@@ -1,7 +1,11 @@
 Revision history for Net::DNS
 =============================
 
-** 0.44_02
+*** 0.45 January 8, 2004
+
+No changes from 0.44_02.
+
+** 0.44_02 January 3, 2004
 
 The XS detection code was broken.  We actually use the XS bits now.
 
@@ -392,4 +396,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 2.107 2004/01/04 04:42:52 ctriv Exp $
+$Id: Changes,v 2.108 2004/01/08 05:47:01 ctriv Exp $
