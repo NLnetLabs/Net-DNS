@@ -22,4 +22,4 @@ mx		Prints a domain's MX records sorted by preference.
 perldig		Performs DNS queries and print the results.
 
 ---
-$Id: README 101 2004-08-12 05:12:05Z ctriv $
+$Id$

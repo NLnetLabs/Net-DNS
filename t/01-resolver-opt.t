@@ -1,4 +1,4 @@
-# $Id: 01-resolver-opt.t 101 2004-08-12 05:12:05Z ctriv $
+# $Id$
 
 
 use Test::More tests => 60;

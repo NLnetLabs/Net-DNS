@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: check_zone 101 2004-08-12 05:12:05Z ctriv $
+# $Id$
 
 =head1 NAME
 

@@ -1,4 +1,4 @@
-# $Id: 01-resolver-file.t 101 2004-08-12 05:12:05Z ctriv $
+# $Id$
 
 
 use Test::More tests => 8;

@@ -1,4 +1,4 @@
-# $Id: 07-misc.t,v 1.4 2002/10/15 22:13:02 ctriv Exp $ -*-perl-*-
+# $Id$ -*-perl-*-
 
 
 my $has_inet6;

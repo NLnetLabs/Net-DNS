@@ -1,4 +1,4 @@
-# $Id: custom.txt 101 2004-08-12 05:12:05Z ctriv $
+# $Id$
 domain t2.net-dns.org
 search alt.net-dns.org ext.net-dns.org
 nameserver 10.0.1.42 10.0.2.42
