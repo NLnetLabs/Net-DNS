@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.20 2002/08/20 16:27:40 ctriv Exp $
+# $Id: Resolver.pm,v 1.23 2002/09/20 07:01:59 ctriv Exp $
 
 =head1 NAME
 
@@ -238,7 +238,8 @@ sub read_config {
 
 	open(FILE, $file) or die "can't open $file: $!";
 	local $/ = "\n";
-
+	local $_;
+	
 	while (<FILE>) {
 		s/\s*[;#].*//;
 		next if /^\s*$/;
@@ -817,7 +818,7 @@ sub send_udp {
 	# Perform each round of retries.
 	for (my $i = 0;
 	     $i < $self->{'retry'};
-	     ++$i, $retrans *= 2, $timeout = int($retrans / ($#ns + 1))) {
+	     ++$i, $retrans *= 2, $timeout = int($retrans / (@ns || 1))) {
 
 		$timeout = 1 if ($timeout < 1);
 

@@ -1,6 +1,16 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.29 2 Oct 2002
+
+Fixed $_ from creaping our of scope in Resolver.pm. Thanks to
+Ilya Martynov for finding the problem and the patch to fix it.
+
+Fixed divide by zero bug there is no usable network interface(s).
+Thanks to twilliams@tfcci.com, misiek@pld.ORG.PL (and one other
+person that I can't seem to find the address of) for reports. 
+ 
+
 *** 0.28 20 Aug 2002
 
 Fixed a bug in the new AUTOLOAD routines that made it impossible to set
@@ -598,4 +608,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.31 2002/08/21 00:10:25 ctriv Exp $
+$Id: Changes,v 1.33 2002/10/02 06:01:34 ctriv Exp $

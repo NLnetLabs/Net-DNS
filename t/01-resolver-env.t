@@ -1,20 +1,27 @@
-# $Id: 01-resolver-env.t,v 1.1 2002/08/01 08:50:46 ctriv Exp $
+# $Id: 01-resolver-env.t,v 1.2 2002/10/02 05:56:14 ctriv Exp $
 
 
 use Test::More tests => 11;
 use strict;
 
 BEGIN { 
+
+	local $ENV{'RES_NAMESERVERS'} = '10.0.1.128 10.0.2.128';
+	local $ENV{'RES_SEARCHLIST'}  = 'net-dns.org lib.net-dns.org';
+	local $ENV{'LOCALDOMAIN'}     = 't.net-dns.org';
+	local $ENV{'RES_OPTIONS'}     = 'retrans:3 retry:2 debug';
+
+    use_ok('Net::DNS'); 
+	
 	$ENV{'RES_NAMESERVERS'} = '10.0.1.128 10.0.2.128';
 	$ENV{'RES_SEARCHLIST'}  = 'net-dns.org lib.net-dns.org';
 	$ENV{'LOCALDOMAIN'}     = 't.net-dns.org';
 	$ENV{'RES_OPTIONS'}     = 'retrans:3 retry:2 debug';
 	
-	use_ok('Net::DNS'); 
+	
 }
 
 SKIP: {
-
 	skip 'ENV parsing only supported on unix.', 10
 		unless $Net::DNS::Resolver::os eq 'unix';
 
@@ -39,4 +46,3 @@ SKIP: {
 	ok($res->debug,                    'Debug works'         );
 }
 
- 
