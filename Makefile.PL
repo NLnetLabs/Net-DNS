@@ -132,6 +132,10 @@ if ($online_tests) {
 
 WriteMakefile(%Makefile);
 
+
+
+
+
 sub test_cc {
 	#
 	# The perl/C checking voodoo is stolen from Graham Barr's
@@ -181,4 +185,12 @@ test_cover : pure_all
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
 	cover
 END_O_MAKE
+}
+
+
+
+sub MY::libscan {
+    my $path = $_[1];
+    return '' if $path =~ /\B\.svn\b/;
+    return $path;
 }

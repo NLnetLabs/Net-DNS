@@ -1,7 +1,31 @@
 Revision history for Net::DNS
 =============================
 
+
+*** 0.49_01
+
+
+Fix: rt.cpan.org Ticket #8483 
+	eval tests for DNS::RR::SIG fail when using a die handler 
+	(thanks Sebastiaan Hoogeveen)
+	
+      Patch applied.
+
+Fix: rt.cpan.org: Ticket #8608 
+	Net::DNS::Packet->data makes incorrect assumptions
+
+      Implemented the "pop" method for the question.
+      Since having a qcount that is not 1 is somewhat rare (it appears
+      in TCP AXFR streams) the ability to pop the answer from a question
+      has not been documented in the "pod"
+
+      Also fixed the incorrect assumption.
+
+      Thanks Bruce Campbell.
+
+
 *** 0.48 Aug 12, 2004
+
 
 Net::DNS is now stored in a subversion repository, replacing cvs.
 As such the submodule version numbers have taken another big jump. 

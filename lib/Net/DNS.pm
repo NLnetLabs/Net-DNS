@@ -30,7 +30,7 @@ BEGIN {
     require Exporter;
     
     @ISA     = qw(Exporter DynaLoader);
-    $VERSION = '0.48';
+    $VERSION = '0.49_01';
     $HAVE_XS = eval { __PACKAGE__->bootstrap(); 1 } ? 1 : 0;
 }
 
@@ -42,7 +42,9 @@ use Net::DNS::Question;
 use Net::DNS::RR;
 
 BEGIN {
-    $DNSSEC = eval { require Net::DNS::RR::SIG; 1 } ? 1 : 0;
+    $DNSSEC = eval { 
+	local $SIG{'__DIE__'} = 'DEFAULT';
+	require Net::DNS::RR::SIG; 1 } ? 1 : 0;
 }
  
 

@@ -1,6 +1,6 @@
 # $Id: 04-packet.t 101 2004-08-12 05:12:05Z ctriv $
 
-use Test::More tests => 34;
+use Test::More tests => 38;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }     #1
@@ -131,3 +131,26 @@ my @rr=$packet3->additional;
 
 is($rr[0]->type, "OPT", "Additional section packet is EDNS0 type");                         #33
 is($rr[0]->class, "4096", "EDNS0 packet size correct");                                     #34
+
+
+
+my $question2=Net::DNS::Question->new("bla.foo","TXT","CHAOS");
+ok($question2->isa('Net::DNS::Question'),"Proper type of object created");  #35
+
+# In theory its valid to have multiple questions in the question section.
+# Not many servers digest it though.
+
+$packet->push("question", $question2);
+@question = $packet->question;
+ok(@question && @question == 2,             'question() returned right number of items poptest:2'); #36
+
+
+$packet->pop("question");
+
+@question = $packet->question;
+ok(@question && @question == 1,             'question() returned right number of items poptest:1'); #37
+
+$packet->pop("question");
+
+@question = $packet->question;
+ok(@question ==0,              'question() returned right number of items poptest0'); #38

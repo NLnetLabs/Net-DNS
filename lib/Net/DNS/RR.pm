@@ -79,7 +79,9 @@ BEGIN {
 	#  Only load DNSSEC if available
 	# 
 
-	eval { require Net::DNS::RR::SIG; };
+	if ($Net::DNS::DNSSEC) { 
+	    require Net::DNS::RR::SIG; 
+	};
 
 	unless ($@) {
 		$RR{'SIG'} = 1;

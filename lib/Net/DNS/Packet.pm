@@ -260,25 +260,49 @@ sub data {
 	# section of the packet. TODO: Packet is dropped silently if is tried to
 	# have it appended to one of the other section
 
-	my $data = $self->{"header"}->data;
+	# Collect the data first, and count the number of records along
+	# the way. ( see rt.cpan.org: Ticket #8608 )
+	my $qdcount = 0;
+	my $ancount = 0;
+	my $nscount = 0;
+	my $arcount = 0;
+	my $data = undef;
+	# Note that the only pieces we;ll fill in later have predefined
+        # length.
+
+	my $headerlength=length $self->{"header"}->data;
 
 	foreach my $question (@{$self->{"question"}}) {
-		$data .= $question->data($self, length $data);
+		$data .= $question->data($self, $headerlength);
+		$qdcount++;
 	}
 
 	foreach my $rr (@{$self->{"answer"}}) {
-		$data .= $rr->data($self, length $data);
+		$data .= $rr->data($self, $headerlength);
+		$ancount++;
 	}
 
 	foreach my $rr (@{$self->{"authority"}}) {
-		$data .= $rr->data($self, length $data);
+		$data .= $rr->data($self, $headerlength);
+		$nscount++;
 	}
 
 	foreach my $rr (@{$self->{"additional"}}) {
-		$data .= $rr->data($self, length $data);
+		$data .= $rr->data($self, $headerlength);
+		$arcount++;
 	}
 
-	return $data;
+	# Fix up the header so the counts are correct.  This overwrites
+	# the user's settings, but the user should know what they aredoing.
+	$self->{"header"}->qdcount( $qdcount );
+	$self->{"header"}->ancount( $ancount );
+	$self->{"header"}->nscount( $nscount );
+	$self->{"header"}->arcount( $arcount );
+	
+	# Return the header and everything else.
+	return $self->{"header"}->data . $data;
+
+
 }
 
 =head2 header
@@ -485,6 +509,7 @@ sub answersize {
 
 Adds RRs to the specified section of the packet.
 
+
 =cut
 
 sub push {
@@ -572,6 +597,7 @@ sub safe_push {
     my $rr = $packet->pop("pre");
     my $rr = $packet->pop("update");
     my $rr = $packet->pop("additional");
+    my $rr = $packet->pop("question");
 
 Removes RRs from the specified section of the packet.
 
@@ -606,7 +632,13 @@ sub pop {
 		if ($adcount) {
 			$rr = pop @{$self->{"additional"}};
 			$self->{"header"}->adcount($adcount - 1);
-		}
+		    }
+	} elsif ($section eq "question") {
+	        my $qdcount = $self->{"header"}->qdcount;
+		if ($qdcount) {
+		    	$rr = pop @{$self->{"question"}};
+			$self->{"header"}->qdcount($qdcount - 1);
+		    }
 	} else {
 		Carp::cluck(qq(invalid section "$section"\n));
 	}
