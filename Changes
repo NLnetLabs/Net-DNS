@@ -58,9 +58,13 @@ Fix: rt.cpan.org: Ticket #8608
 
 
 Fix: Ticket #11106 
-	Incorrect instructions in README 
+      Incorrect instructions in README 
 
       Corrected in the README and in Makefile.PL
+
+Imported the data into another subversion repository. I made sure the
+numbers jumped, but I did not have access to the "original" subversion
+repository so I lost some of the history.
 
 
 *** 0.48 Aug 12, 2004
