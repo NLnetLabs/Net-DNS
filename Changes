@@ -1,6 +1,10 @@
 Revision history for Net::DNS
 =============================
 
+** 0.40 September 1, 2003
+
+Various POD tweaks.
+
 ** 0.39_02 August 28, 2003
 
 Net-DNS-SEC updates, seems that IETF has been busy redefining DNSSEC.
@@ -764,4 +768,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.69 2003/08/28 15:11:54 ctriv Exp $
+$Id: Changes,v 1.70 2003/09/01 22:13:51 ctriv Exp $

@@ -1,6 +1,6 @@
 package Net::DNS::Select;
 #
-# $Id: Select.pm,v 1.3 2003/06/21 07:47:38 ctriv Exp $
+# $Id: Select.pm,v 1.4 2003/08/29 12:04:03 ctriv Exp $
 #
 
 use IO::Select;
@@ -9,7 +9,7 @@ use Carp;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$Revision: 1.3 $)[1];
+$VERSION = (qw$Revision: 1.4 $)[1];
 
 sub new {
 	my ($class, @socks) = @_;
@@ -41,3 +41,39 @@ sub can_read {
 }
 
 1;
+
+__END__
+
+
+=head1 NAME
+
+Net::DNS::Select - Wrapper Around Select
+
+=head1 SYNOPSIS
+
+ use Net::DNS::Select;
+ 
+ my $sel = Net::DNS::Select->new;
+
+=head1 DESCRIPTION
+
+This class provides a wrapper around L<IO::Select|IO::Select>.  
+On UNIX platforms it simply returns a IO::Select object.  On the
+Windows platform it implements a simple array of handles.
+
+=head1 BUGS
+
+The current maintainer does not know if this module is still needed.  
+Feedback from Windows gurus welcome.
+
+=head1 COPYRIGHT
+
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
+
+=head1 SEE ALSO
+
+L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>
+
+=cut

@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 1.4 2003/08/10 15:20:24 ctriv Exp $
+# $Id: Base.pm,v 1.5 2003/08/29 12:04:03 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::Select;
 
-$VERSION = (qw$Revision: 1.4 $)[1];
+$VERSION = (qw$Revision: 1.5 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -1256,6 +1256,34 @@ sub AUTOLOAD {
 	goto &{$AUTOLOAD};	
 }
 
+__END__
 
+=head1 NAME
+
+Net::DNS::Resolver::Base - Common Resolver Class
+
+=head1 SYNOPSIS
+
+ use base qw/Net::DNS::Resolver::Base/;
+
+=head1 DESCRIPTION
+
+This class is the common base class for the different platform
+sub-classes of L<Net::DNS::Resolver|Net::DNS::Resolver>.  
+
+No user serviceable parts inside, see L<Net::DNS::Resolver|Net::DNS::Resolver>
+for all your resolving needs.
+
+=head1 COPYRIGHT
+
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
+
+=head1 SEE ALSO
+
+L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>
+
+=cut
 
 1;

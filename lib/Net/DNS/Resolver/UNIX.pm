@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::UNIX;
 #
-# $Id: UNIX.pm,v 1.2 2003/08/26 23:58:10 ctriv Exp $
+# $Id: UNIX.pm,v 1.3 2003/08/29 12:04:03 ctriv Exp $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Resolver::Base ();
 
 @ISA     = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 1.2 $)[1];
+$VERSION = (qw$Revision: 1.3 $)[1];
 
 my $resolv_conf = '/etc/resolv.conf';
 my $dotfile     = '.resolv.conf';
@@ -41,3 +41,31 @@ sub init {
 	
 1;
 __END__
+
+
+=head1 NAME
+
+Net::DNS::Resolver::UNIX - UNIX Resolver Class
+
+=head1 SYNOPSIS
+
+ use Net::DNS::Resolver;
+
+=head1 DESCRIPTION
+
+This class implements the UNIX specific portions of C<Net::DNS::Resolver>.
+
+No user serviceable parts inside, see L<Net::DNS::Resolver|Net::DNS::Resolver>
+for all your resolving needs.
+
+=head1 COPYRIGHT
+
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
+
+=head1 SEE ALSO
+
+L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>
+
+=cut
