@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 2.101 2004/01/04 04:12:57 ctriv Exp $
+# $Id: Packet.pm,v 2.102 2004/04/01 06:57:46 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.102 $)[1];
 
 =head1 NAME
 
@@ -476,12 +476,12 @@ sub answersize {
 
 =head2 push
 
-    $packet->push("pre", $rr);
-    $packet->push("update", $rr);
-    $packet->push("additional", $rr);
+    $packet->push(pre        => $rr);
+    $packet->push(update     => $rr);
+    $packet->push(additional => $rr);
 
-    $packet->push("update", $rr1, $rr2, $rr3);
-    $packet->push("update", @rr);
+    $packet->push(update => $rr1, $rr2, $rr3);
+    $packet->push(update => @rr);
 
 Adds RRs to the specified section of the packet.
 
@@ -530,7 +530,42 @@ sub push {
 	}
 }
 
+=head2 unique_push
 
+    $packet->unique_push(pre        => $rr);
+    $packet->unique_push(update     => $rr);
+    $packet->unique_push(additional => $rr);
+
+    $packet->unique_push(update => $rr1, $rr2, $rr3);
+    $packet->unique_push(update => @rr);
+
+Adds RRs to the specified section of the packet provided that 
+the RRs do not already exist in the packet.
+
+=cut
+
+sub unique_push {
+	my ($self, $section, @rrs) = @_;
+	
+	foreach my $rr (@rrs) {
+		next if $self->{'seen'}->{$rr->string}++;
+
+		$self->push($section, $rr);
+	}
+}
+
+=head2 safe_push
+
+A deprecated name for C<unique_push()>.
+
+=cut
+
+sub safe_push {
+	carp('safe_push() is deprecated, use unique_push() instead,');
+	
+	goto &unique_push;
+}
+	
 
 =head2 pop
 
@@ -907,12 +942,7 @@ sub parse_rr {
 	return ($rrobj, $offset);
 }
 
-sub safe_push {
-	Carp::croak(<<END);
-Net::DNS::Packet::safe_push() has been removed.  The safe_push() method
-is only avalible from the Net::DNS::Update class.
-END
-}
+
 
 =head1 COPYRIGHT
 

@@ -1,6 +1,6 @@
 package Net::DNS::Nameserver;
 #
-# $Id: Nameserver.pm,v 2.101 2003/12/30 22:45:39 ctriv Exp $
+# $Id: Nameserver.pm,v 2.102 2004/03/24 00:40:29 ctriv Exp $
 #
 
 use Net::DNS;
@@ -11,7 +11,7 @@ use Carp qw(cluck);
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.102 $)[1];
 
 use constant DEFAULT_ADDR => INADDR_ANY;
 use constant DEFAULT_PORT => 53;
@@ -118,7 +118,7 @@ sub make_reply {
 	my $qclass = $qr ? $qr->qclass : "ANY";
 	my $qtype  = $qr ? $qr->qtype  : "ANY";
 	
-	$reply = Net::DNS::Packet->new($qname, $qclass, $qtype);
+	$reply = Net::DNS::Packet->new($qname, $qtype, $qclass);
 	
 	if ($query->header->opcode eq "QUERY") {
 		if ($query->header->qdcount == 1) {

@@ -1,4 +1,4 @@
-# $Id: 05-rr-unknown.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: 05-rr-unknown.t,v 2.101 2004/03/24 00:50:56 ctriv Exp $
 #
 # RFC 3597 Unknown typecode implemntation test code.
 # O.M. Kolkman RIPE NCC.
@@ -26,7 +26,7 @@ eval {
 };
 
 
-like($@, '/Net::DNS::typesbyname\(\) argument larger than 65535/', 'Fails on large TYPE code');
+like($@, '/Net::DNS::typesbyval\(\) argument larger than 65535/', 'Fails on large TYPE code');
 
 
 is(Net::DNS::classesbyname('CLASS124'), 124,       'classesbyname(CLASS124) returns 124');

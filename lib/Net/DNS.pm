@@ -1,6 +1,6 @@
 package Net::DNS;
 #
-# $Id: DNS.pm,v 2.107 2004/02/21 12:44:18 ctriv Exp $
+# $Id: DNS.pm,v 2.109 2004/04/01 07:32:40 ctriv Exp $
 #
 use strict;
 use vars qw(
@@ -30,7 +30,7 @@ BEGIN {
 	require Exporter;
 	
 	@ISA     = qw(Exporter DynaLoader);
-	$VERSION = '0.46';
+	$VERSION = '0.47';
 	$HAVE_XS = eval { __PACKAGE__->bootstrap(); 1 } ? 1 : 0;
 }
 
@@ -139,13 +139,13 @@ sub typesbyname {
 	my $name = uc shift;
 
 	return $typesbyname{$name} if $typesbyname{$name};
-	
-	die "Net::DNS::typesbyval() argument is not TYPE### ($name)" unless 
+
+	die "Net::DNS::typesbyname() argument ($name) is not TYPE###" unless 
 		$name =~ m/^\s*TYPE(\d+)\s*$/;  
 	
 	my $val = $1;
 	
-	die 'Net::DNS::typesbyval() argument larger than ' . 0xffff if $val > 0xffff;
+	die 'Net::DNS::typesbyname() argument larger than ' . 0xffff if $val > 0xffff;
 	
 	return $val;
 }
@@ -155,7 +155,7 @@ sub typesbyname {
 sub typesbyval {
 	my $val = shift;
 	
-	die "Net::DNS::typesbyname() argument is not numeric ($val)" unless 
+	die "Net::DNS::typesbyval() argument ($val) is not numeric" unless 
 		$val =~ m/^\s*\d+\s*$/;  
 	
 	$val =~ s/\s*//g; 
@@ -163,7 +163,7 @@ sub typesbyval {
 	
 	return $typesbyval{$val} if $typesbyval{$val};
 	
-	die 'Net::DNS::typesbyname() argument larger than '. 0xffff if 
+	die 'Net::DNS::typesbyval() argument larger than '. 0xffff if 
 		$val > 0xffff;
 	
 	return "TYPE$val";

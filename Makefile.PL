@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 2.100 2003/12/13 01:37:03 ctriv Exp $
+# $Id: Makefile.PL,v 2.101 2004/03/07 20:36:59 ctriv Exp $
 
 use strict;
 $^W = 1;
@@ -172,4 +172,13 @@ sub metafile {
 	my ($extra) = $self->echo('license: perl', 'META.yml', 1);
 	
 	return "$meta\t$extra\n";
+}
+
+sub postamble {
+	return <<'END_O_MAKE';
+test_cover : pure_all
+	cover -delete
+	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
+	cover
+END_O_MAKE
 }

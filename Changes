@@ -1,6 +1,20 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.47 April 1, 2004
+
+safe_push() is back in Net::DNS::Packet, due to the excellent debate
+skills of Luis E Monoz.  However, the name safe_push() is deprecated,
+use the new name unique_push() instead.
+
+Fixed a bug in Net::DNS::Nameserver which caused the class to build 
+packets incorrectly in some cases. [Ask Bjorn Hansen]
+
+Error message cleanups in Net::DNS::typesbyname()
+and Net::DNS::typesbyval() [Ask Bjorn Hansen]
+
+Net::DNS::RR::new_from_hash() now works with unknown RR types [Olaf].
+
 *** 0.46 February 21, 2004
 
 IPv6 reverse lookups can now be done with Net::DNS::Resolver::search(),
@@ -355,4 +369,4 @@ Fixed warning in Net::DNS::RR::AUTOLOAD with perl 5.005.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 2.116 2004/02/21 12:44:18 ctriv Exp $
+$Id: Changes,v 2.120 2004/04/01 07:32:40 ctriv Exp $

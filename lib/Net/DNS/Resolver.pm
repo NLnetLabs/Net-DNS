@@ -1,12 +1,12 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm,v 2.101 2004/02/17 05:21:03 ctriv Exp $
+# $Id: Resolver.pm,v 2.102 2004/02/25 12:34:54 ctriv Exp $
 #
 
 use strict;
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.102 $)[1];
 
 BEGIN {
 	if ($^O eq 'MSWin32') {
@@ -174,58 +174,6 @@ An array reference of domains.
 For more information on any of these options, please consult the method
 of the same name.
 
-=head2 print
-
-    $res->print;
-
-Prints the resolver state on the standard output.
-
-=head2 string
-
-    print $res->string;
-
-Returns a string representation of the resolver state.
-
-=head2 searchlist
-
-    @searchlist = $res->searchlist;
-    $res->searchlist('example.com', 'a.example.com', 'b.example.com');
-
-Gets or sets the resolver search list.
-
-=head2 nameservers
-
-    @nameservers = $res->nameservers;
-    $res->nameservers('192.168.1.1', '192.168.2.2', '192.168.3.3');
-
-Gets or sets the nameservers to be queried.
-
-=head2 port
-
-    print 'sending queries to port ', $res->port, "\n";
-    $res->port(9732);
-
-Gets or sets the port to which we send queries.  This can be useful
-for testing a nameserver running on a non-standard port.  The
-default is port 53.
-
-=head2 srcport
-
-    print 'sending queries from port ', $res->srcport, "\n";
-    $res->srcport(5353);
-
-Gets or sets the port from which we send queries.  The default is 0,
-meaning any port.
-
-=head2 srcaddr
-
-    print 'sending queries from address ', $res->srcaddr, "\n";
-    $res->srcaddr('192.168.1.1');
-
-Gets or sets the source address from which we send queries.  Convenient
-for forcing queries out a specific interfaces on a multi-homed host.
-The default is 0.0.0.0, meaning any local address.
-
 =head2 search
 
     $packet = $res->search('mailhost');
@@ -275,7 +223,7 @@ applied.  If the name doesn't contain any dots and B<defnames>
 is true then the default domain will be appended.
 
 The record type and class can be omitted; they default to A and
-IN.  If the name looks like an IP address (4 dot-separated numbers),
+IN.  If the name looks like an IP address (IPv4 or IPv6),
 then an appropriate PTR query will be performed.
 
 Returns a C<Net::DNS::Packet> object, or C<undef> if no answers
@@ -293,62 +241,13 @@ nor the default domain will be appended.
 
 The argument list can be either a C<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
-A and IN.  If the name looks like an IP address (4 dot-separated numbers),
+A and IN.  If the name looks like an IP address (Ipv4 or IPv6),
 then an appropriate PTR query will be performed.
 
 Returns a C<Net::DNS::Packet> object whether there were any answers or not.
 Use C<< $packet->header->ancount >> or C<< $packet->answer >> to find out
 if there were any records in the answer section.  Returns C<undef> if there
 was an error.
-
-=head2 bgsend
-
-    $socket = $res->bgsend($packet_object);
-    $socket = $res->bgsend('mailhost.example.com');
-    $socket = $res->bgsend('example.com', 'MX');
-    $socket = $res->bgsend('user.passwd.example.com', 'TXT', 'HS');
-
-Performs a background DNS query for the given name, i.e., sends a
-query packet to the first nameserver listed in C<< $res->nameservers >>
-and returns immediately without waiting for a response.  The program
-can then perform other tasks while waiting for a response from the 
-nameserver.
-
-The argument list can be either a C<Net::DNS::Packet> object or a list
-of strings.  The record type and class can be omitted; they default to
-A and IN.  If the name looks like an IP address (4 dot-separated numbers),
-then an appropriate PTR query will be performed.
-
-Returns an C<IO::Socket::INET> object.  The program must determine when
-the socket is ready for reading and call C<< $res->bgread >> to get
-the response packet.  You can use C<< $res->bgisready >> or C<IO::Select>
-to find out if the socket is ready before reading it.
-
-=head2 bgread
-
-    $packet = $res->bgread($socket);
-    undef $socket;
-
-Reads the answer from a background query (see L</bgsend>).  The argument
-is an C<IO::Socket> object returned by C<bgsend>.
-
-Returns a C<Net::DNS::Packet> object or C<undef> on error.
-
-The programmer should close or destroy the socket object after reading it.
-
-=head2 bgisready
-
-    $socket = $res->bgsend('foo.example.com');
-    until ($res->bgisready($socket)) {
-        # do some other processing
-    }
-    $packet = $res->bgread($socket);
-    $socket = undef;
-
-Determines whether a socket is ready for reading.  The argument is
-an C<IO::Socket> object returned by C<< $res->bgsend >>.
-
-Returns true if the socket is ready, false if not.
 
 =head2 axfr
 
@@ -413,6 +312,107 @@ Returns C<undef> at the end of the zone transfer.  The redundant
 SOA record that terminates the zone transfer is not returned.
 
 See also L</axfr>.
+
+=head2 nameservers
+
+    @nameservers = $res->nameservers;
+    $res->nameservers('192.168.1.1', '192.168.2.2', '192.168.3.3');
+
+Gets or sets the nameservers to be queried.
+
+=head2 print
+
+    $res->print;
+
+Prints the resolver state on the standard output.
+
+=head2 string
+
+    print $res->string;
+
+Returns a string representation of the resolver state.
+
+=head2 searchlist
+
+    @searchlist = $res->searchlist;
+    $res->searchlist('example.com', 'a.example.com', 'b.example.com');
+
+Gets or sets the resolver search list.
+
+=head2 port
+
+    print 'sending queries to port ', $res->port, "\n";
+    $res->port(9732);
+
+Gets or sets the port to which we send queries.  This can be useful
+for testing a nameserver running on a non-standard port.  The
+default is port 53.
+
+=head2 srcport
+
+    print 'sending queries from port ', $res->srcport, "\n";
+    $res->srcport(5353);
+
+Gets or sets the port from which we send queries.  The default is 0,
+meaning any port.
+
+=head2 srcaddr
+
+    print 'sending queries from address ', $res->srcaddr, "\n";
+    $res->srcaddr('192.168.1.1');
+
+Gets or sets the source address from which we send queries.  Convenient
+for forcing queries out a specific interfaces on a multi-homed host.
+The default is 0.0.0.0, meaning any local address.
+
+=head2 bgsend
+
+    $socket = $res->bgsend($packet_object);
+    $socket = $res->bgsend('mailhost.example.com');
+    $socket = $res->bgsend('example.com', 'MX');
+    $socket = $res->bgsend('user.passwd.example.com', 'TXT', 'HS');
+
+Performs a background DNS query for the given name, i.e., sends a
+query packet to the first nameserver listed in C<< $res->nameservers >>
+and returns immediately without waiting for a response.  The program
+can then perform other tasks while waiting for a response from the 
+nameserver.
+
+The argument list can be either a C<Net::DNS::Packet> object or a list
+of strings.  The record type and class can be omitted; they default to
+A and IN.  If the name looks like an IP address (4 dot-separated numbers),
+then an appropriate PTR query will be performed.
+
+Returns an C<IO::Socket::INET> object.  The program must determine when
+the socket is ready for reading and call C<< $res->bgread >> to get
+the response packet.  You can use C<< $res->bgisready >> or C<IO::Select>
+to find out if the socket is ready before reading it.
+
+=head2 bgread
+
+    $packet = $res->bgread($socket);
+    undef $socket;
+
+Reads the answer from a background query (see L</bgsend>).  The argument
+is an C<IO::Socket> object returned by C<bgsend>.
+
+Returns a C<Net::DNS::Packet> object or C<undef> on error.
+
+The programmer should close or destroy the socket object after reading it.
+
+=head2 bgisready
+
+    $socket = $res->bgsend('foo.example.com');
+    until ($res->bgisready($socket)) {
+        # do some other processing
+    }
+    $packet = $res->bgread($socket);
+    $socket = undef;
+
+Determines whether a socket is ready for reading.  The argument is
+an C<IO::Socket> object returned by C<< $res->bgsend >>.
+
+Returns true if the socket is ready, false if not.
 
 =head2 tsig
 

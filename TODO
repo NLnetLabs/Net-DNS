@@ -20,9 +20,7 @@ To Do list for Net::DNS
 
   - IPv6 Support (Coming Soon!)		       
   
-  - Need more tests (IPv4 and IPv6 lookup tests for sure.)
-  
-  - Added IPv6 lookup support to search().
+  - Need more tests
 
 * Get rid of .* in AAAA.pm; write more tests for AAAA.pm.
 
@@ -80,56 +78,15 @@ To Do list for Net::DNS
 
 * Write some front-end methods to do CNAME translations automagically.
 
-* Work on demo scripts:
-
-  - Add a copyright notice to the demo scripts.
-
-  - Work on demo/axfr:
-
-    * Add a print statement to tell whether the zone info comes from
-      a file or a zone transfer.
-
-  - Work on demo/srv (not included with the distribution).  Remaining
-    to do:
-
-    * Documentation.  Don't forget to add a reference to it in the other
-      demo scripts.
-
-    * Consider adding "sub srv" to DNS.pm.
-
-    * Add to the Changes file.
-
-  - Work on nsupdate.pl (not included with the distribution) and add it
-    to the demo directory.  Remaining to do:
-
-    * Write documentation.
-
-    * Make it more robust.
-
-  - Work on dns.cgi (not included with the distribution) and add it to
-    the demo directory.  Some things remaining to do:
-
-    * Check for HTTP_USER_AGENT in zone transfers.
-
-    * Add a way to change resolver settings.  Edit do_axfr and remove
-      the query for the zone's nameservers when this is finished.
-
-    * Add support for dynamic updates.
-
 * Do more study of resolver behavior as recommended in RFCs 1035, 1123,
   and 2136.
-
-* Add some text- and html-specific sections to the manual pages.
 
 * Check code for conformance to the guidelines listed in The Perl 5 Module
   List.  Check style & efficiency according to the perlstyle manpage and
   the Camel.
 
-* Consider providing an .xs file for those who wish to link against
-  libresolv or libbind instead of using the entirely-Perl resolver.
-
 * Consider rewriting the packet-parsing code in C for increased speed,
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 2.103 2004/01/22 05:49:02 ctriv Exp $
+$Id: TODO,v 2.104 2004/02/25 12:36:56 ctriv Exp $

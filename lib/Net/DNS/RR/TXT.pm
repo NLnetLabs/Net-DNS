@@ -1,6 +1,6 @@
 package Net::DNS::RR::TXT;
 #
-# $Id: TXT.pm,v 2.104 2004/02/17 03:37:51 ctriv Exp $
+# $Id: TXT.pm,v 2.106 2004/02/21 21:25:16 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,19 +9,22 @@ use Net::DNS::Packet;
 use Text::ParseWords;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.104 $)[1];
+$VERSION = (qw$Revision: 2.106 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 	
 	my $rdlength = $self->{'rdlength'} or return bless $self, $class;
-	my $end = $offset + $rdlength;
-	while ( $offset < $end ) {
-		my $strlen = unpack("\@$offset C", $$data );
-		++$offset ;
+	my $end      = $offset + $rdlength;
+	
+	while ($offset < $end) {
+		my $strlen = unpack("\@$offset C", $$data);
+		++$offset;
+		
 		my $char_str = substr($$data, $offset, $strlen);
 		$offset += $strlen;
-		push( @{ $self->{'char_str_list'} }, $char_str );
+		
+		push(@{$self->{'char_str_list'}}, $char_str);
 	}
 
 	return bless $self, $class;
@@ -34,7 +37,7 @@ sub new_from_string {
         
     $self->_build_char_str_list($rdata_string);
 
-    return $self ;
+    return $self;
 }
 
 sub txtdata {
@@ -64,7 +67,7 @@ sub _build_char_str_list {
 	$self->{'char_str_list'} = [];
 
 	if (@words) {
-		foreach my $string ( @words ) {
+		foreach my $string (@words) {
 		    $string =~ s/\\"/"/g;
 		    push(@{$self->{'char_str_list'}}, $string);
 		}
@@ -82,10 +85,10 @@ sub char_str_list {
 }
 
 sub rr_rdata {
-	my $self = shift;
-	my $rdata = "";
+	my $self  = shift;
+	my $rdata = '';
 
-	foreach my $string ( $self->char_str_list() ) {
+	foreach my $string ($self->char_str_list) {
 	    $rdata .= pack("C", length $string );
 	    $rdata .= $string;
 	}
@@ -118,12 +121,12 @@ Returns the descriptive text as a single string, regardless of actual
 number of <character-string> elements.  Of questionable value.  Should 
 be deprecated.  
 
-Use C<TXT-E<gt>rdatastr()> or C<TXT-E<gt>char_str_list()> instead.
+Use C<< $txt->rdatastr() >> or C<< $txt->char_str_list() >> instead.
 
 =head2 char_str_list
 
-    print "Individual <character-string> list: \n\t", \
-		    join ( "\n\t", $rr->char_str_list() );
+ print "Individual <character-string> list: \n\t", 
+       join("\n\t", $rr->char_str_list());
 
 Returns a list of the individual <character-string> elements, 
 as unquoted strings.  Used by TXT->rdatastr and TXT->rr_rdata.

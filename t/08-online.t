@@ -1,11 +1,11 @@
-# $Id: 08-online.t,v 2.101 2004/02/21 12:40:29 ctriv Exp $
+# $Id: 08-online.t,v 2.102 2004/02/25 12:33:56 ctriv Exp $
 
 use Test::More;
 use strict;
 
 BEGIN {
 	if (-e 't/online.enabled') {
-		plan tests => 60;
+		plan tests => 72;
 	} else {
 		plan skip_all => 'Online tests disabled.';
 	}
@@ -102,5 +102,49 @@ is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
 			
 			is(($packet->answer)[0]->ptrdname, $test->{'host'}, "$method($test->{'ip'}) works");
 		}
+	}
+}
+
+$res = Net::DNS::Resolver->new(
+	domain     => 't.net-dns.org',
+	searchlist => ['t.net-dns.org', 'net-dns.org'],
+);
+
+
+#
+# test the search() and query() append the default domain and 
+# searchlist correctly.
+#
+{
+	$res->defnames(1); $res->dnsrch(1);
+	
+	my @tests = (
+		{
+			method => 'search',
+			name   => 'a',
+		},
+		{
+			method => 'search',
+			name   => 'a.t',
+		},
+		{
+			method => 'query',
+			name   => 'a',
+		},
+	);
+	
+	foreach my $test (@tests) {
+		my $method = $test->{'method'};
+
+		my $ans = $res->$method($test->{'name'});
+		
+		isa_ok($ans, 'Net::DNS::Packet');
+		
+		is($ans->header->ancount, 1);
+		
+		my ($a) = $ans->answer;
+		
+		isa_ok($a, 'Net::DNS::RR::A');
+		is($a->name, 'a.t.net-dns.org');
 	}
 }

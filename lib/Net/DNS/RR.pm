@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 2.105 2004/02/09 23:28:31 ctriv Exp $
+# $Id: RR.pm,v 2.106 2004/03/05 17:11:10 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -9,7 +9,7 @@ use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
 
-$VERSION = (qw$Revision: 2.105 $)[1];
+$VERSION = (qw$Revision: 2.106 $)[1];
 
 =head1 NAME
 
@@ -415,6 +415,9 @@ sub new_from_hash {
 			# documentation
 			return $subclass->new_from_hash($self);
 	    }
+	} elsif ($self->{'type'} =~ /TYPE\d+/) {
+		bless $self, 'Net::DNS::RR::Unknown';
+		return $self;
 	} else {
 	 	bless $self, $class;
 	 	return $self;
