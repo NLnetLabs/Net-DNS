@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.60 2003/05/26 06:54:54 ctriv Exp $
+# $Id: DNS.pm,v 1.61 2003/05/28 22:15:58 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -18,7 +18,7 @@ use vars qw(
 );
 
 
-$VERSION = '0.35';
+$VERSION = '0.36';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;

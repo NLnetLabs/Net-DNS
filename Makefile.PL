@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.19 2003/05/23 01:14:34 ctriv Exp $
+# $Id: Makefile.PL,v 1.21 2003/05/28 22:15:58 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
@@ -131,20 +131,13 @@ EOF
 	
 	close(F) or return;
 
-	system("$Config{'make'} test$Config{obj_ext}") and return;
+	my $ret = system("$Config{'make'} test$Config{obj_ext}");
+	
+	foreach my $file (glob('test*')) {
+		unlink($file) || warn "Could not delete $file: $!\n";
+	}
 
 	return 1;
 }
 		
 
-package MY;
-
-sub processPL {
-	my $self  = shift;
-	my $block = $self->SUPER::processPL(@_);
-	# "Version:" in spec needs to match
-	# "$VERSION" from VERSION_FROM
-	$block =~ s{(spec.PL\s*)$}
-	           {$1 \$\(VERSION_FROM\)}m;
-	return $block;
-}
