@@ -19,12 +19,14 @@ demo/check_zone
 demo/mresolv
 demo/mx
 demo/perldig
+demo/example_recurse.pl
 lib/Net/DNS.pm
 lib/Net/DNS/FAQ.pod
 lib/Net/DNS/Header.pm
 lib/Net/DNS/Nameserver.pm
 lib/Net/DNS/Packet.pm
 lib/Net/DNS/Question.pm
+lib/Net/DNS/Resolver/Recurse.pm
 lib/Net/DNS/RR.pm
 lib/Net/DNS/RR/A.pm
 lib/Net/DNS/RR/AAAA.pm
@@ -72,4 +74,5 @@ t/06-update.t
 t/07-misc.t
 t/08-online.t
 t/09-tkey.t
+t/10-recurse.t
 t/.resolv.conf

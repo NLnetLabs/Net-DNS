@@ -1,11 +1,12 @@
-# $Id: 00-load.t,v 1.1 2002/10/15 22:12:21 ctriv Exp $
+# $Id: 00-load.t,v 1.2 2003/01/05 21:28:04 ctriv Exp $
 
 
-use Test::More tests => 63;
+use Test::More tests => 64;
 use strict;
 
 BEGIN { 
     use_ok('Net::DNS'); 
+    use_ok('Net::DNS::Resolver::Recurse');
 }
 
 

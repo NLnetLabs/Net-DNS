@@ -1,7 +1,15 @@
-# $Id: 08-online.t,v 1.5 2002/10/12 19:49:26 ctriv Exp $
+# $Id: 08-online.t,v 1.6 2003/01/05 21:28:04 ctriv Exp $
 
-use Test::More tests => 52;
+use Test::More;
 use strict;
+
+BEGIN {
+	if (-e 't/online.enabled') {
+		plan tests => 52;
+	} else {
+		plan skip_all => 'Online tests disabled.';
+	}
+}
 
 BEGIN { use_ok('Net::DNS'); }
 

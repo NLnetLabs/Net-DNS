@@ -95,8 +95,8 @@ sub rdatastr {
                 my $cert = MIME::Base64::encode $self->{certificate};
                 $cert =~ s/\n//g;
                 
-                my $format = defined $r_formats{$self->{format}} 
-                ? $r_formats{$self->{format}} : $self->{format};
+                my $format = defined $r_formats{$self->{"format"}} 
+                ? $r_formats{$self->{"format"}} : $self->{"format"};
                 
                 my $algorithm = defined $r_algorithms{$self->{algorithm}} 
                 ? $r_algorithms{$self->{algorithm}} : $self->{algorithm};
@@ -115,7 +115,7 @@ sub rr_rdata {
 	my $rdata = "";
         
 	if (exists $self->{"format"}) {
-		$rdata .= pack("n2", $self->{format}, $self->{tag});
+		$rdata .= pack("n2", $self->{"format"}, $self->{tag});
 		$rdata .= pack("C",  $self->{algorithm});
 		$rdata .= $self->{certificate};
 	}

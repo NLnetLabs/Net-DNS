@@ -1,4 +1,4 @@
-# $Id: 04-pkt-safe-push.t,v 1.1 2002/10/11 07:57:56 ctriv Exp $
+# $Id: 04-pkt-safe-push.t,v 1.2 2002/12/05 07:07:03 ctriv Exp $
 
 use Test::More tests => 73;
 use strict;
@@ -79,13 +79,17 @@ foreach my $try (@tests) {
 	
 		my $packet = Net::DNS::Packet->new($domain);
 		
-		$packet->safe_push($section, $_) for @rrs;
+		foreach (@rrs) {
+			$packet->safe_push($section, $_);
+		}
 	
 		is($packet->header->$count_meth(), $count, "$section right");
 	
 		# Now we test the parsing in new.
 		my $packet2 = Net::DNS::Packet->new(\($packet->data));
-		$packet2->safe_push($section, $_) for @rrs;
+		foreach (@rrs) {
+			$packet2->safe_push($section, $_);
+		}
 		
 		is($packet2->header->$count_meth(), $count, "$section right");
 	}

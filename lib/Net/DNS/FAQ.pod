@@ -1,4 +1,3 @@
-$Id: FAQ.pod,v 1.3 2002/11/15 10:43:53 ctriv Exp $
 =head1 NAME
 
 Net::DNS::FAQ - Frequently Asked Net::DNS Questions
@@ -39,3 +38,8 @@ will always return the answer packet, as long as an answer was received.
 
 The longer answer is that query() is modeled after the res_query() function
 from the libresolv C library, which has similar behaviors.
+
+=head1 VERSION
+
+ $Id: FAQ.pod,v 1.4 2002/12/05 07:07:03 ctriv Exp $
+ 

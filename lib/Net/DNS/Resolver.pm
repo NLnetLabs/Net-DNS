@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.25 2002/11/15 10:50:51 ctriv Exp $
+# $Id: Resolver.pm,v 1.26 2002/12/07 23:14:14 ctriv Exp $
 
 =head1 NAME
 
@@ -219,6 +219,8 @@ sub res_init_microsoft {
 	if ($nameservers) {
 		$default{'nameservers'} = [ split(' ', $nameservers) ];
 	}
+
+	read_env();
 
 	if (!$default{'domain'} && @{$default{'searchlist'}}) {
 		$default{'domain'} = $default{'searchlist'}[0];

@@ -1,6 +1,20 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.32 5 Jan 2003
+
+Various cleanups for perl 5.004.  Thanks to nathan@anderson-net.com
+([cpan #1847])
+
+Applied Olaf's SIG patch (thanks as always).
+
+Win32 now looks at the envirement variables when building the 
+configuration defaults.  Thanks to net-dns-bug@oak-wood.co.uk 
+(That's the only name I have... [cpan #1819])
+
+Added Rob Brown's Net::DNS::Resolver::Recurse module.
+
+
 *** 0.31 17 Nov 2002
 
 Applied Olaf's patch for an initialization bug in OPT.pm
@@ -631,4 +645,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.38 2002/11/18 04:22:31 ctriv Exp $
+$Id: Changes,v 1.39 2003/01/05 21:27:46 ctriv Exp $

@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 
-# $Id: Packet.pm,v 1.11 2002/10/12 19:16:14 ctriv Exp $
+# $Id: Packet.pm,v 1.13 2002/12/05 07:07:03 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -537,7 +537,9 @@ sub push {
 		return;
 	}
 	
-	$self->{'seen'}{$_->string}++ for @rr;
+	foreach (@rr) {
+		$self->{'seen'}{$_->string}++;
+	}
 }
 
 =head2 safe_push
@@ -821,13 +823,17 @@ sub sign_sig0 {
     my $sig0;
     
     if (@_ == 1 && ref($_[0])) {
-		$sig0 = $_[0];
+	if (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG::Private")){
+	    $sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
+	}elsif (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG")){
+	    $sig0 = $_[0];
+	}else{
+	  Carp::croak('You are passing an incompatible class as argument to sign_sig0: '.ref($_[0]));
+	}
     } elsif (@_ == 1 && ! ref($_[0])) {
-		my $key_name = $_[0];
-		
-	    $sig0 = Net::DNS::RR::SIG->create('', $key_name) if $key_name
-
-    }
+	my $key_name = $_[0];
+	$sig0 = Net::DNS::RR::SIG->create('', $key_name) if $key_name
+	}
     
     $self->push('additional', $sig0) if $sig0;
     return $sig0;
