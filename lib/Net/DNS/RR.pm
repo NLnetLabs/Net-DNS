@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 2.103 2004/01/04 04:31:10 ctriv Exp $
+# $Id: RR.pm,v 2.105 2004/02/09 23:28:31 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -9,7 +9,7 @@ use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
 
-$VERSION = (qw$Revision: 2.103 $)[1];
+$VERSION = (qw$Revision: 2.105 $)[1];
 
 =head1 NAME
 
@@ -187,7 +187,7 @@ All names must be fully qualified.  The trailing dot (.) is optional.
  
  $rr = Net::DNS::RR->new(
 	 name => "foo.example.com",
-	 yype => "A",
+	 type => "A",
  );
 
 Returns an RR object of the appropriate type, or a C<Net::DNS::RR>
@@ -323,10 +323,8 @@ sub new_from_string {
 		'rdata'    => '',
 	};
 
-	
-	# $rdata!~/^\s*\\\#/ means that the rdata does not start with \# (rfc3597)
 
-	if ($RR{$rrtype} && $rdata !~ m/^\s*\\\#/ ) {
+	if ($RR{$rrtype} && $rdata !~ m/^\s*\\#/ ) {
 		my $subclass = $class->_get_subclass($rrtype);
 		
 		return $subclass->new_from_string($self, $rdata);
@@ -461,7 +459,7 @@ sub string {
 	 	 $self->{'ttl'},
 		 $self->{'class'},
 		 $self->{'type'},
-		 $self->rdatastr || '; no data',
+		 (defined $self->rdatastr and length $self->rdatastr) ? $self->rdatastr : '; no data',
    );
 }
 

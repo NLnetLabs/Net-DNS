@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Win32;
 #
-# $Id: Win32.pm,v 2.101 2003/12/29 07:14:32 ctriv Exp $
+# $Id: Win32.pm,v 2.103 2004/02/10 00:42:30 ctriv Exp $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Resolver::Base ();
 
 @ISA     = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.103 $)[1];
 
 use Win32::Registry;
 
@@ -125,7 +125,7 @@ sub init {
 			push @a, $ns unless (!$ns || $h{$ns});
 			$h{$ns} = 1;
 		}
-		$defaults->{'nameservers'} = \@a;
+		$defaults->{'nameservers'} = [map { m/(.*)/ } @a];
 	}
 
 	$class->read_env;
@@ -135,9 +135,6 @@ sub init {
 	} elsif (!@{$defaults->{'searchlist'}} && $defaults->{'domain'}) {
 		$defaults->{'searchlist'} = [ $defaults->{'domain'} ];
 	}
-
-	$defaults->{'usevc'} = 1;
-	$defaults->{'tcp_timeout'} = undef;
 }
 
 1;

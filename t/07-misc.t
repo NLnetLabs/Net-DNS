@@ -1,6 +1,6 @@
-# $Id: 07-misc.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: 07-misc.t,v 2.101 2004/02/09 23:28:31 ctriv Exp $
 
-use Test::More tests => 12;
+use Test::More tests => 15;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -49,3 +49,11 @@ my $warning = 0;
 
 is($warning, 0, 'No evil warning');
 
+
+{
+	my $mx = Net::DNS::RR->new('mx.t.net-dns.org 60 IN MX 0 mail.net-dns.org');
+	
+	like($mx->string, '/0 mail.net-dns.org/');
+	is($mx->preference, 0);
+	is($mx->exchange, 'mail.net-dns.org');
+}

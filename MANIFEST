@@ -58,7 +58,6 @@ lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TXT.pm
 lib/Net/DNS/RR/Unknown.pm
 lib/Net/DNS/RR/X25.pm
-lib/Net/DNS/Select.pm
 lib/Net/DNS/Update.pm
 Makefile.PL
 MANIFEST

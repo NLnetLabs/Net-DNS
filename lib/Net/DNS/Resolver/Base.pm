@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: Base.pm,v 2.105 2004/02/10 00:27:47 ctriv Exp $
 #
 
 use strict;
@@ -14,12 +14,12 @@ use Carp;
 use Config ();
 use Socket;
 use IO::Socket;
+use IO::Select;
 
 use Net::DNS;
 use Net::DNS::Packet;
-use Net::DNS::Select;
 
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.105 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -137,8 +137,8 @@ sub DESTROY {}
 sub read_env {
 	my ($invocant) = @_;
 	my $config     = ref $invocant ? $invocant : $invocant->defaults;
-	
-	$config->{'nameservers'} = [ split(' ', $ENV{'RES_NAMESERVERS'}) ]
+		
+	$config->{'nameservers'} = [ $ENV{'RES_NAMESERVERS'} =~ m/(\S+)/g ]
 		if exists $ENV{'RES_NAMESERVERS'};
 
 	$config->{'searchlist'}  = [ split(' ', $ENV{'RES_SEARCHLIST'})  ]
@@ -148,8 +148,8 @@ sub read_env {
 		if exists $ENV{'LOCALDOMAIN'};
 
 	if (exists $ENV{'RES_OPTIONS'}) {
-		foreach (split(' ', $ENV{'RES_OPTIONS'})) {
-			my ($name, $val) = split(/:/);
+		foreach ($ENV{'RES_OPTIONS'} =~ m/(\S+)/g) {
+			my ($name, $val) = split(m/:/);
 			$val = 1 unless defined $val;
 			$config->{$name} = $val if exists $config->{$name};
 		}
@@ -244,18 +244,16 @@ sub nameservers {
 	if (@_) {
 		my @a;
 		foreach my $ns (@_) {
-			if ($ns =~ /^\d+(\.\d+){0,3}$/) {
-				push @a, ($ns eq '0') ? '0.0.0.0' : $ns;
-			}
-			else {
+			if ($ns =~ /^(\d+(:?\.\d+){0,3})$/) {
+				push @a, ($1 eq '0') ? '0.0.0.0' : $1;
+			} else {
 				my @names;
 
 				if ($ns !~ /\./) {
 					if (defined $defres->searchlist) {
 						@names = map { $ns . '.' . $_ }
 							    $defres->searchlist;
-					}
-					elsif (defined $defres->domain) {
+					} elsif (defined $defres->domain) {
 						@names = ($ns . '.' . $defres->domain);
 					}
 				}
@@ -374,7 +372,7 @@ sub query {
 	$class = 'IN' unless defined($class);
 
 	# If the name doesn't contain any dots then append the default domain.
-	if ((index($name, '.') < 0) && $self->{'defnames'}) {
+	if ((index($name, '.') < 0) && (index($name, ':') < 0) && $self->{'defnames'}) {
 		$name .= ".$self->{domain}";
 	}
 
@@ -385,11 +383,42 @@ sub query {
 		$type = 'PTR';
 	}
 
+	# IPv4 address in IPv6 format (very lax regex)
+	if ($name =~ /^[0:]*:ffff:(\d+)\.(\d+)\.(\d+)\.(\d+)$/i) {
+		$name = "$4.$3.$2.$1.in-addr.arpa";
+		$type = 'PTR';
+	}
+	
+	# if the name looks like an IPv6 0-compressed IP address then expand
+	# PTR query. (eg 2001:5c0:0:1::2)
+	if ($name =~ /::/) {
+		# avoid stupid "Use of implicit split to @_ is deprecated" warning
+		while (scalar(my @parts = split (/:/, $name)) < 8) {
+			$name =~ s/::/:0::/;
+		}
+		$name =~ s/::/:0:/;
+	}	
+	
+	# if the name looks like an IPv6 address then do appropriate
+	# PTR query. (eg 2001:5c0:0:1:0:0:0:2)
+	if ($name =~ /:/) {
+		my (@stuff) = split (/:/, $name);
+		if (@stuff == 8) {
+			$name = 'ip6.arpa.';
+			$type = 'PTR';
+			foreach my $segment (@stuff) {
+				$segment = sprintf ("%04s", $segment);
+				$segment =~ m/(.)(.)(.)(.)/;
+				$name = "$4.$3.$2.$1.$name";
+			}
+		} else {
+			# no idea what this is
+		}
+	}
+
 	print ";; query($name, $type, $class)\n" if $self->{'debug'};
 	my $packet = Net::DNS::Packet->new($name, $type, $class);
 
-
-	
 	my $ans = $self->send($packet);
 
 	return $ans && $ans->header->ancount   ? $ans : undef;
@@ -448,8 +477,7 @@ sub send_tcp {
 			$sock = $self->{'sockets'}{$sock_key};
 			print ";; using persistent socket\n"
 				if $self->{'debug'};
-		}
-		else {
+		} else {
 
 			# IO::Socket carps on errors if Perl's -w flag is
 			# turned on.  Uncomment the next two lines and the
@@ -495,7 +523,7 @@ sub send_tcp {
 			next;
 		}
 
-		my $sel = Net::DNS::Select->new($sock);
+		my $sel = IO::Select->new($sock);
 
 		if ($sel->can_read($timeout)) {
 			my $buf = read_tcp($sock, &Net::DNS::INT16SZ, $self->{'debug'});
@@ -595,7 +623,7 @@ sub send_udp {
 		return;
 	}
 
-	my $sel = Net::DNS::Select->new($sock);
+	my $sel = IO::Select->new($sock);
 
 	# Perform each round of retries.
 	for (my $i = 0;
@@ -758,7 +786,7 @@ sub bgread {
 
 sub bgisready {
 	my $self = shift;
-	my $sel = Net::DNS::Select->new(@_);
+	my $sel = IO::Select->new(@_);
 	my @ready = $sel->can_read(0.0);
 	return @ready > 0;
 }
@@ -922,7 +950,7 @@ sub axfr_start {
 		return;
 	}
 
-	my $sel = Net::DNS::Select->new($sock);
+	my $sel = IO::Select->new($sock);
 
 	$self->{'axfr_sel'}       = $sel;
 	$self->{'axfr_rr'}        = [];
@@ -1167,5 +1195,3 @@ it and/or modify it under the same terms as Perl itself.
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>
 
 =cut
-
-
