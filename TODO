@@ -17,7 +17,7 @@ To Do list for Net::DNS
 	  $res->nameservers(map  { $_->nsdname }
 	                    grep { $_->type eq "NS" }
 		            $ans->authority);
-  - IPv6 Support (?)		       
+  - IPv6 Support (Coming Soon!)		       
 
 * Get rid of .* in AAAA.pm; write more tests for AAAA.pm.
 
@@ -40,9 +40,6 @@ To Do list for Net::DNS
     2136, Section 4).
 
   - Do case-insensitive comparisons in Net::DNS::Packet->dn_comp.
-
-* Consider getting rid of the "; no data" string from $rr->rdatastr.  Add
-  it possibly in $rr->string.
 
 * Improve the error handling and reporting.  Some things to do:
 
@@ -134,4 +131,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 2.100 2003/12/13 01:37:04 ctriv Exp $
+$Id: TODO,v 2.101 2004/01/04 04:31:10 ctriv Exp $

@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 2.102 2004/01/02 23:21:17 ctriv Exp $
+# $Id: RR.pm,v 2.103 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -9,7 +9,7 @@ use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
 
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$Revision: 2.103 $)[1];
 
 =head1 NAME
 
@@ -456,11 +456,13 @@ B<rdatastr> method to get the RR-specific data.
 sub string {
 	my $self = shift;
 
-	return $self->{'name'}  . ".\t" .
-	       $self->{'ttl'}   . "\t"  .
-	       $self->{'class'} . "\t"  .
-	       $self->{'type'}  . "\t"  .
-	       $self->rdatastr;
+	return join("\t",
+		"$self->{'name'}.",
+	 	 $self->{'ttl'},
+		 $self->{'class'},
+		 $self->{'type'},
+		 $self->rdatastr || '; no data',
+   );
 }
 
 =head2 rdatastr
@@ -475,8 +477,8 @@ to implement this method.
 sub rdatastr {
 	my $self = shift;
 	return exists $self->{'rdlength'}
-	       ? '; rdlength = ' . $self->{'rdlength'}
-	       : '; no data';
+	       ? "; rdlength = $self->{'rdlength'}"
+	       : '';
 }
 
 =head2 name

@@ -1,6 +1,6 @@
 package Net::DNS::RR::NAPTR;
 #
-# $Id: NAPTR.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: NAPTR.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,36 +9,34 @@ use Net::DNS;
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my ($order) = unpack("\@$offset n", $$data);
+		($self->{"order"} ) = unpack("\@$offset n", $$data);
 		$offset += &Net::DNS::INT16SZ;
-		my ($preference) = unpack("\@$offset n", $$data);
+		
+		($self->{"preference"}) = unpack("\@$offset n", $$data);
 		$offset += &Net::DNS::INT16SZ;
+		
 		my ($len) = unpack("\@$offset C", $$data);
 		++$offset;
-		my ($flags) = unpack("\@$offset a$len", $$data);
+		($self->{"flags"}) = unpack("\@$offset a$len", $$data);
 		$offset += $len;
+		
 		$len = unpack("\@$offset C", $$data);
 		++$offset;
-		my ($service) = unpack("\@$offset a$len", $$data);
+		($self->{"service"}) = unpack("\@$offset a$len", $$data);
 		$offset += $len;
+		
 		$len = unpack("\@$offset C", $$data);
 		++$offset;
-		my ($regexp) = unpack("\@$offset a$len", $$data);
+		($self->{"regexp"}) = unpack("\@$offset a$len", $$data);
 		$offset += $len;
-		my($replacement) = Net::DNS::Packet::dn_expand($data, $offset);
-  
-		$self->{"order"}       = $order;
-		$self->{"preference"}  = $preference;
-		$self->{"flags"}       = $flags;
-		$self->{"service"}     = $service;
-		$self->{"regexp"}      = $regexp;
-		$self->{"replacement"} = $replacement;
+		
+		($self->{"replacement"}) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
   
 	return bless $self, $class;
@@ -79,7 +77,7 @@ sub rdatastr {
 		            $self->{"replacement"} . '.';
 	}
 	else {
-		$rdatastr = "; no data";
+		$rdatastr = '';
 	}
 
 	return $rdatastr;

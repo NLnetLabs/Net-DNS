@@ -1,6 +1,6 @@
 package Net::DNS::RR::OPT;
 #
-# $Id: OPT.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: OPT.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 
 use strict;
@@ -11,48 +11,52 @@ use Net::DNS;
 use Carp;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
-$EDNSVERSION= 0 ;
+$EDNSVERSION = 0;
 
 %extendedrcodesbyname = (
-	"ONLY_RDATA"	=> 0,		# No name specified see 4.6 of 2671 
-        "UNDEF1"	=> 1,
-        "UNDEF2"	=> 2,
-        "UNDEF3"	=> 3,
-        "UNDEF4"	=> 4,
-        "UNDEF5"	=> 5,
-        "UNDEF6"	=> 6,
-        "UNDEF7"	=> 7,
-        "UNDEF8"	=> 8,
-        "UNDEF9"	=> 9,
-        "UNDEF10"	=> 10,
-        "UNDEF11"	=> 11,
-        "UNDEF12"	=> 12,
-        "UNDEF13"	=> 13,
-        "UNDEF14"	=> 14,
-        "UNDEF15"	=> 15,
-	"BADVERS"	=> 16,		# RFC 2671
+	"ONLY_RDATA" => 0,		# No name specified see 4.6 of 2671 
+	"UNDEF1"     => 1,
+	"UNDEF2"     => 2,
+	"UNDEF3"     => 3,
+	"UNDEF4"     => 4,
+	"UNDEF5"     => 5,
+	"UNDEF6"     => 6,
+	"UNDEF7"     => 7,
+	"UNDEF8"     => 8,
+	"UNDEF9"     => 9,
+	"UNDEF10"    => 10,
+	"UNDEF11"    => 11,
+	"UNDEF12"    => 12,
+	"UNDEF13"    => 13,
+	"UNDEF14"    => 14,
+	"UNDEF15"    => 15,
+	"BADVERS"    => 16,		# RFC 2671
 );
-%extendedrcodesbyval = map { ($extendedrcodesbyname{$_} => $_) } keys %extendedrcodesbyname;
+%extendedrcodesbyval = reverse %extendedrcodesbyname;
 
 
 
 sub new {
-    my ($class, $self, $data, $offset) = @_;
-    $self->{"name"} = "" ;   # should allway be "root"
-    if ($self->{"rdlength"} > 0) {
-	$self->{"optioncode"}=unpack("n",substr($$data,$offset,2));
-	$self->{"optionlength"}=unpack("n",substr($$data,$offset+2,2));
-	$self->{"optiondata"}=unpack("n",substr($$data,$offset+4,$self->{"optionlength"}));
-    }
-    $self->{"_rcode_flags"}=pack("N",$self->{"ttl"});
-    $self->{"extendedrcode"}=unpack("C",substr($self->{"_rcode_flags"},0,1));
-    $self->{"ednsversion"}=unpack("C",substr($self->{"_rcode_flags"},1,1));
-    $self->{"ednsflags"}=unpack("n",substr($self->{"_rcode_flags"},2,2));
-    
-    
-    return bless $self, $class;
+	my ($class, $self, $data, $offset) = @_;
+
+	$self->{"name"} = "" ;   # should allway be "root"
+
+	if ($self->{"rdlength"} > 0) {
+		$self->{"optioncode"}   = unpack("n", substr($$data, $offset, 2));
+		$self->{"optionlength"} = unpack("n", substr($$data, $offset+2, 2));
+		$self->{"optiondata"}   = unpack("n", substr($$data, $offset+4, $self->{"optionlength"}));
+	}
+
+	$self->{"_rcode_flags"}  = pack("N",$self->{"ttl"});
+	
+	$self->{"extendedrcode"} = unpack("C", substr($self->{"_rcode_flags"}, 0, 1));
+	$self->{"ednsversion"}   = unpack("C", substr($self->{"_rcode_flags"}, 1, 1));
+	$self->{"ednsflags"}     = unpack("n", substr($self->{"_rcode_flags"}, 2, 2));
+	
+	
+	return bless $self, $class;
 }
 
 
@@ -71,29 +75,31 @@ sub new_from_string {
 
 
 sub new_from_hash {
-    my ($class, $self ) = @_;
-
-    $self->{"name"} = "" ;   # should allway be "root"
-    # Setting the MTU smaller then 512 does not make sense 
-    # should we test for a maximum here?
-    if ( $self->{"class"} eq "IN" ||  $self->{"class"} <512 ){
-	$self->{"class"} = 512;    # Default value...
-    }
-    
-    $self->{"extendedrcode"}   = 0 unless exists $self->{"extendedrcode"};
-
-    $self->{"ednsflags"}  = 0 unless exists $self->{"ednsflags"};
-    $self->{"ednsversion"}  =  $Net::DNS::RR::OPT::EDNSVERSION unless exists $self->{"ednsversion"};
-    $self->{"ttl"}= unpack ("N", 
-			  pack("C", $self->{"extendedrcode"} ) .
-			  pack("C", $self->{"ednsversion"} )  .
-			  pack("n", $self->{"ednsflags"}));
-
-    if (exists  $self->{"optioncode"}) {
-	$self->{"optiondata"} = "" if ! exists  $self->{"optiondata"};
-	$self->{"optionlength"}= length $self->{"optiondata"}
-    }
-    return bless $self, $class;
+	my ($class, $self ) = @_;
+	
+	$self->{"name"} = "" ;   # should allway be "root"
+	# Setting the MTU smaller then 512 does not make sense 
+	# should we test for a maximum here?
+	if ($self->{"class"} eq "IN" || $self->{"class"} < 512) {
+		$self->{"class"} = 512;    # Default value...
+	}
+	
+	$self->{"extendedrcode"} = 0 unless exists $self->{"extendedrcode"};
+	
+	$self->{"ednsflags"}   = 0 unless exists $self->{"ednsflags"};
+	$self->{"ednsversion"} =  $Net::DNS::RR::OPT::EDNSVERSION unless exists $self->{"ednsversion"};
+	$self->{"ttl"}= unpack ("N", 
+		pack("C", $self->{"extendedrcode"}) .
+		pack("C", $self->{"ednsversion"})  .
+		pack("n", $self->{"ednsflags"})
+	);
+	
+	if (exists  $self->{"optioncode"}) {
+		$self->{"optiondata"}   = "" if ! exists  $self->{"optiondata"};
+		$self->{"optionlength"} = length $self->{"optiondata"}
+	}
+	
+	return bless $self, $class;
 
 }
 
@@ -101,48 +107,40 @@ sub new_from_hash {
 
 
 sub string {
-   my  $self=shift;
+   my $self = shift;
    return
-     "; EDNS Version ". $self->{"ednsversion"} . 
-        "\t UDP Packetsize: " .  $self->{"class"} . 
-	"\n; EDNS-RCODE:\t". $self->{"extendedrcode"} .
-	   " (" . $extendedrcodesbyval{ $self->{"extendedrcode"} }. ")" .
-	"\n; EDNS-FLAGS:\t". sprintf "0x%04x", $self->{"ednsflags"} .
+	"; EDNS Version "     . $self->{"ednsversion"} . 
+	"\t UDP Packetsize: " .  $self->{"class"} . 
+	"\n; EDNS-RCODE:\t"   . $self->{"extendedrcode"} .
+	" (" . $extendedrcodesbyval{ $self->{"extendedrcode"} }. ")" .
+	"\n; EDNS-FLAGS:\t"   . sprintf("0x%04x", $self->{"ednsflags"}) .
 	"\n";
-
-    }
+}
 
 
 sub rdatastr {
-	my $self = shift;
-	my $rdatastr;
-	$rdatastr = "; Parsing of OPT rdata is not yet implemented";
-	return $rdatastr;
+	return '; Parsing of OPT rdata is not yet implemented';
 }
-
-
-
 
 
 sub rr_rdata {
-    my $self = shift;
-    my $rdata;
-    if (exists $self->{"optioncode"}) {
-	$rdata= pack("n",$self->{"optioncode"}) ;
-	$rdata.= pack("n",$self->{"optionlength"}); 
-	$rdata.= $self->{"optiondata"}
-    } else {
-	$rdata="";
-    }
-    return $rdata;
+	my $self = shift;
+	my $rdata;
+	
+	if (exists $self->{"optioncode"}) {
+		$rdata  = pack("n", $self->{"optioncode"});
+		$rdata .= pack("n", $self->{"optionlength"}); 
+		$rdata .= $self->{"optiondata"}
+	} else {
+		$rdata = "";
+	}
+	
+	return $rdata;
 }
 
 
-
-
-
 1;
-
+__END__
 
 =head1 NAME
 

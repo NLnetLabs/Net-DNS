@@ -1,6 +1,24 @@
 Revision history for Net::DNS
 =============================
 
+** 0.44_02
+
+The XS detection code was broken.  We actually use the XS bits now.
+
+Major cleanups/optimizations of the various RR subclasses.  This release
+of Net::DNS is over twice as fast at parsing dns packets as 0.44.
+
+** NOTICE **
+
+$rr->rdatastr no longer returns '; no data' if the RR record has no
+data.  This happens in $rr->string now.
+
+Net::DNS::Packet::safe_push() no longer exists.  The method is now only 
+avalible from Net::DNS::Update objects.
+
+
+** 0.44_01 January 3, 2004
+
 Net::DNS::RR objects were not playing nice with Storable, this caused 
 the axfr demo script to fail.  Thanks to Joe Dial for the report.
 
@@ -374,4 +392,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 2.105 2004/01/02 23:30:43 ctriv Exp $
+$Id: Changes,v 2.107 2004/01/04 04:42:52 ctriv Exp $

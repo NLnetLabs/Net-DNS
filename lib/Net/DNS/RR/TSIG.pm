@@ -1,6 +1,6 @@
 package Net::DNS::RR::TSIG;
 #
-# $Id: TSIG.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: TSIG.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use constant DEFAULT_ALGORITHM => "HMAC-MD5.SIG-ALG.REG.INT";
 use constant DEFAULT_FUDGE     => 300;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 # a signing function for the HMAC-MD5 algorithm. This can be overridden using
 # the sign_func element
@@ -33,31 +33,22 @@ sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my $alg;
-		($alg, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-		$self->{"algorithm"} = $alg;
+		($self->{"algorithm"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
 
 		my ($time_high, $time_low) = unpack("\@$offset nN", $$data);
 		$self->{"time_signed"} = $time_low;	# bug
 		$offset += &Net::DNS::INT16SZ + &Net::DNS::INT32SZ;
 
-		my ($fudge, $macsize) = unpack("\@$offset nn", $$data);
-		$self->{"fudge"} = $fudge;
-		$self->{"mac_size"} = $macsize;
+		@{$self}{qw(fudge mac_size)} = unpack("\@$offset nn", $$data);
 		$offset += &Net::DNS::INT16SZ + &Net::DNS::INT16SZ;
 
-		my $mac = substr($$data, $offset, $macsize);
-		$self->{"mac"} = $mac;
-		$offset += $macsize;
+		$self->{"mac"} = substr($$data, $offset, $self->{'mac_size'});
+		$offset += $self->{'mac_size'};
 
-		my ($oid, $error, $olen) = unpack("\@$offset nnn", $$data);
-		$self->{"original_id"} = $oid;
-		$self->{"error"} = $error;
-		$self->{"other_len"} = $olen;
-		$offset += &Net::DNS::INT16SZ + &Net::DNS::INT16SZ
-                        +  &Net::DNS::INT16SZ;
+		@{$self}{qw(original_id error other_len)} = unpack("\@$offset nnn", $$data);
+		$offset += &Net::DNS::INT16SZ * 3;
 
-		my $odata = substr($$data, $offset, $olen);
+		my $odata = substr($$data, $offset, $self->{'other_len'});
 		my ($odata_high, $odata_low) = unpack("nN", $odata);
 		$self->{"other_data"} = $odata_low;
 	}
@@ -126,9 +117,8 @@ sub rdatastr {
 		if ($self->{"other_len"} && defined($self->{"other_data"})) {
 			$rdatastr .= " $self->{other_data}";
 		}
-	}
-	else {
-		$rdatastr = "; no data";
+	} else {
+		$rdatastr = "";
 	}
 
 	return $rdatastr;

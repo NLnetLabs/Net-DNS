@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSAP;
 #
-# $Id: NSAP.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: NSAP.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -8,7 +8,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -52,8 +52,7 @@ sub new {
 			$self->{"id"}   = sprintf("%02x" x 6, @id);
 			$self->{"sel"}  = sprintf("%02x" x 1, $sel);
 
-		}
-		else {
+		} else {
 			# What to do for unsupported versions?
 		}
 	}
@@ -111,13 +110,11 @@ sub rdatastr {
 	if (exists $self->{"afi"}) {
 		if ($self->{"afi"} eq "47") {
 			$rdatastr = join('', $self->idp, $self->dsp);
-		}
-		else {
+		} else {
 			$rdatastr = "; AFI $self->{'afi'} not supported";
 		}
-	}
-	else {
-		$rdatastr = "; no data";
+	} else {
+		$rdatastr = '';
 	}
 
 	return $rdatastr;

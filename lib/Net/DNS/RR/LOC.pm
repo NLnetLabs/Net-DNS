@@ -1,6 +1,6 @@
 package Net::DNS::RR::LOC;
 #
-# $Id: LOC.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: LOC.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw(
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 # Powers of 10 from 0 to 9 (used to speed up calculations).
 @poweroften = (1, 10, 100, 1_000, 10_000, 100_000, 1_000_000,
@@ -159,14 +159,11 @@ sub rdatastr {
 			            sprintf("%.2fm", $size)      . " " .
 			            sprintf("%.2fm", $horiz_pre) . " " .
 			            sprintf("%.2fm", $vert_pre);
+		} else {
+			$rdatastr = "; version " . $self->{"version"} . " not supported";
 		}
-		else {
-			$rdatastr = "; version " . $self->{"version"} . 
-				    " not supported";
-		}
-	}
-	else {
-		$rdatastr = "; no data";
+	} else {
+		$rdatastr = '';
 	}
 
 	return $rdatastr;

@@ -1,6 +1,6 @@
 package Net::DNS::RR::SOA;
 #
-# $Id: SOA.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: SOA.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -8,26 +8,16 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my ($mname, $rname);
-		($mname, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-		($rname, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
+		($self->{"mname"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
+		($self->{"rname"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
 
-		my ($serial, $refresh, $retry, $expire, $minimum)
-			= unpack("\@$offset N5", $$data);
-	
-		$self->{"mname"}   = $mname;
-		$self->{"rname"}   = $rname;
-		$self->{"serial"}  = $serial;
-		$self->{"refresh"} = $refresh;
-		$self->{"retry"}   = $retry;
-		$self->{"expire"}  = $expire;
-		$self->{"minimum"} = $minimum;
+		@{$self}{qw(serial refresh retry expire minimum)} = unpack("\@$offset N5", $$data);
 	}
 
 	return bless $self, $class;
@@ -42,19 +32,10 @@ sub new_from_string {
 		# XXX do we need to strip out comments here now that RR.pm does it?
 		$string =~ s/;.*$//mg;
 
-		my ($mname, $rname, $serial,
-		    $refresh, $retry, $expire, $minimum) = $string =~ /(\S+)/g;
+		@{$self}{qw(mname rname serial refresh retry expire minimum)} = $string =~ /(\S+)/g;
 
-		$mname =~ s/\.+$//;
-		$rname =~ s/\.+$//;
-
-		$self->{"mname"}   = $mname;
-		$self->{"rname"}   = $rname;
-		$self->{"serial"}  = $serial;
-		$self->{"refresh"} = $refresh;
-		$self->{"retry"}   = $retry;
-		$self->{"expire"}  = $expire;
-		$self->{"minimum"} = $minimum;
+		$self->{'mname'} =~ s/\.+$//;
+		$self->{'rname'} =~ s/\.+$//;
 	}
 
 	return bless $self, $class;
@@ -71,9 +52,8 @@ sub rdatastr {
 		$rdatastr .= "\t" x 5 . "$self->{retry}\t; Retry\n";
 		$rdatastr .= "\t" x 5 . "$self->{expire}\t; Expire\n";
 		$rdatastr .= "\t" x 5 . "$self->{minimum} )\t; Minimum TTL";
-	}
-	else {
-		$rdatastr = "; no data";
+	} else {
+		$rdatastr = '';
 	}
 
 	return $rdatastr;
@@ -88,15 +68,9 @@ sub rr_rdata {
 
 	if (exists $self->{"mname"}) {
 		$rdata .= $packet->dn_comp($self->{"mname"}, $offset);
+		$rdata .= $packet->dn_comp($self->{"rname"},  $offset + length $rdata);
 
-		$rdata .= $packet->dn_comp($self->{"rname"},
-					   $offset + length $rdata);
-
-		$rdata .= pack("N5", $self->{"serial"},
-				     $self->{"refresh"},
-				     $self->{"retry"},
-				     $self->{"expire"},
-				     $self->{"minimum"});
+		$rdata .= pack("N5", @{$self}{qw(serial refresh retry expire minimum)});
 	}
 
 	return $rdata;
@@ -112,15 +86,9 @@ sub _canonicalRdata {
     # print a warning otherwise.
     
     if (exists $self->{"mname"}) {
-	$rdata .= $self->_name2wire($self->{"mname"});
-	
-	$rdata .=  $self->_name2wire($self->{"rname"});
-
-		$rdata .= pack("N5", $self->{"serial"},
-				     $self->{"refresh"},
-				     $self->{"retry"},
-				     $self->{"expire"},
-				     $self->{"minimum"});
+		$rdata .= $self->_name2wire($self->{"mname"});		
+		$rdata .= $self->_name2wire($self->{"rname"});
+		$rdata .= pack("N5", @{$self}{qw(serial refresh retry expire minimum)});
 	}
 
 	return $rdata;

@@ -1,9 +1,10 @@
 package Net::DNS;
 #
-# $Id: DNS.pm,v 2.101 2003/12/30 22:49:58 ctriv Exp $
+# $Id: DNS.pm,v 2.103 2004/01/04 04:42:52 ctriv Exp $
 #
 use strict;
 use vars qw(
+	$HAVE_XS
 	$VERSION
 	$DNSSEC
 	@ISA
@@ -23,7 +24,15 @@ use vars qw(
 );
 
 
-$VERSION = '0.44_01';
+
+BEGIN {
+	require DynaLoader;
+	require Exporter;
+	
+	@ISA     = qw(Exporter DynaLoader);
+	$VERSION = '0.44_02';
+	$HAVE_XS = eval { __PACKAGE__->bootstrap(); 1 } ? 1 : 0;
+}
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -33,17 +42,10 @@ use Net::DNS::Question;
 use Net::DNS::RR;
 
 BEGIN {
-	eval { require Net::DNS::RR::SIG };
-	# $@ will be true if any errors where encountered 
-	# loading SIG.pm
-	$DNSSEC = $@ ? 0 : 1;
+	$DNSSEC = eval { require Net::DNS::RR::SIG; 1 } ? 1 : 0;
 }
  
-require DynaLoader;
-require Exporter;
-@ISA = qw(Exporter DynaLoader);
 
-eval { __PACKAGE__->bootstrap() };
 
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
 

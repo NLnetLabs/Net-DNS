@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 2.100 2003/12/13 01:37:04 ctriv Exp $
+# $Id: Packet.pm,v 2.101 2004/01/04 04:12:57 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 =head1 NAME
 
@@ -63,7 +63,6 @@ sub new {
 	my %self;
 
 	$self{"compnames"} = {};
-	$self{'seen'}      = {};
 
   PARSE: {
 	if (ref($_[0])) {
@@ -150,8 +149,6 @@ sub new {
 				       : undef;
 			}
 			
-			$self{'seen'}{$rrobj->string}++;
-
 			push(@{$self{"answer"}}, $rrobj);
 			$rrobj->print if $debug;
 		}
@@ -183,8 +180,6 @@ sub new {
 				       : undef;
 			}
 			
-			$self{'seen'}{$rrobj->string}++;
-
 			push(@{$self{"authority"}}, $rrobj);
 			$rrobj->print if $debug;
 		}
@@ -213,14 +208,11 @@ sub new {
 				       : undef;
 			}
 
-	
-			$self{'seen'}{$rrobj->string}++;
 		
 			push(@{$self{"additional"}}, $rrobj);
 			$rrobj->print if $debug;
 		}
-	}
-	else {
+	} else {
 		my ($qname, $qtype, $qclass) = @_;
 
 		$qtype  = "A"  unless defined $qtype;
@@ -520,62 +512,25 @@ sub push {
 		push(@{$self->{"answer"}}, @rr);
 		my $ancount = $self->{"header"}->ancount;
 		$self->{"header"}->ancount($ancount + @rr);
-	}
-	elsif ($section eq "authority" || $section eq "update") {
+	} elsif ($section eq "authority" || $section eq "update") {
 		push(@{$self->{"authority"}}, @rr);
 		my $nscount = $self->{"header"}->nscount;
 		$self->{"header"}->nscount($nscount + @rr);
-	}
-	elsif ($section eq "additional") {
+	} elsif ($section eq "additional") {
 		push(@{$self->{"additional"}}, @rr);
 		my $adcount = $self->{"header"}->adcount;
 		$self->{"header"}->adcount($adcount + @rr);
-	}
-	elsif ($section eq "question") {
+	} elsif ($section eq "question") {
 		push(@{$self->{"question"}}, @rr);
 		my $qdcount = $self->{"header"}->qdcount;
 		$self->{"header"}->qdcount($qdcount + @rr);
-	}
-	else {
+	} else {
 		Carp::carp(qq(invalid section "$section"\n));
 		return;
 	}
-	
-	foreach (@rr) {
-		$self->{'seen'}{$_->string}++;
-	}
 }
 
-=head2 safe_push
 
-    $packet->safe_push("pre", $rr);
-    $packet->safe_push("update", $rr);
-    $packet->safe_push("additional", $rr);
-
-    $packet->safe_push("update", $rr1, $rr2, $rr3);
-    $packet->safe_push("update", @rr);
-
-Adds unseen RRs to the specified section of the packet. This is useful
-to insure that the packets do not contain redundant RRs in any of the
-sections.
-
-This method will no longer be available in Net::DNS::Packet soon.  It 
-should only be used on Net::DNS::Update objects. 
-
-=cut
-
-sub safe_push {
-	my ($self, $section, @rrs) = @_;
-	
-	carp "Deprecated use of safe_push() on Net::DNS::Packet object, use Net::DNS::Update."
-		unless $self->isa('Net::DNS::Update');
-	
-	foreach my $rr (@rrs) {
-		next if $self->{'seen'}->{$rr->string};
-		
-		$self->push($section, $rr);
-	}
-}
 
 =head2 pop
 
@@ -605,22 +560,19 @@ sub pop {
 			$rr = pop @{$self->{"answer"}};
 			$self->{"header"}->ancount($ancount - 1);
 		}
-	}
-	elsif ($section eq "authority" || $section eq "update") {
+	} elsif ($section eq "authority" || $section eq "update") {
 		my $nscount = $self->{"header"}->nscount;
 		if ($nscount) {
 			$rr = pop @{$self->{"authority"}};
 			$self->{"header"}->nscount($nscount - 1);
 		}
-	}
-	elsif ($section eq "additional") {
+	} elsif ($section eq "additional") {
 		my $adcount = $self->{"header"}->adcount;
 		if ($adcount) {
 			$rr = pop @{$self->{"additional"}};
 			$self->{"header"}->adcount($adcount - 1);
 		}
-	}
-	else {
+	} else {
 		Carp::cluck(qq(invalid section "$section"\n));
 	}
 
@@ -689,7 +641,7 @@ Returns B<(undef, undef)> if the domain name couldn't be expanded.
 # This is very hot code, so we try to keep things fast.  This makes for
 # odd style sometimes.
 {
-	if (defined &dn_expand_XS) {
+	if ($Net::DNS::HAVE_XS) {
 		*dn_expand = \&dn_expand_XS;
 	} else {
 		*dn_expand = \&dn_expand_PP;
@@ -704,6 +656,7 @@ sub dn_expand_PP {
 	my $int16sz = &Net::DNS::INT16SZ;
 
 	# Debugging
+	#warn "USING PURE PERL dn_expand()\n";
 	#if ($seen->{$offset}) {
 	#	die "dn_expand: loop: offset=$offset (seen = ",
 	#	     join(",", keys %$seen), ")\n";
@@ -829,34 +782,34 @@ The method will call C<Carp::croak()> if Net::DNS::RR::SIG cannot be found.
 =cut
 
 sub sign_sig0 {
-    my $self = shift;
-
-    Carp::croak('The sign_sig0() method is only available when the Net::DNS::SEC package is installed.') 
-    		unless $Net::DNS::DNSSEC;
-    
-    
-    my $sig0;
-    
-    if (@_ == 1 && ref($_[0])) {
-	if (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG::Private")){
-	    Carp::carp ('Net::DNS::RR::SIG::Private is deprecated use Net::DNS::SEC::Private instead');
-	    $sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
-
-	}elsif (UNIVERSAL::isa($_[0],"Net::DNS::SEC::Private")){
-	    $sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
-
-	}elsif (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG")){
-	    $sig0 = $_[0];
-	}else{
-	  Carp::croak('You are passing an incompatible class as argument to sign_sig0: '.ref($_[0]));
+	my $self = shift;
+	
+	Carp::croak('The sign_sig0() method is only available when the Net::DNS::SEC package is installed.') 
+			unless $Net::DNS::DNSSEC;
+	
+	
+	my $sig0;
+	
+	if (@_ == 1 && ref($_[0])) {
+		if (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG::Private")) {
+			Carp::carp('Net::DNS::RR::SIG::Private is deprecated use Net::DNS::SEC::Private instead');
+			$sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
+		
+		} elsif (UNIVERSAL::isa($_[0],"Net::DNS::SEC::Private")) {
+			$sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
+		
+		} elsif (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG")) {
+			$sig0 = $_[0];
+		} else {
+		  Carp::croak('You are passing an incompatible class as argument to sign_sig0: ' . ref($_[0]));
+		}
+	} elsif (@_ == 1 && ! ref($_[0])) {
+		my $key_name = $_[0];
+		$sig0 = Net::DNS::RR::SIG->create('', $key_name) if $key_name
 	}
-    } elsif (@_ == 1 && ! ref($_[0])) {
-	my $key_name = $_[0];
-	$sig0 = Net::DNS::RR::SIG->create('', $key_name) if $key_name
-	}
-    
-    $self->push('additional', $sig0) if $sig0;
-    return $sig0;
+	
+	$self->push('additional', $sig0) if $sig0;
+	return $sig0;
 }
 
 
@@ -952,6 +905,13 @@ sub parse_rr {
 
 	$offset += $rdlength;
 	return ($rrobj, $offset);
+}
+
+sub safe_push {
+	Carp::croak(<<END);
+Net::DNS::Packet::safe_push() has been removed.  The safe_push() method
+is only avalible from the Net::DNS::Update class.
+END
 }
 
 =head1 COPYRIGHT

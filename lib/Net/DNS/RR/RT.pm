@@ -1,6 +1,6 @@
 package Net::DNS::RR::RT;
 #
-# $Id: RT.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: RT.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,17 +9,16 @@ use Net::DNS;
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my ($preference) = unpack("\@$offset n", $$data);
+		($self->{"preference"})   = unpack("\@$offset n", $$data);
 		$offset += &Net::DNS::INT16SZ;
-		my ($intermediate) = Net::DNS::Packet::dn_expand($data, $offset);
-		$self->{"preference"} = $preference;
-		$self->{"intermediate"} = $intermediate;
+		
+		($self->{"intermediate"}) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
 
 	return bless $self, $class;
@@ -40,9 +39,9 @@ sub new_from_string {
 sub rdatastr {
 	my $self = shift;
 
-	return exists $self->{"preference"}
+	return $self->{"preference"}
 	       ? "$self->{preference} $self->{intermediate}."
-	       : "; no data";
+	       : '';
 }
 
 sub rr_rdata {
@@ -57,6 +56,7 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
 sub _canonicalRdata {
 	my ($self, $packet, $offset) = @_;
 	my $rdata = "";
@@ -64,10 +64,11 @@ sub _canonicalRdata {
 	if (exists $self->{"preference"}) {
 		$rdata .= pack("n", $self->{"preference"});
 		$rdata .= $self->_name2wire($self->{"intermediate"});
-	    }
+	}
 
 	return $rdata;
 }
+
 
 1;
 __END__

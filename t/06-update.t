@@ -1,4 +1,4 @@
-# $Id: 06-update.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: 06-update.t,v 2.101 2004/01/04 04:31:11 ctriv Exp $
 
 use Test::More tests => 72;
 use strict;
@@ -9,6 +9,9 @@ BEGIN { use_ok('Net::DNS'); } #1
 
 sub is_empty {
 	my ($string) = @_;
+	
+	return 1 if not $string;
+	
 	return ($string eq "; no data" || $string eq "; rdlength = 0");
 }
 

@@ -1,6 +1,6 @@
 package Net::DNS::RR::RP;
 #
-# $Id: RP.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: RP.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -8,17 +8,14 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my ($mbox, $txtdname);
-		($mbox, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-		($txtdname, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-		$self->{"mbox"} = $mbox;
-		$self->{"txtdname"} = $txtdname;
+		($self->{"mbox"},     $offset) = Net::DNS::Packet::dn_expand($data, $offset);
+		($self->{"txtdname"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
 
 	return bless $self, $class;
@@ -40,9 +37,7 @@ sub new_from_string {
 sub rdatastr {
 	my $self = shift;
 
-	return exists $self->{"mbox"}
-	       ? "$self->{mbox}. $self->{txtdname}."
-	       : "; no data";
+	return $self->{"mbox"} ? "$self->{mbox}. $self->{txtdname}." : '';
 }
 
 sub rr_rdata {
@@ -60,14 +55,14 @@ sub rr_rdata {
 
 
 sub _canonicalRdata {
-    my $self = shift;
+    my $self  = shift;
     my $rdata = "";
     
-    if (exists $self->{"mbox"}) {
-	$rdata .= $self->_name2wire($self->{"mbox"});
-	$rdata .=  $self->_name2wire($self->{"txtdname"});
-	
-    }
+	if (exists $self->{"mbox"}) {
+		$rdata .= $self->_name2wire($self->{"mbox"});
+		$rdata .= $self->_name2wire($self->{"txtdname"});
+	}
+
     return $rdata;
 }
 

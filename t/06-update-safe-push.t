@@ -1,6 +1,6 @@
-# $Id: 06-update-safe-push.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: 06-update-safe-push.t,v 2.101 2004/01/04 04:31:11 ctriv Exp $
 
-use Test::More tests => 73;
+use Test::More tests => 37;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }     #1
@@ -65,11 +65,6 @@ foreach my $try (@tests) {
 	
 		is($packet->header->$count_meth(), $count, "$section right");
 	
-		# Now we test the parsing in new.
-		my $packet2 = Net::DNS::Update->new(\($packet->data));
-		$packet2->safe_push($section, @rrs);
-		
-		is($packet2->header->$count_meth(), $count, "$section right");
 	}
 	
 	#
@@ -84,14 +79,6 @@ foreach my $try (@tests) {
 		}
 	
 		is($packet->header->$count_meth(), $count, "$section right");
-	
-		# Now we test the parsing in new.
-		my $packet2 = Net::DNS::Update->new(\($packet->data));
-		foreach (@rrs) {
-			$packet2->safe_push($section, $_);
-		}
-		
-		is($packet2->header->$count_meth(), $count, "$section right");
 	}
 
 }

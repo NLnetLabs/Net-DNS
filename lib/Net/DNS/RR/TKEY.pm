@@ -1,6 +1,6 @@
 package Net::DNS::RR::TKEY;
 #
-# $Id: TKEY.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: TKEY.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -10,7 +10,7 @@ use Digest::HMAC_MD5;
 use MIME::Base64;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -18,30 +18,22 @@ sub new {
 	# if we have some data then we are parsing an incoming TKEY packet
 	# see RFC2930 for the packet format
 	if ($self->{"rdlength"} > 0) {
-		my $alg;
-		($alg, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-		$self->{"algorithm"} = $alg;
+		($self->{"algorithm"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
 
-		my ($inception, $expiration) = unpack("\@$offset NN", $$data);
-		$self->{"inception"} = $inception;
-		$self->{"expiration"} = $expiration;
+		@{$self}{qw(inception expiration)} = unpack("\@$offset NN", $$data);
 		$offset += &Net::DNS::INT32SZ + &Net::DNS::INT32SZ;
 
-		my ($mode, $error) = unpack("\@$offset nn", $$data);
-		$self->{"mode"} = $mode;
-		$self->{"error"} = $error;
+		@{$self}{qw(inception expiration)} = unpack("\@$offset nn", $$data);
 		$offset += &Net::DNS::INT16SZ + &Net::DNS::INT16SZ;
 
 		my ($key_len) = unpack("\@$offset n", $$data);
 		$offset += &Net::DNS::INT16SZ;
-		my $key = substr($$data, $offset, $key_len);
-		$self->{"key"} = $key;
+		$self->{"key"} = substr($$data, $offset, $key_len);
 		$offset += $key_len;
 
 		my ($other_len) = unpack("\@$offset n", $$data);
 		$offset += &Net::DNS::INT16SZ;
-		my $otherdata = substr($$data, $offset, $other_len);
-		$self->{"other_data"} = $otherdata;
+		$self->{"other_data"} = substr($$data, $offset, $other_len);
 		$offset += $other_len;
 	}
 
@@ -92,9 +84,8 @@ sub rdatastr {
 		if ($self->{"other_len"} && defined($self->{"other_data"})) {
 			$rdatastr .= " $self->{other_data}";
 		}
-	}
-	else {
-		$rdatastr = "; no data";
+	} else {
+		$rdatastr = '';
 	}
 
 	return $rdatastr;

@@ -1,6 +1,6 @@
 package Net::DNS::Update;
 #
-# $Id: Update.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: Update.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION @ISA);
@@ -8,7 +8,7 @@ use vars qw($VERSION @ISA);
 use Net::DNS;
 
 @ISA     = qw(Net::DNS::Packet);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 =head1 NAME
 
@@ -69,6 +69,8 @@ sub new {
 	$self->header->opcode('UPDATE');
 	$self->header->rd(0);
 
+	$self->{'seen'} = {};
+
 
 	return $self;
 }
@@ -83,6 +85,31 @@ sub new {
 Adds unseen RRs to the specified section of the update. This is useful
 to insure that the udpates do not contain redundant RRs in any of the
 sections.
+
+=cut
+
+sub safe_push {
+	my ($self, $section, @rrs) = @_;
+	
+	foreach my $rr (@rrs) {
+		next if $self->{'seen'}->{$rr->string};
+		
+		$self->push($section, $rr);
+	}
+}
+
+
+# overload push to DTRT.  We don't need to worry about populating
+# seen inside of new() because you only can use safe_push with
+# an update object.
+
+sub push {
+	my ($self, $section, @rrs) = @_;
+	
+	$self->{'seen'}{$_->string}++ for @rrs;
+
+	return $self->SUPER::push($section, @rrs);
+}
 
 =head1 EXAMPLES
 

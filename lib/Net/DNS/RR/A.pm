@@ -1,6 +1,6 @@
 package Net::DNS::RR::A;
 #
-# $Id: A.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: A.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,14 +9,13 @@ use Socket;
 use Net::DNS;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my $addr = inet_ntoa(substr($$data, $offset, 4));
-		$self->{"address"} = $addr;
+		$self->{"address"} = inet_ntoa(substr($$data, $offset, 4));
 	}
 
 	return bless $self, $class;
@@ -40,19 +39,15 @@ sub new_from_string {
 sub rdatastr {
 	my $self = shift;
 
-	return exists $self->{"address"} && $self->{"address"}
-	       ? $self->{"address"}
-	       : "; no data";
+	return $self->{"address"} || '';
 }
 
 sub rr_rdata {
 	my $self = shift;
 
-	my $rdata = exists $self->{"address"}
-		  ? inet_aton($self->{"address"})
-		  : "";
-
-	return $rdata;
+	return exists $self->{"address"}
+			  ? inet_aton($self->{"address"})
+			  : "";
 }
 
 1;

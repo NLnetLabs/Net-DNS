@@ -1,6 +1,6 @@
 package Net::DNS::RR::CERT;
 #
-# $Id: CERT.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: CERT.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 # Written by Mike Schiraldi <raldi@research.netsol.com> for VeriSign
 
@@ -12,7 +12,7 @@ use Net::DNS::Packet;
 use MIME::Base64;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 my %formats = 
     (
@@ -107,7 +107,7 @@ sub rdatastr {
                 $rdatastr = "$format $self->{tag} $algorithm $cert";
 	}
 	else {
-		$rdatastr = "; no data";
+		$rdatastr = '';
 	}
         
 	return $rdatastr;

@@ -1,6 +1,6 @@
 package Net::DNS::RR::SRV;
 #
-# $Id: SRV.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: SRV.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,20 +9,16 @@ use Net::DNS;
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my ($priority, $weight, $port) = unpack("\@$offset n3", $$data);
+		@{$self}{qw(priority weight port)} = unpack("\@$offset n3", $$data);
 		$offset += 3 * &Net::DNS::INT16SZ;
-		my($target) = Net::DNS::Packet::dn_expand($data, $offset);
-
-		$self->{"priority"} = $priority;
-		$self->{"weight"}   = $weight;
-		$self->{"port"}     = $port;
-		$self->{"target"}   = $target;
+		
+		($self->{"target"}) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
 
 	return bless $self, $class;
@@ -46,12 +42,10 @@ sub rdatastr {
 	my $self = shift;
 	my $rdatastr;
 
-	if (exists $self->{"priority"}) {
-		$rdatastr = "$self->{priority} $self->{weight} " .
-			    "$self->{port} $self->{target}.";
-	}
-	else {
-		$rdatastr = "; no data";
+	if ($self->{"priority"}) {
+		$rdatastr = join(' ', @{$self}{qw(priority weight port target)});
+	} else {
+		$rdatastr = '';
 	}
 
 	return $rdatastr;
@@ -62,10 +56,8 @@ sub rr_rdata {
 	my $rdata = "";
 
 	if (exists $self->{"priority"}) {
-		$rdata .= pack("n3", $self->{"priority"}, $self->{"weight"},
-				     $self->{"port"});
-		$rdata .= $packet->dn_comp($self->{"target"},
-					   $offset + length $rdata);
+		$rdata .= pack("n3", @{$self}{qw(priority weight port)});
+		$rdata .= $packet->dn_comp($self->{"target"}, $offset + length $rdata);
 	}
 
 	return $rdata;
@@ -73,13 +65,12 @@ sub rr_rdata {
 
 
 sub _canonicalRdata {
-    my $self  = shift;
-    my $rdata = '';
-    
-    if (exists $self->{"priority"}) {
-	$rdata .= pack("n3", $self->{"priority"}, $self->{"weight"},
-		       $self->{"port"});
-	$rdata .= $self->name_2wire($self->{"target"});
+	my $self  = shift;
+	my $rdata = '';
+	
+	if (exists $self->{"priority"}) {
+		$rdata .= pack("n3", @{$self}{qw(priority weight port)});
+		$rdata .= $self->name_2wire($self->{"target"});
 	}
 
 	return $rdata;

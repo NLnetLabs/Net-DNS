@@ -1,6 +1,6 @@
 package Net::DNS::RR::PX;
 #
-# $Id: PX.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: PX.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,23 +9,17 @@ use Net::DNS;
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
-		my ($preference, $map822, $mapx400);
-
-		($preference) = unpack("\@$offset n", $$data);
+		($self->{"preference"}) = unpack("\@$offset n", $$data);
 		$offset += &Net::DNS::INT16SZ;
 
-		($map822,  $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-		($mapx400, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-
-		$self->{"preference"} = $preference;
-		$self->{"map822"}     = $map822;
-		$self->{"mapx400"}    = $mapx400;
+		($self->{"map822"},  $offset) = Net::DNS::Packet::dn_expand($data, $offset);
+		($self->{"mapx400"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
 
 	return bless $self, $class;
@@ -48,9 +42,9 @@ sub new_from_string {
 sub rdatastr {
 	my $self = shift;
 
-	return exists $self->{"preference"}
+	return $self->{"preference"}
 	       ? "$self->{preference} $self->{map822}. $self->{mapx400}."
-	       : "; no data";
+	       : '';
 }
 
 sub rr_rdata {
@@ -71,25 +65,19 @@ sub rr_rdata {
 }
 
 
-
-
-
 sub _canonicalRdata {
 	my ($self) = shift;
 	my $rdata = "";
 
 	if (exists $self->{"preference"}) {
 		$rdata .= pack("n", $self->{"preference"});
-
-		$rdata .= $self->_name2wire($self->{"map822"});
-					   
-
+		$rdata .= $self->_name2wire($self->{"map822"});					   
 		$rdata .= $self->_name2wire($self->{"mapx400"});
-
 	}
 
 	return $rdata;
 }
+
 
 1;
 __END__

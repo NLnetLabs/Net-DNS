@@ -1,6 +1,6 @@
 package Net::DNS::RR::HINFO;
 #
-# $Id: HINFO.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: HINFO.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -8,7 +8,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -47,9 +47,9 @@ sub new_from_string {
 sub rdatastr {
 	my $self = shift;
 
-	return exists $self->{"cpu"}
+	return $self->{"cpu"}
 	       ? qq("$self->{cpu}" "$self->{os}")
-	       : "; no data";
+	       : '';
 }
 
 sub rr_rdata {
