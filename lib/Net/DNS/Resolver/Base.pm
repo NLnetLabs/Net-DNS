@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 1.2 2003/06/16 14:41:44 ctriv Exp $
+# $Id: Base.pm,v 1.3 2003/07/29 04:53:23 ctriv Exp $
 #
 
 use strict;
@@ -191,6 +191,7 @@ sub read_config_file {
 			/^\s*nameserver\s+(.*)/ && do {
 				foreach my $ns (split(' ', $1)) {
 					$ns = '0.0.0.0' if $ns eq '0';
+					next if $ns =~ m/:/;  # skip IPv6 nameservers
 					push @ns, $ns;
 				}
 				last SWITCH;

@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm,v 1.36 2003/06/21 07:59:46 ctriv Exp $
+# $Id: Resolver.pm,v 1.37 2003/07/29 09:22:56 ctriv Exp $
 #
 
 use strict;
@@ -32,6 +32,32 @@ Net::DNS::Resolver - DNS resolver class
 
   use Net::DNS;
   
+  my $res = Net::DNS::Resolver->new;
+  
+  # Perform a lookup, using the searchlist if appropriate.
+  my $answer = $res->search('example.com');
+  
+  # Perform a lookup, without the searchlist
+  my $answer = $res->query('example.com', 'MX');
+  
+  # Perform a lookup, without pre or post-processing
+  my $answer = $res->send('example.com', 'MX', 'CH');
+  
+  # Send a prebuilt packet
+  my $packet = Net::DNS::Packet->new(...);
+  my $answer = $res->send($packet);
+  
+=head1 DESCRIPTION
+
+Instances of the C<Net::DNS::Resolver> class represent resolver objects.
+A program can have multiple resolver objects, each maintaining its
+own state information such as the nameservers to be queried, whether
+recursion is desired, etc.
+
+=head1 METHODS
+
+=head2 new
+
   # Use the system defaults
   my $res = Net::DNS::Resolver->new;
   
@@ -44,28 +70,10 @@ Net::DNS::Resolver - DNS resolver class
   	recurse     => 0,
   	debug       => 1,
   );
-  
-  # Perform a lookup, using the searchlist if appropriate.
-  my $answer = $res->search('example.com');
-  
-  # Perform a lookup, without the searchlist
-  my $answer = $res->query('example.com', 'MX');
-  
-  # Perform a lookup, without pre or post-processing
-  my $answer = $res->send('example.com', 'MX', 'CH');
-  
-  # Send a prebuilt packet
-  my $answer = $res->send($packet);
-  
-=head1 DESCRIPTION
 
-Instances of the C<Net::DNS::Resolver> class represent resolver objects.
-A program can have multiple resolver objects, each maintaining its
-own state information such as the nameservers to be queried, whether
-recursion is desired, etc.
-
-Resolver configuration is read from the following files, in the
-order indicated:
+Returns a resolver object.  If given no argurments, C<new()> returns an
+object configured to your system's defaults.  On UNIX systems the 
+defaults are read from the following files, in the order indicated:
 
     /etc/resolv.conf
     $HOME/.resolv.conf
@@ -75,15 +83,15 @@ The following keywords are recognized in resolver configuration files:
 
 =over 4
 
-=item B<domain>
+=item domain
 
 The default domain.
 
-=item B<search>
+=item search
 
 A space-separated list of domains to put in the search list.
 
-item B<nameserver>
+=item nameserver
 
 A space-separated list of nameservers to query.
 
@@ -91,11 +99,75 @@ A space-separated list of nameservers to query.
 
 Files except for F</etc/resolv.conf> must be owned by the effective
 userid running the program or they won't be read.  In addition, several
-environment variables can also contain configuration information;
-see L</ENVIRONMENT>.
+environment variables can also contain configuration information; see
+L</ENVIRONMENT>.
 
-=head1 METHODS
+On Windows systems, an attempt is made to determine the system defaults
+using the registry.  This is still a work in progress; systems with many
+dynamically configured network interfaces may confuse Net::DNS.
 
+You can include a configuration file of your own when creating a
+resolver object:
+
+ # Use my own configuration file 
+ my $res = Net::DNS::Resolver->new(config_file => '/my/dns.conf');
+
+This is supported on both UNIX and Windows.  Values pulled from a custom
+configuration file override the the system's defaults, but can still be
+overridden by the other arguments to new().
+
+Explicit arguments to new override both the system's defaults and the
+values of the custom configuration file, if any.  The following
+arguments to new() are supported:
+
+=over 4
+
+=item nameservers
+
+An array reference of nameservers to query.  
+
+=item searchlist
+
+An array reference of domains.
+
+=item recurse
+
+=item debug
+
+=item domain
+
+=item port
+
+=item srcaddr
+
+=item srcport
+
+=item tcp_timeout
+
+=item udp_timeout
+
+=item retrans
+
+=item retry
+
+=item usecv
+
+=item stayopen
+
+=item igntc
+
+=item defnames
+
+=item dnsrch
+
+=item persistent_tcp
+
+=item dnssec
+
+=back
+
+For more information on any of these options, please consult the method
+of the same name.
 
 =head2 print
 
@@ -112,7 +184,7 @@ Returns a string representation of the resolver state.
 =head2 searchlist
 
     @searchlist = $res->searchlist;
-    $res->searchlist('example.com', 'sub1.example.com', 'sub2.example.com');
+    $res->searchlist('example.com', 'a.example.com', 'b.example.com');
 
 Gets or sets the resolver search list.
 

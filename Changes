@@ -1,9 +1,18 @@
 Revision history for Net::DNS
 =============================
 
+** 0.38_02 July 29 2003
+
+Reworked the POD for Net::DNS::Resolver.
+
+When parsing resolver configuration files, IPv6 addresses are now skipped,
+as Net::DNS does not yet have IPv6 support. 
+
+** 0.38_01 Jun 22 2003
+
 Broke Net::DNS::Resolver into seperate classes.  UNIX and Win32 
 classes are currently implemented.  Many of the globals in 
-Net::DNS::Resolver are no longer exist.  They were never documented
+Net::DNS::Resolver no longer exist.  They were never documented
 so you never used them.... right?
 
 Options to Net::DNS::Resolver->new() are now supported, including
@@ -732,4 +741,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.61 2003/06/16 19:16:10 ctriv Exp $
+$Id: Changes,v 1.64 2003/07/29 09:26:51 ctriv Exp $
