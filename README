@@ -47,18 +47,21 @@ You can get the latest version of Net::DNS from the Comprehensive
 Perl Archive Network (CPAN) or from the module's homepage:
 
     http://www.perl.org/CPAN/modules/by-module/Net/
+
     http://www.net-dns.org/
 
 The following link will always be the current released version:
 
     http://www.net-dns.org/download/Net-DNS-release.tar.gz
     
-Additionally, nightly cvs snapshots of the current developement version
-are at:
+Additionally a subversion repository is made available through
 
-	http://www.net-dns.org/snaps/
-	
-Please note that the CVS version at any given moment may be broken.
+	http://www.net-dns.org/svn/net-dns/
+
+The version on the "trunk" (http://www.net-dns.org/svn/net-dns/trunk) is
+the version that is targeted for next release.
+
+Please note that the SVN version at any given moment may be broken.
 
 
 
@@ -90,6 +93,10 @@ additional modules -- see demo/README and contrib/README for details.
 
 Note that the Test::More module is actually part of the Test-Simple
 distribution.  See the FAQ (lib/Net/DNS/FAQ.pod) for more information.
+
+
+Net::DNS is mostly developed on MacOS X. I have access to Linux,
+FreeBSD and if need be to cygwin.
 
 
 4. INSTALLATION
@@ -214,7 +221,11 @@ zone.  That warning in place, I am aware of at least one large company
 that has used Net::DNS to make thousands of dynamic updates per day for
 nearly three years without any problems.
 
-If you find a bug, please report it to the author along with the
+Please use the following form to submit bug reports:
+
+     https://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-DNS
+
+If you find a bug, please report it in "rt.cpan.org" along with the
 following information:
 
     * version of Perl (output of 'perl -V' is best)
@@ -230,10 +241,6 @@ If I don't have access to a system similar to yours, I may ask you
 to insert some debugging lines and report back on the results.
 The more help and information you can provide, the better.
 
-The hope is to do all of Net::DNS's bug tracking using rt.cpan.org.
-Please use the following form to submit bug reports:
-
-     https://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-DNS
 
 10. COPYRIGHT
 -------------
@@ -242,6 +249,8 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
+Portions Copyright (c) 2005 Olaf Kolkman (RIPE NCC)
+
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
 
@@ -249,9 +258,13 @@ it and/or modify it under the same terms as Perl itself.
 11. AUTHOR INFORMATION
 ----------------------
 
-Net::DNS is currently maintained by a group, led by:
-	Chris Reinhardt
-	ctriv@net-dns.org
+Net::DNS is currently maintained by:
+        Olaf Kolkman
+	olaf@net-dns.org
+
+Between 2002 and 2004 Net::DNS was maintained by:
+       Chris Reinhardt
+
 
 Net::DNS was created by:
 	Michael Fuhr
@@ -261,9 +274,10 @@ Net::DNS was created by:
 12. ACKNOWLEDGMENTS
 -------------------
 
+
 Thanks to Mike for letting me take care of his baby.
 
-Thanks to Olaf Kolkman and Rob Brown for all their patches and input.
+Thanks to Rob Brown for all their patches and input.
 
 Thanks to all who have used Net::DNS and reported bugs, made
 suggestions, contributed code, and encouraged me to add certain
@@ -283,6 +297,8 @@ which I've used exclusively while developing Net::DNS.
 
 Thanks to Andreas Gustafsson for DNAME support, and for all the work
 he has done on BIND 9.
+
+Thanks to the team that maintains ethereal.
 
 Thanks to the thousands who participate in the open-source community.
 I've always developed Net::DNS using open-source systems and I'm
