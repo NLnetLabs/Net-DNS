@@ -41,7 +41,10 @@ To Do list for Net::DNS
   
   - Need more tests
 
-
+  - Proper identification of the set of nameservers to query in Cygwin.pm
+    and Win32.pm. Using the registy is highly unreliable. Also see
+    rt.cpan.org ticket 11931.
+  
 * Get rid of .* in AAAA.pm; write more tests for AAAA.pm.
 
 * Allow Net::DNS::RR::LOC->latlon to set the lat/lon.
@@ -66,8 +69,6 @@ To Do list for Net::DNS
 
   - Make sure empty RDATA sections don't cause the program to print
     the obnoxious "no such method" warning.
-
-  - Check for invalid RR types or classes.
 
   - Set a more descriptive error if a zone transfer fails, especially
     if the nameserver isn't authoritative (current code returns NOERROR
