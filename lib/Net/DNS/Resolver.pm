@@ -1,12 +1,12 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm,v 1.39 2003/09/03 04:41:50 ctriv Exp $
+# $Id: Resolver.pm,v 1.40 2003/09/28 04:06:45 ctriv Exp $
 #
 
 use strict;
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 1.39 $)[1];
+$VERSION = (qw$Revision: 1.40 $)[1];
 
 BEGIN {
 	if ($^O eq 'MSWin32') {
@@ -581,6 +581,26 @@ udppacketsize will set or get the packet size. If set to a value greater than
 recovery.
 
 Default udppacketsize is &Net::DNS::PACKETSZ (512)
+
+=head1 CUSTOMIZING
+
+Net::DNS::Resolver is actually an empty subclass.  At compile time a
+super class is chosen based on the current platform.  A side benefit of
+this allows for easy modification of the methods in Net::DNS::Resolver. 
+You simply add a method to the namespace!  
+
+For example, if we wanted to cache lookups:
+
+ package Net::DNS::Resolver;
+ 
+ my %cache;
+ 
+ sub search {
+	my ($self, @args) = @_;
+	
+	return $cache{@args} ||= $self->SUPER::search(@args);
+ } 
+
 
 =head1 ENVIRONMENT
 

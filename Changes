@@ -1,6 +1,10 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.41 October 3, 2003
+
+Added some documentation about modifying the behavior of Net::DNS::Resolver. 
+
 ** 0.40_01 September 26, 2003
 
 Fixed some uninitialized value warnings when running under windows.
@@ -9,7 +13,7 @@ Fixed a bug in the test suite that caused 00-version.t to fail with
 certain versions of ExtUtils::MakeMaker.   Thanks to David James, Jos 
 Boumans and others for reporting it.
 
-Replay handlers in Net::DNS::Nameserver are now passed then peerhost.
+Reply handlers in Net::DNS::Nameserver are now passed the peerhost.
 (Assen Totin <assen@online.bg>)
 
 Reply handlers in Net::DNS::Nameserver can now tweak the header bits
@@ -18,8 +22,7 @@ that the nameserver returns.  [Olaf]
 The AD header bit is now documented, and twiddleable. [Olaf]
 
 The change log has been trimmed, entries for versions older than 0.21
-have been removed.  For a complete list of changes, please see:
-    http://www.net-dns.org/docs/full_changes.html
+have been removed. 
 
 ** NOTICE **
 Net::DNS::Resolver::axfr_old() has been removed from the package.  
@@ -293,4 +296,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.76 2003/09/26 22:50:02 ctriv Exp $
+$Id: Changes,v 1.80 2003/10/03 15:45:22 ctriv Exp $

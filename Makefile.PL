@@ -1,16 +1,4 @@
-# $Id: Makefile.PL,v 1.27 2003/09/26 22:47:12 ctriv Exp $
-
-package MY;
-
-sub metafile {
-	my $self    = shift;
-	my $meta    = $self->SUPER::metafile_target(@_); 
-	my ($extra) = $self->echo('license: perl', 'META.yml', 1);
-	
-	return "$meta\t$extra\n";
-}
-
-package main;
+# $Id: Makefile.PL,v 1.28 2003/09/27 00:21:16 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
@@ -155,3 +143,12 @@ EOF
 	return ($ret == 0);
 }
 		
+package MY;
+
+sub metafile {
+	my $self    = shift;
+	my $meta    = $self->SUPER::metafile_target(@_); 
+	my ($extra) = $self->echo('license: perl', 'META.yml', 1);
+	
+	return "$meta\t$extra\n";
+}
