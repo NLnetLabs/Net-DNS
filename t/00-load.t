@@ -1,4 +1,4 @@
-# $Id: 00-load.t,v 1.3 2003/01/07 23:27:41 ctriv Exp $
+# $Id: 00-load.t,v 1.4 2003/03/13 23:23:13 ctriv Exp $
 
 
 use Test::More tests => 64;
@@ -35,6 +35,8 @@ foreach my $rr (@rrs) {
 foreach my $rr (@rrs) {
 	my $class;
 	eval { $class = Net::DNS::RR->_get_subclass($rr); };
+
+	diag($@) if $@;
 
 	ok(is_rr_loaded($rr), "$class loaded");
 }

@@ -1,4 +1,4 @@
-# $Id: 01-resolver-file.t,v 1.4 2002/08/05 06:45:00 ctriv Exp $
+# $Id: 01-resolver-file.t,v 1.5 2003/05/10 12:47:23 ctriv Exp $
 
 
 use Test::More tests => 8;
@@ -6,7 +6,7 @@ use strict;
 
 BEGIN { 
 	chdir 't/' || die "Couldn't chdir to t/\n";  
-	unshift(@INC, "../blib/lib");
+	unshift(@INC, '../blib/lib', '../blib/arch');
 	use_ok('Net::DNS');	
 }
 

@@ -20,6 +20,7 @@ demo/mresolv
 demo/mx
 demo/perldig
 demo/example_recurse.pl
+DNS.xs
 lib/Net/DNS.pm
 lib/Net/DNS/FAQ.pod
 lib/Net/DNS/Header.pm

@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.52 2003/03/06 19:04:48 ctriv Exp $
+# $Id: DNS.pm,v 1.55 2003/05/10 12:39:54 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -18,7 +18,7 @@ use vars qw(
 );
 
 
-$VERSION = "0.34";
+$VERSION = "0.34_02";
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -27,6 +27,9 @@ use Net::DNS::Header;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
+use XSLoader;
+
+XSLoader::load __PACKAGE__;
 
 BEGIN {
 	eval { require Net::DNS::RR::SIG };

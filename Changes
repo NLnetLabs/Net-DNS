@@ -1,6 +1,14 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.34_02 May 21 2003
+
+Net::DNS::Packet::dn_expand is now implemented using the function of the
+same name from libresolv.  This method of decompressing names is around
+twice as fast as the perl implementation.
+
+Applied Jan Dubois's patch to fix nameserver lookup on Windows 2000/95/98/ME.
+
 *** 0.34 6 Mar 2003
 
 Applied David Carmean's patch for handling more than one string in a 
@@ -21,7 +29,7 @@ Fixed 00-load.t to skip the Net::DNS::SEC modules.  The test suite
 should now pass if you have Net::DNS::SEC installed. 
 
 Fixed the regular expression in RR.pm to comply with the RFCs, turns
-our we were _too_ paranoid.  [Olaf]
+out we were _too_ paranoid.  [Olaf]
 
 
 *** 0.32 5 Jan 2003
@@ -668,4 +676,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.46 2003/03/06 19:05:49 ctriv Exp $
+$Id: Changes,v 1.50 2003/05/22 02:23:10 ctriv Exp $

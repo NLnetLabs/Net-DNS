@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.14 2002/11/15 10:43:08 ctriv Exp $
+# $Id: Makefile.PL,v 1.16 2003/05/10 12:32:29 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 
@@ -12,7 +12,7 @@ properly with older perls such as yours, but bugs may lurk.
 AMEN
 
 # Check if we have internet connection
-# (I lifted this code from LWP... many thanks for this and more!)
+# (I lifted this code from LWP... )
 require IO::Socket;
 my $s = IO::Socket::INET->new(
 	PeerAddr => "www.google.com:80",
@@ -37,17 +37,23 @@ EOT
 	}
 }
 
+my %needed_modules = (
+	Test::More       => 0.18,
+	IO::Socket		 => 0,
+	MIME::Base64	 => 2.11,
+	Digest::MD5		 => 2.12,
+	Digest::HMAC_MD5 => 1.00,
+);
+
+if ($^O eq 'Win32') {
+	$needed_modules{'Win32::Registry'} = 0;
+}
 
 WriteMakefile(
 	'NAME'			=> 'Net::DNS',
 	'VERSION_FROM'	=> 'lib/Net/DNS.pm',
-	'PREREQ_PM'		=> {
-		Test::More       => 0.18,
-		IO::Socket		 => 0,
-		MIME::Base64	 => 2.11,
-		Digest::MD5		 => 2.12,
-		Digest::HMAC_MD5 => 1.00,
-	},
+	'PREREQ_PM'		=> \%needed_modules,
+	'XSPROTOARG'    => '-noprototypes',
 	'clean'			=> { FILES => 't/online.enabled' },
 
    ($] >= 5.005 ?    

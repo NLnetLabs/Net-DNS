@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.28 2003/02/18 20:22:33 ctriv Exp $
+# $Id: Resolver.pm,v 1.30 2003/05/08 07:07:04 ctriv Exp $
 
 =head1 NAME
 
@@ -85,8 +85,15 @@ use Net::DNS::Select;
 
 use constant MAX_ID => 65535;
 
-eval 'use Win32::Registry';
-$os = $@ ? 'unix' : 'microsoft';
+if ($^O eq 'Win32') {
+	eval 'use Win32::Registry';
+	die $@ if $@;
+	
+	$os = 'microsoft';
+} else {
+	$os = 'unix';
+}
+
 
 # XXX See above
 #eval 'use Time::HiRes';
@@ -196,21 +203,14 @@ sub res_init_unix {
 
 sub res_init_microsoft {
 	my ($resobj, %keys);
-	
-	# This will *not* work on win95/98/ME...OTOH, who cares?
-	# Ok, so some do...simplest is probably to parse output
-	# of: (these are best guesses - no such systems to test on)
-	# (on 95) 'winipcfg /all /batch'
-	# (on 98 & ME) 'ipconfig /all /batch'
-	# There might be the required data resident under .../VxD/MSTCP in 
-	# the registry on those machines but this is hearsay
-	# Actually, the trick of parsing 'ipconfig' could be applied
-	# to NT/W2K/XP too for some insulation...
-	
-	my $root = 'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
 
-	$main::HKEY_LOCAL_MACHINE->Open($root, $resobj)
-		or Carp::croak "can't read registry: $!";
+	my $root = 'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
+	unless ($main::HKEY_LOCAL_MACHINE->Open($root, $resobj)) {
+		# Didn't work, maybe we are on 95/98/Me?
+		$root = 'SYSTEM\CurrentControlSet\Services\VxD\MSTCP';
+		$main::HKEY_LOCAL_MACHINE->Open($root, $resobj)
+			or Carp::croak "can't read registry: $!";
+	}
 
 	$resobj->GetValues(\%keys)
 		or Carp::croak "can't read registry values: $!";
@@ -234,12 +234,29 @@ sub res_init_microsoft {
 	# opt to silently fail if something isn't ok (maybe we're on NT4)
 	# drop any duplicates later
 	my $dnsadapters;
-	my $interfaces;
 	$resobj->Open("DNSRegisteredAdapters", $dnsadapters);
+	if ($dnsadapters) {
+		my @adapters;
+		$dnsadapters->GetKeys(\@adapters);
+		foreach my $adapter (@adapters) {
+			my $regadapter;
+			$dnsadapters->Open($adapter, $regadapter);
+			if ($regadapter) {
+				my($type,$ns);
+				$regadapter->QueryValueEx("DNSServerAddresses", $type, $ns);
+				while (length($ns) >= 4) {
+					my $addr = join('.', unpack("C4", substr($ns,0,4,"")));
+					$nameservers .= " $addr";
+				}
+			}
+		}
+	}
+
+	my $interfaces;
 	$resobj->Open("Interfaces", $interfaces);
-	if ($dnsadapters and $interfaces) {
+	if ($interfaces) {
 		my @ifacelist;
-		$dnsadapters->GetKeys(\@ifacelist);
+		$interfaces->GetKeys(\@ifacelist);
 		foreach my $iface (@ifacelist) {
 			my $regiface;
 			$interfaces->Open($iface, $regiface);
@@ -247,6 +264,8 @@ sub res_init_microsoft {
 				my $ns;
 				my $type;
 				$regiface->QueryValueEx("NameServer", $type, $ns);
+				$nameservers .= " $ns" if $ns;
+				$regiface->QueryValueEx("DhcpNameServer", $type, $ns);
 				$nameservers .= " $ns" if $ns;
 			}
 		}

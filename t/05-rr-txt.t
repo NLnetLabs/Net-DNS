@@ -1,9 +1,9 @@
-# $Id: 05-rr-txt.t,v 1.1 2003/03/06 18:10:30 ctriv Exp $
+# $Id: 05-rr-txt.t,v 1.2 2003/05/19 01:06:01 ctriv Exp $
 
 use Test::More tests => 32;
 use strict;
-use vars qw( $uut @list );
 
+my $uut;
 
 BEGIN { use_ok('Net::DNS'); }
 
@@ -71,13 +71,16 @@ my @Testlist =	(
 
 foreach my $test_hr ( @Testlist ) {
     ok( $uut = Net::DNS::RR->new($rr_base . $test_hr->{'stim'}), 	
-	$test_hr->{'descr'} . " -- Stimulus " ); 
+		$test_hr->{'descr'} . " -- Stimulus " ); 
+		
     ok( $uut->rdatastr() eq $test_hr->{'rdatastr'}, 			
-	$test_hr->{'descr'} . " -- Response ( rdatastr ) " ); 
-    ok( defined ( @list = $uut->char_str_list() ), 
-	$test_hr->{'descr'} . " -- Response ( defined char_str_list ) " );
+		$test_hr->{'descr'} . " -- Response ( rdatastr ) " ); 
+	
+	my @list = $uut->char_str_list();	
+    ok(scalar @list, $test_hr->{'descr'} . " -- Response ( defined char_str_list ) " );
+		
     ok( eq_array( \@list, $test_hr->{'char_str_list_r'}) , 
-	$test_hr->{'descr'} . " -- char_str_list equality"  ) ;		
+		$test_hr->{'descr'} . " -- char_str_list equality"  ) ;		
 }
 
 my $string1 = q|no|;
@@ -109,6 +112,4 @@ ok( $uut->rdatastr() eq q|"no" "quotes"|, 		# 31
     "RR->new_from_hash with txtdata -- Response (rdatastr())");
 
 ok( $uut->rr_rdata() eq $rdata , "TXT->rr_rdata" );	# 32
-
-sleep 0;
 
