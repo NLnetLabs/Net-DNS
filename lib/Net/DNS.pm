@@ -41,12 +41,15 @@ use Net::DNS::Header;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
+
 BEGIN {
+
     $DNSSEC = eval { 
-	local $SIG{'__DIE__'} = 'DEFAULT';
-	require Net::DNS::RR::SIG; 1 } ? 1 : 0;
+	    local $SIG{'__DIE__'} = 'DEFAULT';
+	    require Net::DNS::SEC; 
+	    1 
+	    } ? 1 : 0;
 }
- 
 
 
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);

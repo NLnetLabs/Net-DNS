@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm 212 2005-03-02 15:09:42Z olaf $
+# $Id$
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -77,12 +77,17 @@ BEGIN {
 	);
 
 	#  Only load DNSSEC if available
-	# 
 
-	if ($Net::DNS::DNSSEC) { 
+	eval { 	    
+	    local $SIG{'__DIE__'} = 'DEFAULT';
+	    require Net::DNS::RR::SIG; 
+	};
+	unless ($@) {
 		$RR{'SIG'} = 1;
-	
-		eval { require Net::DNS::RR::NXT; };
+		eval { 	    
+		    local $SIG{'__DIE__'} = 'DEFAULT';
+		    require Net::DNS::RR::NXT; 
+		};
 		
 		unless ($@) {
 		    $RR{'NXT'}	= 1;
@@ -90,7 +95,10 @@ BEGIN {
 		    die $@;
 		}
 		
-		eval { require Net::DNS::RR::KEY; };
+		eval { 
+		    local $SIG{'__DIE__'} = 'DEFAULT';
+		    require Net::DNS::RR::KEY; 
+		};
 		
 		unless ($@) {
 		    $RR{'KEY'} = 1;
@@ -98,7 +106,10 @@ BEGIN {
 		    die $@;
 		}
 
-	 	eval { require Net::DNS::RR::DS; };
+	 	eval { 
+		    local $SIG{'__DIE__'} = 'DEFAULT';
+		    require Net::DNS::RR::DS; 
+		};
 
 	 	unless ($@) {
 		    $RR{'DS'} = 1;
@@ -107,18 +118,28 @@ BEGIN {
 		    die $@;
 		}
 
-	 	eval { require Net::DNS::RR::RRSIG; };
+	 	eval { 
+		    local $SIG{'__DIE__'} = 'DEFAULT';
+		    require Net::DNS::RR::RRSIG; 
+		};
 
 	 	unless ($@) {
 		    $RR{'RRSIG'} = 1;
 		    # If RRSIG is available so should the other DNSSEC types
-		    eval { require Net::DNS::RR::NSEC; };
+		    eval {		    
+			local $SIG{'__DIE__'} = 'DEFAULT';
+			require Net::DNS::RR::NSEC; 
+		    };
 		    unless ($@) {
 		      $RR{'NSEC'} = 1;
 		    } else {
 		    die $@;
 		  }
-		    eval { require Net::DNS::RR::DNSKEY; };
+		    eval { 
+			local $SIG{'__DIE__'} = 'DEFAULT';
+			require Net::DNS::RR::DNSKEY; 
+		    };
+
 		    unless ($@) {
 		      $RR{'DNSKEY'} = 1;
 		    } else {
