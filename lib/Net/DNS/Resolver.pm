@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.11 2002/05/31 08:46:58 ctriv Exp $
+# $Id: Resolver.pm,v 1.13 2002/06/11 18:27:35 ctriv Exp $
 
 =head1 NAME
 
@@ -436,13 +436,15 @@ sub cname_addr {
 	my @addr;
 	my @names = @{$names};
 
-	foreach my $rr ($packet->answer) {
-		next unless grep {$rr->name} @names;
+	RR: foreach my $rr ($packet->answer) {
+		next RR unless grep {$rr->name} @names;
+		
 		if ($rr->type eq 'CNAME') {
 			push(@names, $rr->cname);
-		}
-		elsif ($rr->type eq 'A') {
-			push @addr, $rr->address;
+		} elsif ($rr->type eq 'A') {
+			# Run a basic taint check.  Nothing fancy, or strict.
+			next RR unless $rr->address =~ /^([\d\.]+)$/;
+			push(@addr, $1)
 		}
 	}
 	return @addr;
@@ -782,6 +784,7 @@ sub send_udp {
 	#my $old_wflag = $^W;
 	#$^W = 0;
 
+	# XXX Why is PeerPort defined here?
 	my $sock = IO::Socket::INET->new(
 			    PeerPort  => $dstport,
 			    LocalAddr => $srcaddr,
@@ -927,18 +930,17 @@ sub bgsend {
 	my $dstaddr = $self->{'nameservers'}->[0];
 	my $dstport = $self->{'port'};
 
-	my $sock = IO::Socket::INET->new(Proto => 'udp');
+	my $sock = IO::Socket::INET->new(
+		Proto => 'udp',
+		LocalAddr => $srcaddr,
+		LocalPort => ($srcport || undef),
+	);
 
 	unless ($sock) {
 		$self->errorstring(q|couldn't get socket|);   #'
 		return;
 	}
-	my $src_sockaddr = sockaddr_in($srcport, inet_aton($srcaddr));
-	unless ($sock->bind($src_sockaddr)) {
-	    $self->errorstring("can't bind socket: $!");
-	    return;
-	}
-
+	
 	my $dst_sockaddr = sockaddr_in($dstport, inet_aton($dstaddr));
 
 	print ";; bgsend($dstaddr:$dstport)\n" if $self->{'debug'};

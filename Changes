@@ -1,11 +1,18 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.23 11 June 2002
+
+Fixed Net::DNS::mx() to work properly in scalar context.
+
+Fixed taint issue when Net::DNS::Resolver::nameservers() is passed
+a hostname as an argument.
+
+
 *** 0.22  6 June 2002
 
-Somehow, someway, the numerical values for RR types in DNS.pm were 
-all wrong.  This has been corrected, fixed TSIG functionality.
-All users are strongly encouraged to upgrade to this version.
+Fixed bug in DNS.pm causing TSIG to no longer function.  This was due
+to certain RR types being assigned the wrong number.
 
 *** 0.21  3 June 2002
 
@@ -531,4 +538,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.15 2002/06/06 21:39:36 ctriv Exp $
+$Id: Changes,v 1.17 2002/06/11 22:31:02 ctriv Exp $

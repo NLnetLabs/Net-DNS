@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.16 2002/06/06 21:40:24 ctriv Exp $
+# $Id: DNS.pm,v 1.18 2002/06/11 22:31:16 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -17,7 +17,7 @@ use vars qw(
 	%rcodesbyval
 );
 
-$VERSION = "0.22";
+$VERSION = "0.23";
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -164,9 +164,12 @@ sub mx {
 	# Then we take just the MX records from that list
 	# Then we sort the list by preference
 	# Then we return it.
-	return sort { $a->preference <=> $b->preference } 
-	       grep { $_->type eq 'MX'} $ans->answer;
+	# We do this into an array to force list context.
+	my @ret = sort { $a->preference <=> $b->preference } 
+	       	  grep { $_->type eq 'MX'} $ans->answer;
 
+
+	return @ret;
 }
 
 sub yxrrset {
