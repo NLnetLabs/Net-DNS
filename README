@@ -304,6 +304,5 @@ Thanks to the thousands who participate in the open-source community.
 I've always developed Net::DNS using open-source systems and I'm
 proud to make Net::DNS freely available to the world.
 
-
 ----
-$Id: README 112 2004-08-12 23:09:16Z ctriv $
+$Id$
