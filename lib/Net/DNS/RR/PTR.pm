@@ -1,6 +1,6 @@
 package Net::DNS::RR::PTR;
 #
-# $Id: PTR.pm,v 1.4 2003/08/26 23:58:10 ctriv Exp $
+# $Id: PTR.pm,v 1.5 2003/09/03 04:41:51 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -8,7 +8,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 1.4 $)[1];
+$VERSION = (qw$Revision: 1.5 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -87,9 +87,12 @@ Returns the domain name associated with this record.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-1998 Michael Fuhr.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 1.5 2003/08/29 12:04:03 ctriv Exp $
+# $Id: Base.pm,v 1.8 2003/09/03 04:41:51 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::Select;
 
-$VERSION = (qw$Revision: 1.5 $)[1];
+$VERSION = (qw$Revision: 1.8 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -834,147 +834,8 @@ sub axfr {
 }
 
 sub axfr_old {
-	warn "Use of " . __PACKAGE__ . "::axfr_old() is deprecated.  Use axfr() or axfr_start().\n";
-	
-	my $self = shift;
-	my ($dname, $class) = @_;
-	$dname ||= $self->{'searchlist'}->[0];
-	$class ||= 'IN';
-
-	unless ($dname) {
-		print ";; ERROR: axfr: no zone specified\n" if $self->{'debug'};
-		$self->errorstring('no zone');
-		return;
-	}
-
-	print ";; axfr($dname, $class)\n" if $self->{'debug'};
-
-	unless (@{$self->{'nameservers'}}) {
-		$self->errorstring('no nameservers');
-		print ";; ERROR: no nameservers\n" if $self->{'debug'};
-		return;
-	}
-
-	my $packet = $self->make_query_packet($dname, 'AXFR', $class);
-	my $packet_data = $packet->data;
-
-	my $ns = $self->{'nameservers'}->[0];
-
-	print ";; axfr nameserver = $ns\n" if $self->{'debug'};
-
-	my $srcport = $self->{'srcport'};
-
-	my $sock;
-	my $sock_key = "$ns:$self->{'port'}";
-
-	if ($self->{'persistent_tcp'} && $self->{'sockets'}{$sock_key}) {
-		$sock = $self->{'sockets'}{$sock_key};
-		print ";; using persistent socket\n" if $self->{'debug'};
-	}
-	else {
-
-		# IO::Socket carps on errors if Perl's -w flag is turned on.
-		# Uncomment the next two lines and the line following the "new"
-		# call to turn off these messages.
-
-		my $old_wflag = $^W;
-		$^W = 0;
-
-		$sock = IO::Socket::INET->new(
-		    PeerAddr  => $ns,
-		    PeerPort  => $self->{'port'},
-		    LocalAddr => $self->{'srcaddr'},
-		    LocalPort => ($srcport || undef),
-		    Proto     => 'tcp',
-		    Timeout   => $self->{'tcp_timeout'}
-		);
-
-		$^W = $old_wflag;
-
-		unless ($sock) {
-			$self->errorstring(q|couldn't connect|);
-			return;
-		}
-
-		$self->{'sockets'}{$sock_key} = $sock;
-	}
-
-	my $lenmsg = pack('n', length($packet_data));
-
-	unless ($sock->send($lenmsg)) {
-		$self->errorstring($!);
-		return;
-	}
-
-	unless ($sock->send($packet_data)) {
-		$self->errorstring($!);
-		return;
-	}
-
-	my $sel = Net::DNS::Select->new($sock);
-
-	my @zone;
-	my $soa_count = 0;
-	my $timeout = $self->{'tcp_timeout'};
-
-	while (1) {
-		my @ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$self->errorstring('timeout');
-			return;
-		}
-
-		my $buf = read_tcp($sock, &Net::DNS::INT16SZ, $self->{'debug'});
-		last unless length($buf);
-		my ($len) = unpack('n', $buf);
-		last unless $len;
-
-		@ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$self->errorstring('timeout');
-			return;
-		}
-
-		$buf = read_tcp($sock, $len, $self->{'debug'});
-
-		print ';; received ', length($buf), " bytes\n"
-			if $self->{'debug'};
-
-		unless (length($buf) == $len) {
-			$self->errorstring("expected $len bytes, received " . length($buf));
-			return;
-		}
-
-		my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
-
-		if (defined $ans) {
-			if ($ans->header->ancount < 1) {
-				$self->errorstring($ans->header->rcode);
-				last;
-			}
-		}
-		elsif (defined $err) {
-			$self->errorstring($err);
-			last;
-		}
-
-		foreach ($ans->answer) {
-			# $_->print if $self->{'debug'};
-			if ($_->type eq 'SOA') {
-				++$soa_count;
-				push @zone, $_ unless $soa_count >= 2;
-			}
-			else {
-				push @zone, $_;
-			}
-		}
-
-		last if $soa_count >= 2;
-	}
-
-	return @zone;
+	croak "Use of Net::DNS::Resolver::axfr_old() is deprecated, use axfr() or axfr_start().";
 }
-
 
 sub axfr_start {
 	my $self = shift;
@@ -1276,9 +1137,12 @@ for all your resolving needs.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

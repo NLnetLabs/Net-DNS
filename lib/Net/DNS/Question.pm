@@ -1,6 +1,6 @@
 package Net::DNS::Question;
 #
-# $Id: Question.pm,v 1.6 2003/08/10 15:20:24 ctriv Exp $
+# $Id: Question.pm,v 1.7 2003/09/03 04:41:50 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -8,7 +8,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$Revision: 1.6 $)[1];
+$VERSION = (qw$Revision: 1.7 $)[1];
 
 =head1 NAME
 
@@ -178,9 +178,12 @@ sub data {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

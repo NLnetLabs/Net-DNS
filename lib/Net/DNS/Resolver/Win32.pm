@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Win32;
 #
-# $Id: Win32.pm,v 1.4 2003/08/29 12:04:03 ctriv Exp $
+# $Id: Win32.pm,v 1.6 2003/09/24 22:38:51 ctriv Exp $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Resolver::Base ();
 
 @ISA     = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 1.4 $)[1];
+$VERSION = (qw$Revision: 1.6 $)[1];
 
 use Win32::Registry;
 
@@ -34,7 +34,7 @@ sub init {
 	# Best effort to find a useful domain name for the current host
 	# if domain ends up blank, we're probably (?) not connected anywhere
 	# a DNS server is interesting either...
-	my $domain      = $keys{'Domain'}->[2] || $keys{'DhcpDomain'}->[2];
+	my $domain = $keys{'Domain'}->[2] || $keys{'DhcpDomain'}->[2] || '';
 	
 	# If nothing else, the searchlist should probably contain our own domain
 	# also see below for domain name devolution if so configured
@@ -155,9 +155,12 @@ for all your resolving needs.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

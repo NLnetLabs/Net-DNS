@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 1.21 2003/08/28 15:11:54 ctriv Exp $
+# $Id: Packet.pm,v 1.22 2003/09/03 04:41:50 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 1.21 $)[1];
+$VERSION = (qw$Revision: 1.22 $)[1];
 
 =head1 NAME
 
@@ -950,10 +950,12 @@ sub parse_rr {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr. 
 
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 DNSSEC/EDNS0 functionality courtesy of Olaf M. Kolkman, RIPE NCC.  
 

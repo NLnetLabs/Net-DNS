@@ -1,6 +1,14 @@
 /*
- * $Id: DNS.xs,v 1.11 2003/08/04 03:41:52 ctriv Exp $
+ * $Id: DNS.xs,v 1.13 2003/09/03 04:43:13 ctriv Exp $
  *
+ *
+ * 
+ * Copyright (c) 2002-2003 Chris Reinhardt.
+ * 
+ * All rights reserved.  This program is free software; you may redistribute
+ * it and/or modify it under the same terms as Perl itself.
+ *
+ *  
  */
 
 #ifdef _HPUX_SOURCE

@@ -1,4 +1,16 @@
-# $Id: Makefile.PL,v 1.25 2003/06/05 22:21:30 ctriv Exp $
+# $Id: Makefile.PL,v 1.27 2003/09/26 22:47:12 ctriv Exp $
+
+package MY;
+
+sub metafile {
+	my $self    = shift;
+	my $meta    = $self->SUPER::metafile_target(@_); 
+	my ($extra) = $self->echo('license: perl', 'META.yml', 1);
+	
+	return "$meta\t$extra\n";
+}
+
+package main;
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
@@ -6,6 +18,7 @@ use Config qw(%Config);
 
 # An existing makefile can confuse the CC test.
 unlink('Makefile');
+
 
 warn <<AMEN if $] < 5.005;
 
@@ -23,15 +36,15 @@ my %Makefile = (
 	NAME          => 'Net::DNS',
 	VERSION_FROM  => 'lib/Net/DNS.pm',
 	PREREQ_PM     => {
-		Test::More       => 0.18,
-		IO::Socket		 => 0,
-		MIME::Base64	 => 2.11,
-		Digest::MD5		 => 2.12,
-		Digest::HMAC_MD5 => 1.00,
+		'Test::More'       => 0.18,
+		'IO::Socket'       => 0,
+		'MIME::Base64'     => 2.11,
+		'Digest::MD5'      => 2.12,
+		'Digest::HMAC_MD5' => 1.00,
 	},
 	XS            => {},
 	C             => [],
-	clean         => { FILES => 't/online.enabled test.* DNS.o DNS.c DNS.bs' },
+	clean         => { FILES => 't/online.enabled compile.* DNS.o DNS.c DNS.bs' },
 );
 
 if ($^O eq 'Win32') {
@@ -142,4 +155,3 @@ EOF
 	return ($ret == 0);
 }
 		
-

@@ -1,6 +1,6 @@
 package Net::DNS::Header;
 #
-# $Id: Header.pm,v 1.10 2003/08/10 15:20:24 ctriv Exp $
+# $Id: Header.pm,v 1.13 2003/09/19 18:28:24 ctriv Exp $
 #
 
 use strict;
@@ -10,7 +10,7 @@ use Net::DNS;
 
 use constant MAX_ID => 65535;
 
-$VERSION = (qw$Revision: 1.10 $)[1];
+$VERSION = (qw$Revision: 1.13 $)[1];
 
 =head1 NAME
 
@@ -218,12 +218,27 @@ Gets or sets the recursion desired flag.
 
 Gets or sets the checking disabled flag.
 
+
+
 =head2 ra
 
     print "recursion is ", $header->ra ? "" : "not ", "available\n";
     $header->ra(0);
 
 Gets or sets the recursion available flag.
+
+
+=head2 ad
+
+    print "The result has ", $header->ad ? "" : "not", "been verified\n"
+
+
+Relevant in DNSSEC context.
+
+(The AD bit is only set on answers where signatures have been
+cryptographically verified or the server is authoritative for the data
+and is allowed to set the bit by policy.)
+
 
 =head2 rcode
 
@@ -321,6 +336,7 @@ sub data {
 	          | $self->{"rd"};
 
 	my $byte3 = ($self->{"ra"} << 7)
+	          | ($self->{"ad"} << 5)
 	          | ($self->{"cd"} << 4)
 	          | $rcode;
 
@@ -335,9 +351,12 @@ sub data {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2000 Michael Fuhr.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

@@ -1,6 +1,6 @@
 package Net::DNS::Nameserver;
 #
-# $Id: Nameserver.pm,v 1.4 2003/08/10 15:20:24 ctriv Exp $
+# $Id: Nameserver.pm,v 1.8 2003/09/19 08:37:33 ctriv Exp $
 #
 
 use Net::DNS;
@@ -11,7 +11,7 @@ use Carp qw(cluck);
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$Revision: 1.4 $)[1];
+$VERSION = (qw$Revision: 1.8 $)[1];
 
 use constant DEFAULT_ADDR => INADDR_ANY;
 use constant DEFAULT_PORT => 53;
@@ -93,58 +93,74 @@ sub new {
 #------------------------------------------------------------------------------
 
 sub make_reply {
-	my ($self, $query) = @_;
-
+	my ($self, $query, $peerhost) = @_;
+	
 	my $reply;
-
+	my $headermask;
 	if ($query) {
 		my $qr = ($query->question)[0];
-
+		
 		my $qname  = $qr ? $qr->qname  : "";
 		my $qclass = $qr ? $qr->qclass : "ANY";
 		my $qtype  = $qr ? $qr->qtype  : "ANY";
-
+		
 		$reply = Net::DNS::Packet->new($qname, $qclass, $qtype);
-
+		
 		if ($query->header->opcode eq "QUERY") {
 			if ($query->header->qdcount == 1) {
 				print "query ", $query->header->id,
-			  ": ($qname, $qclass, $qtype)..." if $self->{"Verbose"};
-
-		my ($rcode, $ans, $auth, $add) =
-			&{$self->{"ReplyHandler"}}($qname, $qclass, $qtype);
-
-		print "$rcode\n" if $self->{"Verbose"};
-
-		$reply->header->rcode($rcode);
-
-		$reply->push("answer",	   @$ans)  if $ans;
-		$reply->push("authority",  @$auth) if $auth;
-		$reply->push("additional", @$add)  if $add;
-		}
-		else {
-			print "ERROR: qdcount ", $query->header->qdcount,
-			  "unsupported\n" if $self->{"Verbose"};
-		$reply->header->rcode("FORMERR");
-		}
+				": ($qname, $qclass, $qtype)..." if $self->{"Verbose"};
+				
+				my ($rcode, $ans, $auth, $add);
+				
+				($rcode, $ans, $auth, $add, $headermask) =
+					&{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost);
+				
+				print "$rcode\n" if $self->{"Verbose"};
+				
+				$reply->header->rcode($rcode);
+				
+				$reply->push("answer",	   @$ans)  if $ans;
+				$reply->push("authority",  @$auth) if $auth;
+				$reply->push("additional", @$add)  if $add;
+			} else {
+				print "ERROR: qdcount ", $query->header->qdcount,
+					"unsupported\n" if $self->{"Verbose"};
+				$reply->header->rcode("FORMERR");
+			}
 		}
 		else {
 			print "ERROR: opcode ", $query->header->opcode, " unsupported\n"
-		  if $self->{"Verbose"};
+				if $self->{"Verbose"};
 			$reply->header->rcode("FORMERR");
 		}
-	}
-	else {
+	} else {
 		print "ERROR: invalid packet\n" if $self->{"Verbose"};
 		$reply = Net::DNS::Packet->new("", "ANY", "ANY");
 		$reply->header->rcode("FORMERR");
 	}
-
+	
+	
+	if (!defined ($headermask)) {
+		$reply->header->ra(1);
+		$reply->header->ad(0);
+	} else {
+		# Local modifications
+	
+		$reply->header->aa(1) if $headermask->{'aa'};
+		$reply->header->ra(1) if $headermask->{'ra'};
+		$reply->header->ad(1) if $headermask->{'ad'};
+	}
+	
+	
 	$reply->header->qr(1);
-	$reply->header->ra(1);
-	$reply->header->rd($query->header->rd);
+	$reply->header->cd($query->header->cd);
+	$reply->header->rd($query->header->rd);	
 	$reply->header->id($query->header->id);
-
+	
+	
+	$reply->header->print if $self->{"Verbose"} && defined $headermask;
+	
 	return $reply;
 }
 
@@ -154,6 +170,7 @@ sub make_reply {
 
 sub tcp_connection {
 	my ($self, $sock) = @_;
+	my $peerhost = $sock->peerhost;
 
 	print "TCP connection from ", $sock->peerhost, ":", $sock->peerport, "\n"
 	  if $self->{"Verbose"};
@@ -170,7 +187,7 @@ sub tcp_connection {
 		print "got ", length($buf), " bytes\n" if $self->{"Verbose"};
 
 		my $query = Net::DNS::Packet->new(\$buf);
-		my $reply = $self->make_reply($query);
+		my $reply = $self->make_reply($query, $peerhost);
 		my $reply_data = $reply->data;
 
 		print "writing response..." if $self->{"Verbose"};
@@ -198,7 +215,7 @@ sub udp_connection {
 	print "UDP connection from $peerhost:$peerport\n" if $self->{"Verbose"};
 
 	my $query = Net::DNS::Packet->new(\$buf);
-	my $reply = $self->make_reply($query);
+	my $reply = $self->make_reply($query, $peerhost);
 	my $reply_data = $reply->data;
 
 	print "writing response..." if $self->{"Verbose"};
@@ -262,12 +279,12 @@ objects.  See L</EXAMPLE> for an example.
 
 =head2 new
 
-	my $ns = Net::DNS::Nameserver->new(
+ my $ns = Net::DNS::Nameserver->new(
 	LocalAddr	 => "10.1.2.3",
 	LocalPort	 => "5353",
 	ReplyHandler => \&reply_handler,
 	Verbose		 => 1
-	);
+ );
 
 Creates a nameserver object.  Attributes are:
 
@@ -277,9 +294,10 @@ Creates a nameserver object.  Attributes are:
   Verbose		Print info about received queries.	Defaults to 0 (off).
 
 The ReplyHandler subroutine is passed the query name, query class,
-and query type.	 It must return the response code and references
-to the answer, authority, and additional sections of the response.
-Common response codes are:
+query type and optionally an argument containing header bit settings
+(see below).  It must return the response code and references to the
+answer, authority, and additional sections of the response.  Common
+response codes are:
 
   NOERROR	No error
   FORMERR	Format error
@@ -287,6 +305,12 @@ Common response codes are:
   NXDOMAIN	Non-existent domain (name doesn't exist)
   NOTIMP	Not implemented
   REFUSED	Query refused
+
+For advanced usage there is an optional argument containing an
+hashref with the settings for the C<aa>, C<ra>, and C<ad> 
+header bits. The argument is of the form 
+C<<{ ad => 1, aa => 0, ra => 1 }>>. 
+
 
 See RFC 1035 and the IANA dns-parameters file for more information:
 
@@ -314,40 +338,42 @@ Start accepting queries.
 The following example will listen on port 5353 and respond to all queries
 for A records with the IP address 10.1.2.3.	 All other queries will be
 answered with NXDOMAIN.	 Authority and additional sections are left empty.
+The $peerhost variable catches the IP address of the peer host, so that
+additional filtering on its basis may be applied.
 
-  #!/usr/bin/perl -Tw
-  
-  use Net::DNS;
-  use strict;
-  
-  sub reply_handler {
-	  my ($qname, $qclass, $qtype) = @_;
-	  my ($rcode, @ans, @auth, @add);
-  
-	  if ($qtype eq "A") {
-		my ($ttl, $rdata) = (3600, "10.1.2.3");
-		push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
-		$rcode = "NOERROR";
-	  }
-	  else {
-		$rcode = "NXDOMAIN";
-	  }
-		
-	  return ($rcode, \@ans, \@auth, \@add);
-  }
-
-  my $ns = Net::DNS::Nameserver->new(
-	  LocalPort	   => 5353,
-	  ReplyHandler => \&reply_handler,
-	  Verbose	   => 1
-  );
-  
-  if ($ns) {
-	  $ns->main_loop;
-  }
-  else {
-	  die "couldn't create nameserver object\n";
-  }
+ #!/usr/bin/perl 
+ 
+ use Net::DNS;
+ use strict;
+ use warnings;
+ 
+ sub reply_handler {
+	 my ($qname, $qclass, $qtype, $peerhost) = @_;
+	 my ($rcode, @ans, @auth, @add);
+	 
+	 if ($qtype eq "A") {
+		 my ($ttl, $rdata) = (3600, "10.1.2.3");
+		 push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
+		 $rcode = "NOERROR";
+	 } else {
+         $rcode = "NXDOMAIN";
+	 }
+	 
+	 # mark the answer as authoritive (by setting the 'aa' flag
+	 return ($rcode, \@ans, \@auth, \@add, { aa => 1 });
+ }
+ 
+ my $ns = Net::DNS::Nameserver->new(
+     LocalPort    => 5353,
+     ReplyHandler => \&reply_handler,
+     Verbose      => 1,
+ );
+ 
+ if ($ns) {
+     $ns->main_loop;
+ } else {
+    die "couldn't create nameserver object\n";
+ }
 
 =head1 BUGS
 
@@ -355,9 +381,12 @@ Net::DNS::Nameserver objects can handle only one query at a time.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000-2002 Michael Fuhr.  All rights reserved.	This program
-is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

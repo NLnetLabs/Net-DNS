@@ -31,13 +31,9 @@ To read about the latest features, see the Changes file.  To find
 out about known bugs and to see what's planned for future versions,
 see the TODO file.
 
-As of version 0.02, Net::DNS is written entirely in Perl.  Version
-0.01 was written mostly in C and used the system's resolver.  The
-Perl version runs quite a bit slower, but considering that the
-network can be a serious bottleneck when making DNS queries, the
-speed difference may not really matter in most cases.  However,
-future versions may contain some C to increase speed or for those
-who wish to link against libresolv or libbind.
+Net::DNS does not depend on any C libraries.  However, if possible
+Net::DNS tries to link to the libresolv library.  This provides a 
+notable speed increase.
 
 The author invites feedback on Net::DNS.  If there's something you'd
 like to have added, please let me know.  If you find a bug, please
@@ -97,7 +93,7 @@ Some of the demonstration and contributed scripts may require
 additional modules -- see demo/README and contrib/README for details.
 
 Note that the Test::More module is actually part of the Test-Simple
-distrobution.  See the FAQ (lib/Net/DNS/FAQ.pod) for more information.
+distribution.  See the FAQ (lib/Net/DNS/FAQ.pod) for more information.
 
 
 4. INSTALLATION
@@ -135,16 +131,6 @@ from the following command:
 
     make test TEST_VERBOSE=1
 
-If you examine the test scripts (in the t/ directory), you'll notice
-that there aren't many tests for the resolver itself (i.e., the
-network code).  Part of the problem is creating a test suite to
-work on systems both with and without Internet connectivity.  Future
-versions of this module may have more tests but will probably
-require some site-specific configuration before running them.
-
-The author runs additional tests against customized zone data on a
-private nameserver, but these tests aren't included in the distribution.
-
 
 6. DEMONSTRATION SCRIPTS
 ------------------------
@@ -162,17 +148,9 @@ information be mentioned somewhere.
 7. DYNAMIC UPDATES
 ------------------
 
-    *** WARNING: EXERCISE CAUTION WHEN USING DYNAMIC UPDATES ***
-
-Net::DNS now supports DNS dynamic updates as documented in RFC 2136;
+Net::DNS supports DNS dynamic updates as documented in RFC 2136;
 for more information and examples, please see the Net::DNS::Update
 manual page.
-
-The dynamic update code is still under development but I've decided
-to make it available to those who'd like to try it; please see the
-TODO file for some of the things I still need to work on.  At this
-time, I recommend that you exercise caution when using Net::DNS to
-maintain a production nameserver via dynamic updates.
 
 Please note that there are some bugs in the BIND 8.1-REL nameserver
 that can cause it to dump core when receiving certain dynamic
@@ -228,13 +206,12 @@ Net::DNS, while nearly four years old, is still under development
 and is sure to contain a few bugs.  Please see the TODO and Changes
 files for more information.
 
-As mentioned in the Dynamic Updates section, I recommend that you
-exercise caution when using Net::DNS to maintain a production
-nameserver via dynamic updates.  Always test your code *thoroughly*.
-The Net::DNS author accepts no blame if you corrupt your zone.  That
-warning in place, I am aware of at least one large company that has
-used Net::DNS to make thousands of dynamic updates per day for nearly
-three years without any problems.
+I recommend that you exercise caution when using Net::DNS to maintain a
+production nameserver via dynamic updates.  Always test your code
+*thoroughly*. The Net::DNS author accepts no blame if you corrupt your
+zone.  That warning in place, I am aware of at least one large company
+that has used Net::DNS to make thousands of dynamic updates per day for
+nearly three years without any problems.
 
 If you find a bug, please report it to the author along with the
 following information:
@@ -260,9 +237,12 @@ Please use the following form to submit bug reports:
 10. COPYRIGHT
 -------------
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 
 11. AUTHOR INFORMATION
@@ -287,6 +267,8 @@ devel-request@lists.net-dns.org with "subscribe" in the subject.
 -------------------
 
 Thanks to Mike for letting me take care of his baby.
+
+Thanks to Olaf Kolkman and Rob Brown for all their patches and input.
 
 Thanks to all who have used Net::DNS and reported bugs, made
 suggestions, contributed code, and encouraged me to add certain
@@ -313,4 +295,4 @@ proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 1.13 2003/05/26 06:53:40 ctriv Exp $
+$Id: README,v 1.14 2003/09/03 04:29:58 ctriv Exp $

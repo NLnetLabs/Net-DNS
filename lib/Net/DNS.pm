@@ -1,6 +1,6 @@
 package Net::DNS;
 #
-# $Id: DNS.pm,v 1.70 2003/09/01 22:13:51 ctriv Exp $
+# $Id: DNS.pm,v 1.72 2003/09/26 22:44:52 ctriv Exp $
 #
 use strict;
 use vars qw(
@@ -19,7 +19,7 @@ use vars qw(
 );
 
 
-$VERSION = '0.40';
+$VERSION = '0.40_01';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -551,9 +551,12 @@ the source distribution.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This program 
-is free software; you can redistribute it and/or modify it under the same 
-terms as Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr. 
+
+Portions Copyright (c) 2002-2003 Chris Reinhardt.
+
+All rights reserved.  This program is free software; you may redistribute
+it and/or modify it under the same terms as Perl itself.
 
 =head1 AUTHOR INFORMATION
 
