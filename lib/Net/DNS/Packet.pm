@@ -266,29 +266,30 @@ sub data {
 	my $ancount = 0;
 	my $nscount = 0;
 	my $arcount = 0;
-	my $data = undef;
 	# Note that the only pieces we;ll fill in later have predefined
         # length.
 
 	my $headerlength=length $self->{"header"}->data;
 
+	my $data = $self->{"header"}->data;
+
 	foreach my $question (@{$self->{"question"}}) {
-		$data .= $question->data($self, $headerlength);
+		$data .= $question->data($self, length $data);
 		$qdcount++;
 	}
 
 	foreach my $rr (@{$self->{"answer"}}) {
-		$data .= $rr->data($self, $headerlength);
+		$data .= $rr->data($self, length $data);
 		$ancount++;
 	}
 
 	foreach my $rr (@{$self->{"authority"}}) {
-		$data .= $rr->data($self, $headerlength);
+		$data .= $rr->data($self, length $data);
 		$nscount++;
 	}
 
 	foreach my $rr (@{$self->{"additional"}}) {
-		$data .= $rr->data($self, $headerlength);
+		$data .= $rr->data($self, length $data);
 		$arcount++;
 	}
 
@@ -299,8 +300,9 @@ sub data {
 	$self->{"header"}->nscount( $nscount );
 	$self->{"header"}->arcount( $arcount );
 	
-	# Return the header and everything else.
-	return $self->{"header"}->data . $data;
+	# Replace the orginal header with corrected counts.
+
+	return $self->{"header"}->data . substr ($data,$headerlength);
 
 
 }

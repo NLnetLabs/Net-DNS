@@ -1,6 +1,6 @@
-# $Id: 04-packet.t 101 2004-08-12 05:12:05Z ctriv $
+# $Id$    -*-perl-*-
 
-use Test::More tests => 38;
+use Test::More tests => 39;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }     #1
@@ -154,3 +154,24 @@ $packet->pop("question");
 
 @question = $packet->question;
 ok(@question ==0,              'question() returned right number of items poptest0'); #38
+
+
+
+$packet=Net::DNS::Packet->new("254.9.11.10.in-addr.arpa","PTR","IN");
+
+$packet->push("answer", Net::DNS::RR->new(
+	"254.9.11.10.in-addr.arpa 86400 IN PTR
+host-84-11-9-254.customer.example.com"));
+
+$packet->push("authority", Net::DNS::RR->new(
+        "9.11.10.in-addr.arpa 86400 IN NS autons1.example.com"));
+$packet->push("authority", Net::DNS::RR->new(
+        "9.11.10.in-addr.arpa 86400 IN NS autons2.example.com"));
+$packet->push("authority", Net::DNS::RR->new(
+        "9.11.10.in-addr.arpa 86400 IN NS autons3.example.com"));
+
+$data=$packet->data;
+$packet2=Net::DNS::Packet->new(\$data);
+
+
+is($packet->string,$packet2->string,"Packet to data and back (failure indicates broken dn_comp)");  #39

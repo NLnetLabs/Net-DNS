@@ -2,12 +2,19 @@ Revision history for Net::DNS
 =============================
 
 
+*** 0.48_02 March 13, 2005 (Version 0.49 release candidate 2)
+
+Fix: Bug report by Bernhard Schmidt (concerning a bug on the IPv6 branch).
+
+      The bug caused dname compression to fail and to create
+      compression pointers causing loops.
+
 *** 0.48_01 March 7, 2005 (Version 0.49 release candidate 1)
 
 
 Fix: rt.cpan.org  #8882  
       No redundant lookups on SERVFAIL response 
-     and #6149 	 
+      and #6149 	 
       Does not search multiple DNS servers
  
       Net::DNS::Resolver will now use the other nameservers in the
