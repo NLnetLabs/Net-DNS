@@ -1,0 +1,122 @@
+#!/usr/local/bin/perl -w
+# $Id: check_soa,v 1.5 1997/10/02 05:00:51 mfuhr Exp $
+
+=head1 NAME
+
+check_soa - Check a domain's nameservers
+
+=head1 SYNOPSIS
+
+B<check_soa> I<domain>
+
+=head1 DESCRIPTION
+
+B<check_soa> queries each of a domain's nameservers for the Start
+of Authority (SOA) record and prints the serial number.  Errors
+are printed for nameservers that couldn't be reached or didn't
+answer authoritatively.
+
+=head1 AUTHOR
+
+The original Bourne Shell and C versions were printed in
+I<DNS and BIND> by Paul Albitz & Cricket Liu.
+
+This Perl version was written by Michael Fuhr.
+
+=head1 SEE ALSO
+
+L<perl(1)>, L<axfr>, L<check_zone>, L<mresolv>, L<mx>, L<perldig>, L<Net::DNS>
+
+=cut
+
+use File::Basename;
+use Net::DNS::Resolver;
+use Net::DNS::RR;
+
+#------------------------------------------------------------------------------
+# Get the domain from the command line.
+#------------------------------------------------------------------------------
+
+die "Usage: ", basename($0), " domain\n" unless @ARGV == 1;
+($domain) = @ARGV;
+
+#------------------------------------------------------------------------------
+# Find all the nameservers for the domain.
+#------------------------------------------------------------------------------
+
+$res = new Net::DNS::Resolver;
+
+$res->defnames(0);
+$res->retry(2);
+
+$ns_req = $res->query($domain, "NS");
+die "No nameservers found for $domain: ", $res->errorstring, "\n"
+	unless defined($ns_req) and ($ns_req->header->ancount > 0);
+
+#------------------------------------------------------------------------------
+# Check the SOA record on each nameserver.
+#------------------------------------------------------------------------------
+
+$res->recurse(0);
+$| = 1;
+
+foreach $nsrr (grep {$_->type eq "NS" } $ns_req->answer) {
+
+	#----------------------------------------------------------------------
+	# Set the resolver to query this nameserver.
+	#----------------------------------------------------------------------
+
+	$ns = $nsrr->nsdname;
+	print "$ns ";
+
+	unless ($res->nameservers($ns)) {
+		warn ": can't find address: ", $res->errorstring, "\n";
+		next;
+	}
+
+	#----------------------------------------------------------------------
+	# Get the SOA record.
+	#----------------------------------------------------------------------
+
+	$packet = new Net::DNS::Packet($domain, "SOA", "IN");
+	$soa_req = $res->send($packet);
+	unless (defined($soa_req)) {
+		warn ": ", $res->errorstring, "\n";
+		next;
+	}
+
+	#----------------------------------------------------------------------
+	# Is this nameserver authoritative for the domain?
+	#----------------------------------------------------------------------
+
+	unless ($soa_req->header->aa) {
+		warn "isn't authoritative for $domain\n";
+		next;
+	}
+
+	#----------------------------------------------------------------------
+	# We should have received exactly one answer.
+	#----------------------------------------------------------------------
+
+	unless ($soa_req->header->ancount == 1) {
+		warn ": expected 1 answer, got ",
+		      $soa_req->header->ancount, "\n";
+		next;
+	}
+		
+	#----------------------------------------------------------------------
+	# Did we receive an SOA record?
+	#----------------------------------------------------------------------
+
+	unless (($soa_req->answer)[0]->type eq "SOA") {
+		warn ": expected SOA, got ",
+		     ($soa_req->answer)[0]->type, "\n";
+		next;
+	}
+		
+	#----------------------------------------------------------------------
+	# Print the serial number.
+	#----------------------------------------------------------------------
+
+	print "has serial number ", ($soa_req->answer)[0]->serial, "\n";
+}

@@ -1,0 +1,316 @@
+Revision history for Net::DNS
+=============================
+
+
+*** 0.14  21 Jan 2002
+
+Net::DNS is in a state of flux.  The module is now maintained by a group
+of people including Mike Fuhr (the original developer) and others.
+
+This is an interum release, intended to return Net::DNS to 
+CPAN, and encourage new devopement.  Version 2.0 is not far behind 
+with major changes including support for windows platforms, TSIG 
+and Net::DNS::Nameserver (a very simple nameserver). 
+
+Fixed the "defined(@array) is deprecated" message in DNS.pm under perl 
+5.6.0 and greater.
+
+Fixed a bug in the Net::DNS::Resolver->nextid method to ensure
+that the query ID remains 16 bits.
+
+
+*** 0.12  1 Oct 1997
+
+Implemented TCP queries.  UDP is still the default, but you can
+make TCP the default by setting $res->usevc(1).  If the response
+to a UDP query has the truncated flag set ($query->header->tc),
+the query will be retried using TCP; you can turn off this behavior
+by setting $res->igntc(1).  This has been on my TODO list for a
+long time -- thanks to T.P. Brisco for inspiring me to finally add
+it.
+
+Added $res->tcp_timeout to set the timeout for TCP queries, including
+zone transfers.  Suggested by Stan Barber and finally added after
+a question about timeouts from Jerzy Kedra.
+
+Changed Net::DNS::Resolver->send to be a front-end to either send_udp
+or send_tcp, as appropriate.
+
+Added a check to Net::DNS::Resolver->send_udp to make sure the
+socket objects really were created.  Failure to make this check
+was causing Net::DNS to die with errors like "Can't call method
+'peerhost' without a package or object reference" or "Can't call
+method 'fileno' without a package or object reference" if the socket
+creation had failed.  Problem noted by John Line, David Topper,
+and Timothy Zakamaldin.
+
+Changed some of the code in Resolver.pm to use IO::Select instead
+of select().  Also changed one of the examples in DNS.pm to use
+IO::Select.
+
+Added "sub class" to RR.pm instead of using AUTOLOAD for it.
+Apparently some versions of Perl, specifically the 5.003_07 release
+included with some Linux distributions, would return the class an
+object was blessed into instead of the RR's class.  This fix should
+work around the problem.  Problem noted by John Line.
+
+Added a check for a nameserver of "0" and convert it to "0.0.0.0".
+Inspired in part by a report from David Mazieres.
+
+Changed Net::DNS::Update->new to use the default domain if none
+is specified.  Inspired by a question from KrisJon Hanson.
+
+Changed Net::DNS::Resolver->axfr to use the default domain if none
+is specified.
+
+In the documentation for Net::DNS::Resolver->bgread, mentioned that
+the programmer should close or destroy the socket object after reading
+from it.  Suggested by Kouichirou Eto.
+
+Removed an "srand" command from the Net::DNS::Resolver initialization
+code.  Decided it wasn't appropriate for the module to do.
+
+Added the "-q" option to demo/axfr to make zone transfers quiet
+(don't print the zone's resource records).
+
+Wrote demo/mresolv as a demonstration of performing multiple
+background queries simultaneously.
+
+Replaced contrib/loc2earth.cgi with loc2earth.fcgi.  Contributed by
+Christopher Davis.
+
+Added contrib/check_zone, a hacked version of demo/check_zone.
+Contributed by Dennis Glatting.
+
+Added contrib/DNSHash.pm, a module to implement DNS lookups as a
+tied hash.  Contributed by Dave Hayes.
+
+Added contrib/dnswalk.README to mention Dave Barr's dnswalk, which
+now uses Net::DNS.
+
+
+*** 0.11  6 Jul 1997
+
+Net::DNS::RR->new now allows the programmer to create RR objects
+from text strings like "foo.com. 86400 IN A 172.16.1.2".  See the
+Net::DNS::RR manual page for examples.
+
+Wrote the functions yxrrset, nxrrset, yxdomain, nxdomain, rr_add,
+and rr_del as front-ends for creating RR objects in an update
+packet.  See the Net::DNS and Net::DNS::Update manual pages for
+documentation and examples.
+
+Changed Net::DNS::RR->AUTOLOAD to print a warning message and return
+undef if the programmer calls an unknown method for an RR object.
+Previous behavior died with an error message and a stack trace.
+This error happens when the calling software assumes that an RR
+object is of a particular type when it's actually of a different
+type.  THE CALLER SHOULD ALWAYS CHECK AN RR OBJECT'S TYPE BEFORE
+CALLING ANY OF ITS METHODS!  Personally, I think failure to do so
+deserves a fatal error but I can appreciate that not everyone agrees
+with me.  Suggested by Dirk Herr-Hoyman.
+
+Added the "answerfrom" and "answersize" methods to Net::DNS::Resolver
+and Net::DNS::Packet.
+
+Added the "mx" method to Net::DNS as a high-level function to return
+the MX records for a specified name.  This method will follow CNAME
+references as long as there are MX records in the answer section
+of the response packet (actually, it just ignores the CNAME records
+and returns whatever MX records are present -- I'm not sure if this
+is really correct).  Modified demo/mx to use this new method.
+
+Made the error message in Makefile.PL more descriptive.
+
+Net::DNS::Resolver->axfr no longer returns the redundant SOA record
+that terminates a zone transfer.
+
+Finished the code for adding a LOC RR to a dynamic update packet.
+
+Added loc2earth.cgi and loclist.pl to the contrib/ directory.
+Contributed by Christopher Davis.
+
+
+*** 0.10  12 Jun 1997
+
+Added an index and some more information to README.
+
+Documented the rdlength method and added the rdata method to the
+Net::DNS::RR base class.
+
+Added a check for packet size to Net::DNS::Resolver->send.  Net::DNS
+currently supports only UDP queries, which have a packet size limit of
+512 octets (RFC 1035, Section 2.3.4).
+
+Added lines to Net::DNS::Resolver->send to ignore any packets whose
+query response code isn't set to 1, or whose query ID doesn't match
+the one we sent in our request packet.
+
+Added the "string" method to the Resolver, Packet, Header, and Question
+classes.
+
+Added code to Net::DNS::Question->new to check if the caller reversed
+the type and class arguments.  Inspired by a question from Robert Yoder.
+
+Added support for dynamic updates (RFC 2136); see README and the
+Net::DNS::Update manual page for more information and an example.
+Here are some of the changes:
+
+  * Added the push method to the Net::DNS::Packet class.
+
+  * Wrote the Net::DNS::Update module as a front-end to Net::DNS::Packet
+    for creating dynamic update packets.
+
+  * Changed Net::DNS::RR->new to allow the programmer to create RR objects.
+
+  * Added test cases for creating RRs and pushing them into the
+    various packet sections.
+
+  * Changed Net::DNS::RR->AUTOLOAD to allow the programmer to change
+    the value of an RR's fields.
+
+  * Wrote Net::DNS::Packet->dn_comp to compress domain names (opposite
+    of dn_expand).
+
+  * Changed Net::DNS::Question->data to require a packet object and
+    an offset as arguments.  We need this information to handle
+    compressed domain names.
+
+  * Added the rr_rdata method to RR subclasses to provide a binary
+    representation of the RRs RDATA section.
+
+Added support for the following RR types:
+
+    AAAA
+    EID
+    MB
+    NIMLOC
+    NSAP
+    NULL
+    PX
+
+Checked for the existence of $ENV{"HOME"} in Resolver.pm -- previous
+behavior caused a "Use of uninitialized value" error to appear in
+HTTP server log files if Net::DNS was being used in a CGI program
+and HOME wasn't defined.
+
+
+*** 0.09  29 May 1997
+
+Net::DNS is now being developed under Perl 5.004.  I'll try to keep
+it compatible with earlier versions of Perl, at least for a while.
+
+Got rid of an eval in RR.pm and replaced unpack with substr in
+several places.  After all other changes in this version, a simple
+benchmark of a zone transfer showed the new code using about 25%
+less CPU time than the old code.  Mileage will vary based on the
+program, of course, and programmers probably shouldn't expect to
+see much improvement.
+
+Debugging is now printed during packet parsing instead of after
+the entire packet has been parsed.  This can be useful for examining
+corrupt packets.
+
+Added support for NAPTR RRs.  Thanks to Ryan Moats for contributing
+the necessary code.
+
+Wrote demo/axfr to demonstrate how to save a zone transfer to a
+disk file and read it back later.  Requires the Storable module.
+
+BUG FIX:  If no "nameserver" lines are found in the resolver config
+files, queries should go to the nameserver running on the local
+host.  Previous behavior left the nameserver list empty, causing
+all queries to fail with the error "no nameservers".  Problem noted
+by Dr Eberhard W Lisse.
+
+BUG FIX:  Added checks for missing data in packets - this should
+eliminate the "@ outside of string" errors that can happen if the
+packet is corrupt.  In these cases, queries will return undef and an
+explanation of the error (e.g., "answer section incomplete") will be
+present in $res->errorstring.  Problem noted by Martin Lichtin and
+Stephen Hebditch.
+
+
+*** 0.08  13 May 1997
+
+Added support for LOC RRs.  Thanks to Christopher Davis for his
+help and contributing some of the code.
+
+
+*** 0.07  19 Apr 1997
+
+Added an empty DESTROY method to Header.pm, Question.pm, Resolver.pm,
+and RR.pm.  A couple of users have reported that Net::DNS dies because
+AUTOLOAD gets called for DESTROY methods but doesn't handle them.
+I haven't been able to reproduce this problem under Perl 5.003.
+
+Changed Net::DNS::Resolver->nameservers to accept unqualified hostnames.
+
+
+*** 0.06  2 Apr 1997
+
+Fixed Net::DNS::Resolver->nameservers to accept CNAME RRs if the
+corresponding A RR is found in the answer section.  This should
+eliminate some of the "address: no such method" errors that have
+been reported.
+
+Added the "string" method to Net::DNS::RR.
+
+Added a more descriptive error to Net::DNS::RR::AUTOLOAD.  This
+error is printed if you call a method that doesn't exist for
+a particular RR type.
+
+
+*** 0.05  27 Mar 1997
+
+Fixed Net::DNS::Resolver->nameservers to accept IP addresses.  Was
+accepting only names.
+
+Fixed Net::DNS::Resolver->read_config() to ignore end-of-line comments
+when reading resolver config files.  Also fixed to recognize multiple
+"nameserver" and "search" lines.
+
+Fixed ISDN.pm to handle a non-existent sa field (sets it to an empty
+string).
+
+demo/check_zone now sets $res->defnames to false, so the domain name
+given on the command line should be fully qualified.
+
+Started adding code for dynamic updates.  Not yet finished.
+
+
+*** 0.04  13 Feb 1997
+
+Added background queries.  See the examples in the Net::DNS and
+Net::DNS::Resolver manpages.
+
+Added zone transfers and some error reporting to demo/perldig.  Also
+added the ability to query a specific nameserver.
+
+Added a check to end zone transfers when we receive a second SOA RR
+(would block waiting for more input when doing zone transfers from
+certain nameservers).  Also added some additional output if debugging
+is turned on.
+
+
+*** 0.03  8 Feb 1997
+
+Added zone transfers.  Wrote demo/check_zone.  Minor corrections and
+additions to the documentation.
+
+
+*** 0.02  2 Feb 1997
+
+Rewritten to be entirely Perl.  No longer uses the system's resolver
+library or the resparse library.  Net::Resolver needs some work
+on error reporting and needs to implement TCP queries.
+
+
+*** 0.01  26 Jan 1997
+
+Initial release for testing.  Still some bugs, particularly in
+memory management.
+
+---
+Michael Fuhr <mfuhr@dimensional.com>
+$Id: Changes,v 1.11 1997/10/02 05:34:51 mfuhr Exp $
