@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Recurse;
 
-# $Id: Recurse.pm,v 1.2 2003/03/05 19:17:13 ctriv Exp $
+# $Id: Recurse.pm,v 1.3 2003/05/22 06:19:49 ctriv Exp $
 
 use strict;
 use Net::DNS::Resolver;
@@ -273,8 +273,8 @@ Net::DNS::Resolver::Recurse - Perform recursive dns lookups
 
 =head1 SYNOPSIS
 
-  use Net::DNS::Recurse;
-  my $res = Net::DNS::Resolver->new;
+  use Net::DNS::Resolver::Recurse;
+  my $res = Net::DNS::Resolver::Recurse->new;
 
 =head1 DESCRIPTION
 
@@ -322,7 +322,7 @@ Copyright (c) 2002, Rob Brown.  All rights reserved.
 This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 
-$Id: Recurse.pm,v 1.2 2003/03/05 19:17:13 ctriv Exp $
+$Id: Recurse.pm,v 1.3 2003/05/22 06:19:49 ctriv Exp $
 
 =cut
 

@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 
-# $Id: Packet.pm,v 1.15 2003/05/10 12:32:14 ctriv Exp $
+# $Id: Packet.pm,v 1.16 2003/05/22 21:31:26 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -682,9 +682,11 @@ Returns B<(undef, undef)> if the domain name couldn't be expanded.
 sub dn_expand {
 	my ($packet, $offset) = @_;
 
-	#return dn_expand2($packet, $offset, {});
-		
-	return dn_expand_XS($packet, $offset);
+	if (defined &dn_expand_XS) {
+		return dn_expand_XS($packet, $offset);
+	} else {
+		return dn_expand2($packet, $offset, {});
+	}
 }
 
 sub dn_expand2 {

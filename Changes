@@ -1,6 +1,17 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.34_03 May 22 2003
+
+Reworked Makefile.PL to try and detect if you have a working C compiler.
+
+Added '--pm' and '--xs' command line options to Makefile.PL
+
+Fixed linking problem on linux.
+
+Tie::DNSHash removed from the package, see Tie::DNS from CPAN for a more
+complete implementation of a DNS hash.
+
 *** 0.34_02 May 21 2003
 
 Net::DNS::Packet::dn_expand is now implemented using the function of the
@@ -676,4 +687,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.50 2003/05/22 02:23:10 ctriv Exp $
+$Id: Changes,v 1.52 2003/05/23 01:01:29 ctriv Exp $

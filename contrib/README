@@ -6,10 +6,9 @@ problems or questions, please contact the contributor.
 File			Contributor
 ------			-----------
 check_zone		Dennis Glatting <dennis.glatting@software-munitions.com>
-DNSHash.pm		Dave Hayes <dave@jetcafe.org>
 dnswalk			Dave Barr <barr@cis.ohio-state.edu>
 loc2earth.fcgi		Christopher Davis <ckd@kei.com>
 loclist.pl		Christopher Davis <ckd@kei.com>
 
 ---
-$Id: README,v 1.1.1.1 2002/02/02 03:48:15 ctriv Exp $
+$Id: README,v 1.2 2003/05/22 21:37:04 ctriv Exp $

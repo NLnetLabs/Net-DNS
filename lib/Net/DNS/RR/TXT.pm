@@ -1,6 +1,6 @@
 package Net::DNS::RR::TXT;
 
-# $Id: TXT.pm,v 1.3 2003/03/06 18:09:27 ctriv Exp $
+# $Id: TXT.pm,v 1.4 2003/05/23 00:18:53 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -30,6 +30,7 @@ sub new_from_string {
     my ( $class, $self, $rdata_string ) = @_ ;
     
     bless $self, $class;
+        
     $self->_build_char_str_list($rdata_string);
 
     return $self ;
@@ -37,7 +38,7 @@ sub new_from_string {
 
 sub txtdata {
 	my $self = shift;
-	return join(' ',  $self->char_str_list()  ) ;
+	return join(' ',  $self->char_str_list()  );
 }
 
 sub rdatastr {
@@ -47,15 +48,17 @@ sub rdatastr {
 				$str =~ s/"/\\"/g ;  
 				q("). $str. q(") 
 				}  @{ $self->{'char_str_list'} }  )
-		: "; no data"  ;
+		: "; no data";
 }
 
 sub _build_char_str_list {
-	my ( $self, $rdata_string ) = @_ ;
-	my @words = &shellwords($rdata_string) ;
+	my ( $self, $rdata_string ) = @_;
+	
+	my @words = shellwords($rdata_string);
+
 	foreach my $string ( @words ) {
-	    $string =~ s/\\"/"/go ;
-	    push( @{ $self->{'char_str_list'} }, $string );
+	    $string =~ s/\\"/"/g;
+	    push(@{$self->{'char_str_list'}}, $string);
 	}
 }
 
@@ -68,7 +71,7 @@ sub char_str_list {
 		$self->_build_char_str_list( $self->{'txtdata'} );
 	}
 
-	return @{ $self->{'char_str_list'} } ;	# unquoted strings
+	return @{ $self->{'char_str_list'} };	# unquoted strings
 }
 
 sub rr_rdata {

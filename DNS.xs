@@ -1,5 +1,5 @@
 /*
- * $Id: DNS.xs,v 1.7 2003/05/17 09:18:04 ctriv Exp $
+ * $Id: DNS.xs,v 1.8 2003/05/23 00:12:37 ctriv Exp $
  *
  */
  
@@ -37,7 +37,8 @@ void
 dn_expand_XS(buffer, offset) 
 	SV * buffer
 	int offset
-		
+
+  PROTOTYPE: $$		
   PPCODE:
 	STRLEN len;
 	char * buf;

@@ -6,7 +6,6 @@ README
 TODO
 Net-DNS.spec
 Net-DNS.spec.PL
-contrib/DNSHash.pm
 contrib/README
 contrib/check_zone
 contrib/dnswalk.README
