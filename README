@@ -258,12 +258,6 @@ Net::DNS was created by:
 	mike@fuhr.org 
 
 
-If you have any questions about Net::DNS or wish to help in development, 
-please join the Net::DNS mailing list by sending an email to 
-devel-request@lists.net-dns.org with "subscribe" in the subject.
-
-
-
 12. ACKNOWLEDGMENTS
 -------------------
 
@@ -296,4 +290,4 @@ proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 2.102 2004/05/05 20:35:43 ctriv Exp $
+$Id: README 112 2004-08-12 23:09:16Z ctriv $

@@ -1,12 +1,12 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm,v 2.105 2004/05/05 20:35:43 ctriv Exp $
+# $Id: Resolver.pm 102 2004-08-12 05:16:06Z ctriv $
 #
 
 use strict;
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 2.105 $)[1];
+$VERSION = (qw$LastChangedRevision: 102 $)[1];
 
 BEGIN {
 	if ($^O eq 'MSWin32') {
@@ -207,8 +207,9 @@ The record type and class can be omitted; they default to A and
 IN.  If the name looks like an IP address (4 dot-separated numbers),
 then an appropriate PTR query will be performed.
 
-Returns a C<Net::DNS::Packet> object, or C<undef> if no answers
-were found.
+Returns a "Net::DNS::Packet" object, or "undef" if no answers were
+found.  If you need to examine the response packet whether it contains
+any answers or not, use the send() method instead.
 
 =head2 query
 
@@ -226,8 +227,9 @@ The record type and class can be omitted; they default to A and
 IN.  If the name looks like an IP address (IPv4 or IPv6),
 then an appropriate PTR query will be performed.
 
-Returns a C<Net::DNS::Packet> object, or C<undef> if no answers
-were found.
+Returns a "Net::DNS::Packet" object, or "undef" if no answers were
+found.  If you need to examine the response packet whether it contains
+any answers or not, use the send() method instead.
 
 =head2 send
 

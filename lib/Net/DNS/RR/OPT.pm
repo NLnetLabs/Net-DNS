@@ -1,6 +1,6 @@
 package Net::DNS::RR::OPT;
 #
-# $Id: OPT.pm,v 2.102 2004/05/04 23:16:18 ctriv Exp $
+# $Id: OPT.pm 102 2004-08-12 05:16:06Z ctriv $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION %extendedrcodesbyname %extendedrcodesbyval $EDNSVERSIO
 use Carp;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$LastChangedRevision: 102 $)[1];
 
 $EDNSVERSION = 0;
 

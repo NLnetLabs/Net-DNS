@@ -1,4 +1,4 @@
-# $Id: 08-online.t,v 2.102 2004/02/25 12:33:56 ctriv Exp $
+# $Id: 08-online.t 101 2004-08-12 05:12:05Z ctriv $
 
 use Test::More;
 use strict;

@@ -1,4 +1,4 @@
-# $Id: 05-rr-sshfp.t,v 1.1 2004/05/04 22:36:17 ctriv Exp $
+# $Id: 05-rr-sshfp.t 101 2004-08-12 05:12:05Z ctriv $
 
 use Test::More;
 use strict;

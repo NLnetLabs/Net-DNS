@@ -12,6 +12,7 @@ demo/mresolv
 demo/mx
 demo/perldig
 demo/README
+demo/trace_dns.pl
 DNS.xs
 lib/Net/DNS.pm
 lib/Net/DNS/FAQ.pod

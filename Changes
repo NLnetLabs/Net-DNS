@@ -1,13 +1,31 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.48 Aug 12, 2004
+
+Net::DNS is now stored in a subversion repository, replacing cvs.
+As such the submodule version numbers have taken another big jump. 
+Luckily those numbers don't matter as long as they work.
+
+Fixed a bug with Unknown RR types that broke zone signing [Olaf].
+
+Added callback support to Net::DNS::Resolver::Recuse.  The
+demo/trace_dns.pl script demonstrates this.
+
+Added a note regarding answers with an empty answer section to the 
+Net::DNS::Resolver::search() and Net::DNS::Resolver::query() 
+documentation.
+
+The copyright notice for Net::DNS::RR::SSHFP was incorrect.  That file
+is Copyright (c) 2004 RIPE NCC, Olaf Kolkman.
+
 *** 0.47_01 May 6, 2004
 
 ** NOTICE **
 
 RR subclasses no longer pull in parts of Net::DNS; Net::DNS is assumed
-to be up and running when the subclass is compiled.  If you were using 
-a RR subclass directly, this may break your code.  It was never documented
+to be up and running when the subclass is compiled.  If you were using a
+RR subclass directly, this may break your code.  It was never documented
 that you could use them directly however, so hopefully you never did...
 
 Fixed bug where SRV records with a priority of 0 did not function 
@@ -388,4 +406,4 @@ Fixed warning in Net::DNS::RR::AUTOLOAD with perl 5.005.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 2.125 2004/05/06 19:16:34 ctriv Exp $
+$Id: Changes 116 2004-08-13 00:29:04Z ctriv $

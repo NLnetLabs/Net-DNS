@@ -1,6 +1,6 @@
 package Net::DNS::RR::SSHFP;
 #
-# $Id: SSHFP.pm,v 1.4 2004/05/06 19:13:00 ctriv Exp $
+# $Id: SSHFP.pm 102 2004-08-12 05:16:06Z ctriv $
 #
 use strict;
 use vars qw(@ISA $VERSION $HasBabble);
@@ -15,7 +15,7 @@ BEGIN {
 	
 }
 
-$VERSION = do { my @r=(q$Revision: 1.4 $=~/\d+/g); sprintf "%d."."%03d" x $#r, @r};
+$VERSION = (qw$LastChangedRevision: 102 $)[1];
 
 @ISA = qw(Net::DNS::RR);
 
@@ -195,12 +195,10 @@ Jakob Schlyter for code review and supplying patches.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 2004 RIPE NCC, Olaf Kolkman.
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
-
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+"All rights reserved, This program is free software; you may redistribute it
+and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 

@@ -1,13 +1,13 @@
 package Net::DNS::Resolver::Recurse;
 #
-# $Id: Recurse.pm,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: Recurse.pm 102 2004-08-12 05:16:06Z ctriv $
 #
 use strict;
 use Net::DNS::Resolver;
 
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$LastChangedRevision: 102 $)[1];
 @ISA = qw(Net::DNS::Resolver);
 
 sub hints {
@@ -78,6 +78,18 @@ sub hints {
 
   return $self->nameservers( map { @{ $_ } } values %{ $self->{'hints'} } );
 }
+
+
+sub recursion_callback {
+	my ($self, $sub) = @_;
+	
+	if ($sub && UNIVERSAL::isa($sub, 'CODE')) {
+		$self->{'callback'} = $sub;
+	}
+	
+	return $self->{'callback'};
+}
+
 
 # $res->query_dorecursion( args );
 # Takes same args as Net::DNS::Resolver->query
@@ -195,6 +207,11 @@ sub _dorecursion {
   $self->nameservers(@ns);
 
   if (my $packet = $self->send( $query_packet )) {
+ 	
+  	if ($self->{'callback'}) {
+  		$self->{'callback'}->($packet);
+  	}
+  
     my $of = undef;
     print ";; _dorecursion() Response received from [",$self->answerfrom,"]\n" if $self->{'debug'};
     if (my $status = $packet->header->rcode) {
@@ -280,32 +297,45 @@ Net::DNS::Resolver::Recurse - Perform recursive dns lookups
 
 =head1 DESCRIPTION
 
-This module is a super class of Net::DNS::Resolver.
-So the methods for Net::DNS::Resolver still work
-for this module as well.  There are just a couple
-methods added:
+This module is a sub class of Net::DNS::Resolver. So the methods for
+Net::DNS::Resolver still work for this module as well.  There are just a
+couple methods added:
 
 =head2 hints
 
-Initialize the hint servers.  Recursive queries
-need a starting name server to work off of.
-This method takes a list of IP addresses to
-use as the starting servers.  These name servers
-should be authoritative for the root (.) zone.
+Initialize the hint servers.  Recursive queries need a starting name
+server to work off of. This method takes a list of IP addresses to use
+as the starting servers.  These name servers should be authoritative for
+the root (.) zone.
 
-  $res->hints( @ips );
+  $res->hints(@ips);
 
-If no hints are passed, the default nameserver
-is asked for the hints.  Normally these IPs can
-be obtained from the following location:
+If no hints are passed, the default nameserver is asked for the hints. 
+Normally these IPs can be obtained from the following location:
 
   ftp://ftp.internic.net/domain/named.root
+  
+=head2 recursion_callback
+
+This method is takes a code reference, which is then invoked each time a
+packet is received during the recursive lookup.  For example to emulate
+dig's C<+trace> function:
+
+ $res->recursion_callback(sub {
+     my $packet = shift;
+		
+     $_->print for $packet->additional;
+		
+     printf(";; Received %d bytes from %s\n\n", 
+         $packet->answersize, 
+         $packet->answerfrom
+     );
+ });
 
 =head2 query_dorecursion
 
-This method is much like the normal query() method
-except it disables the recurse flag in the packet
-and explicitly performs the recursion.
+This method is much like the normal query() method except it disables
+the recurse flag in the packet and explicitly performs the recursion.
 
   $packet = $res->query_dorecursion( "www.netscape.com.", "A");
 
@@ -324,7 +354,7 @@ Copyright (c) 2002, Rob Brown.  All rights reserved.
 This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 
-$Id: Recurse.pm,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+$Id: Recurse.pm 102 2004-08-12 05:16:06Z ctriv $
 
 =cut
 

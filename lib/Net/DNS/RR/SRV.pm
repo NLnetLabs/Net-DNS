@@ -1,12 +1,12 @@
 package Net::DNS::RR::SRV;
 #
-# $Id: SRV.pm,v 2.105 2004/05/05 20:36:00 ctriv Exp $
+# $Id: SRV.pm 102 2004-08-12 05:16:06Z ctriv $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.105 $)[1];
+$VERSION = (qw$LastChangedRevision: 102 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;

@@ -1,4 +1,4 @@
-# $Id: 07-misc.t,v 2.102 2004/05/04 22:52:30 ctriv Exp $
+# $Id: 07-misc.t 101 2004-08-12 05:12:05Z ctriv $
 
 use Test::More tests => 17;
 use strict;

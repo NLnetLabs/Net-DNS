@@ -1,12 +1,12 @@
 package Net::DNS::RR::Unknown;
 #
-# $Id: Unknown.pm,v 2.102 2004/05/05 20:35:43 ctriv Exp $
+# $Id: Unknown.pm 102 2004-08-12 05:16:06Z ctriv $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$LastChangedRevision: 102 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -14,25 +14,35 @@ sub new {
 	my $length = $self->{'rdlength'};
 	
 	if ($length > 0) {
-	    my $hex = unpack('H*', substr($$data, $offset,$length));
-	    $self->{'rdata'} = "\\# $length $hex";
+		$self->{'rdata'}    = substr($$data, $offset,$length);
+		$self->{'rdatastr'} = "\\# $length " . unpack('H*',  $self->{'rdata'});
 	}
-
+	
 	return bless $self, $class;
 }
 
 
 sub rdatastr {
 	my $self = shift;
-	return defined $self->{'rdata'} ? $self->{'rdata'} : '# NODATA';
-
+	
+	if (exists $self->{'rdatastr'}) {
+		return $self->{'rdatastr'};
+	} else {
+		if (exists $self->{"rdata"}){
+			my $data= $self->{'rdata'};
+			
+			return  "\\# ". length($data) . "  " . unpack('H*',  $data);
+		}
+	}
+	
+	return "#NO DATA";
 }
 
-sub rr_rdata {
-	my $self  = shift;
-	my $rdata = '';
-	return $rdata;
-}
+
+# sub rr_rdata is inherited from RR.pm. Note that $self->{'rdata'}
+# should always be defined
+
+
 
 1;
 __END__

@@ -1,6 +1,6 @@
 package Net::DNS;
 #
-# $Id: DNS.pm,v 2.113 2004/05/06 19:11:23 ctriv Exp $
+# $Id: DNS.pm 114 2004-08-13 00:23:41Z ctriv $
 #
 use strict;
 use vars qw(
@@ -30,7 +30,7 @@ BEGIN {
     require Exporter;
     
     @ISA     = qw(Exporter DynaLoader);
-    $VERSION = '0.47_01';
+    $VERSION = '0.48';
     $HAVE_XS = eval { __PACKAGE__->bootstrap(); 1 } ? 1 : 0;
 }
 

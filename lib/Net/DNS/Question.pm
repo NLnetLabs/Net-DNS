@@ -1,6 +1,6 @@
 package Net::DNS::Question;
 #
-# $Id: Question.pm,v 2.101 2004/05/05 20:35:43 ctriv Exp $
+# $Id: Question.pm 102 2004-08-12 05:16:06Z ctriv $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -8,7 +8,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$LastChangedRevision: 102 $)[1];
 
 =head1 NAME
 
