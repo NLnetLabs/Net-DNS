@@ -33,7 +33,7 @@ my ($use_xs, $online_tests);
 GetOptions(
 	'xs!'           => \$use_xs,
 	'pm'            => sub { 
-		warn qq/\n\tWARNING: Use of "--pm" is deprecated.  Use "--no-xs" instead.\n\n/;
+		warn qq/\n\tWARNING: Use of "--pm" is deprecated.  Use "--noxs" instead.\n\n/;
 		$use_xs = 0;
 	},
 	'online-tests!' => \$online_tests,

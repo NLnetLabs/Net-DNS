@@ -114,9 +114,9 @@ Makefile.PL's guess, use the '--xs' option to force linking the library:
 
 	perl Makefile.PL --xs
 	
-Use the '--no-xs' option to use the pure perl version:
+Use the '--noxs' option to use the pure perl version:
 
-	perl Makefile.PL --no-xs
+	perl Makefile.PL --noxs
 
 
 If you wish to not run the online tests, the '--no-online-tests'

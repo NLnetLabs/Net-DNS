@@ -7,7 +7,7 @@ Revision history for Net::DNS
 
 Fix: rt.cpan.org Ticket #8483 
 	eval tests for DNS::RR::SIG fail when using a die handler 
-	(thanks Sebastiaan Hoogeveen)
+	(Thanks Sebastiaan Hoogeveen)
 	
       Patch applied.
 
@@ -21,7 +21,13 @@ Fix: rt.cpan.org: Ticket #8608
 
       Also fixed the incorrect assumption.
 
-      Thanks Bruce Campbell.
+      (Thanks Bruce Campbell.)
+
+
+Fix: Ticket #11106 
+	Incorrect instructions in README 
+
+      Corrected in the README and in Makefile.PL
 
 
 *** 0.48 Aug 12, 2004
