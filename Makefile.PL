@@ -1,6 +1,6 @@
-# $Id: Makefile.PL,v 1.10 2002/06/03 21:12:22 ctriv Exp $
+# $Id: Makefile.PL,v 1.11 2002/08/01 09:57:10 ctriv Exp $
 
-use ExtUtils::MakeMaker;
+use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 
 warn <<AMEN if $] < 5.005;
 
@@ -10,6 +10,33 @@ properly with older perls such as yours, but bugs may lurk.
 
 
 AMEN
+
+ # Check if we have internet connection
+ # (I lifted this code from LWP... many thanks for this and more!)
+require IO::Socket;
+my $s = IO::Socket::INET->new(
+	PeerAddr => "www.google.com:80",
+	Timeout  => 10,
+);
+
+if ($s) {
+	close($s);
+
+	print <<EOT;
+
+You appear to be directly connected to the Internet.  I have some tests
+that try to query live nameservers.
+
+EOT
+
+	if (prompt("Do you want to enable these tests?", "y") =~ /^y/i) {
+		open(ENABLED, ">t/online.enabled") || die "Can't touch ./t/online.enabled $!";
+		close(ENABLED);
+	} else {
+		unlink("t/online.enabled"); # just to shure...
+	}
+}
+
 
 WriteMakefile(
 	'NAME'			=> 'Net::DNS',

@@ -1,6 +1,6 @@
 package Net::DNS::RR::ISDN;
 
-# $Id: ISDN.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: ISDN.pm,v 1.3 2002/07/16 09:19:37 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -40,9 +40,9 @@ sub new {
 sub new_from_string {
 	my ($class, $self, $string) = @_;
 
-	if ($string && $string =~ /^['"](.*?)['"]/) {
+	if ($string && $string =~ /^['"](.*?)['"](.*)/s) {
 		$self->{"address"} = $1;
-		my $rest = $';
+		my $rest = $2;
 
 		if ($rest =~ /^\s+['"](.*?)['"]$/) {
 			$self->{"sa"} = $1;

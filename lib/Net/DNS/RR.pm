@@ -1,12 +1,14 @@
 package Net::DNS::RR;
 
+# $Id: RR.pm,v 1.19 2002/08/01 08:51:40 ctriv Exp $
+
 use strict;
 use vars qw($VERSION $AUTOLOAD);
 
 use Carp;
 use Net::DNS;
 
-# $Id: RR.pm,v 1.11 2002/06/30 14:41:19 ctriv Exp $
+
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -30,41 +32,46 @@ any of its methods.  If you call an unknown method, you'll get a nasty
 warning message and C<Net::DNS::RR> will return C<undef> to the caller.
 
 =cut
-#'
+#' Stupid Emacs (I Don't even USE emacs!)
+
 
 # %RR needs to be available within the scope of the BEGIN block.
-use vars qw( %RR );
+# $RR_REGEX is a global just to be on the safe side.  
+# %_LOADED is used internally for autoloading the RR subclasses.
+use vars qw(%RR %_LOADED $RR_REGEX);
 
-# Need to figure out a good way to autoload these.
-use Net::DNS::RR::A;		$RR{"A"}	= 1;
-use Net::DNS::RR::AAAA;		$RR{"AAAA"}	= 1;
-use Net::DNS::RR::AFSDB;	$RR{"AFSDB"}	= 1;
-use Net::DNS::RR::CNAME;	$RR{"CNAME"}	= 1;
-use Net::DNS::RR::DNAME;	$RR{"DNAME"}	= 1;
-use Net::DNS::RR::EID;		$RR{"EID"}	= 1;
-use Net::DNS::RR::HINFO;	$RR{"HINFO"}	= 1;
-use Net::DNS::RR::ISDN;		$RR{"ISDN"}	= 1;
-use Net::DNS::RR::LOC;		$RR{"LOC"}	= 1;
-use Net::DNS::RR::MB;		$RR{"MB"}	= 1;
-use Net::DNS::RR::MG;		$RR{"MG"}	= 1;
-use Net::DNS::RR::MINFO;	$RR{"MINFO"}	= 1;
-use Net::DNS::RR::MR;		$RR{"MR"}	= 1;
-use Net::DNS::RR::MX;		$RR{"MX"}	= 1;
-use Net::DNS::RR::NAPTR;	$RR{"NAPTR"}	= 1;
-use Net::DNS::RR::NIMLOC;	$RR{"NIMLOC"}	= 1;
-use Net::DNS::RR::NS;		$RR{"NS"}	= 1;
-use Net::DNS::RR::NSAP;		$RR{"NSAP"}	= 1;
-use Net::DNS::RR::NULL;		$RR{"NULL"}	= 1;
-use Net::DNS::RR::PTR;		$RR{"PTR"}	= 1;
-use Net::DNS::RR::PX;		$RR{"PX"}	= 1;
-use Net::DNS::RR::RP;		$RR{"RP"}	= 1;
-use Net::DNS::RR::RT;		$RR{"RT"}	= 1;
-use Net::DNS::RR::SOA;		$RR{"SOA"}	= 1;
-use Net::DNS::RR::SRV;		$RR{"SRV"}	= 1;
-use Net::DNS::RR::TSIG;		$RR{"TSIG"}	= 1;
-use Net::DNS::RR::TXT;		$RR{"TXT"}	= 1;
-use Net::DNS::RR::X25;		$RR{"X25"}	= 1;
-use Net::DNS::RR::OPT;		$RR{"OPT"}	= 1;
+%RR = map { $_ => 1 } qw(
+	A
+	AAAA
+	AFSDB
+	CNAME
+	CERT
+	DNAME
+	EID
+	HINFO
+	ISDN
+	LOC
+	MB
+	MG
+	MINFO
+	MR
+	MX
+	NAPTR
+	NIMLOC
+	NS
+	NSAP
+	NULL
+	PTR
+	PX
+	RP
+	RT
+	SOA
+	SRV
+	TSIG
+	TXT
+	X25
+	OPT
+);
 
 #  Only load DNSSEC if available
 # 
@@ -98,6 +105,29 @@ BEGIN {
 		    die $@;
 		}
     }
+}
+
+sub build_regex {
+	my $classes = join('|', keys %Net::DNS::classesbyname);
+		
+	# Longest ones go first, so the regex engine will match AAAA before A.
+	my $types   = join('|', sort { length $b <=> length $a } keys %Net::DNS::typesbyname);
+				
+	$RR_REGEX   = " ^ 
+    	            ([*a-zA-Z0-9.-]+) # name
+    	            \\s+                
+    	            (\\d+)?           
+    	            \\s*
+    	            ($classes)?
+    	            \\s*
+    	            ($types)?
+    	            \\s*
+    	            (.*)
+    	            \$";
+
+
+
+	#print STDERR "Regex: $RR_REGEX\n";
 }
 
 
@@ -154,96 +184,73 @@ is recommended.
 
 
 sub new {
-	my $retval;
-
 	if (@_ == 8 && ref $_[6]) {
-		$retval = new_from_data(@_);
+		return new_from_data(@_);
 	}
-	elsif (@_ == 2 || @_ == 3) {
-		$retval = new_from_string(@_);
+	
+	if (@_ == 2 || @_ == 3) {
+		return new_from_string(@_);
 	}
-	else {
-		$retval = new_from_hash(@_);
-	}
-
-	return $retval;
+	
+	return new_from_hash(@_);
 }
+
 
 sub new_from_data {
 	my $class = shift;
 	my ($name, $rrtype, $rrclass, $ttl, $rdlength, $data, $offset) = @_;
-	my (%self, $retval);
 
-	%self = (
+	my $self = {
 		"name"		=> $name,
 		"type"		=> $rrtype,
 		"class"		=> $rrclass,
 		"ttl"		=> $ttl,
 		"rdlength"	=> $rdlength,
 		"rdata"		=> substr($$data, $offset, $rdlength),
-	);
+	};
 
 
 	if ($RR{$rrtype}) {
-		my $subclass = $class . "::" . $rrtype;
-		$retval = $subclass->new(\%self, $data, $offset);
-	}
-	else {
-		$retval = bless \%self, $class;
+		my $subclass = $class->_get_subclass($rrtype);
+		
+		return $subclass->new($self, $data, $offset);
+	} else {
+		bless $self, $class;
+		
+		return $self
 	}
 
-	return $retval;
 }
 
 sub new_from_string {
 	my ($class, $rrstring, $update_type) = @_;
-	my ($s, %self, $retval);
+	
+	build_regex() unless $RR_REGEX;
+	
+	# strip out comments
+	$rrstring   =~ s/;.*//g;
+	
+	($rrstring =~ m/$RR_REGEX/xso) || 
+		confess qq|qInteral Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
 
-	my $name     = undef;
-	my $ttl      = 0;
-	my $rrclass  = "";
-	my $rrtype   = "";
-	my $rdata    = "";
-
-	while ($rrstring =~ /\s*(\S+)\s*/g) {
-		$s = $1;
-
-		if (!defined($name)) {
-			#($name = $s) =~ s/\.+$//;
-			$name = $s;
-			$name =~ s/^\.+//;
-			$name =~ s/\.+$//;
-		}
-		elsif ($s =~ /^\d+$/) {
-			$ttl = $s;
-		}
-		elsif (!$rrclass && exists $Net::DNS::classesbyname{uc($s)}) {
-			$rrclass = uc($s);
-			$rdata = $';  # in case this is really type=ANY
-		}
-		elsif (exists $Net::DNS::typesbyname{uc($s)}) {
-			$rrtype = uc($s);
-			$rdata = $';
-			last;
-		}
-		else {
-			last;
-		}
-	}
+	my $name    = $1;
+	my $ttl     = $2 || 0;
+	my $rrclass = $3 || '';
+	my $rrtype  = $4 || '';
+	my $rdata   = $5 || '';
 
 	$rdata =~ s/\s+$// if $rdata;
+	$name  =~ s/\.$//  if $name;
 
-	if (!$rrtype && $rrclass && $rrclass eq "ANY") {
-		$rrtype = $rrclass;
+	if (!$rrtype && $rrclass && $rrclass eq 'ANY') {
+		$rrtype  = 'ANY';
+		$rrclass = 'IN';
+	} elsif (!$rrclass) {
 		$rrclass = "IN";
 	}
-	elsif (!$rrclass) {
-		$rrclass = "IN";
-	}
 
-	if (!$rrtype) {
-		$rrtype = "ANY";
-	}
+	$rrtype ||= 'ANY';
+	
 
 	if ($update_type) {
 		$update_type = lc $update_type;
@@ -273,68 +280,69 @@ sub new_from_string {
 		}
 	}
 
-	if ($rrtype) {
-		%self = (
-			"name"		=> $name,
-			"type"		=> $rrtype,
-			"class"		=> $rrclass,
-			"ttl"		=> $ttl,
-			"rdlength"      => 0,
-			"rdata"         => "",
-		);
+	# We used to check if $rrtype was defined at this point.  However,
+	# we just defaulted it to ANY earlier....
 
-		my $subclass = $class . "::" . $rrtype;
+	my $self = {
+		"name"		=> $name,
+		"type"		=> $rrtype,
+		"class"		=> $rrclass,
+		"ttl"		=> $ttl,
+		"rdlength"      => 0,
+		"rdata"         => "",
+	};
 
-		if ($RR{$rrtype}) {
-			my $subclass = $class . "::" . $rrtype;
-			$retval = $subclass->new_from_string(\%self, $rdata);
-		} else {
-			$retval = bless \%self, $class;
-		}
+	
+
+	if ($RR{$rrtype}) {
+		my $subclass = $class->_get_subclass($rrtype);
+			
+		return $subclass->new_from_string($self, $rdata);
 	} else {
-		$retval = undef;
+		bless $self, $class;
+		return $self;
 	}
-
-	return $retval;
 }
 
 sub new_from_hash {
-	my $class = shift;
+	my $class    = shift;
 	my %tempself = @_;
-	my (%self, $retval);
+	my $self     = {};
+	
 	my ($key, $val);
 
 	while (($key, $val) = each %tempself) {
-		$self{lc($key)} = $val;
+		$self->{lc($key)} = $val;
 	}
 
-	Carp::croak("RR name not specified")
-		unless exists $self{"name"};
-	Carp::croak("RR type not specified")
-		unless exists $self{"type"};
+	Carp::croak('RR name not specified')
+		unless exists $self->{'name'};
+	Carp::croak('RR type not specified')
+		unless exists $self->{'type'};
 
-	$self{"ttl"}   = 0    unless exists $self{"ttl"};
-	$self{"class"} = "IN" unless exists $self{"class"};
+	$self->{'ttl'}   ||= 0;
+	$self->{'class'} ||= 'IN';
 
-	$self{"rdlength"} = length $self{"rdata"}
-		if exists $self{"rdata"};
+	$self->{'rdlength'} = length $self->{'rdata'}
+		if $self->{'rdata'};
 
-	if ($RR{$self{"type"}}) {
-		my $subclass = $class . "::" . $self{"type"};
-	    if (uc $self{"type"} ne "OPT"){
-			$retval = bless \%self, $subclass;
+	if ($RR{$self->{'type'}}) {
+		my $subclass = $class->_get_subclass($self->{'type'});
+	   
+	    if (uc $self->{'type'} ne 'OPT') {
+			bless $self, $subclass;
+			
+			return $self;
 	    } else {  
 			# Special processing of OPT. Since TTL and CLASS are
 			# set by other variables. See Net::DNS::RR::OPT 
 			# documentation
-			$retval = $subclass->new_from_hash(\%self);
+			return $subclass->new_from_hash($self);
 	    }
+	} else {
+	 	bless $self, $class;
+	 	return $self;
 	}
-	else {
-		$retval = bless \%self, $class;
-	}
-
-	return $retval;
 }
 
 #
@@ -351,7 +359,8 @@ Prints the record to the standard output.  Calls the
 B<string> method to get the RR's string representation.
 
 =cut
-#'
+#' someone said that emacs gets screwy here.  Who am I to claim otherwise...
+
 sub print {
 	my $self = shift;
 	print $self->string, "\n";
@@ -485,11 +494,11 @@ sub data {
 	if (uc($self->{"type"}) eq "TSIG") {
 		my $tmp_packet = Net::DNS::Packet->new("");
 		$data = $tmp_packet->dn_comp($self->{"name"}, 0);
-	}elsif (uc($self->{"type"}) eq "OPT") {
+	} elsif (uc($self->{"type"}) eq "OPT") {
 		my $tmp_packet = Net::DNS::Packet->new("");
 		$data = $tmp_packet->dn_comp("", 0);
-	}else {
-	        $data  = $packet->dn_comp($self->{"name"}, $offset);
+	} else {
+		$data  = $packet->dn_comp($self->{"name"}, $offset);
 	}
 
 	my $qtype = uc($self->{"type"});
@@ -500,15 +509,15 @@ sub data {
 	my $qclass_val = ($qclass =~ /^\d+$/) ? $qclass : $Net::DNS::classesbyname{$qclass};
 	$qclass_val = 0 if !defined($qclass_val);
 	$data .= pack("n", $qtype_val);
+	
 	# If the type is OPT then class will need to contain a decimal number
 	# containing the UDP payload size. (RFC2671 section 4.3)
-
-	if (uc($self->{"type"}) ne "OPT"){
+	if (uc($self->{"type"}) ne "OPT") {
 	    $data .= pack("n", $qclass_val);
-	} else
-	{
+	} else {
 	    $data .= pack("n", $self->{"class"});
 	}
+	
 	$data .= pack("N", $self->{"ttl"});
 
 	$offset += length($data) + &Net::DNS::INT16SZ;	# allow for rdlength
@@ -574,24 +583,26 @@ sub _canonicalRdata {
 sub _name2wire   {   
     my ($self,$name)=@_;
 
-    my $rdata="";
-    my @dname= split /\./,lc($name);
-    for (my $i=0;$i<@dname;$i++){
-	$rdata .= pack ("C",length $dname[$i] );
-	$rdata .= $dname[$i] ;
+    my $rdata = '';
+    my @dname = split(m/\./, lc $name);
+    
+    for (@dname) {
+		$rdata .= pack('C', length $_);
+		$rdata .= $_ ;
     }
-    $rdata .= pack ("C","0");
+    
+    $rdata .= pack('C', '0');
+    
     return $rdata;
 }
 
 sub AUTOLOAD {
-	my $self = shift;
-	my $name = $AUTOLOAD;
-	$name =~ s/.*://;
-
-	if (@_) {
-		$self->{$name} = shift;
-	} elsif (!exists $self->{$name}) {
+	my ($self) = @_;  # If we do shift here, it will mess up the goto below.
+	
+	my ($class, $name) = $AUTOLOAD =~ m/^(.*)::(.*)$/;
+	
+	# XXX -- We should test that we do in fact carp on unknown methods.	
+	unless (exists $self->{$name}) {
 		my $rr_string = $self->string;
 		Carp::carp(<<"AMEN");
 
@@ -609,13 +620,52 @@ sub AUTOLOAD {
 ***
 ***  Net::DNS has returned undef to the caller.
 ***
-AMEN
-		warn "\n";
-		return undef;
-	}
 
-	return $self->{$name};
+AMEN
+		return;
+	}
+	
+	no strict q/refs/;
+	
+	# Build a method in the class.
+	*{"$class::$name"} = sub {
+		my ($self, $new_val) = @_;
+				
+		if ($new_val) {
+			$self->{$name} = $new_val;
+		}
+		
+		return $self->{$name};
+	};
+	
+	# And jump over to it.
+	goto &{"$class::$name"};
 }
+
+
+#
+#  Net::DNS::RR->_get_subclass($type)
+#
+# Return a subclass, after loading a subclass (if needed)
+#
+sub _get_subclass {
+	my ($class, $type) = @_;
+	
+	return unless $type and $RR{$type};
+	
+	my $subclass = join('::', $class, $type);
+	
+	unless ($_LOADED{$subclass}) {
+		eval "require $subclass";
+		die $@ if $@;
+		$_LOADED{$subclass}++;
+	}
+	
+	return $subclass;
+}	
+		
+	
+	
 
 =head1 BUGS
 
@@ -629,6 +679,7 @@ program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. 
 
 EDNS0 extensions by Olaf Kolkman.
+
 =head1 SEE ALSO
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,

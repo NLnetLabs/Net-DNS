@@ -1,6 +1,27 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.25 1 Aug 2002
+
+Implemented autoloading of the RR subclasses.  This provides a good
+sized speed bump, particually for applications that are not persisant. 
+Thanks to Benjamin Franz for a first version of this, and a lot of
+inspiration.
+
+Cleaned up a few things with CERT RRs.
+
+Removed use of $' from RR.pm for effciency reasons.  As a result, for
+all RRs text following a ';' is considered a comment.  This was
+originally only done in RR/SOA.pm.
+
+Added method caching to AUTOLOAD subroutines.  This should provide a
+modest speed bump.
+
+The test suite has been greatly improved, though there is still more to
+be done in this regard.  Net::DNS now has the option to run online
+tests, you'll need to be connected to the internet, with a
+properly configured local recursive namserver, to run these.
+
 *** 0.24 6 July 2002
 
 Added support for DNAME resource records.  Thanks to Andreas Gustafsson 
@@ -548,4 +569,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.21 2002/07/06 19:57:46 ctriv Exp $
+$Id: Changes,v 1.25 2002/08/01 10:14:46 ctriv Exp $

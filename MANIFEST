@@ -56,9 +56,13 @@ lib/Net/DNS/RR/X25.pm
 lib/Net/DNS/Resolver.pm
 lib/Net/DNS/Select.pm
 lib/Net/DNS/Update.pm
-t/01-resolver.t
+t/01-resolver-env.t
+t/01-resolver-file.t
 t/02-header.t
 t/03-question.t
 t/04-packet.t
 t/05-rr.t
 t/06-update.t
+t/07-misc.t
+t/08-online.t
+t/.resolv.conf

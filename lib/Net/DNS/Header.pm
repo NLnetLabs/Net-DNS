@@ -5,7 +5,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use Net::DNS;
 
-# $Id: Header.pm,v 1.5 2002/05/28 08:08:25 ctriv Exp $
+# $Id: Header.pm,v 1.6 2002/08/01 10:11:29 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -261,15 +261,26 @@ In dynamic update packets, this field is known as C<adcount>.
 =cut
 
 sub AUTOLOAD {
-	my $self = shift;
+	my ($self) = @_;
+
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
 
-	Carp::croak "$name: no such method"
-		unless exists $self->{$name};
-
-	$self->{$name} = shift if @_;
-	return $self->{$name};
+	Carp::croak "$name: no such method" unless exists $self->{$name};
+	
+	no strict q/refs/;
+	
+	*{$AUTOLOAD} = sub {
+		my ($self, $new_val) = @_;
+		
+		if ($new_val) {
+			$self->{"$name"} = $new_val;
+		}
+		
+		return $self->{"$name"};
+	};
+	
+	goto &{$AUTOLOAD};	
 }
 
 sub zocount { my $self = shift; $self->qdcount(@_); }

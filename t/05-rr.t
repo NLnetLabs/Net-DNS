@@ -1,6 +1,6 @@
-# $Id: 05-rr.t,v 1.8 2002/07/06 20:07:25 ctriv Exp $
+# $Id: 05-rr.t,v 1.10 2002/08/01 08:41:31 ctriv Exp $
 
-use Test::More tests => 209;
+use Test::More tests => 219;
 use strict;
 
 
@@ -32,39 +32,43 @@ my @rrs = (
 		type         => 'CNAME',
 		cname        => 'cname-cname.example.com',
 	}, 
-	{	#[4]
+	{   #[4]
+		type         => 'DNAME',
+		dname        => 'dname.example.com',
+	},
+	{	#[5]
 		type         => 'HINFO',
 		cpu          => 'test-cpu',
 		os           => 'test-os',
 	}, 
-	{	#[5]
+	{	#[6]
 		type         => 'ISDN',
 		address      => '987654321',
 		sa           => '001',
 	}, 
-	{	#[6]
+	{	#[7]
 		type         => 'MB',
 		madname      => 'mb-madname.example.com',
 	}, 
-	{	#[7]
+	{	#[8]
 		type         => 'MG',
 		mgmname      => 'mg-mgmname.example.com',
 	}, 
-	{	#[8]
+	{	#[9]
 		type         => 'MINFO',
 		rmailbx      => 'minfo-rmailbx.example.com',
 		emailbx      => 'minfo-emailbx.example.com',
 	}, 
-	{	#[9]
+	{	#[10]
 		type         => 'MR',
 		newname      => 'mr-newname.example.com',
 	}, 
-	{	#[10]
+	{	#[11]
 		type         => 'MX',
 		preference   => 10,
 		exchange     => 'mx-exchange.example.com',
 	},
-	{	#[11]
+	{	#[12]
 		type         => 'NAPTR',
 		order        => 100,
 		preference   => 10,
@@ -73,11 +77,11 @@ my @rrs = (
 		regexp       => 'naptr-regexp',
 		replacement  => 'naptr-replacement.example.com',
 	},
-	{	#[12]
+	{	#[13]
 		type         => 'NS',
 		nsdname      => 'ns-nsdname.example.com',
 	},
-	{	#[13]
+	{	#[14]
 		type         => 'NSAP',
 		afi          => '47',
 		idi          => '0005',
@@ -88,27 +92,27 @@ my @rrs = (
 		id           => '00800a123456',
 		sel          => '00',
 	},
-	{	#[14]
+	{	#[15]
 		type         => 'PTR',
 		ptrdname     => 'ptr-ptrdname.example.com',
 	},
-	{	#[15] 
+	{	#[16] 
 		type         => 'PX',
 		preference   => 10,
 		map822       => 'px-map822.example.com',
 		mapx400      => 'px-mapx400.example.com',
 	},
-	{	#[16]
+	{	#[17]
 		type         => 'RP',
 		mbox		 => 'rp-mbox.example.com',
 		txtdname     => 'rp-txtdname.example.com',
 	},
-	{	#[17]
+	{	#[18]
 		type         => 'RT',
 		preference   => 10,
 		intermediate => 'rt-intermediate.example.com',
 	},
-	{	#[18]
+	{	#[19]
 		type         => 'SOA',
 		mname        => 'soa-mname.example.com',
 		rname        => 'soa-rname.example.com',
@@ -118,22 +122,22 @@ my @rrs = (
 		expire       => 2592000,
 		minimum      => 86400,
 	},
-	{	#[19]
+	{	#[20]
 		type         => 'SRV',
 		priority     => 1,
 		weight       => 2,
 		port         => 3,
 		target       => 'srv-target.example.com',
 	},
-	{	#[20]
+	{	#[21]
 		type         => 'TXT',
 		txtdata      => 'txt-txtdata',
 	},
-	{	#[21]
+	{	#[22]
 		type         => 'X25',
 		psdn         => 123456789,
 	},
-	{	#[22]
+	{	#[23]
 		type         => 'LOC',
 		version      => 0,
 		size         => 3000,
@@ -142,11 +146,14 @@ my @rrs = (
 		latitude     => 2001683648,
 		longitude    => 1856783648,
 		altitude     => 9997600,
+	}, 	#[24]
+	{
+		type         => 'CERT',
+		'format'     => 3,
+		tag			 => 1,
+		algorithm    => 1,
+		certificate  => '123456789abcdefghijklmnopqrstuvwxyz',
 	},
-	{  #[23]
-		type         => 'DNAME',
-		dname        => 'dname.example.com',
-	}
 	
 );
 
@@ -194,6 +201,7 @@ while (@answer and @rrs) {
 	is($rr->name,    $name,       	"$type - name() correct");         
 	is($rr->class,   $class,      	"$type - class() correct");  
 	is($rr->ttl,     $ttl,        	"$type - ttl() correct");                
+	
 	foreach my $meth (keys %{$data}) {
 		
 		is($rr->$meth(), $data->{$meth}, "$type - $meth() correct");

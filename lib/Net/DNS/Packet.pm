@@ -1,5 +1,6 @@
 package Net::DNS::Packet;
-# $Id: Packet.pm,v 1.6 2002/06/02 11:52:31 ctriv Exp $
+
+# $Id: Packet.pm,v 1.8 2002/08/01 09:42:27 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -66,16 +67,15 @@ sub new {
 
   PARSE: {
 	if (ref($_[0])) {
-		my $data = shift;
-		my $debug = @_ ? shift : 0;
+		my $data  = shift;
+		my $debug = shift || 0;
 
 		#--------------------------------------------------------------
 		# Parse the header section.
 		#--------------------------------------------------------------
 
-		if ($debug) {
-			print ";; HEADER SECTION\n";
-		}
+		print ";; HEADER SECTION\n" if $debug;
+
 
 		$self{"header"} = Net::DNS::Header->new($data);
 
@@ -258,7 +258,7 @@ sub data {
 	# Get the data for each section in the packet.
 	#----------------------------------------------------------------------
 	# Note that EDNS OPT RR data should inly be appended to the additional
-        # section of the packet. TODO: Packet is dropped silently if is tried to
+	# section of the packet. TODO: Packet is dropped silently if is tried to
 	# have it appended to one of the other section
 
 	my $data = $self->{"header"}->data;

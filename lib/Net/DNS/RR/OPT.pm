@@ -1,6 +1,6 @@
 package Net::DNS::RR::OPT;
 
-# $Id: OPT.pm,v 1.2 2002/06/03 21:36:39 ctriv Exp $
+# $Id: OPT.pm,v 1.3 2002/07/28 23:18:06 ctriv Exp $
 
 
 use strict;
@@ -60,7 +60,7 @@ sub new {
 
 sub new_from_string {
     my ($class, $self ) = @_;
-
+    
     # There is no such thing as an OPT RR in a ZONE file. 
     # Not implemented!
     croak "You should not try to create a OPT RR from a string\nNot implemented";

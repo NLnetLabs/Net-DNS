@@ -22,6 +22,7 @@ To Do list for Net::DNS
 	  $res->nameservers(map  { $_->nsdname }
 	                    grep { $_->type eq "NS" }
 		            $ans->authority);
+  - IPv6 Support (?)		       
 
 * Work on the manual pages:
 
@@ -162,4 +163,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 1.4 2002/05/29 19:17:50 ctriv Exp $
+$Id: TODO,v 1.5 2002/07/16 09:18:58 ctriv Exp $
