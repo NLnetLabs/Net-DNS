@@ -1,5 +1,6 @@
 # $Id$    -*-perl-*-
 
+
 use Test::More tests => 39;
 use strict;
 
@@ -132,8 +133,6 @@ my @rr=$packet3->additional;
 is($rr[0]->type, "OPT", "Additional section packet is EDNS0 type");                         #33
 is($rr[0]->class, "4096", "EDNS0 packet size correct");                                     #34
 
-
-
 my $question2=Net::DNS::Question->new("bla.foo","TXT","CHAOS");
 ok($question2->isa('Net::DNS::Question'),"Proper type of object created");  #35
 
@@ -153,7 +152,11 @@ ok(@question && @question == 1,             'question() returned right number of
 $packet->pop("question");
 
 @question = $packet->question;
+
+
 ok(@question ==0,              'question() returned right number of items poptest0'); #38
+
+
 
 
 
@@ -175,3 +178,4 @@ $packet2=Net::DNS::Packet->new(\$data);
 
 
 is($packet->string,$packet2->string,"Packet to data and back (failure indicates broken dn_comp)");  #39
+

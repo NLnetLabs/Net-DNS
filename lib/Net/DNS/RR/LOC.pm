@@ -1,6 +1,6 @@
 package Net::DNS::RR::LOC;
 #
-# $Id: LOC.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 use strict;
 use vars qw(

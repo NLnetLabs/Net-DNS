@@ -2,7 +2,7 @@
  * $Id$
  *
  *
- * 
+ * Copyright (c) 2005 Olaf Kolkman
  * Copyright (c) 2002-2003 Chris Reinhardt.
  * 
  * All rights reserved.  This program is free software; you may redistribute
@@ -19,10 +19,9 @@
 #include "EXTERN.h"
 #include "perl.h"
 #include "XSUB.h"
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/nameser.h>
-#include <resolv.h> 
+
+#include "./netdnslib/netdns.h"
+
 
 
 /*
@@ -32,8 +31,9 @@
  *	   
  * dn_expand
  *	 dn_expand() expands the compressed domain name	 given by the
- *	 pointer comp _dn into a full domain name. Expanded names are
- *	 converted to upper case. The compressed name is contained in
+ *	 pointer comp _dn into a full domain name.
+ * 
+ *       The compressed name is contained in
  *	 a	query or reply message; msg is a pointer to the beginning
  *	 of that message. Expanded names are  stored  in  the  buffer
  *	 referenced by the exp_dn buffer of size length , which should
@@ -79,3 +79,5 @@ dn_expand_XS(sv_buf, offset)
 	
 	XSRETURN(2);
  
+
+

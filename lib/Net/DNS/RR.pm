@@ -9,6 +9,7 @@ use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
 
+
 $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
@@ -651,12 +652,13 @@ sub _canonicaldata {
 	my $self = shift;
 	my $data='';
 	{   
-		my @dname= split /\./,lc($self->{'name'});
-		for (my $i=0;$i<@dname;$i++){
-			$data .= pack ('C',length $dname[$i] );
-			$data .= $dname[$i] ;
-		}
-		$data .= pack ('C','0');
+	    my $name=$self->{'name'};
+	    my @dname=Net::DNS::name2labels($name);
+	    for (my $i=0;$i<@dname;$i++){
+		$data .= pack ('C',length $dname[$i] );
+		$data .= $dname[$i] ;
+	    }
+	    $data .= pack ('C','0');
 	}
 	$data .= pack('n', Net::DNS::typesbyname(uc($self->{'type'})));
 	$data .= pack('n', Net::DNS::classesbyname(uc($self->{'class'})));
@@ -676,7 +678,7 @@ sub _canonicaldata {
 # have domain names in them. Verification works only on RRs with
 # uncompressed domain names. (Canonical format as in sect 8 of
 # RFC2535) _canonicalRdata is overwritten in those RR objects that
-# have domain names in the RDATA and _name2label is used to convert a
+# have domain names in the RDATA and _name2wire is used to convert a
 # domain name to "wire format"
 
 sub _canonicalRdata {
@@ -687,19 +689,22 @@ sub _canonicalRdata {
 
 
 
-sub _name2wire   {   
-    my ($self,$name)=@_;
 
-    my $rdata = '';
-    my @dname = split(m/\./, lc $name);
-    
+
+sub _name2wire   {   
+    my ($self, $name) = @_;
+
+    my $rdata="";
+    my $compname = "";
+    my @dname = Net::DNS::name2labels($name);
+
+
     for (@dname) {
 		$rdata .= pack('C', length $_);
 		$rdata .= $_ ;
     }
     
     $rdata .= pack('C', '0');
-    
     return $rdata;
 }
 

@@ -1,6 +1,6 @@
 package Net::DNS::RR::RP;
 #
-# $Id: RP.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -55,10 +55,11 @@ sub rr_rdata {
 sub _canonicalRdata {
     my $self  = shift;
     my $rdata = "";
-    
 	if (exists $self->{"mbox"}) {
 		$rdata .= $self->_name2wire($self->{"mbox"});
 		$rdata .= $self->_name2wire($self->{"txtdname"});
+
+
 	}
 
     return $rdata;

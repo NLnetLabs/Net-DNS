@@ -369,10 +369,13 @@ The default is 0.0.0.0, meaning any local address.
 
 =head2 bgsend
 
-    $socket = $res->bgsend($packet_object);
+    $socket = $res->bgsend($packet_object) || die " $res->errorstring";
+
     $socket = $res->bgsend('mailhost.example.com');
     $socket = $res->bgsend('example.com', 'MX');
     $socket = $res->bgsend('user.passwd.example.com', 'TXT', 'HS');
+
+
 
 Performs a background DNS query for the given name, i.e., sends a
 query packet to the first nameserver listed in C<< $res->nameservers >>
@@ -385,10 +388,14 @@ of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (4 dot-separated numbers),
 then an appropriate PTR query will be performed.
 
-Returns an C<IO::Socket::INET> object.  The program must determine when
-the socket is ready for reading and call C<< $res->bgread >> to get
-the response packet.  You can use C<< $res->bgisready >> or C<IO::Select>
-to find out if the socket is ready before reading it.
+Returns an C<IO::Socket::INET> object or C<undef> on error in which
+case the reason for failure can be found through a call to the
+errorstring method.
+
+The program must determine when the socket is ready for reading and
+call C<< $res->bgread >> to get the response packet.  You can use C<<
+$res->bgisready >> or C<IO::Select> to find out if the socket is ready
+before reading it.
 
 =head2 bgread
 

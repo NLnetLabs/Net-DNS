@@ -7,8 +7,10 @@ use vars qw(
     $HAVE_XS
     $VERSION
     $DNSSEC
+    $DN_EXPAND_ESCAPES
     @ISA
     @EXPORT
+    @EXPORT_OK
     %typesbyname
     %typesbyval
     %qtypesbyname
@@ -28,14 +30,17 @@ use vars qw(
 BEGIN {
     require DynaLoader;
     require Exporter;
-    
     @ISA     = qw(Exporter DynaLoader);
-    $VERSION = '0.49';
+
+    
+    $VERSION = '0.49_01';
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 
 	} ? 1 : 0;
 }
+
+
 
 BEGIN {
 
@@ -44,6 +49,7 @@ BEGIN {
 	    require Net::DNS::SEC; 
 	    1 
 	    } ? 1 : 0;
+
 
 }
 
@@ -56,10 +62,8 @@ use Net::DNS::Question;
 use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
 
 
-
-
-
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
+@EXPORT_OK= qw(name2labels wire2presentation );
 
 #
 # If you implement an RR record make sure you also add it to 
@@ -348,6 +352,131 @@ sub rr_del {
     return Net::DNS::RR->new_from_string(shift, 'rr_del');
 }
 
+
+
+# Utility function
+#
+# name2labels to translate names from presentation format into an
+# array of "wire-format" labels.
+
+
+# in: $dname a string with a domain name in presentation format (1035
+# sect 5.1)
+# out: an array of labels in wire format.
+
+
+sub name2labels {
+    my $dname=shift;
+    my @names;
+    my $j=0;
+    while ($dname){
+	($names[$j],$dname)=presentation2wire($dname);
+	$j++;
+    }
+
+    return @names;
+}
+
+
+
+
+sub wire2presentation {
+    my  $wire=shift;
+    my  $presentation="";
+    my $length=length($wire);
+    # There must be a nice regexp to do this.. but since I failed to
+    # find one I scan the name string until I find a '\', at that time
+    # I start looking forward and do the magic.
+
+    my $i=0;
+    
+    while ($i < $length ){
+	my $char=unpack("x".$i."C1",$wire);
+	if ( $char < 33 || $char > 126 ){
+	    $presentation.= sprintf ("\\%03u" ,$char);
+	}elsif ( $char == ord( "\"" )) {   
+	    $presentation.= "\\\"";    
+	}elsif ( $char == ord( "\$" )) {   
+	    $presentation.= "\\\$";    
+	}elsif ( $char == ord( "(" )) {   
+	    $presentation.= "\\(";    
+	}elsif ( $char == ord( ")" )) {   
+	    $presentation.= "\\)";    
+	}elsif ( $char == ord( ";" )) {   
+	    $presentation.= "\\;";    
+	}elsif ( $char == ord( "@" )) {   
+	    $presentation.= "\\@";    
+	}elsif ( $char == ord( "\\" )) {   
+	    $presentation.= "\\\\" ; 
+	}elsif ( $char==ord (".") ){
+	    $presentation.= "\\." ; 
+	}else{
+	    $presentation.=chr($char) 	;
+	}
+	$i++;
+    }
+
+    return $presentation;
+    
+}
+
+
+
+# ($wire,$leftover)=presentation2wire($leftover);
+
+# Will parse the input presentation format and return everything before
+# the first non-escaped "." in the first element of the return array and
+# all that has not been parsed yet in the 2nd argument.
+
+
+sub presentation2wire {
+    my  $presentation=shift;
+    my  $wire="";
+    my $length=length($presentation);
+    
+    my $i=0;
+    
+    while ($i < $length ){
+	my $char=unpack("x".$i."C1",$presentation);
+	if (  $char == ord ('.')){
+	    return ($wire,substr($presentation,$i+1));
+	}
+	if (  $char == ord ('\\')){
+	    #backslash found
+	    pos($presentation)=$i+1;
+	    if ($presentation=~/\G(\d\d\d)/){
+		$wire.=pack("C",$1);
+		$i+=3;
+	    }elsif($presentation=~/\Gx([0..9a..fA..F][0..9a..fA..F])/){
+		$wire.=pack("H*",$1);
+		$i+=3;
+	    }elsif($presentation=~/\G\./){
+		$wire.="\.";
+		$i+=1;
+	    }elsif($presentation=~/\G@/){
+		$wire.="@";
+		$i+=1;
+	    }elsif($presentation=~/\G\(/){
+		$wire.="(";
+		$i+=1;
+	    }elsif($presentation=~/\G\)/){
+		$wire.=")";
+		$i+=1;
+           }elsif($presentation=~/\G\\/){
+               $wire.="\\"; 
+               $i+=1;
+	    }
+	}else{
+	    $wire .=  pack("C",$char);  
+        }
+	$i++;
+    }
+    
+    return $wire;
+}
+
+
+
 1;
 __END__
 
@@ -561,6 +690,7 @@ section of a dynamic update packet.
 
 Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
 be created.
+
 
 =head1 EXAMPLES
 

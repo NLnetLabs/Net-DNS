@@ -6,8 +6,9 @@ package Net::DNS::Resolver::Base;
 use strict;
 
 use vars qw(
-	$VERSION
-	$AUTOLOAD
+	    $VERSION
+	    $has_inet6
+	    $AUTOLOAD
 );
 
 use Carp;
@@ -16,11 +17,62 @@ use Socket;
 use IO::Socket;
 use IO::Select;
 
+use Net::IP qw(ip_is_ipv4 ip_is_ipv6 ip_normalize); 
 use Net::DNS;
 use Net::DNS::Packet;
 
 $VERSION = (qw$LastChangedRevision$)[1];
 
+
+#
+#  A few implementation notes wrt IPv6 support.
+#
+#  In general we try to be gracious to those stacks that do not have ipv6 support.
+#  We test that by means of the availability of Socket6 and IO::Socket::INET6
+#
+
+
+#  We have chosen to not use mapped IPv4 addresses, there seem to be
+#  issues with this; as a result we have to use sockets for both
+#  family types.  To be able to deal with persistent sockets and
+#  sockets of both family types we use an array that is indexed by the
+#  socketfamily type to store the socket handlers.  We know this could
+#  be done more efficient but programmers time is more expensive than
+#  memory.
+ 
+#  inet_pton is not available on WIN32, so we only use the getaddrinfo
+#  call to translate IP addresses to socketaddress
+ 
+ 
+#  Set the $force_inet4_only variable inside the BEGIN block to force not to use the 
+#  IPv6 stuff. You can use this for compatibility test. We do not see a need to do this 
+#  from the calling code.
+ 
+# Olaf Kolkman, RIPE NCC, December 2003.
+ 
+ 
+BEGIN {
+    my $force_inet4_only=0;
+    
+    if ($force_inet4_only){
+ 	$has_inet6=0;
+    }elsif ( 
+	     eval {require Socket6;} &&
+ 	     # INET6 prior to 2.01 will not work; sorry.
+ 	     eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}
+	     ) {
+ 	import Socket6;
+ 	$has_inet6=1;
+    }else{
+ 	$has_inet6=0;
+    }
+}
+	    
+ 
+ 
+ 
+ 
+  
 #
 # Set up a closure to be our class data.
 #
@@ -99,10 +151,13 @@ sub new {
 
 	my $self = bless({ %{$class->defaults} }, $class);
 
+	
 	$self->_process_args(@_) if @_ and @_ % 2 == 0;
 			
 	return $self;
 }
+
+
 
 sub _process_args {
 	my ($self, %args) = @_;
@@ -178,7 +233,7 @@ sub read_config_file {
 	local $_;
 	
 	while (<FILE>) {
-		s/\s*[;#].*//;
+ 		s/\s*[;#].*//;
 		
 		# Skip ahead unless there's non-whitespace characters 
 		next unless m/\S/;
@@ -197,18 +252,20 @@ sub read_config_file {
 			/^\s*nameserver\s+(.*)/ && do {
 				foreach my $ns (split(' ', $1)) {
 					$ns = '0.0.0.0' if $ns eq '0';
-					next if $ns =~ m/:/;  # skip IPv6 nameservers
+#					next if $ns =~ m/:/;  # skip IPv6 nameservers
 					push @ns, $ns;
 				}
 				last SWITCH;
 			};
-		}
-	}
-	close FILE || croak "Could not close $file: $!";
+		    }
+		  }
+		close FILE || croak "Could not close $file: $!";
+		
+		$config->{'nameservers'} = [ @ns ]         if @ns;
+		$config->{'searchlist'}  = [ @searchlist ] if @searchlist;
+	    }
+ 
 
-	$config->{'nameservers'} = [ @ns ]         if @ns;
-	$config->{'searchlist'}  = [ @searchlist ] if @searchlist;
-}
 
 
 sub print { print $_[0]->string }
@@ -217,7 +274,7 @@ sub string {
 	my $self = shift;
 
 	my $timeout = defined $self->{'tcp_timeout'} ? $self->{'tcp_timeout'} : 'indefinite';
-	
+	my $hasINET6line= $has_inet6?";; INET6 enabled ":"";
 	return <<END;
 ;; RESOLVER state:
 ;;  domain       = $self->{domain}
@@ -231,7 +288,9 @@ sub string {
 ;;  usevc    = $self->{usevc}  stayopen = $self->{stayopen}    igntc = $self->{igntc}
 ;;  defnames = $self->{defnames}  dnsrch   = $self->{dnsrch}
 ;;  recurse  = $self->{recurse}  debug    = $self->{debug}
+$hasINET6line
 END
+
 }
 
 
@@ -242,41 +301,48 @@ sub searchlist {
 }
 
 sub nameservers {
-	my $self   = shift;
-	my $defres = Net::DNS::Resolver->new;
-
-	if (@_) {
-		my @a;
-		foreach my $ns (@_) {
-			if ($ns =~ /^(\d+(:?\.\d+){0,3})$/) {
-				push @a, ($1 eq '0') ? '0.0.0.0' : $1;
-			} else {
-				my @names;
-
-				if ($ns !~ /\./) {
-					if (defined $defres->searchlist) {
-						@names = map { $ns . '.' . $_ }
-							    $defres->searchlist;
-					} elsif (defined $defres->domain) {
-						@names = ($ns . '.' . $defres->domain);
-					}
-				}
-				else {
-					@names = ($ns);
-				}
-
-				my $packet = $defres->search($ns);
-				$self->errorstring($defres->errorstring);
-				if (defined($packet)) {
-					push @a, cname_addr([@names], $packet);
-				}
-			}
+    my $self   = shift;
+    my $defres = Net::DNS::Resolver->new;
+    
+    if (@_) {
+	my @a;
+	foreach my $ns (@_) {
+	    if ($ns =~ /^(\d+(:?\.\d+){0,3})$/) {
+		if ( ip_is_ipv4($ns) ) {
+		    push @a, ($1 eq '0') ? '0.0.0.0' : $1;
 		}
-
-		$self->{'nameservers'} = [ @a ];
+		
+	    }
+	    elsif ( ip_is_ipv6($ns) ) {
+		push @a, ($ns eq '0') ? '::0' : $ns;
+		
+	    } else  {
+		my @names;
+		
+		if ($ns !~ /\./) {
+		    if (defined $defres->searchlist) {
+			@names = map { $ns . '.' . $_ }
+			$defres->searchlist;
+		    } elsif (defined $defres->domain) {
+			@names = ($ns . '.' . $defres->domain);
+		    }
+		}
+		else {
+		    @names = ($ns);
+		}
+		
+		my $packet = $defres->search($ns);
+		$self->errorstring($defres->errorstring);
+		if (defined($packet)) {
+		    push @a, cname_addr([@names], $packet);
+		}
+	    }
 	}
-
-	return @{$self->{'nameservers'}};
+	
+	$self->{'nameservers'} = [ @a ];
+    }
+    
+    return @{$self->{'nameservers'}};
 }
 
 sub nameserver { &nameservers }
@@ -439,6 +505,7 @@ sub send {
 	my $packet = $self->make_query_packet(@_);
 	my $packet_data = $packet->data;
 
+
 	my $ans;
 
 	if ($self->{'usevc'} || length $packet_data > $self->_packetsz) {
@@ -480,40 +547,57 @@ sub send_tcp {
 		print ";; send_tcp($ns:$dstport) (src port = $srcport)\n"
 			if $self->{'debug'};
 
+
+
 		my $sock;
 		my $sock_key = "$ns:$dstport";
-
+		my ($host,$port);
 		if ($self->persistent_tcp && $self->{'sockets'}{$sock_key}) {
 			$sock = $self->{'sockets'}{$sock_key};
 			print ";; using persistent socket\n"
 				if $self->{'debug'};
 		} else {
 
-			# IO::Socket carps on errors if Perl's -w flag is
-			# turned on.  Uncomment the next two lines and the
-			# line following the "new" call to turn off these
-			# messages.
 
-			#my $old_wflag = $^W;
-			#$^W = 0;
-
+		    # IO::Socket carps on errors if Perl's -w flag is
+		    # turned on.  Uncomment the next two lines and the
+		    # line following the "new" call to turn off these
+		    # messages.
+		    
+		    #my $old_wflag = $^W;
+		    #$^W = 0;
+		    if ($has_inet6){
+			$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
+			
+			$sock = 
+			    IO::Socket::INET6->new(
+						   PeerPort =>    53,
+						   PeerAddr =>    $ns,
+						   LocalAddr => 0,
+						   LocalPort => ($srcport || undef),
+						   Proto     => 'tcp',
+						   Timeout   => $timeout,
+						   );
+			
+		    }else{
 			$sock = IO::Socket::INET->new(
-			    PeerAddr  => $ns,
-			    PeerPort  => $dstport,
-			    LocalAddr => $srcaddr,
-			    LocalPort => ($srcport || undef),
-			    Proto     => 'tcp',
-			    Timeout   => $timeout
-			);
-
-			#$^W = $old_wflag;
-
-			unless ($sock) {
-				$self->errorstring('connection failed');
-				print ';; ERROR: send_tcp: connection ',
-				      "failed: $!\n" if $self->{'debug'};
-				next;
-			}
+						      PeerAddr  => $ns,
+						      PeerPort  => $dstport,
+						      LocalAddr => $srcaddr,
+						      LocalPort => ($srcport || undef),
+						      Proto     => 'tcp',
+						      Timeout   => $timeout
+						      );
+		    }
+		    
+		    #$^W = $old_wflag;
+		    
+		    unless ($sock) {
+			$self->errorstring('connection failed');
+			print ';; ERROR: send_tcp: connection ',
+			"failed: $!\n" if $self->{'debug'};
+			next;
+		    }
 
 			$self->{'sockets'}{$sock_key} = $sock;
 		}
@@ -526,7 +610,9 @@ sub send_tcp {
 		# as this produces a single TCP packet rather than two. This
 		# is more efficient and also makes things much nicer for sniffers.
 		# (ethereal doesn't seem to reassemble DNS over TCP correctly)
-		unless ($sock->send($lenmsg . $packet_data)) {
+
+
+		unless ($sock->send( $lenmsg . $packet_data)) {
 			$self->errorstring($!);
 			print ";; ERROR: send_tcp: data send failed: $!\n"
 				if $self->{'debug'};
@@ -598,69 +684,155 @@ sub send_tcp {
 	return;
 }
 
+
+
 sub send_udp {
 	my ($self, $packet, $packet_data) = @_;
 	my $retrans = $self->{'retrans'};
 	my $timeout = $retrans;
-
+	
 	my $lastanswer;
 
 	my $stop_time = time + $self->{'udp_timeout'} if $self->{'udp_timeout'};
-
+	
 	$self->_reset_errorstring;
-
-	my $dstport = $self->{'port'};
-	my $srcport = $self->{'srcport'};
-	my $srcaddr = $self->{'srcaddr'};
-
-
-	my $sock;
-
-	if ($self->persistent_udp && $self->{'sockets'}{'UDP'}) {
-		$sock = $self->{'sockets'}{'UDP'};
-		print ";; using persistent socket\n"
+	
+ 	my @ns;
+  	my $dstport = $self->{'port'};
+  	my $srcport = $self->{'srcport'};
+  	my $srcaddr = $self->{'srcaddr'};
+	
+ 	my @sock;
+	
+	
+ 	if ($self->persistent_udp){
+ 	    if ($has_inet6){
+ 		if ( $self->{'sockets'}[AF_INET6]{'UDP'}) {
+ 		    $sock[AF_INET6] = $self->{'sockets'}[AF_INET6]{'UDP'};
+ 		    print ";; using persistent AF_INET6 family type socket\n"
 			if $self->{'debug'};
+ 		}
+ 	    }
+ 	    if ( $self->{'sockets'}[AF_INET]{'UDP'}) {
+ 		$sock[AF_INET] = $self->{'sockets'}[AF_INET]{'UDP'};
+ 		print ";; using persistent AF_INET6 family type socket\n"
+ 		    if $self->{'debug'};
+ 	    }
+ 	    
+	    
 	} else {
+	    if ($has_inet6){
+ 		$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
+		
 		# IO::Socket carps on errors if Perl's -w flag is turned on.
 		# Uncomment the next two lines and the line following the "new"
 		# call to turn off these messages.
-
+		
 		#my $old_wflag = $^W;
 		#$^W = 0;
+		
+ 		$sock[AF_INET6] = IO::Socket::INET6->new(
+ 							 LocalAddr => $srcaddr,
+ 							 LocalPort => ($srcport || undef),
+ 							 Proto     => 'udp',
+ 							 );
+ 		
+ 		#$^W = $old_wflag;
+ 	    }
 
-		$sock = IO::Socket::INET->new(
-				    LocalAddr => $srcaddr,
-				    LocalPort => ($srcport || undef),
-				    Proto     => 'udp',
-		);
+ 	    #always create an AF_INET family type socket.
+ 	    
+ 	    #my $old_wflag = $^W;
+ 	    #$^W = 0;
+ 	    
+ 	    $sock[AF_INET] = IO::Socket::INET->new(
+ 						   LocalAddr => $srcaddr,
+ 						   LocalPort => ($srcport || undef),
+ 						   Proto     => 'udp',
+ 						   );
+ 	    
+ 	    #$^W = $old_wflag;
+ 	    
+ 	    
+ 	    
+  
+  
+ 
+ 	    unless (scalar(@sock)) {
+ 		$self->errorstring("could not get socket");   #'
+ 		return;
+ 	    }
+ 
+ 	    
+ 	    $self->{'sockets'}[AF_INET]{'UDP'} = $sock[AF_INET] if ($self->persistent_udp);
+ 	    $self->{'sockets'}[AF_INET6]{'UDP'} = $sock[AF_INET6] if $has_inet6 && ($self->persistent_udp);
+ 	    
+	    
+	}
+	
+	
+ 	# Constructing an array of arrays that contain 3 elements: The
+ 	# nameserver IP address, its sockaddr and the sockfamily for
+ 	# which the sockaddr structure is constructed.
+ 	
+	
+      NSADDRESS: foreach my $ns_address (@{$self->{'nameservers'}}){
+	  # The logic below determines the $dst_sockaddr.
+	  # If getaddrinfo is available that is used for both INET4 and INET6
+	  # If getaddrinfo is not avialable (Socket6 failed to load) we revert
+	  # to the 'classic mechanism
+	  if ($has_inet6){ 
+	      # we can use getaddrinfo
+	      no strict 'subs';   # Because of the eval statement in the BEGIN
+	      # AI_NUMERICHOST is not available at compile time.
+	      
+	      # The AI_NUMERICHOST surpresses lookups.
+	      
+	      
+	      my $old_wflag = $^W; 		#circumvent perl -w warnings about 'udp'
+	      $^W = 0;
+	      
+	      my @res = getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 
+				    'udp', AI_NUMERICHOST);
+	      
+	      $^W=$old_wflag ;
+	      
+	      
+	      use strict 'subs';
+	      
+	      my ($sockfamily, $socktype_tmp, 
+		  $proto_tmp, $dst_sockaddr, $canonname_tmp) = @res;
+	      
+	      if (scalar(@res) < 5) {
+		  die ("can't resolve \"$ns_address\" to address");
+	      }
+	      
+	      push @ns,[$ns_address,$dst_sockaddr,$sockfamily];
+	      
+	  }else{
+	      next NSADDRESS unless( ip_is_ipv4($ns_address));
+	      my $dst_sockaddr = sockaddr_in($dstport, inet_aton($ns_address));
+	      push @ns, [$ns_address,$dst_sockaddr,AF_INET];
+	  }
+	  
+      }
 
-		#$^W = $old_wflag;
-
-		unless ($sock) {
-			$self->errorstring("couldn't create socket: $!");
-			return;
-		}
-		$self->{'sockets'}{'UDP'} = $sock if ($self->persistent_udp);
+	
+      	unless (@ns) {
+	    $self->errorstring('no nameservers');
+	    return;
 	}
 
-	my @ns = grep { $_->[0] && $_->[1] }
-	         map  { [ $_, scalar(sockaddr_in($dstport, inet_aton($_))) ] }
-	         @{$self->{'nameservers'}};
-
-	unless (@ns) {
-		$self->errorstring('no nameservers');
-		return;
-	}
-
-	my $sel = IO::Select->new($sock);
-
+ 	my $sel = IO::Select->new($sock[AF_INET]);
+ 	$sel->add($sock[AF_INET6]) if $has_inet6;
+	
 	# Perform each round of retries.
 	for (my $i = 0;
 	     $i < $self->{'retry'};
 	     ++$i, $retrans *= 2, $timeout = int($retrans / (@ns || 1))) {
 
 		$timeout = 1 if ($timeout < 1);
-
+		
 		# Try each nameserver.
 	      NAMESERVER: foreach my $ns (@ns) {
 			if ($stop_time) {
@@ -675,12 +847,14 @@ sub send_udp {
 			}
 			my $nsname = $ns->[0];
 			my $nsaddr = $ns->[1];
+			my $nssockfamily = $ns->[2];
 
 			print ";; send_udp($nsname:$dstport)\n"
 				if $self->{'debug'};
 
-			unless ($sock->send($packet_data, 0, $nsaddr)) {
+			unless ($sock[$nssockfamily]->send($packet_data, 0, $nsaddr)) {
 				print ";; send error: $!\n" if $self->{'debug'};
+				$self->errorstring("Send error: $!");
 				@ns = grep { $_->[0] ne $nsname } @ns;
 				next;
 			}
@@ -737,7 +911,8 @@ sub send_udp {
 					return unless @ns;
 				}
 			}
-		}
+		    }
+
 	}
 
 	if ($lastanswer){
@@ -745,10 +920,10 @@ sub send_udp {
 		return $lastanswer;
 
 	}
-
-
 	if ($sel->handles) {
-		$self->errorstring('query timed out');
+	    # If there are valid hanndles than we have either a timeout or 
+	    # a send error.
+	    $self->errorstring('query timed out') unless ($self->errorstring =~ /Send error:/);
 	}
 	else {
 		$self->errorstring('all nameservers failed');
@@ -765,7 +940,7 @@ sub bgsend {
 		return;
 	}
 
-	$self->_reset_errorstring;
+		$self->_reset_errorstring;
 
 	my $packet = $self->make_query_packet(@_);
 	my $packet_data = $packet->data;
@@ -773,34 +948,101 @@ sub bgsend {
 	my $srcaddr = $self->{'srcaddr'};
 	my $srcport = $self->{'srcport'};
 
-	my $dstaddr = $self->{'nameservers'}->[0];
+
+	my (@res, $sockfamily, $dst_sockaddr);
+	my $ns_address = $self->{'nameservers'}->[0];
 	my $dstport = $self->{'port'};
 
-	my $sock = IO::Socket::INET->new(
-		Proto => 'udp',
-		LocalAddr => $srcaddr,
-		LocalPort => ($srcport || undef),
-	);
 
-	unless ($sock) {
-		$self->errorstring(q|couldn't get socket|);   #'
+	# The logic below determines ther $dst_sockaddr.
+	# If getaddrinfo is available that is used for both INET4 and INET6
+	# If getaddrinfo is not avialable (Socket6 failed to load) we revert
+	# to the 'classic mechanism
+	if ($has_inet6){ 
+
+	    my ( $socktype_tmp, $proto_tmp, $canonname_tmp);
+
+	    no strict 'subs';   # Because of the eval statement in the BEGIN
+	                      # AI_NUMERICHOST is not available at compile time.
+
+	    # The AI_NUMERICHOST surpresses lookups.
+	    my @res = getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 
+				  'udp', AI_NUMERICHOST);
+
+	    use strict 'subs';
+
+	    ($sockfamily, $socktype_tmp, 
+	     $proto_tmp, $dst_sockaddr, $canonname_tmp) = @res;
+
+	    if (scalar(@res) < 5) {
+		die ("can't resolve \"$ns_address\" to address (it have been an IP address)");
+	    }
+
+	}else{
+	    $sockfamily=AF_INET;
+	    
+	    if (! ip_is_ipv4($ns_address)){
+		$self->errorstring("bgsend(ipv4 only):$ns_address does not seem to be a valid IPv4 address");
 		return;
+	    }
+
+	    $dst_sockaddr = sockaddr_in($dstport, inet_aton($ns_address));
+
+
+
+	}
+	my @socket;  
+
+	if ($sockfamily == AF_INET) {
+	    $socket[$sockfamily] = IO::Socket::INET->new(
+							 Proto => 'udp',
+							 Type => SOCK_DGRAM,
+							 LocalAddr => $srcaddr,
+							 LocalPort => $srcport,
+					    );
+	} elsif ($sockfamily == AF_INET6 ) {
+	    $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
+	    $socket[$sockfamily] = IO::Socket::INET6->new(
+							  Proto => 'udp',
+							  Type => SOCK_DGRAM,
+							  LocalAddr => $srcaddr,
+							  LocalPort => $srcport,
+					     );
+	} else {
+	    die ref($self)." bgsend:Unsoported Socket Family: $sockfamily";
 	}
 	
-	my $dst_sockaddr = sockaddr_in($dstport, inet_aton($dstaddr));
-
-	print ";; bgsend($dstaddr:$dstport)\n" if $self->{'debug'};
-
-	unless ($sock->send($packet_data, 0, $dst_sockaddr)) {
-		my $err = $!;
-		print ";; send ERROR($dstaddr): $err\n" if $self->{'debug'};
-		$self->errorstring($err);
+	unless (scalar(@socket)) {
+		$self->errorstring("could not get socket");   #'
 		return;
 	}
 
-	return $sock;
-}
 
+
+
+
+
+
+
+	print ";; bgsend($ns_address : $dstport)\n" if $self->{'debug'};
+	print ";; remote addr struc: ".unpack("H*", $dst_sockaddr)."\n";
+
+	foreach my $socket (@socket){
+	    next if !defined $socket;
+	    
+	    unless ($socket->send($packet_data,0,$dst_sockaddr)){
+		my $err = $!;
+		print ";; send ERROR($ns_address): $err\n" if $self->{'debug'};
+		
+		$self->errorstring("Send: ".$err);
+		return;
+	    }
+	    return $socket;
+	}
+	$self->errorstring("Could not find a socket to send on");
+	return;
+	    
+}
 
 sub bgread {
 	my ($self, $sock) = @_;
@@ -947,6 +1189,8 @@ sub axfr_start {
 	print ";; axfr_start nameserver = $ns\n" if $self->{'debug'};
 
 	my $srcport = $self->{'srcport'};
+	my $srcaddr = $self->{'srcaddr'};
+	my $dstport = $self->{'port'};
 
 	my $sock;
 	my $sock_key = "$ns:$self->{'port'}";
@@ -956,34 +1200,42 @@ sub axfr_start {
 	    print ";; using persistent socket\n" if $self->{'debug'};
 	    
 	} else {
-
-		# IO::Socket carps on errors if Perl's -w flag is turned on.
-		# Uncomment the next two lines and the line following the "new"
-		# call to turn off these messages.
-
-		#my $old_wflag = $^W;
-		#$^W = 0;
-
+	    
+	    
+	    if ($has_inet6){
+		$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
+		
+		$sock = 
+		    IO::Socket::INET6->new(
+					   PeerPort =>    53,
+					   PeerAddr =>    $ns,
+					   LocalAddr => 0,
+					   LocalPort => ($srcport || undef),
+					   Proto     => 'tcp',
+					   );
+		
+	    }else{
 		$sock = IO::Socket::INET->new(
-		    PeerAddr  => $ns,
-		    PeerPort  => $self->{'port'},
-		    LocalAddr => $self->{'srcaddr'},
-		    LocalPort => ($srcport || undef),
-		    Proto     => 'tcp',
-		    Timeout   => $self->{'tcp_timeout'}
-		 );
-
-		#$^W = $old_wflag;
-
-		unless ($sock) {
-			$self->errorstring(q|couldn't connect|);  # Comment to sattisfy emacs' font-lock mode.
-			return;
-		}
-
-
-
-		$self->{'sockets'}->{$sock_key} = $sock;
+					      PeerAddr  => $ns,
+					      PeerPort  => $dstport,
+					      LocalAddr => $srcaddr,
+					      LocalPort => ($srcport || undef),
+					      Proto     => 'tcp',
+					      );
+	    }
+	    
+	    #$^W = $old_wflag;
+	    
+	    unless ($sock) {
+		$self->errorstring('connection failed');
+		print ';; ERROR: send_tcp: connection ',
+		"failed: $!\n" if $self->{'debug'};
+		next;
+	    }
+	    
+	    $self->{'sockets'}{$sock_key} = $sock;
 	}
+
 
 	my $lenmsg = pack('n', length($packet_data));
 
@@ -1234,7 +1486,7 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2005 Olaf Kolkman
+Portions Copyright (c) 2005 Olaf Kolkman  <olaf@net-dns.org>
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
@@ -1244,3 +1496,5 @@ it and/or modify it under the same terms as Perl itself.
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>
 
 =cut
+
+

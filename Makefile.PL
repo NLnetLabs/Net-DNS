@@ -53,10 +53,15 @@ my %Makefile = (
 		'MIME::Base64'     => 2.11,
 		'Digest::MD5'      => 2.12,
 		'Digest::HMAC_MD5' => 1.00,
+		"Net::IP"          => 1.20,
+
 	},
 	XS            => {},
 	C             => [],
 	clean         => { FILES => 't/online.enabled compile.* DNS.o DNS.c DNS.bs' },
+
+         MYEXTLIB    => 'netdnslib/netdns$(LIB_EXT)',
+
 );
 
 if ($^O eq 'MSWin32') {
@@ -97,7 +102,6 @@ if ($use_xs) {
 	print "Activating XS Magic...\n" if DEBUG; 
 	delete $Makefile{'XS'};
 	delete $Makefile{'C'};
-	$Makefile{'LIBS'} = ['-lresolv'];
 }
 
 #
@@ -149,11 +153,7 @@ sub test_cc {
 	}
 
 	print F <<'EOF';
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/nameser.h>
-#include <resolv.h> 
-
+#include "netdnslib/netdns.h"
 int main() { return 0; }
 EOF
 	
@@ -174,17 +174,24 @@ sub metafile {
 	my $self    = shift;
 	my $meta    = $self->SUPER::metafile_target(@_); 
 	my ($extra) = $self->echo('license: perl', 'META.yml', 1);
-	
 	return "$meta\t$extra\n";
 }
 
 sub postamble {
-	return <<'END_O_MAKE';
+
+    my $content;
+    $content='$(MYEXTLIB): netdnslib/Makefile
+	cd netdnslib && $(MAKE) $(PASSTHRU)
+' if $use_xs;
+
+    $content.='
 test_cover : pure_all
 	cover -delete
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
 	cover
-END_O_MAKE
+';
+    print "$content";
+    return $content;
 }
 
 

@@ -48,14 +48,23 @@ send me the information described in the BUGS section below.
 You can get the latest version of Net::DNS from the Comprehensive
 Perl Archive Network (CPAN) or from the module's homepage:
 
-    http://www.perl.org/CPAN/modules/by-module/Net/
-
+    http://search.cpan.org/dist/Net-DNS/
+or through
     http://www.net-dns.org/
 
 The following link will always be the current released version:
 
     http://www.net-dns.org/download/Net-DNS-release.tar.gz
     
+
+Additionally a subversion repository is made available through
+	http://www.net-dns.org/svn/net-dns/
+
+
+The version on the "trunk" (http://www.net-dns.org/svn/net-dns/trunk) is
+the version that is targeted for next release.
+
+Please note that the SVN version at any given moment may be broken.
 
 
 3. PREREQUISITES
@@ -281,7 +290,6 @@ Net::DNS. Announcements about Net::DNS and Net::DNS::SEC will be done
 through the Net::DNS weblog at http://www.net-dns.org/blog/. An RSS
 feed for the weblog is available.
 
-
 If you want to have access to the latest and greatest code a
 subversion repository is made available through
 
@@ -296,6 +304,7 @@ branches may be broken at any time.
 
 13. ACKNOWLEDGMENTS
 -------------------
+
 
 Thanks to Mike for letting me take care of his baby.
 

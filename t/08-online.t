@@ -1,4 +1,4 @@
-# $Id: 08-online.t 101 2004-08-12 05:12:05Z ctriv $
+# $Id$ -*-perl-*-
 
 use Test::More;
 use strict;

@@ -1,4 +1,4 @@
-# $Id: 07-misc.t 101 2004-08-12 05:12:05Z ctriv $ -*-perl-*-
+# $Id$ -*-perl-*-
 
 use Test::More tests => 22;
 use strict;
@@ -69,6 +69,7 @@ is($warning, 0, 'No evil warning');
 
 
 
+
 #
 #
 # Below are some thests that have to do with TXT RRs 
@@ -109,6 +110,9 @@ my $UUencodedPacket='
 12 34 be 21 e3 1e                               
 ';
 
+
+
+
 $UUencodedPacket =~ s/\s*//g;
 my $packetdata = pack('H*',$UUencodedPacket);
 my $packet     = Net::DNS::Packet->new(\$packetdata);
@@ -130,5 +134,6 @@ is(($TXTrr2->char_str_list())[1],'Test2',"Second Char string in TXT RR read from
 my $TXTrr3   = Net::DNS::RR->new("baz.example.com 3600 HS TXT '\"' 'Char Str2'");
 
 is( ($TXTrr3->char_str_list())[0],'"',"Escaped \" between the  single quotes");
+
 
 

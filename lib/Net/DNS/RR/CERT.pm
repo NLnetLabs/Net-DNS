@@ -1,6 +1,6 @@
 package Net::DNS::RR::CERT;
 #
-# $Id: CERT.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 # Written by Mike Schiraldi <raldi@research.netsol.com> for VeriSign
 

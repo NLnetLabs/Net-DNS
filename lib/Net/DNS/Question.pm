@@ -69,6 +69,9 @@ sub new {
 	bless \%self, $class;
 }
 
+
+
+
 #
 # Some people have reported that Net::DNS dies because AUTOLOAD picks up
 # calls to DESTROY.

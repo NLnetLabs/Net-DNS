@@ -1,6 +1,6 @@
 package Net::DNS::RR::OPT;
 #
-# $Id: OPT.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 
 use strict;

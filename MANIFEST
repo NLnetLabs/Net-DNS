@@ -86,5 +86,6 @@ t/07-misc.t
 t/08-online.t
 t/09-tkey.t
 t/10-recurse.t
+t/11-escapedchars.t
 t/custom.txt
 TODO

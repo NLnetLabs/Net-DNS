@@ -3,18 +3,24 @@ package Net::DNS::Packet;
 # $Id: Packet.pm 208 2005-03-02 14:59:43Z olaf $
 #
 use strict;
+use bytes; # Make sure characters are treated as bytes See perldoc perlunicode
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
+
+use Carp;
+use Net::DNS ;
+use Net::DNS::Question;
+use Net::DNS::RR;
+
+
 
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(dn_expand);
 
-use Carp;
-use Net::DNS;
-use Net::DNS::Question;
-use Net::DNS::RR;
 
 $VERSION = (qw$LastChangedRevision$)[1];
+
+
 
 =head1 NAME
 
@@ -271,7 +277,7 @@ sub data {
 
 	my $headerlength=length $self->{"header"}->data;
 
-	my $data = $self->{"header"}->data;
+        my $data = $self->{"header"}->data;
 
 	foreach my $question (@{$self->{"question"}}) {
 		$data .= $question->data($self, length $data);
@@ -680,12 +686,11 @@ future use.
 
 sub dn_comp {
 	my ($self, $name, $offset) = @_;
-
-	$name = "" unless defined($name);
-
-	my $compname = "";
-	my @names = map { s/\\\././g; $_ } split(/(?=[^\\]|^)\./, $name);
-
+	$name="" unless defined($name);
+	my $compname="";
+	# The Exporter module does not seem to catch this baby...
+	my @names=Net::DNS::name2labels($name);
+	
 	while (@names) {
 		my $dname = join(".", @names);
 
@@ -703,6 +708,7 @@ sub dn_comp {
 	}
 
 	$compname .= pack("C", 0) unless @names;
+
 	return $compname;
 }
 
@@ -728,12 +734,19 @@ Returns B<(undef, undef)> if the domain name couldn't be expanded.
 
 # This is very hot code, so we try to keep things fast.  This makes for
 # odd style sometimes.
+
+sub dn_expand
 {
+    my ($packet, $offset) = @_;
+    my ($name, $roffset);
 	if ($Net::DNS::HAVE_XS) {
-		*dn_expand = \&dn_expand_XS;
+	    ($name, $roffset)=dn_expand_XS($packet, $offset);
 	} else {
-		*dn_expand = \&dn_expand_PP;
+	    ($name, $roffset)=dn_expand_PP($packet, $offset);
 	}
+    
+	return ($name, $roffset);
+
 }
 
 sub dn_expand_PP {
@@ -744,7 +757,7 @@ sub dn_expand_PP {
 	my $int16sz = Net::DNS::INT16SZ();
 
 	# Debugging
-	#warn "USING PURE PERL dn_expand()\n";
+	# warn "USING PURE PERL dn_expand()\n";
 	#if ($seen->{$offset}) {
 	#	die "dn_expand: loop: offset=$offset (seen = ",
 	#	     join(",", keys %$seen), ")\n";
@@ -781,11 +794,14 @@ sub dn_expand_PP {
 				if $packetlen < ($offset + $len);
 
 			my $elem = substr($$packet, $offset, $len);
-			$elem =~ s/\./\\./g;
-			$name .= "$elem.";
+
+			$name .= Net::DNS::wire2presentation($elem).".";
+
 			$offset += $len;
 		}
 	}
+
+	
 
 	$name =~ s/\.$//;
 	return ($name, $offset);

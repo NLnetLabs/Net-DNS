@@ -1,4 +1,4 @@
-# $Id: 00-version.t 101 2004-08-12 05:12:05Z ctriv $
+# $Id$ -*-perl-*-
 
 use Test::More;
 use File::Spec;
