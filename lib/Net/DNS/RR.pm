@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 1.31 2003/09/03 04:41:50 ctriv Exp $
+# $Id: RR.pm,v 1.32 2003/10/27 14:44:42 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -8,7 +8,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$Revision: 1.31 $)[1];
+$VERSION = (qw$Revision: 1.32 $)[1];
 
 =head1 NAME
 
@@ -165,7 +165,7 @@ sub build_regex {
 Returns a C<Net::DNS::RR> object of the appropriate type and
 initialized from the string passed by the user.  The format of the
 string is that used in zone files, and is compatible with the string
-returned by C<<Net::DNS::RR->string>>.
+returned by C<< Net::DNS::RR->string >>.
 
 The name and RR type are required; all other information is optional.
 If omitted, the TTL defaults to 0 and the RR class defaults to IN.

@@ -1,12 +1,15 @@
-# $Id: 00-load.t,v 1.6 2003/08/28 15:11:54 ctriv Exp $
+# $Id: 00-load.t,v 1.7 2003/12/01 04:33:51 ctriv Exp $
 
 
-use Test::More tests => 71;
+use Test::More tests => 73;
 use strict;
 
 BEGIN { 
     use_ok('Net::DNS'); 
     use_ok('Net::DNS::Resolver::Recurse');
+    use_ok('Net::DNS::Nameserver');
+    use_ok('Net::DNS::Resolver::Cygwin');  
+    # can't test windows, has registry stuff
 }
 
 

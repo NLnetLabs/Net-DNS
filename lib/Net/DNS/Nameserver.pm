@@ -1,6 +1,6 @@
 package Net::DNS::Nameserver;
 #
-# $Id: Nameserver.pm,v 1.8 2003/09/19 08:37:33 ctriv Exp $
+# $Id: Nameserver.pm,v 1.10 2003/12/01 01:21:05 ctriv Exp $
 #
 
 use Net::DNS;
@@ -11,7 +11,7 @@ use Carp qw(cluck);
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$Revision: 1.8 $)[1];
+$VERSION = (qw$Revision: 1.10 $)[1];
 
 use constant DEFAULT_ADDR => INADDR_ANY;
 use constant DEFAULT_PORT => 53;
@@ -97,56 +97,57 @@ sub make_reply {
 	
 	my $reply;
 	my $headermask;
-	if ($query) {
-		my $qr = ($query->question)[0];
-		
-		my $qname  = $qr ? $qr->qname  : "";
-		my $qclass = $qr ? $qr->qclass : "ANY";
-		my $qtype  = $qr ? $qr->qtype  : "ANY";
-		
-		$reply = Net::DNS::Packet->new($qname, $qclass, $qtype);
-		
-		if ($query->header->opcode eq "QUERY") {
-			if ($query->header->qdcount == 1) {
-				print "query ", $query->header->id,
-				": ($qname, $qclass, $qtype)..." if $self->{"Verbose"};
-				
-				my ($rcode, $ans, $auth, $add);
-				
-				($rcode, $ans, $auth, $add, $headermask) =
-					&{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost);
-				
-				print "$rcode\n" if $self->{"Verbose"};
-				
-				$reply->header->rcode($rcode);
-				
-				$reply->push("answer",	   @$ans)  if $ans;
-				$reply->push("authority",  @$auth) if $auth;
-				$reply->push("additional", @$add)  if $add;
-			} else {
-				print "ERROR: qdcount ", $query->header->qdcount,
-					"unsupported\n" if $self->{"Verbose"};
-				$reply->header->rcode("FORMERR");
-			}
-		}
-		else {
-			print "ERROR: opcode ", $query->header->opcode, " unsupported\n"
-				if $self->{"Verbose"};
-			$reply->header->rcode("FORMERR");
-		}
-	} else {
+	
+	if (not $query) {
 		print "ERROR: invalid packet\n" if $self->{"Verbose"};
 		$reply = Net::DNS::Packet->new("", "ANY", "ANY");
 		$reply->header->rcode("FORMERR");
+		
+		return $reply;
 	}
+	
+	my $qr = ($query->question)[0];
+	
+	my $qname  = $qr ? $qr->qname  : "";
+	my $qclass = $qr ? $qr->qclass : "ANY";
+	my $qtype  = $qr ? $qr->qtype  : "ANY";
+	
+	$reply = Net::DNS::Packet->new($qname, $qclass, $qtype);
+	
+	if ($query->header->opcode eq "QUERY") {
+		if ($query->header->qdcount == 1) {
+			print "query ", $query->header->id,
+			": ($qname, $qclass, $qtype)..." if $self->{"Verbose"};
+			
+			my ($rcode, $ans, $auth, $add);
+			
+			($rcode, $ans, $auth, $add, $headermask) =
+				&{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost);
+			
+			print "$rcode\n" if $self->{"Verbose"};
+			
+			$reply->header->rcode($rcode);
+			
+			$reply->push("answer",	   @$ans)  if $ans;
+			$reply->push("authority",  @$auth) if $auth;
+			$reply->push("additional", @$add)  if $add;
+		} else {
+			print "ERROR: qdcount ", $query->header->qdcount,
+				"unsupported\n" if $self->{"Verbose"};
+			$reply->header->rcode("FORMERR");
+		}
+	} else {
+		print "ERROR: opcode ", $query->header->opcode, " unsupported\n"
+			if $self->{"Verbose"};
+		$reply->header->rcode("FORMERR");
+	}
+
 	
 	
 	if (!defined ($headermask)) {
 		$reply->header->ra(1);
 		$reply->header->ad(0);
 	} else {
-		# Local modifications
-	
 		$reply->header->aa(1) if $headermask->{'aa'};
 		$reply->header->ra(1) if $headermask->{'ra'};
 		$reply->header->ad(1) if $headermask->{'ad'};
@@ -309,7 +310,7 @@ response codes are:
 For advanced usage there is an optional argument containing an
 hashref with the settings for the C<aa>, C<ra>, and C<ad> 
 header bits. The argument is of the form 
-C<<{ ad => 1, aa => 0, ra => 1 }>>. 
+C<< { ad => 1, aa => 0, ra => 1 } >>. 
 
 
 See RFC 1035 and the IANA dns-parameters file for more information:

@@ -1,6 +1,13 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.42_01 November 30, 2003
+
+Major work to get Net::DNS functioning properly on Cygwin by Sidney 
+Markowitz.
+
+Fixed a bug in Net::DNS::Nameserver's error handling.  CPAN #4195
+
 *** 0.42 October 26, 2003
 
 Fixed compilation problems on panther (Mac OS 10.3).
@@ -307,4 +314,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.83 2003/10/26 05:35:35 ctriv Exp $
+$Id: Changes,v 1.85 2003/12/01 04:33:50 ctriv Exp $

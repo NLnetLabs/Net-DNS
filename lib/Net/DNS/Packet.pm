@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 1.22 2003/09/03 04:41:50 ctriv Exp $
+# $Id: Packet.pm,v 1.23 2003/10/27 14:44:42 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 1.22 $)[1];
+$VERSION = (qw$Revision: 1.23 $)[1];
 
 =head1 NAME
 
@@ -468,7 +468,7 @@ sub answerfrom {
 
 Returns the size of the packet in bytes as it was received from a
 nameserver.  User-created packets will return undef for this method
-(use C<<length $packet->data>> instead).
+(use C<< length $packet->data >> instead).
 
 =cut
 

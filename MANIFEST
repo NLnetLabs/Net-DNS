@@ -21,6 +21,7 @@ lib/Net/DNS/Packet.pm
 lib/Net/DNS/Question.pm
 lib/Net/DNS/Resolver.pm
 lib/Net/DNS/Resolver/Base.pm
+lib/Net/DNS/Resolver/Cygwin.pm
 lib/Net/DNS/Resolver/Recurse.pm
 lib/Net/DNS/Resolver/UNIX.pm
 lib/Net/DNS/Resolver/Win32.pm
