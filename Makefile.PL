@@ -1,4 +1,4 @@
-# $Id: Makefile.PL 101 2004-08-12 05:12:05Z ctriv $
+# $Id$
 
 use strict;
 $^W = 1;
@@ -67,7 +67,7 @@ if ($^O eq 'darwin' and $Config{'osvers'} =~ m/^7\./) {
 }
 
 if ($] >= 5.005) {
-	$Makefile{'AUTHOR'}   = 'Chris Reinhardt <ctriv@net-dns.org>';
+	$Makefile{'AUTHOR'}   = 'Olaf Kolkman <olaf@net-dns.org>';
 	$Makefile{'ABSTRACT'} = 'Perl DNS resolver module';
 }
 
