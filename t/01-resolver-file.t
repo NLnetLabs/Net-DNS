@@ -1,4 +1,4 @@
-# $Id: 01-resolver-file.t,v 1.5 2003/05/10 12:47:23 ctriv Exp $
+# $Id: 01-resolver-file.t,v 1.6 2003/06/11 09:56:13 ctriv Exp $
 
 
 use Test::More tests => 8;
@@ -13,7 +13,7 @@ BEGIN {
 SKIP: {
 
 	skip 'File parsing only supported on unix.', 7
-		unless $Net::DNS::Resolver::os eq 'unix';
+		unless $Net::DNS::Resolver::ISA[0] eq 'Net::DNS::Resolver::UNIX';
 		
 	skip 'Could not read configuration file', 7
 		unless -r '.resolv.conf' && -o _;

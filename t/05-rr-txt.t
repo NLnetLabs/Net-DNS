@@ -1,6 +1,6 @@
-# $Id: 05-rr-txt.t,v 1.2 2003/05/19 01:06:01 ctriv Exp $
+# $Id: 05-rr-txt.t,v 1.3 2003/06/11 10:36:46 ctriv Exp $
 
-use Test::More tests => 32;
+use Test::More tests => 28;
 use strict;
 
 my $uut;
@@ -63,6 +63,12 @@ my @Testlist =	(
 			char_str_list_r	=>	[ q|two|, q|tokens|, ],
 			descr		=>	'Two unquoted strings',
 			},
+			{ # 30-33
+			stim		=> q|"missing quote|,
+			rdatastr    => q||,
+			char_str_list_r	=>	[],
+			descr		=> 'Unbalanced quotes work',
+			}
 		);
 
 #------------------------------------------------------------------------------
@@ -73,13 +79,12 @@ foreach my $test_hr ( @Testlist ) {
     ok( $uut = Net::DNS::RR->new($rr_base . $test_hr->{'stim'}), 	
 		$test_hr->{'descr'} . " -- Stimulus " ); 
 		
-    ok( $uut->rdatastr() eq $test_hr->{'rdatastr'}, 			
+    is($uut->rdatastr(), $test_hr->{'rdatastr'}, 			
 		$test_hr->{'descr'} . " -- Response ( rdatastr ) " ); 
 	
 	my @list = $uut->char_str_list();	
-    ok(scalar @list, $test_hr->{'descr'} . " -- Response ( defined char_str_list ) " );
-		
-    ok( eq_array( \@list, $test_hr->{'char_str_list_r'}) , 
+			
+    is_deeply(\@list, $test_hr->{'char_str_list_r'}, 
 		$test_hr->{'descr'} . " -- char_str_list equality"  ) ;		
 }
 
@@ -92,14 +97,13 @@ $rdata .= pack("C", length $string2) . $string2;
 # RR->new_from_hash() drops stuff straight into the hash and 
 # re-blesses it, breaking encapsulation.
 
-my %base_hash = (
+my %work_hash = (
 	Name		=> $name,
 	TTL		=> $ttl,
 	Class		=> $class,
 	Type		=> $type,
 	);
 
-my %work_hash = %base_hash;
 
 # Don't break RR->new_from_hash (e.i. "See the manual pages for each RR 
 # type to see what fields the type requires.").

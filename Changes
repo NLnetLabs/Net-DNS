@@ -1,6 +1,26 @@
 Revision history for Net::DNS
 =============================
 
+Broke Net::DNS::Resolver into seperate classes.  UNIX and Win32 
+classes are currently implemented.  Many of the globals in 
+Net::DNS::Resolver are no longer exist.  They were never documented
+so you never used them.... right?
+
+Options to Net::DNS::Resolver->new() are now supported, including
+using your own configuration file.  See the Net::DNS::Resolver man
+page for details.
+
+Tweaked Net::DNS::RR::TXT to fail more gracefully when the quotes 
+in the data section are not balanced.
+
+Add more tests (of course).
+
+Moved next_id() from Resolver.pm to Header.pm (which is where it is
+used).
+
+Net::DNS::Select now uses $^O directly, this means that the second
+argument to Net::DNS::Select::new() (the OS) is now ignored.
+
 *** 0.38 Jun 5 2003
 
 Various buglets fixed in the new Makefile.PL.
@@ -712,4 +732,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.60 2003/06/05 23:41:40 ctriv Exp $
+$Id: Changes,v 1.61 2003/06/16 19:16:10 ctriv Exp $

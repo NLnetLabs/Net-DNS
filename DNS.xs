@@ -1,5 +1,5 @@
 /*
- * $Id: DNS.xs,v 1.9 2003/06/01 23:18:57 ctriv Exp $
+ * $Id: DNS.xs,v 1.10 2003/06/21 07:46:01 ctriv Exp $
  *
  */
 
@@ -38,8 +38,8 @@
 MODULE = Net::DNS PACKAGE = Net::DNS::Packet
 
 void
-dn_expand_XS(buffer, offset) 
-	SV * buffer
+dn_expand_XS(sv_buf, offset) 
+	SV * sv_buf
 	int offset
 
   PROTOTYPE: $$		
@@ -49,11 +49,12 @@ dn_expand_XS(buffer, offset)
 	char name[MAXDNAME];
 	int pos;
 	
-	if (SvROK(buffer)) 
-		buffer = SvRV(buffer);
+	if (SvROK(sv_buf)) 
+		sv_buf = SvRV(sv_buf);
 	
 	
-	buf = SvPV(buffer, len);
+	buf = SvPV(sv_buf, len);
+	/* This is where we do the actual uncompressing magic. */
 	pos = dn_expand(buf, buf+len, buf+offset, &name[0], MAXDNAME);
 	
 	EXTEND(SP, 2);

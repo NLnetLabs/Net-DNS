@@ -24,7 +24,11 @@ lib/Net/DNS/Header.pm
 lib/Net/DNS/Nameserver.pm
 lib/Net/DNS/Packet.pm
 lib/Net/DNS/Question.pm
+lib/Net/DNS/Resolver.pm
 lib/Net/DNS/Resolver/Recurse.pm
+lib/Net/DNS/Resolver/Base.pm
+lib/Net/DNS/Resolver/UNIX.pm
+lib/Net/DNS/Resolver/Win32.pm
 lib/Net/DNS/RR.pm
 lib/Net/DNS/RR/A.pm
 lib/Net/DNS/RR/AAAA.pm
@@ -57,13 +61,14 @@ lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TKEY.pm
 lib/Net/DNS/RR/TXT.pm
 lib/Net/DNS/RR/X25.pm
-lib/Net/DNS/Resolver.pm
 lib/Net/DNS/Select.pm
 lib/Net/DNS/Update.pm
 t/00-load.t
 t/00-pod.t
+t/01-resolver.t
 t/01-resolver-env.t
 t/01-resolver-file.t
+t/01-resolver-opt.t
 t/02-header.t
 t/03-question.t
 t/04-packet.t
@@ -75,4 +80,5 @@ t/07-misc.t
 t/08-online.t
 t/09-tkey.t
 t/10-recurse.t
+t/custom.txt
 t/.resolv.conf

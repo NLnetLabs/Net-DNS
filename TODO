@@ -3,11 +3,6 @@ To Do list for Net::DNS
 
 * Work on Resolver.pm:
 
-  - Add an optional argument to Net::DNS::Resolver->new to read a
-    specific configuration file instead of using the default files.
-
-  - Accept options in resolver config files.
-
   - Show more info about the query when $res->debug(1).
 
   - Work on a way to use the same socket for background queries.
@@ -123,8 +118,6 @@ To Do list for Net::DNS
 
     * Add support for dynamic updates.
 
-  - Consider writing a simple nameserver with Net::DNS.
-
 * Do more study of resolver behavior as recommended in RFCs 1035, 1123,
   and 2136.
 
@@ -141,4 +134,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 1.7 2003/05/25 05:27:34 ctriv Exp $
+$Id: TODO,v 1.9 2003/06/21 07:47:38 ctriv Exp $

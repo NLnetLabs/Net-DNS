@@ -1,11 +1,15 @@
 package Net::DNS::Header;
+#
+# $Id: Header.pm,v 1.9 2003/06/11 09:56:13 ctriv Exp $
+#
 
 use strict;
 use vars qw($VERSION $AUTOLOAD);
 
 use Net::DNS;
 
-# $Id: Header.pm,v 1.8 2002/10/12 19:38:30 ctriv Exp $
+use constant MAX_ID => 65535;
+
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -39,6 +43,14 @@ the data is incomplete).
 
 =cut
 
+{
+	my $id = int rand(MAX_ID);
+	
+	sub nextid {
+		return $id++ % (MAX_ID + 1);
+	}
+}
+
 sub new {
 	my $class = shift;
 	my %self;
@@ -70,7 +82,7 @@ sub new {
 	}
 	else { 
 		%self = (
-			"id"		=> Net::DNS::Resolver::nextid(),
+			"id"		=> nextid(),
 			"qr"		=> 0,
 			"opcode"	=> 0,
 			"aa"		=> 0,
@@ -309,7 +321,7 @@ sub data {
 	          | $self->{"rd"};
 
 	my $byte3 = ($self->{"ra"} << 7)
-                  | ($self->{"cd"} << 4)
+	          | ($self->{"cd"} << 4)
 	          | $rcode;
 
 	return pack("n C2 n4", $self->{"id"},

@@ -1,6 +1,28 @@
 package Net::DNS::Resolver;
+#
+# $Id: Resolver.pm,v 1.36 2003/06/21 07:59:46 ctriv Exp $
+#
 
-# $Id: Resolver.pm,v 1.32 2003/06/01 23:33:12 ctriv Exp $
+use strict;
+use vars qw($VERSION @ISA);
+
+$VERSION = $Net::DNS::VERSION;
+
+BEGIN {
+	if ($^O eq 'MSWin32') {
+		require Net::DNS::Resolver::Win32;
+		@ISA = qw(Net::DNS::Resolver::Win32);
+	} else {
+		require Net::DNS::Resolver::UNIX;
+		@ISA = qw(Net::DNS::Resolver::UNIX);
+	}
+}
+
+__PACKAGE__->init();
+
+1;
+
+__END__
 
 =head1 NAME
 
@@ -8,8 +30,33 @@ Net::DNS::Resolver - DNS resolver class
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::Resolver;>
-
+  use Net::DNS;
+  
+  # Use the system defaults
+  my $res = Net::DNS::Resolver->new;
+  
+  # Use my own configuration file
+  my $res = Net::DNS::Resolver->new(config_file => '/my/dns.conf');
+  
+  # Set options in the constructor
+  my $res = Net::DNS::Resolver->new(
+  	nameservers => [qw(10.1.1.128 10.1.2.128)],
+  	recurse     => 0,
+  	debug       => 1,
+  );
+  
+  # Perform a lookup, using the searchlist if appropriate.
+  my $answer = $res->search('example.com');
+  
+  # Perform a lookup, without the searchlist
+  my $answer = $res->query('example.com', 'MX');
+  
+  # Perform a lookup, without pre or post-processing
+  my $answer = $res->send('example.com', 'MX', 'CH');
+  
+  # Send a prebuilt packet
+  my $answer = $res->send($packet);
+  
 =head1 DESCRIPTION
 
 Instances of the C<Net::DNS::Resolver> class represent resolver objects.
@@ -49,335 +96,6 @@ see L</ENVIRONMENT>.
 
 =head1 METHODS
 
-=cut
-
-#'  Stupid Emacs!
-
-use Config;
-use strict;
-
-use vars qw(
-	$VERSION
-	$resolv_conf
-	$dotfile
-	$os
-	$can_time
-	@confpath
-	%default
-	%global
-	$AUTOLOAD
-);
-
-# XXX Not used till query timing is implemented
-
-# Need these because we're using eval to get Time::HiRes.
-#use subs qw(
-#	Time::HiRes::gettimeofday
-#	Time::HiRes::tv_interval
-#);
-
-use Carp;
-use Socket;
-use IO::Socket;
-use Net::DNS;
-use Net::DNS::Packet;
-use Net::DNS::Select;
-
-use constant MAX_ID => 65535;
-
-if ($^O eq 'Win32') {
-	eval 'use Win32::Registry';
-	die $@ if $@;
-	
-	$os = 'microsoft';
-} else {
-	$os = 'unix';
-}
-
-
-# XXX See above
-#eval 'use Time::HiRes';
-#$can_time = $@ ? 0 : 1;
-
-
-$VERSION = $Net::DNS::VERSION;
-
-#------------------------------------------------------------------------------
-# Configurable defaults.
-#------------------------------------------------------------------------------
-
-$resolv_conf = '/etc/resolv.conf';
-$dotfile     = '.resolv.conf';
-
-push(@confpath, $ENV{'HOME'}) if exists $ENV{'HOME'};
-push(@confpath, '.');
-
-%default = (
-	nameservers	   => ['127.0.0.1'],
-	port		   => 53,
-	srcaddr        => '0.0.0.0',
-	srcport        => 0,
-	domain	       => '',
-	searchlist	   => [],
-	retrans	       => 5,
-	retry		   => 4,
-	usevc		   => 0,
-	stayopen       => 0,
-	igntc          => 0,
-	recurse        => 1,
-	defnames       => 1,
-	dnsrch         => 1,
-	debug          => 0,
-	errorstring	   => 'unknown error or no error',
-	tsig_rr        => undef,
-	answerfrom     => '',
-	answersize     => 0,
-	querytime      => undef,
-	tcp_timeout    => 120,
-	udp_timeout    => undef,
-	axfr_sel       => undef,
-	axfr_rr        => [],
-	axfr_soa_count => 0,
-	persistent_tcp => 0,
-    dnssec         => 0,
-    udppacketsize  => 0,  # The actual default is lower bound by Net::DNS::PACKETSZ
-    cdflag         => 1,  # this is only used when {dnssec} == 1
-);
-
-%global = (
-	id		       => int(rand(MAX_ID)),
-);
-
-=head2 new
-
-    $res = Net::DNS::Resolver->new;
-
-Creates a new DNS resolver object.
-
-=cut
-
-sub new {
-	my $class = shift;
-	my $self = { %default };
-	return bless $self, $class;
-}
-
-#
-# Some people have reported that Net::DNS dies because AUTOLOAD picks up
-# calls to DESTROY.
-#
-sub DESTROY {}
-
-sub res_init {
-	if ($os eq 'unix') {
-		res_init_unix();
-	} elsif ($os eq 'microsoft') {
-		res_init_microsoft();
-	}
-
-	# If we're running under a SOCKSified Perl, use TCP instead of UDP
-	# and keep the sockets open.
-	if ($Config::Config{'usesocks'}) {
-		$default{'usevc'} = 1;
-		$default{'persistent_tcp'} = 1;
-	}
-}
-
-sub res_init_unix {
-	read_config($resolv_conf) if (-f $resolv_conf) and (-r $resolv_conf);
-
-	foreach my $dir (@confpath) {
-		my $file = "$dir/$dotfile";
-		read_config($file) if (-f $file) and (-r $file) and (-o $file);
-	}
-
-	read_env();
-
-	if (!$default{'domain'} && @{$default{'searchlist'}}) {
-		$default{'domain'} = $default{'searchlist'}[0];
-	}
-	elsif (!@{$default{'searchlist'}} && $default{'domain'}) {
-		$default{'searchlist'} = [ $default{'domain'} ];
-	}
-}
-
-sub res_init_microsoft {
-	my ($resobj, %keys);
-
-	my $root = 'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
-	unless ($main::HKEY_LOCAL_MACHINE->Open($root, $resobj)) {
-		# Didn't work, maybe we are on 95/98/Me?
-		$root = 'SYSTEM\CurrentControlSet\Services\VxD\MSTCP';
-		$main::HKEY_LOCAL_MACHINE->Open($root, $resobj)
-			or Carp::croak "can't read registry: $!";
-	}
-
-	$resobj->GetValues(\%keys)
-		or Carp::croak "can't read registry values: $!";
-
-	# Best effort to find a useful domain name for the current host
-	# if domain ends up blank, we're probably (?) not connected anywhere
-	# a DNS server is interesting either...
-	my $domain      = $keys{'Domain'}->[2] || $keys{'DhcpDomain'}->[2];
-	
-	# If nothing else, the searchlist should probably contain our own domain
-	# also see below for domain name devolution if so configured
-	# (also remove any duplicates later)
-	my $searchlist = "$domain ";
-	$searchlist  .= $keys{'SearchList'}->[2];
-	
-	# This is (probably) adequate on NT4
-	my $nameservers = $keys{'NameServer'}->[2] || $keys{'DhcpNameServer'}->[2];
-	#
-	# but on W2K/XP the registry layout is more advanced due to dynamically
-	# appearing connections. So we attempt to handle them, too...
-	# opt to silently fail if something isn't ok (maybe we're on NT4)
-	# drop any duplicates later
-	my $dnsadapters;
-	$resobj->Open("DNSRegisteredAdapters", $dnsadapters);
-	if ($dnsadapters) {
-		my @adapters;
-		$dnsadapters->GetKeys(\@adapters);
-		foreach my $adapter (@adapters) {
-			my $regadapter;
-			$dnsadapters->Open($adapter, $regadapter);
-			if ($regadapter) {
-				my($type,$ns);
-				$regadapter->QueryValueEx("DNSServerAddresses", $type, $ns);
-				while (length($ns) >= 4) {
-					my $addr = join('.', unpack("C4", substr($ns,0,4,"")));
-					$nameservers .= " $addr";
-				}
-			}
-		}
-	}
-
-	my $interfaces;
-	$resobj->Open("Interfaces", $interfaces);
-	if ($interfaces) {
-		my @ifacelist;
-		$interfaces->GetKeys(\@ifacelist);
-		foreach my $iface (@ifacelist) {
-			my $regiface;
-			$interfaces->Open($iface, $regiface);
-			if ($regiface) {
-				my $ns;
-				my $type;
-				$regiface->QueryValueEx("NameServer", $type, $ns);
-				$nameservers .= " $ns" if $ns;
-				$regiface->QueryValueEx("DhcpNameServer", $type, $ns);
-				$nameservers .= " $ns" if $ns;
-			}
-		}
-	}
-
-	if ($domain) {
-		$default{'domain'} = $domain;
-	}
-
-	my $usedevolution = $keys{'UseDomainNameDevolution'}->[2];
-	if ($searchlist) {
-		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
-		my $i = 0;
-		my %h;
-		foreach my $entry (split(' ', $searchlist)) {
-			$h{$entry} = $i++;
-			if ($usedevolution) {
-				# as long there's more than two pieces, cut
-				while ($entry =~ m#\..+\.#) {
-					$entry =~ s#^[^\.]+\.(.+)$#$1#;
-					$h{$entry} = $i++;
-					}
-				}
-			}
-		my @a;
-		$a[$h{$_}] = $_ foreach (keys %h);
-		$default{'searchlist'} = \@a;
-	}
-
-	if ($nameservers) {
-		# just in case dups were introduced...
-		my @a;
-		my %h;
-		foreach my $ns (split(' ', $nameservers)) {
-			push @a, $ns unless $h{$ns};
-			$h{$ns} = 1;
-		}
-		$default{'nameservers'} = \@a;
-	}
-
-	read_env();
-
-	if (!$default{'domain'} && @{$default{'searchlist'}}) {
-		$default{'domain'} = $default{'searchlist'}[0];
-	}
-	elsif (!@{$default{'searchlist'}} && $default{'domain'}) {
-		$default{'searchlist'} = [ $default{'domain'} ];
-	}
-
-	$default{'usevc'} = 1;
-	$default{'tcp_timeout'} = undef;
-}
-
-sub read_config {
-	my $file = shift;
-	my @ns;
-	my @searchlist;
-	local *FILE;
-
-	open(FILE, $file) or die "can't open $file: $!";
-	local $/ = "\n";
-	local $_;
-	
-	while (<FILE>) {
-		s/\s*[;#].*//;
-		next if /^\s*$/;
-
-		SWITCH: {
-			/^\s*domain\s+(\S+)/ && do {
-				$default{'domain'} = $1;
-				last SWITCH;
-			};
-
-			/^\s*search\s+(.*)/ && do {
-				push(@searchlist, split(' ', $1));
-				last SWITCH;
-			};
-
-			/^\s*nameserver\s+(.*)/ && do {
-				foreach my $ns (split(' ', $1)) {
-					$ns = '0.0.0.0' if $ns eq '0';
-					push @ns, $ns;
-				}
-				last SWITCH;
-			};
-		}
-	}
-	close FILE;
-
-	$default{'nameservers'} = [ @ns ]         if @ns;
-	$default{'searchlist'}  = [ @searchlist ] if @searchlist;
-}
-
-sub read_env {
-	$default{'nameservers'} = [ split(' ', $ENV{'RES_NAMESERVERS'}) ]
-		if exists $ENV{'RES_NAMESERVERS'};
-
-	$default{'searchlist'} = [ split(' ', $ENV{'RES_SEARCHLIST'}) ]
-		if exists $ENV{'RES_SEARCHLIST'};
-	
-	$default{'domain'} = $ENV{'LOCALDOMAIN'}
-		if exists $ENV{'LOCALDOMAIN'};
-
-	if (exists $ENV{'RES_OPTIONS'}) {
-		my @env = split(' ', $ENV{'RES_OPTIONS'});
-		foreach (@env) {
-			my ($name, $val) = split(/:/);
-			$val = 1 unless defined $val;
-			$default{$name} = $val if exists $default{$name};
-		}
-	}
-}
 
 =head2 print
 
@@ -385,46 +103,11 @@ sub read_env {
 
 Prints the resolver state on the standard output.
 
-=cut
-
-sub print {
-	my $self = shift;
-	print $self->string;
-}
-
 =head2 string
 
     print $res->string;
 
 Returns a string representation of the resolver state.
-
-=cut
-#"
-
-sub string {
-	my $self = shift;
-
-	my $timeout = defined $self->{'tcp_timeout'} ? $self->{'tcp_timeout'} : 'indefinite';
-	
-	return <<END;
-;; RESOLVER state:
-;;  domain       = $self->{domain}
-;;  searchlist   = @{$self->{searchlist}}
-;;  nameservers  = @{$self->{nameservers}}
-;;  port         = $self->{port}
-;;  srcport      = $self->{srcport}
-;;  srcaddr      = $self->{srcaddr}
-;;  tcp_timeout  = $timeout
-;;  retrans  = $self->{retrans}  retry    = $self->{retry}
-;;  usevc    = $self->{usevc}  stayopen = $self->{stayopen}    igntc = $self->{igntc}
-;;  defnames = $self->{defnames}  dnsrch   = $self->{dnsrch}
-;;  recurse  = $self->{recurse}  debug    = $self->{debug}
-END
-}
-
-sub nextid {
-	return $global{'id'}++ % (MAX_ID + 1);
-}
 
 =head2 searchlist
 
@@ -432,14 +115,6 @@ sub nextid {
     $res->searchlist('example.com', 'sub1.example.com', 'sub2.example.com');
 
 Gets or sets the resolver search list.
-
-=cut
-
-sub searchlist {
-	my $self = shift;
-	$self->{'searchlist'} = [ @_ ] if @_;
-	return @{$self->{'searchlist'}};
-}
 
 =head2 nameservers
 
@@ -473,87 +148,6 @@ meaning any port.
 Gets or sets the source address from which we send queries.  Convenient
 for forcing queries out a specific interfaces on a multi-homed host.
 The default is 0.0.0.0, meaning any local address.
-
-=cut
-
-sub nameservers {
-	my $self   = shift;
-	my $defres = Net::DNS::Resolver->new;
-
-	if (@_) {
-		my @a;
-		foreach my $ns (@_) {
-			if ($ns =~ /^\d+(\.\d+){0,3}$/) {
-				push @a, ($ns eq '0') ? '0.0.0.0' : $ns;
-			}
-			else {
-				my @names;
-
-				if ($ns !~ /\./) {
-					if (defined $defres->searchlist) {
-						@names = map { $ns . '.' . $_ }
-							    $defres->searchlist;
-					}
-					elsif (defined $defres->domain) {
-						@names = ($ns . '.' . $defres->domain);
-					}
-				}
-				else {
-					@names = ($ns);
-				}
-
-				my $packet = $defres->search($ns);
-				$self->errorstring($defres->errorstring);
-				if (defined($packet)) {
-					push @a, cname_addr([@names], $packet);
-				}
-			}
-		}
-
-		$self->{'nameservers'} = [ @a ];
-	}
-
-	return @{$self->{'nameservers'}};
-}
-
-sub nameserver { &nameservers }
-
-
-sub cname_addr {
-	my $names  = shift;
-	my $packet = shift;
-	my @addr;
-	my @names = @{$names};
-
-	my $oct2 = '(?:2[0-4]\d|25[0-5]|[0-1]?\d\d|\d)';
-
-	RR: foreach my $rr ($packet->answer) {
-		next RR unless grep {$rr->name} @names;
-				
-		if ($rr->type eq 'CNAME') {
-			push(@names, $rr->cname);
-		} elsif ($rr->type eq 'A') {
-			# Run a basic taint check.
-			next RR unless $rr->address =~ m/^($oct2\.$oct2\.$oct2\.$oct2)$/o;
-			
-			push(@addr, $1)
-		}
-	}
-	
-	
-	return @addr;
-}
-
-
-# if ($self->{"udppacketsize"}  > &Net::DNS::PACKETSZ 
-# then we use EDNS and $self->{"udppacketsize"} 
-# should be taken as the maximum packet_data length
-sub _packetsz {
-	my ($self) = @_;
-
-	return $self->{"udppacketsize"} > &Net::DNS::PACKETSZ ? 
-		   $self->{"udppacketsize"} : &Net::DNS::PACKETSZ; 
-}
 
 =head2 search
 
@@ -591,52 +185,6 @@ then an appropriate PTR query will be performed.
 Returns a C<Net::DNS::Packet> object, or C<undef> if no answers
 were found.
 
-=cut
-
-sub search {
-	my $self = shift;
-	my ($name, $type, $class) = @_;
-	my $ans;
-
-	$type  = 'A'  unless defined($type);
-	$class = 'IN' unless defined($class);
-
-	# If the name looks like an IP address then do an appropriate
-	# PTR query.
-	if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
-		$name = "$4.$3.$2.$1.in-addr.arpa.";
-		$type = 'PTR';
-	}
-
-	# If the name contains at least one dot then try it as is first.
-	if (index($name, '.') >= 0) {
-		print ";; search($name, $type, $class)\n" if $self->{'debug'};
-		$ans = $self->query($name, $type, $class);
-		return $ans if (defined $ans) && ($ans->header->ancount > 0);
-	}
-
-	# If the name doesn't end in a dot then apply the search list.
-	if (($name !~ /\.$/) && $self->{'dnsrch'}) {
-		foreach my $domain (@{$self->{'searchlist'}}) {
-			my $newname = "$name.$domain";
-			print ";; search($newname, $type, $class)\n"
-				if $self->{'debug'};
-			$ans = $self->query($newname, $type, $class);
-			return $ans if (defined $ans) && ($ans->header->ancount > 0);
-		}
-	}
-
-	# Finally, if the name has no dots then try it as is.
-	if (index($name, '.') < 0) {
-		print ";; search($name, $type, $class)\n" if $self->{'debug'};
-		$ans = $self->query("$name.", $type, $class);
-		return $ans if (defined $ans) && ($ans->header->ancount > 0);
-	}
-
-	# No answer was found.
-	return undef;
-}
-
 =head2 query
 
     $packet = $res->query('mailhost');
@@ -655,37 +203,6 @@ then an appropriate PTR query will be performed.
 
 Returns a C<Net::DNS::Packet> object, or C<undef> if no answers
 were found.
-
-=cut
-#'
-
-sub query {
-	my ($self, $name, $type, $class) = @_;
-
-	$type  = 'A'  unless defined($type);
-	$class = 'IN' unless defined($class);
-
-	# If the name doesn't contain any dots then append the default domain.
-	if ((index($name, '.') < 0) && $self->{'defnames'}) {
-		$name .= ".$self->{domain}";
-	}
-
-	# If the name looks like an IP address then do an appropriate
-	# PTR query.
-	if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
-		$name = "$4.$3.$2.$1.in-addr.arpa";
-		$type = 'PTR';
-	}
-
-	print ";; query($name, $type, $class)\n" if $self->{'debug'};
-	my $packet = Net::DNS::Packet->new($name, $type, $class);
-
-
-	
-	my $ans = $self->send($packet);
-
-	return (defined($ans) && ($ans->header->ancount > 0)) ? $ans : undef;
-}
 
 =head2 send
 
@@ -706,288 +223,6 @@ Returns a C<Net::DNS::Packet> object whether there were any answers or not.
 Use C<<$packet->header->ancount>> or C<<$packet->answer>> to find out
 if there were any records in the answer section.  Returns C<undef> if there
 was an error.
-
-=cut
-
-sub send {
-	my $self = shift;
-	my $packet = $self->make_query_packet(@_);
-	my $packet_data = $packet->data;
-
-	my $ans;
-
-	if ($self->{'usevc'} || length $packet_data > $self->_packetsz) {
-	  
-	    $ans = $self->send_tcp($packet, $packet_data);
-	    
-	} else {
-	    $ans = $self->send_udp($packet, $packet_data);
-	    
-	    if ($ans && $ans->header->tc && !$self->{'igntc'}) {
-			print ";;\n;; packet truncated: retrying using TCP\n" if $self->{'debug'};
-			$ans = $self->send_tcp($packet, $packet_data);
-	    }
-	}
-	
-	return $ans;
-}
-
-
-
-sub send_tcp {
-	my ($self, $packet, $packet_data) = @_;
-
-	unless (@{$self->{'nameservers'}}) {
-		$self->errorstring('no nameservers');
-		print ";; ERROR: send_tcp: no nameservers\n" if $self->{'debug'};
-		return;
-	}
-
-	$self->errorstring($default{'errorstring'});
-	my $timeout = $self->{'tcp_timeout'};
-
-	foreach my $ns (@{$self->{'nameservers'}}) {
-		my $srcport = $self->{'srcport'};
-		my $srcaddr = $self->{'srcaddr'};
-		my $dstport = $self->{'port'};
-
-		print ";; send_tcp($ns:$dstport) (src port = $srcport)\n"
-			if $self->{'debug'};
-
-		my $sock;
-		my $sock_key = "$ns:$dstport";
-
-		if ($self->persistent_tcp && $self->{'sockets'}{$sock_key}) {
-			$sock = $self->{'sockets'}{$sock_key};
-			print ";; using persistent socket\n"
-				if $self->{'debug'};
-		}
-		else {
-
-			# IO::Socket carps on errors if Perl's -w flag is
-			# turned on.  Uncomment the next two lines and the
-			# line following the "new" call to turn off these
-			# messages.
-
-			#my $old_wflag = $^W;
-			#$^W = 0;
-
-			$sock = IO::Socket::INET->new(
-			    PeerAddr  => $ns,
-			    PeerPort  => $dstport,
-			    LocalAddr => $srcaddr,
-			    LocalPort => ($srcport || undef),
-			    Proto     => 'tcp',
-			    Timeout   => $timeout
-			);
-
-			#$^W = $old_wflag;
-
-			unless ($sock) {
-				$self->errorstring('connection failed');
-				print ';; ERROR: send_tcp: connection ',
-				      "failed: $!\n" if $self->{'debug'};
-				next;
-			}
-
-			$self->{'sockets'}{$sock_key} = $sock;
-		}
-
-		my $lenmsg = pack('n', length($packet_data));
-		print ';; sending ', length($packet_data), " bytes\n"
-			if $self->{'debug'};
-
-		# note that we send the length and packet data in a single call
-		# as this produces a single TCP packet rather than two. This
-		# is more efficient and also makes things much nicer for sniffers.
-		# (ethereal doesn't seem to reassemble DNS over TCP correctly)
-		unless ($sock->send($lenmsg . $packet_data)) {
-			$self->errorstring($!);
-			print ";; ERROR: send_tcp: data send failed: $!\n"
-				if $self->{'debug'};
-			next;
-		}
-
-		my $sel = Net::DNS::Select->new($os, $sock);
-
-		if ($sel->can_read($timeout)) {
-			my $buf = read_tcp($sock, &Net::DNS::INT16SZ, $self->{'debug'});
-			next unless length($buf);
-			my ($len) = unpack('n', $buf);
-			next unless $len;
-
-			unless ($sel->can_read($timeout)) {
-				$self->errorstring('timeout');
-				print ";; TIMEOUT\n" if $self->{'debug'};
-				next;
-			}
-
-			$buf = read_tcp($sock, $len, $self->{'debug'});
-
-			$self->answerfrom($sock->peerhost);
-			$self->answersize(length $buf);
-
-			print ';; received ', length($buf), " bytes\n"
-				if $self->{'debug'};
-
-			unless (length($buf) == $len) {
-				$self->errorstring("expected $len bytes, " .
-						   'received ' . length($buf));
-				next;
-			}
-
-			my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
-			if (defined $ans) {
-				$self->errorstring($ans->header->rcode);
-				$ans->answerfrom($self->answerfrom);
-				$ans->answersize($self->answersize);
-			}
-			elsif (defined $err) {
-				$self->errorstring($err);
-			}
-
-			return $ans;
-		}
-		else {
-			$self->errorstring('timeout');
-			next;
-		}
-	}
-
-	return;
-}
-
-sub send_udp {
-	my ($self, $packet, $packet_data) = @_;
-	my $retrans = $self->{'retrans'};
-	my $timeout = $retrans;
-
-	my $stop_time = time + $self->{'udp_timeout'} if $self->{'udp_timeout'};
-
-	$self->errorstring($default{'errorstring'});
-
-	my $dstport = $self->{'port'};
-	my $srcport = $self->{'srcport'};
-	my $srcaddr = $self->{'srcaddr'};
-
-	# IO::Socket carps on errors if Perl's -w flag is turned on.
-	# Uncomment the next two lines and the line following the "new"
-	# call to turn off these messages.
-
-	#my $old_wflag = $^W;
-	#$^W = 0;
-
-	# XXX Why is PeerPort defined here?
-	my $sock = IO::Socket::INET->new(
-			    PeerPort  => $dstport,
-			    LocalAddr => $srcaddr,
-			    LocalPort => ($srcport || undef),
-			    Proto     => 'udp',
-	);
-
-	#$^W = $old_wflag;
-
-	unless ($sock) {
-		$self->errorstring("couldn't create socket: $!");
-		return;
-	}
-
-	my @ns = grep { $_->[0] && $_->[1] }
-	         map  { [ $_, scalar(sockaddr_in($dstport, inet_aton($_))) ] }
-	         @{$self->{'nameservers'}};
-
-	unless (@ns) {
-		$self->errorstring('no nameservers');
-		return;
-	}
-
-	my $sel = Net::DNS::Select->new($os, $sock);
-
-	# Perform each round of retries.
-	for (my $i = 0;
-	     $i < $self->{'retry'};
-	     ++$i, $retrans *= 2, $timeout = int($retrans / (@ns || 1))) {
-
-		$timeout = 1 if ($timeout < 1);
-
-		# Try each nameserver.
-		foreach my $ns (@ns) {
-			if ($stop_time) {
-				my $now = time;
-				if ($stop_time < $now) {
-					$self->errorstring('query timed out');
-					return;
-				}
-				if ($timeout > 1 && $timeout > ($stop_time-$now)) {
-					$timeout = $stop_time-$now;
-				}
-			}
-			my $nsname = $ns->[0];
-			my $nsaddr = $ns->[1];
-
-			print ";; send_udp($nsname:$dstport)\n"
-				if $self->{'debug'};
-
-			unless ($sock->send($packet_data, 0, $nsaddr)) {
-				print ";; send error: $!\n" if $self->{'debug'};
-				@ns = grep { $_->[0] ne $nsname } @ns;
-				next;
-			}
-
-			my @ready = $sel->can_read($timeout);
-
-			foreach my $ready (@ready) {
-				my $buf = '';
-
-				if ($ready->recv($buf, $self->_packetsz)) {
-				
-					$self->answerfrom($ready->peerhost);
-					$self->answersize(length $buf);
-				
-					print ';; answer from ',
-					      $ready->peerhost, ':',
-					      $ready->peerport, ' : ',
-					      length($buf), " bytes\n"
-						if $self->{'debug'};
-				
-					my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
-				
-					if (defined $ans) {
-						next unless $ans->header->qr;
-						next unless $ans->header->id == $packet->header->id;
-						$self->errorstring($ans->header->rcode);
-						$ans->answerfrom($self->answerfrom);
-						$ans->answersize($self->answersize);
-					} elsif (defined $err) {
-						$self->errorstring($err);
-					}
-					
-					return $ans;
-				} else {
-					$self->errorstring($!);
-					
-					print ';; recv ERROR(',
-					      $ready->peerhost, ':',
-					      $ready->peerport, '): ',
-					      $self->errorstring, "\n"
-						if $self->{'debug'};
-
-					@ns = grep { $_->[0] ne $ready->peerhost } @ns;
-					
-					return unless @ns;
-				}
-			}
-		}
-	}
-
-	if ($sel->handles) {
-		$self->errorstring('query timed out');
-	}
-	else {
-		$self->errorstring('all nameservers failed');
-	}
-	return;
-}
 
 =head2 bgsend
 
@@ -1012,52 +247,6 @@ the socket is ready for reading and call C<<$res->bgread>> to get
 the response packet.  You can use C<<$res->bgisready>> or C<IO::Select>
 to find out if the socket is ready before reading it.
 
-=cut
-
-sub bgsend {
-	my $self = shift;
-
-	unless (@{$self->{'nameservers'}}) {
-		$self->errorstring('no nameservers');
-		return;
-	}
-
-	$self->errorstring($default{'errorstring'});
-
-	my $packet = $self->make_query_packet(@_);
-	my $packet_data = $packet->data;
-
-	my $srcaddr = $self->{'srcaddr'};
-	my $srcport = $self->{'srcport'};
-
-	my $dstaddr = $self->{'nameservers'}->[0];
-	my $dstport = $self->{'port'};
-
-	my $sock = IO::Socket::INET->new(
-		Proto => 'udp',
-		LocalAddr => $srcaddr,
-		LocalPort => ($srcport || undef),
-	);
-
-	unless ($sock) {
-		$self->errorstring(q|couldn't get socket|);   #'
-		return;
-	}
-	
-	my $dst_sockaddr = sockaddr_in($dstport, inet_aton($dstaddr));
-
-	print ";; bgsend($dstaddr:$dstport)\n" if $self->{'debug'};
-
-	unless ($sock->send($packet_data, 0, $dst_sockaddr)) {
-		my $err = $!;
-		print ";; send ERROR($dstaddr): $err\n" if $self->{'debug'};
-		$self->errorstring($err);
-		return;
-	}
-
-	return $sock;
-}
-
 =head2 bgread
 
     $packet = $res->bgread($socket);
@@ -1069,35 +258,6 @@ is an C<IO::Socket> object returned by C<bgsend>.
 Returns a C<Net::DNS::Packet> object or C<undef> on error.
 
 The programmer should close or destroy the socket object after reading it.
-
-=cut
-
-sub bgread {
-	my ($self, $sock) = @_;
-
-	my $buf = '';
-
-	my $peeraddr = $sock->recv($buf, $self->_packetsz);
-	
-	if ($peeraddr) {
-		print ';; answer from ', $sock->peerhost, ':',
-		      $sock->peerport, ' : ', length($buf), " bytes\n"
-			if $self->{'debug'};
-
-		my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
-		
-		if (defined $ans) {
-			$self->errorstring($ans->header->rcode);
-		} elsif (defined $err) {
-			$self->errorstring($err);
-		}
-		
-		return $ans;
-	} else {
-		$self->errorstring($!);
-		return;
-	}
-}
 
 =head2 bgisready
 
@@ -1112,79 +272,6 @@ Determines whether a socket is ready for reading.  The argument is
 an C<IO::Socket> object returned by C<<$res->bgsend>>.
 
 Returns true if the socket is ready, false if not.
-
-=cut
-
-sub bgisready {
-	my $self = shift;
-	my $sel = Net::DNS::Select->new($os, @_);
-	my @ready = $sel->can_read(0.0);
-	return @ready > 0;
-}
-
-sub make_query_packet {
-	my $self = shift;
-	my $packet;
-
-	if (ref($_[0]) and $_[0]->isa('Net::DNS::Packet')) {
-		$packet = shift;
-	} else {
-		my ($name, $type, $class) = @_;
-
-		$name  ||= '';
-		$type  ||= 'A';
-		$class ||= 'IN';
-
-		# If the name looks like an IP address then do an appropriate
-		# PTR query.
-		if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
-			$name = "$4.$3.$2.$1.in-addr.arpa.";
-			$type = 'PTR';
-		}
-
-		$packet = Net::DNS::Packet->new($name, $type, $class);
-	}
-
-	if ($packet->header->opcode eq 'QUERY') {
-		$packet->header->rd($self->{'recurse'});
-	}
-
-    if ($self->{'dnssec'}) {
-	    # RFC 3225
-    	print ";; Adding EDNS extention with UDP packetsize $self->{'udppacketsize'} and DNS OK bit set\n" 
-    		if $self->{'debug'};
-    	
-    	my $optrr = Net::DNS::RR->new(
-						Type         => 'OPT',
-						Name         => '',
-						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload
-						ednsflags    => 0x8000, # first bit set see RFC 3225 
-				   );
-				 
-	    $packet->push('additional', $optrr);
-	    
-	} elsif ($self->{'udppacketsize'} > &Net::DNS::PACKETSZ) {
-	    print ";; Adding EDNS extention with UDP packetsize  $self->{'udppacketsize'}.\n" if $self->{'debug'};
-	    # RFC 3225
-	    my $optrr = Net::DNS::RR->new( 
-						Type         => 'OPT',
-						Name         => '',
-						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload
-						TTL          => 0x0000 # RCODE 32bit Hex
-				    );
-				    
-	    $packet->push('additional', $optrr);
-	}
-	
-
-	if ($self->{'tsig_rr'}) {
-		if (!grep { $_->type eq 'TSIG' } $packet->additional) {
-			$packet->push('additional', $self->{'tsig_rr'});
-		}
-	}
-
-	return $packet;
-}
 
 =head2 axfr
 
@@ -1217,165 +304,6 @@ Here's an example that uses a timeout:
         print 'Zone transfer failed: ', $res->errorstring, "\n";
     }
 
-=cut
-
-sub axfr {
-	my $self = shift;
-	my @zone;
-
-	if ($self->axfr_start(@_)) {
-		my ($rr, $err);
-		while (($rr, $err) = $self->axfr_next, $rr && !$err) {
-			push @zone, $rr;
-		}
-		@zone = () if $err && $err ne 'no zone transfer in progress';
-	}
-
-	return @zone;
-}
-
-sub axfr_old {
-	warn "Use of " . __PACKAGE__ . "::axfr_old() is deprecated.  Use axfr() or axfr_start()\n";
-	
-	my $self = shift;
-	my ($dname, $class) = @_;
-	$dname ||= $self->{'searchlist'}->[0];
-	$class ||= 'IN';
-
-	unless ($dname) {
-		print ";; ERROR: axfr: no zone specified\n" if $self->{'debug'};
-		$self->errorstring('no zone');
-		return;
-	}
-
-	print ";; axfr($dname, $class)\n" if $self->{'debug'};
-
-	unless (@{$self->{'nameservers'}}) {
-		$self->errorstring('no nameservers');
-		print ";; ERROR: no nameservers\n" if $self->{'debug'};
-		return;
-	}
-
-	my $packet = $self->make_query_packet($dname, 'AXFR', $class);
-	my $packet_data = $packet->data;
-
-	my $ns = $self->{'nameservers'}->[0];
-
-	print ";; axfr nameserver = $ns\n" if $self->{'debug'};
-
-	my $srcport = $self->{'srcport'};
-
-	my $sock;
-	my $sock_key = "$ns:$self->{'port'}";
-
-	if ($self->{'persistent_tcp'} && $self->{'sockets'}{$sock_key}) {
-		$sock = $self->{'sockets'}{$sock_key};
-		print ";; using persistent socket\n" if $self->{'debug'};
-	}
-	else {
-
-		# IO::Socket carps on errors if Perl's -w flag is turned on.
-		# Uncomment the next two lines and the line following the "new"
-		# call to turn off these messages.
-
-		my $old_wflag = $^W;
-		$^W = 0;
-
-		$sock = IO::Socket::INET->new(
-		    PeerAddr  => $ns,
-		    PeerPort  => $self->{'port'},
-		    LocalAddr => $self->{'srcaddr'},
-		    LocalPort => ($srcport || undef),
-		    Proto     => 'tcp',
-		    Timeout   => $self->{'tcp_timeout'}
-		);
-
-		$^W = $old_wflag;
-
-		unless ($sock) {
-			$self->errorstring(q|couldn't connect|);
-			return;
-		}
-
-		$self->{'sockets'}{$sock_key} = $sock;
-	}
-
-	my $lenmsg = pack('n', length($packet_data));
-
-	unless ($sock->send($lenmsg)) {
-		$self->errorstring($!);
-		return;
-	}
-
-	unless ($sock->send($packet_data)) {
-		$self->errorstring($!);
-		return;
-	}
-
-	my $sel = Net::DNS::Select->new($os, $sock);
-
-	my @zone;
-	my $soa_count = 0;
-	my $timeout = $self->{'tcp_timeout'};
-
-	while (1) {
-		my @ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$self->errorstring('timeout');
-			return;
-		}
-
-		my $buf = read_tcp($sock, &Net::DNS::INT16SZ, $self->{'debug'});
-		last unless length($buf);
-		my ($len) = unpack('n', $buf);
-		last unless $len;
-
-		@ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$self->errorstring('timeout');
-			return;
-		}
-
-		$buf = read_tcp($sock, $len, $self->{'debug'});
-
-		print ';; received ', length($buf), " bytes\n"
-			if $self->{'debug'};
-
-		unless (length($buf) == $len) {
-			$self->errorstring("expected $len bytes, received " . length($buf));
-			return;
-		}
-
-		my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
-
-		if (defined $ans) {
-			if ($ans->header->ancount < 1) {
-				$self->errorstring($ans->header->rcode);
-				last;
-			}
-		}
-		elsif (defined $err) {
-			$self->errorstring($err);
-			last;
-		}
-
-		foreach ($ans->answer) {
-			# $_->print if $self->{'debug'};
-			if ($_->type eq 'SOA') {
-				++$soa_count;
-				push @zone, $_ unless $soa_count >= 2;
-			}
-			else {
-				push @zone, $_;
-			}
-		}
-
-		last if $soa_count >= 2;
-	}
-
-	return @zone;
-}
-
 =head2 axfr_start
 
     $res->axfr_start;
@@ -1391,98 +319,11 @@ C<undef> on error.
 
 Use C<axfr_next> to read the zone records one at a time.
 
-=cut
-
-sub axfr_start {
-	my $self = shift;
-	my ($dname, $class) = @_;
-	$dname ||= $self->{'searchlist'}->[0];
-	$class ||= 'IN';
-
-	unless ($dname) {
-		print ";; ERROR: axfr: no zone specified\n" if $self->{'debug'};
-		$self->errorstring('no zone');
-		return;
-	}
-
-	print ";; axfr_start($dname, $class)\n" if $self->{'debug'};
-
-	unless (@{$self->{'nameservers'}}) {
-		$self->errorstring('no nameservers');
-		print ";; ERROR: no nameservers\n" if $self->{'debug'};
-		return;
-	}
-
-	my $packet = $self->make_query_packet($dname, 'AXFR', $class);
-	my $packet_data = $packet->data;
-
-	my $ns = $self->{'nameservers'}->[0];
-
-	print ";; axfr_start nameserver = $ns\n" if $self->{'debug'};
-
-	my $srcport = $self->{'srcport'};
-
-	my $sock;
-	my $sock_key = "$ns:$self->{'port'}";
-
-	if ($self->{'persistent_tcp'} && $self->{'sockets'}->{$sock_key}) {
-	    $sock = $self->{'sockets'}->{$sock_key};
-	    print ";; using persistent socket\n" if $self->{'debug'};
-	    
-	} else {
-
-		# IO::Socket carps on errors if Perl's -w flag is turned on.
-		# Uncomment the next two lines and the line following the "new"
-		# call to turn off these messages.
-
-		#my $old_wflag = $^W;
-		#$^W = 0;
-
-		$sock = IO::Socket::INET->new(
-		    PeerAddr  => $ns,
-		    PeerPort  => $self->{'port'},
-		    LocalAddr => $self->{'srcaddr'},
-		    LocalPort => ($srcport || undef),
-		    Proto     => 'tcp',
-		    Timeout   => $self->{'tcp_timeout'}
-		 );
-
-		#$^W = $old_wflag;
-
-		unless ($sock) {
-			$self->errorstring(q|couldn't connect|);
-			return;
-		}
-
-		$self->{'sockets'}->{$sock_key} = $sock;
-	}
-
-	my $lenmsg = pack('n', length($packet_data));
-
-	unless ($sock->send($lenmsg)) {
-		$self->errorstring($!);
-		return;
-	}
-
-	unless ($sock->send($packet_data)) {
-		$self->errorstring($!);
-		return;
-	}
-
-	my $sel = Net::DNS::Select->new($os, $sock);
-
-	$self->{'axfr_sel'}       = $sel;
-	$self->{'axfr_rr'}        = [];
-	$self->{'axfr_soa_count'} = 0;
-
-	return $sock;
-}
-
 =head2 axfr_next
 
     $res->axfr_start('example.com');
     while ($rr = $res->axfr_next) {
-	$rr->print;
+	    $rr->print;
     }
 
 Reads records from a zone transfer one at a time.
@@ -1491,114 +332,6 @@ Returns C<undef> at the end of the zone transfer.  The redundant
 SOA record that terminates the zone transfer is not returned.
 
 See also L</axfr>.
-
-=cut
-
-sub axfr_next {
-	my $self = shift;
-	my $err  = '';
-
-	unless (@{$self->{'axfr_rr'}}) {
-		unless ($self->{'axfr_sel'}) {
-			$err = 'no zone transfer in progress';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my $sel = $self->{'axfr_sel'};
-		my $timeout = $self->{'tcp_timeout'};
-
-		#--------------------------------------------------------------
-		# Read the length of the response packet.
-		#--------------------------------------------------------------
-
-		my @ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$err = 'timeout';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my $buf = read_tcp($ready[0], &Net::DNS::INT16SZ, $self->{'debug'});
-		unless (length $buf) {
-			$err = 'truncated zone transfer';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my ($len) = unpack('n', $buf);
-		unless ($len) {
-			$err = 'truncated zone transfer';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		#--------------------------------------------------------------
-		# Read the response packet.
-		#--------------------------------------------------------------
-
-		@ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$err = 'timeout';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		$buf = read_tcp($ready[0], $len, $self->{'debug'});
-
-		print ';; received ', length($buf), " bytes\n"
-			if $self->{'debug'};
-
-		unless (length($buf) == $len) {
-			$err = "expected $len bytes, received " . length($buf);
-			$self->errorstring($err);
-			print ";; $err\n" if $self->{'debug'};
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my $ans;
-		($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
-
-		if ($ans) {
-			if ($ans->header->rcode ne 'NOERROR') {	
-				$self->errorstring('Response code from server: ' . $ans->header->rcode);
-				print ';; Response code from server: ' . $ans->header->rcode . "\n" if $self->{'debug'};
-				return wantarray ? (undef, $err) : undef;
-			}
-			if ($ans->header->ancount < 1) {
-				$err = 'truncated zone transfer';
-				$self->errorstring($err);
-				print ";; $err\n" if $self->{'debug'};
-				return wantarray ? (undef, $err) : undef;
-			}
-		}
-		else {
-			$err ||= 'unknown error during packet parsing';
-			$self->errorstring($err);
-			print ";; $err\n" if $self->{'debug'};
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		foreach my $rr ($ans->answer) {
-			if ($rr->type eq 'SOA') {
-				if (++$self->{'axfr_soa_count'} < 2) {
-					push @{$self->{'axfr_rr'}}, $rr;
-				}
-			}
-			else {
-				push @{$self->{'axfr_rr'}}, $rr;
-			}
-		}
-
-		if ($self->{'axfr_soa_count'} >= 2) {
-			$self->{'axfr_sel'} = undef;
-		}
-	}
-
-	my $rr = shift @{$self->{'axfr_rr'}};
-
-	return wantarray ? ($rr, undef) : $rr;
-}
 
 =head2 tsig
 
@@ -1626,70 +359,6 @@ You can also sign packets manually -- see the C<Net::DNS::Packet>
 and C<Net::DNS::Update> manual pages for examples.  TSIG records
 in manually-signed packets take precedence over those that the
 resolver would add automatically.
-
-=cut
-
-sub tsig {
-	my $self = shift;
-
-	if (@_ == 1) {
-		if ($_[0] && ref($_[0])) {
-			$self->{'tsig_rr'} = $_[0];
-		}
-		else {
-			$self->{'tsig_rr'} = undef;
-		}
-	}
-	elsif (@_ == 2) {
-		my ($key_name, $key) = @_;
-		$self->{'tsig_rr'} = Net::DNS::RR->new("$key_name TSIG $key");
-	}
-
-	return $self->{'tsig_rr'};
-}
-
-#
-# Usage:  $data = read_tcp($socket, $nbytes, $debug);
-#
-sub read_tcp {
-	my ($sock, $nbytes, $debug) = @_;
-	my $buf = '';
-
-	while (length($buf) < $nbytes) {
-		my $nread = $nbytes - length($buf);
-		my $read_buf = '';
-
-		print ";; read_tcp: expecting $nread bytes\n" if $debug;
-
-		# During some of my tests recv() returned undef even
-		# though there wasn't an error.  Checking for the amount
-		# of data read appears to work around that problem.
-
-		unless ($sock->recv($read_buf, $nread)) {
-			if (length($read_buf) < 1) {
-				my $errstr = $!;
-
-				print ";; ERROR: read_tcp: recv failed: $!\n"
-					if $debug;
-
-				if ($errstr eq 'Resource temporarily unavailable') {
-					warn "ERROR: read_tcp: recv failed: $errstr\n";
-					warn "ERROR: try setting \$res->timeout(undef)\n";
-				}
-
-				last;
-			}
-		}
-
-		print ';; read_tcp: received ', length($read_buf), " bytes\n"
-			if $debug;
-
-		last unless length($read_buf);
-		$buf .= $read_buf;
-	}
-
-	return $buf;
-}
 
 =head2 retrans
 
@@ -1840,30 +509,6 @@ udppacketsize will set or get the packet size. If set to a value greater than
 recovery.
 
 Default udppacketsize is &Net::DNS::PACKETSZ (512)
-=cut
-
-sub AUTOLOAD {
-	my ($self) = @_;
-
-	my $name = $AUTOLOAD;
-	$name =~ s/.*://;
-
-	Carp::croak "$name: no such method" unless exists $self->{$name};
-	
-	no strict q/refs/;
-	
-	*{$AUTOLOAD} = sub {
-		my ($self, $new_val) = @_;
-		
-		if (defined $new_val) {
-			$self->{"$name"} = $new_val;
-		}
-		
-		return $self->{"$name"};
-	};
-	
-	goto &{$AUTOLOAD};	
-}
 
 =head1 ENVIRONMENT
 
@@ -1935,7 +580,3 @@ L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
 L<resolver(5)>, RFC 1035, RFC 1034 Section 4.3.5
 
 =cut
-
-res_init();
-
-1;

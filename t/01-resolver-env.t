@@ -1,4 +1,4 @@
-# $Id: 01-resolver-env.t,v 1.3 2002/10/12 19:49:26 ctriv Exp $
+# $Id: 01-resolver-env.t,v 1.4 2003/06/11 09:56:13 ctriv Exp $
 
 
 use Test::More tests => 11;
@@ -15,28 +15,22 @@ BEGIN {
 }
 
 
-SKIP: {
-	skip 'ENV parsing only supported on unix.', 10
-		unless $Net::DNS::Resolver::os eq 'unix';
+my $res = Net::DNS::Resolver->new;
 
-	my $res = Net::DNS::Resolver->new;
+ok($res,                       "new() returned something");
+ok(scalar $res->nameservers,   "nameservers() works");
 
-	ok($res,                "new() returned something");
-	ok($res->nameservers,   "nameservers() works");
+my @servers = $res->nameservers;
 
-	my @servers = $res->nameservers;
-
-	is($servers[0], '10.0.1.128',  'Nameserver set correctly');
-	is($servers[1], '10.0.2.128',  'Nameserver set correctly');
+is($servers[0], '10.0.1.128',  'Nameserver set correctly');
+is($servers[1], '10.0.2.128',  'Nameserver set correctly');
 
 
-	my @search = $res->searchlist;
-	is($search[0], 'net-dns.org',     'Search set correctly' );
-	is($search[1], 'lib.net-dns.org', 'Search set correctly' );
+my @search = $res->searchlist;
+is($search[0], 'net-dns.org',     'Search set correctly' );
+is($search[1], 'lib.net-dns.org', 'Search set correctly' );
 
-	is($res->domain,  't.net-dns.org', 'Local domain works'  );
-	is($res->retrans, 3,               'Retransmit works'    );
-	is($res->retry,   2,               'Retry works'         );
-	ok($res->debug,                    'Debug works'         );
-}
-
+is($res->domain,  't.net-dns.org', 'Local domain works'  );
+is($res->retrans, 3,               'Retransmit works'    );
+is($res->retry,   2,               'Retry works'         );
+ok($res->debug,                    'Debug works'         );

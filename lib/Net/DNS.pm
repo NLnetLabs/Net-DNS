@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.64 2003/06/05 23:40:18 ctriv Exp $
+# $Id: DNS.pm,v 1.65 2003/06/21 07:47:38 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -18,7 +18,7 @@ use vars qw(
 );
 
 
-$VERSION = '0.38';
+$VERSION = '0.38_01';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -88,7 +88,7 @@ eval { __PACKAGE__->bootstrap() };
 	"UID"		=> 101,		# non-standard
 	"GID"		=> 102,		# non-standard
 	"UNSPEC"	=> 103,		# non-standard
-	"TKEY"		=> 249,	        # RFC 2930
+	"TKEY"		=> 249,	    # RFC 2930
 	"TSIG"		=> 250,		# RFC 2931
 	"IXFR"		=> 251,		# RFC 1995
 	"AXFR"		=> 252,		# RFC 1035
@@ -135,13 +135,13 @@ eval { __PACKAGE__->bootstrap() };
 %rcodesbyval = reverse %rcodesbyname;
 
 
-sub version	{ $VERSION; }
-sub PACKETSZ	{ 512; }
-sub HFIXEDSZ	{  12; }
-sub QFIXEDSZ	{   4; }
-sub RRFIXEDSZ	{  10; }
-sub INT32SZ	{   4; }
-sub INT16SZ	{   2; }
+sub version      { $VERSION; }
+sub PACKETSZ  () { 512; }
+sub HFIXEDSZ  () {  12; }
+sub QFIXEDSZ  () {   4; }
+sub RRFIXEDSZ () {  10; }
+sub INT32SZ   () {   4; }
+sub INT16SZ   () {   2; }
 
 
 
@@ -151,14 +151,11 @@ sub INT16SZ	{   2; }
 #    my @mxes = mx('example.com', 'IN');
 #
 sub mx {
-	# If the first argument is a object, use that as our resolver.
 	my $res = ref $_[0] ? shift : Net::DNS::Resolver->new;
 
-	# assign our arguments, setting class to 'IN' if not set for us.
 	my ($name, $class) = @_;
 	$class ||= 'IN';
 
-	# We return failure unless we get an answer.
 	my $ans = $res->query($name, "MX", $class) || return;
 
 	# This construct is best read backwords.
@@ -176,33 +173,27 @@ sub mx {
 }
 
 sub yxrrset {
-	my $string = shift;
-	return Net::DNS::RR->new_from_string($string, "yxrrset");
+	return Net::DNS::RR->new_from_string(shift, "yxrrset");
 }
 
 sub nxrrset {
-	my $string = shift;
-	return Net::DNS::RR->new_from_string($string, "nxrrset");
+	return Net::DNS::RR->new_from_string(shift, "nxrrset");
 }
 
 sub yxdomain {
-	my $string = shift;
-	return Net::DNS::RR->new_from_string($string, "yxdomain");
+	return Net::DNS::RR->new_from_string(shift, "yxdomain");
 }
 
 sub nxdomain {
-	my $string = shift;
-	return Net::DNS::RR->new_from_string($string, "nxdomain");
+	return Net::DNS::RR->new_from_string(shift, "nxdomain");
 }
 
 sub rr_add {
-	my $string = shift;
-	return Net::DNS::RR->new_from_string($string, "rr_add");
+	return Net::DNS::RR->new_from_string(shift, "rr_add");
 }
 
 sub rr_del {
-	my $string = shift;
-	return Net::DNS::RR->new_from_string($string, "rr_del");
+	return Net::DNS::RR->new_from_string(shift, "rr_del");
 }
 
 1;

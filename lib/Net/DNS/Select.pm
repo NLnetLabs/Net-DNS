@@ -1,22 +1,22 @@
 package Net::DNS::Select;
+#
+# $Id: Select.pm,v 1.3 2003/06/21 07:47:38 ctriv Exp $
+#
 
-use Net::DNS;
 use IO::Select;
 use Carp;
 
 use strict;
 use vars qw($VERSION);
 
-# $Id: Select.pm,v 1.1 2002/02/13 04:29:58 ctriv Exp $
-$VERSION = $Net::DNS::Version;
+$VERSION = (qw$Revision: 1.3 $)[1];
 
 sub new {
-	my ($class, $os, @socks) = @_;
+	my ($class, @socks) = @_;
 
-	if ($os eq "microsoft") {
+	if ($^O eq 'MSWin32') {
 		return bless \@socks, $class;
-	}
-	else {
+	} else {
 		return IO::Select->new(@socks);
 	}
 }

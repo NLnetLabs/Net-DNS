@@ -1,6 +1,6 @@
 package Net::DNS::RR::TXT;
 
-# $Id: TXT.pm,v 1.4 2003/05/23 00:18:53 ctriv Exp $
+# $Id: TXT.pm,v 1.5 2003/06/11 10:36:29 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -56,9 +56,13 @@ sub _build_char_str_list {
 	
 	my @words = shellwords($rdata_string);
 
-	foreach my $string ( @words ) {
-	    $string =~ s/\\"/"/g;
-	    push(@{$self->{'char_str_list'}}, $string);
+	$self->{'char_str_list'} = [];
+
+	if (@words) {
+		foreach my $string ( @words ) {
+		    $string =~ s/\\"/"/g;
+		    push(@{$self->{'char_str_list'}}, $string);
+		}
 	}
 }
 

@@ -1,7 +1,7 @@
-# $Id: 00-load.t,v 1.4 2003/03/13 23:23:13 ctriv Exp $
+# $Id: 00-load.t,v 1.5 2003/06/16 14:42:08 ctriv Exp $
 
 
-use Test::More tests => 64;
+use Test::More tests => 71;
 use strict;
 
 BEGIN { 
@@ -41,3 +41,13 @@ foreach my $rr (@rrs) {
 	ok(is_rr_loaded($rr), "$class loaded");
 }
 
+#
+# Did we get things imported correctly?
+#
+{ 	
+	no strict 'refs';
+	foreach my $sym (@Net::DNS::EXPORT) {
+		ok(defined &{$sym}, "$sym is imported");
+	}
+}
+			
