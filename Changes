@@ -1,6 +1,12 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.22  6 June 2002
+
+Somehow, someway, the numerical values for RR types in DNS.pm were 
+all wrong.  This has been corrected, fixed TSIG functionality.
+All users are strongly encouraged to upgrade to this version.
+
 *** 0.21  3 June 2002
 
 Net::DNS::RR::NSAP::new_from_string() is now implemented.  
@@ -525,4 +531,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.13 2002/06/03 21:13:25 ctriv Exp $
+$Id: Changes,v 1.15 2002/06/06 21:39:36 ctriv Exp $

@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.13 2002/06/03 21:12:39 ctriv Exp $
+# $Id: DNS.pm,v 1.16 2002/06/06 21:40:24 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -17,7 +17,7 @@ use vars qw(
 	%rcodesbyval
 );
 
-$VERSION = "0.21";
+$VERSION = "0.22";
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -78,7 +78,7 @@ require Exporter;
 	"SRV"		=> 33,		# RFC 2052
 	"ATMA"		=> 34,		# ???
 	"NAPTR"		=> 35,		# RFC 2168
-	"TSIG"		=> 36,		# RFC 2931
+	"KX"		=> 36,		# RFC 2230
  	"CERT"		=> 37,		# RFC 2538
 	"OPT"       => 41,      # RFC 2671
 	"DS"		=> 43,		# Not ASSIGNED YET...!!! draft
@@ -86,6 +86,7 @@ require Exporter;
 	"UID"		=> 101,		# non-standard
 	"GID"		=> 102,		# non-standard
 	"UNSPEC"	=> 103,		# non-standard
+	"TSIG"		=> 250,		# RFC 2931
 	"IXFR"		=> 251,		# RFC 1995
 	"AXFR"		=> 252,		# RFC 1035
 	"MAILB"		=> 253,		# RFC 1035 (MB, MG, MR)
@@ -165,7 +166,6 @@ sub mx {
 	# Then we return it.
 	return sort { $a->preference <=> $b->preference } 
 	       grep { $_->type eq 'MX'} $ans->answer;
-
 
 }
 
