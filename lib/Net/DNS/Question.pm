@@ -6,7 +6,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-# $Id: Question.pm,v 1.5 1997/06/13 03:39:17 mfuhr Exp $
+# $Id: Question.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -26,7 +26,7 @@ question section of a DNS packet.
 
 =head2 new
 
-    $question = new Net::DNS::Question("foo.com", "MX", "IN");
+    $question = Net::DNS::Question->new("example.com", "MX", "IN");
 
 Creates a question object from the domain, type, and class passed
 as arguments.
@@ -43,14 +43,22 @@ sub new {
 
 	my ($qname, $qtype, $qclass) = @_;
 
+	$qname  = "" if !defined($qname);
+
+	$qtype  = defined($qtype)  ? uc($qtype)  : "ANY";
+	$qclass = defined($qclass) ? uc($qclass) : "ANY";
+
 	# Check if the caller has the type and class reversed.
-	if (   !exists $Net::DNS::typesbyname{$qtype}
-	    &&  exists $Net::DNS::classesbyname{$qtype}
-	    && !exists $Net::DNS::classesbyname{$qclass}
-	    &&  exists $Net::DNS::typesbyname{$qclass}) {
+	if ((!exists $Net::DNS::typesbyname{$qtype} ||
+	     !exists $Net::DNS::classesbyname{$qclass})
+	    && exists $Net::DNS::classesbyname{$qtype}
+	    && exists $Net::DNS::typesbyname{$qclass}) {
 
 		($qtype, $qclass) = ($qclass, $qtype);
 	}
+
+	$qname =~ s/^\.+//;
+	$qname =~ s/\.+$//;
 
 	$self{"qname"}  = $qname;
 	$self{"qtype"}  = $qtype;
@@ -157,9 +165,9 @@ sub data {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 

@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: check_zone,v 1.5 1997/10/02 05:00:51 mfuhr Exp $
+# $Id: check_zone,v 1.2 2002/02/07 03:54:18 ctriv Exp $
 
 =head1 NAME
 
@@ -38,7 +38,7 @@ Perform a recursive check on subdomains.
 
 =head1 AUTHOR
 
-Michael Fuhr <mfuhr@dimensional.com>
+Michael Fuhr <mike@fuhr.org>
 
 =head1 SEE ALSO
 
@@ -70,7 +70,7 @@ sub check_domain {
 	print "$domain (class $class)\n";
 	print "\n";
 
-	my $res = new Net::DNS::Resolver;
+	my $res = Net::DNS::Resolver->new;
 	$res->defnames(0);
 	$res->retry(2);
 
@@ -94,7 +94,7 @@ sub check_domain {
 			  $nspack->answer);
 
 	my @zone = $res->axfr($domain, $class);
-	unless (defined(@zone) && @zone) {
+	unless (@zone) {
 		warn "Zone transfer failed: ", $res->errorstring, "\n";
 		return;
 	}
@@ -129,7 +129,7 @@ sub check_domain {
 
 sub check_ptr {
 	my ($domain, $class, @zone) = @_;
-	my $res = new Net::DNS::Resolver;
+	my $res = Net::DNS::Resolver->new;
 	my $rr;
 	foreach $rr (grep { $_->type eq "A" } @zone) {
 		my $host = $rr->name;
@@ -142,7 +142,7 @@ sub check_ptr {
 
 sub check_ns {
 	my ($domain, $class, @zone) = @_;
-	my $res = new Net::DNS::Resolver;
+	my $res = Net::DNS::Resolver->new;
 	my $rr;
 	foreach $rr (grep { $_->type eq "NS" } @zone) {
 		my $ans = $res->send($rr->nsdname, "A", $class);
@@ -153,7 +153,7 @@ sub check_ns {
 
 sub check_mx {
 	my ($domain, $class, @zone) = @_;
-	my $res = new Net::DNS::Resolver;
+	my $res = Net::DNS::Resolver->new;
 	my $rr;
 	foreach $rr (grep { $_->type eq "MX" } @zone) {
 		my $ans = $res->send($rr->exchange, "A", $class);
@@ -164,7 +164,7 @@ sub check_mx {
 
 sub check_cname {
 	my ($domain, $class, @zone) = @_;
-	my $res = new Net::DNS::Resolver;
+	my $res = Net::DNS::Resolver->new;
 	my $rr;
 	foreach $rr (grep { $_->type eq "CNAME" } @zone) {
 		my $ans = $res->send($rr->cname, "A", $class);

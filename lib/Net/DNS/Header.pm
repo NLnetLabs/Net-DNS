@@ -5,7 +5,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use Net::DNS;
 
-# $Id: Header.pm,v 1.6 1997/06/13 03:36:06 mfuhr Exp $
+# $Id: Header.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -25,8 +25,8 @@ packet.
 
 =head2 new
 
-    $header = new Net::DNS::Header;
-    $header = new Net::DNS::Header(\$data);
+    $header = Net::DNS::Header->new;
+    $header = Net::DNS::Header->new(\$data);
 
 Without an argument, C<new> creates a header object appropriate
 for making a DNS query.
@@ -149,6 +149,8 @@ sub string {
 		           "nscount = $self->{nscount}  "    .
 		           "arcount = $self->{arcount}\n";
 	}
+
+	return $retval;
 }
 
 =head2 id
@@ -296,9 +298,9 @@ sub data {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 

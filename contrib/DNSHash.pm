@@ -122,8 +122,11 @@ each() on these hashes only walks the preload.
 =cut
 #################
 #
-#!$Id: DNSHash.pm,v 1.3 1997/08/15 04:26:10 dave Exp dave $
+#!$Id: DNSHash.pm,v 1.1.1.1 2002/02/02 03:48:15 ctriv Exp $
 #!$Log: DNSHash.pm,v $
+#!Revision 1.1.1.1  2002/02/02 03:48:15  ctriv
+#!Imported
+#!
 #!Revision 1.3  1997/08/15 04:26:10  dave
 #!Fixed bug in Cache loading if cache was not present or you couldn't create the cache file
 #!
@@ -152,7 +155,7 @@ require Net::DNS;
 use Carp;
 
 BEGIN {
-    $VERSION = do { my @r = (q$Revision: 1.3 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; #
+    $VERSION = do { my @r = (q$Revision: 1.1.1.1 $ =~ /\d+/g); sprintf "%d."."%02d" x $#r, @r }; #
     @ISA         = qw(Tie::Hash);
 }
 

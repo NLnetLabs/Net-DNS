@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: perldig,v 1.5 1997/10/02 05:00:51 mfuhr Exp $
+# $Id: perldig,v 1.2 2002/02/07 03:54:18 ctriv Exp $
 
 =head1 NAME
 
@@ -17,7 +17,7 @@ to A and IN.
 
 =head1 AUTHOR
 
-Michael Fuhr <mfuhr@dimensional.com>
+Michael Fuhr <mike@fuhr.org>
 
 =head1 SEE ALSO
 
@@ -31,7 +31,7 @@ use strict;
 use File::Basename;
 use Net::DNS;
 
-my $res = new Net::DNS::Resolver;
+my $res = Net::DNS::Resolver->new;
 if (@ARGV && ($ARGV[0] =~ /^@/)) {
 	my $nameserver = shift;
 	$nameserver =~ s/^@//;
@@ -47,7 +47,7 @@ $class ||= "IN";
 
 if (uc($type) eq "AXFR") {
 	my @zone = $res->axfr($name, $class);
-	if (defined(@zone) && @zone) {
+	if (@zone) {
 		foreach (@zone) {
 			$_->print;
 		}

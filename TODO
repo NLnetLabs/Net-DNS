@@ -3,8 +3,6 @@ To Do list for Net::DNS
 
 * Work on Resolver.pm:
 
-  - Add a method to set the query source port.
-
   - Add an optional argument to Net::DNS::Resolver->new to read a
     specific configuration file instead of using the default files.
 
@@ -13,8 +11,6 @@ To Do list for Net::DNS
   - Show more info about the query when $res->debug(1).
 
   - Work on a way to use the same socket for background queries.
-
-  - Write $res->axfr_start, $res->axfr_next.
 
   - Document $res->errorstring messages.
 
@@ -47,7 +43,7 @@ To Do list for Net::DNS
 * Work on the dynamic update code.  Some things remaining to do:
 
   - Append the default zone in update packets if the name doesn't
-    contain a dot.
+    contain a dot.  Does this break people's code?
 
   - Add the "new_from_string" method to the following RR types:
 
@@ -177,4 +173,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 1.12 1997/10/02 05:35:14 mfuhr Exp $
+$Id: TODO,v 1.2 2002/03/26 22:10:38 ctriv Exp $

@@ -12,7 +12,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-# $Id: Packet.pm,v 1.7 1997/10/02 05:26:57 mfuhr Exp $
+# $Id: Packet.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -31,22 +31,22 @@ A C<Net::DNS::Packet> object represents a DNS packet.
 
 =head2 new
 
-    $packet = new Net::DNS::Packet(\$data);
-    $packet = new Net::DNS::Packet(\$data, 1);  # set debugging
+    $packet = Net::DNS::Packet->new("example.com");
+    $packet = Net::DNS::Packet->new("example.com", "MX", "IN");
 
-    $packet = new Net::DNS::Packet("foo.com");
-    $packet = new Net::DNS::Packet("foo.com", "MX", "IN");
+    $packet = Net::DNS::Packet->new(\$data);
+    $packet = Net::DNS::Packet->new(\$data, 1);  # set debugging
 
-    ($packet, $err) = new Net::DNS::Packet(\$data);
-
-If passed a reference to a scalar containing DNS packet data,
-C<new> creates a packet object from that data.  A second argument
-can be passed to turn on debugging output for packet parsing.
+    ($packet, $err) = Net::DNS::Packet->new(\$data);
 
 If passed a domain, type, and class, C<new> creates a packet
 object appropriate for making a DNS query for the requested
 information.  The type and class can be omitted; they default
 to A and IN.
+
+If passed a reference to a scalar containing DNS packet data,
+C<new> creates a packet object from that data.  A second argument
+can be passed to turn on debugging output for packet parsing.
 
 If called in array context, returns a packet object and an
 error string.  The error string will only be defined if the
@@ -63,15 +63,20 @@ sub new {
 
 	$self{"compnames"} = {};
 
+	PARSE: {
 	if (ref($_[0])) {
 		my $data = shift;
 		my $debug = @_ ? shift : 0;
+
+		#--------------------------------------------------------------
+		# Parse the header section.
+		#--------------------------------------------------------------
 
 		if ($debug) {
 			print ";; HEADER SECTION\n";
 		}
 
-		$self{"header"} = new Net::DNS::Header($data);
+		$self{"header"} = Net::DNS::Header->new($data);
 
 		unless (defined $self{"header"}) {
 			return wantarray
@@ -82,6 +87,10 @@ sub new {
 		$self{"header"}->print if $debug;
 
 		my $offset = &Net::DNS::HFIXEDSZ;
+
+		#--------------------------------------------------------------
+		# Parse the question/zone section.
+		#--------------------------------------------------------------
 
 		if ($debug) {
 			print "\n";
@@ -100,6 +109,7 @@ sub new {
 			($qobj, $offset) = parse_question($data, $offset);
 
 			unless (defined $qobj) {
+				last PARSE if $self{"header"}->tc;
 				return wantarray
 				       ? (undef, "question section incomplete")
 				       : undef;
@@ -112,6 +122,10 @@ sub new {
 			}
 		}
 			
+		#--------------------------------------------------------------
+		# Parse the answer/prerequisite section.
+		#--------------------------------------------------------------
+
 		if ($debug) {
 			print "\n";
 			my $section = ($self{"header"}->opcode eq "UPDATE")
@@ -129,6 +143,7 @@ sub new {
 			($rrobj, $offset) = parse_rr($data, $offset);
 
 			unless (defined $rrobj) {
+				last PARSE if $self{"header"}->tc;
 				return wantarray
 				       ? (undef, "answer section incomplete")
 				       : undef;
@@ -137,6 +152,10 @@ sub new {
 			push(@{$self{"answer"}}, $rrobj);
 			$rrobj->print if $debug;
 		}
+
+		#--------------------------------------------------------------
+		# Parse the authority/update section.
+		#--------------------------------------------------------------
 
 		if ($debug) {
 			print "\n";
@@ -155,6 +174,7 @@ sub new {
 			($rrobj, $offset) = parse_rr($data, $offset);
 
 			unless (defined $rrobj) {
+				last PARSE if $self{"header"}->tc;
 				return wantarray
 				       ? (undef, "authority section incomplete")
 				       : undef;
@@ -163,6 +183,10 @@ sub new {
 			push(@{$self{"authority"}}, $rrobj);
 			$rrobj->print if $debug;
 		}
+
+		#--------------------------------------------------------------
+		# Parse the additional section.
+		#--------------------------------------------------------------
 
 		if ($debug) {
 			print "\n";
@@ -178,6 +202,7 @@ sub new {
 			($rrobj, $offset) = parse_rr($data, $offset);
 
 			unless (defined $rrobj) {
+				last PARSE if $self{"header"}->tc;
 				return wantarray
 				       ? (undef, "additional section incomplete")
 				       : undef;
@@ -193,15 +218,16 @@ sub new {
 		$qtype  = "A"  unless defined $qtype;
 		$qclass = "IN" unless defined $qclass;
 
-		$self{"header"} = new Net::DNS::Header;
+		$self{"header"} = Net::DNS::Header->new;
 		$self{"header"}->qdcount(1);
-		$self{"question"} = [ new Net::DNS::Question($qname,
-							     $qtype,
-							     $qclass) ];
+		$self{"question"} = [ Net::DNS::Question->new($qname,
+							      $qtype,
+							      $qclass) ];
 		$self{"answer"}     = [];
 		$self{"authority"}  = [];
 		$self{"additional"} = [];
 	}
+	} # PARSE
 
 	return wantarray
 		? ((bless \%self, $class), undef)
@@ -219,23 +245,33 @@ a nameserver.
 
 sub data {
 	my $self = shift;
-	my ($data, $question, $rr);
 
-	$data = $self->{"header"}->data;
+	#----------------------------------------------------------------------
+	# Flush the cache of already-compressed names.  This should fix the bug
+	# that caused this method to work only the first time it was called.
+	#----------------------------------------------------------------------
 
-	foreach $question (@{$self->{"question"}}) {
+	$self->{"compnames"} = {};
+
+	#----------------------------------------------------------------------
+	# Get the data for each section in the packet.
+	#----------------------------------------------------------------------
+
+	my $data = $self->{"header"}->data;
+
+	foreach my $question (@{$self->{"question"}}) {
 		$data .= $question->data($self, length $data);
 	}
 
-	foreach $rr (@{$self->{"answer"}}) {
+	foreach my $rr (@{$self->{"answer"}}) {
 		$data .= $rr->data($self, length $data);
 	}
 
-	foreach $rr (@{$self->{"authority"}}) {
+	foreach my $rr (@{$self->{"authority"}}) {
 		$data .= $rr->data($self, length $data);
 	}
 
-	foreach $rr (@{$self->{"additional"}}) {
+	foreach my $rr (@{$self->{"additional"}}) {
 		$data .= $rr->data($self, length $data);
 	}
 
@@ -468,9 +504,10 @@ Adds RRs to the specified section of the packet.
 =cut
 
 sub push {
-	my $self = shift;
-	my ($section, @rr) = @_;
+	my ($self, $section, @rr) = @_;
 	my $rr;
+
+	return unless $section;
 
 	$section = lc $section;
 	if (($section eq "prerequisite") || ($section eq "prereq")) {
@@ -503,13 +540,63 @@ sub push {
 		$self->{"header"}->adcount($adcount + @rr);
 	}
 	else {
-		Carp::confess(qq(invalid section "$section"\n));
+		Carp::cluck(qq(invalid section "$section"\n));
 	}
+}
+
+=head2 pop
+
+    my $rr = $packet->pop("pre");
+    my $rr = $packet->pop("update");
+    my $rr = $packet->pop("additional");
+
+Removes RRs from the specified section of the packet.
+
+=cut
+
+sub pop {
+	my ($self, $section) = @_;
+
+	return unless $section;
+	$section = lc $section;
+
+	if (($section eq "prerequisite") || ($section eq "prereq")) {
+		$section = "pre";
+	}
+
+	my $rr;
+
+	if ($section eq "answer" || $section eq "pre") {
+		my $ancount = $self->{"header"}->ancount;
+		if ($ancount) {
+			$rr = pop @{$self->{"answer"}};
+			$self->{"header"}->ancount($ancount - 1);
+		}
+	}
+	elsif ($section eq "authority" || $section eq "update") {
+		my $nscount = $self->{"header"}->nscount;
+		if ($nscount) {
+			$rr = pop @{$self->{"authority"}};
+			$self->{"header"}->nscount($nscount - 1);
+		}
+	}
+	elsif ($section eq "additional") {
+		my $adcount = $self->{"header"}->adcount;
+		if ($adcount) {
+			$rr = pop @{$self->{"additional"}};
+			$self->{"header"}->adcount($adcount - 1);
+		}
+	}
+	else {
+		Carp::cluck(qq(invalid section "$section"\n));
+	}
+
+	return $rr;
 }
 
 =head2 dn_comp
 
-    $compname = $packet->dn_comp("foo.bar.com", $offset);
+    $compname = $packet->dn_comp("foo.example.com", $offset);
 
 Returns a domain name compressed for a particular packet object, to
 be stored beginning at the given offset within the packet data.  The
@@ -521,8 +608,10 @@ future use.
 sub dn_comp {
 	my ($self, $name, $offset) = @_;
 
+	$name = "" unless defined($name);
+
 	my $compname = "";
-	my @names = split(/\./, $name);
+	my @names = map { s/\\\././g; $_ } split(/(?<!\\)\./, $name);
 
 	while (@names) {
 		my $dname = join(".", @names);
@@ -565,10 +654,23 @@ Returns B<(undef, undef)> if the domain name couldn't be expanded.
 
 sub dn_expand {
 	my ($packet, $offset) = @_;
+	my %seen;
+	dn_expand2($packet, $offset, \%seen);
+}
+
+sub dn_expand2 {
+	my ($packet, $offset, $seen) = @_;
 	my $name = "";
 	my $len;
 	my $packetlen = length $$packet;
 	my $int16sz = &Net::DNS::INT16SZ;
+
+	# Debugging
+	#if ($seen->{$offset}) {
+	#	die "dn_expand: loop: offset=$offset (seen = ",
+	#	     join(",", keys %$seen), ")\n";
+	#}
+	#$seen->{$offset} = 1;
 
 	while (1) {
 		return (undef, undef) if $packetlen < ($offset + 1);
@@ -585,7 +687,7 @@ sub dn_expand {
 
 			my $ptr = unpack("\@$offset n", $$packet);
 			$ptr &= 0x3fff;
-			my($name2) = dn_expand($packet, $ptr);
+			my($name2) = dn_expand2($packet, $ptr, $seen);
 
 			return (undef, undef) unless defined $name2;
 
@@ -600,6 +702,7 @@ sub dn_expand {
 				if $packetlen < ($offset + $len);
 
 			my $elem = substr($$packet, $offset, $len);
+			$elem =~ s/\./\\./g;
 			$name .= "$elem.";
 			$offset += $len;
 		}
@@ -607,6 +710,65 @@ sub dn_expand {
 
 	$name =~ s/\.$//;
 	return ($name, $offset);
+}
+
+=head2 sign_tsig
+
+    $key_name = "tsig-key";
+    $key      = "awwLOtRfpGE+rRKF2+DEiw==";
+
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
+
+    $update->sign_tsig($key_name, $key);
+
+    $response = $res->send($update);
+
+Signs a packet with a TSIG resource record (see RFC 2845).  Uses the
+following defaults:
+
+    algorithm   = HMAC-MD5.SIG-ALG.REG.INT
+    time_signed = current time
+    fudge       = 300 seconds
+
+If you wish to customize the TSIG record, you'll have to create it
+yourself and call the appropriate Net::DNS::RR::TSIG methods.  The
+following example creates a TSIG record and sets the fudge to 60
+seconds:
+
+    $key_name = "tsig-key";
+    $key      = "awwLOtRfpGE+rRKF2+DEiw==";
+
+    $tsig = Net::DNS::RR->new("$key_name TSIG $key");
+    $tsig->fudge(60);
+
+    $query = Net::DNS::Packet->new("www.example.com");
+    $query->sign_tsig($tsig);
+
+    $response = $res->send($query);
+
+You shouldn't modify a packet after signing it; otherwise authentication
+will probably fail.
+
+=cut
+
+sub sign_tsig {
+	my $self = shift;
+
+	my $tsig;
+
+	if (@_ == 1 && ref($_[0])) {
+		$tsig = $_[0];
+	}
+	elsif (@_ == 2) {
+		my ($key_name, $key) = @_;
+		if (defined($key_name) && defined($key)) {
+			$tsig = Net::DNS::RR->new("$key_name TSIG $key")
+		}
+	}
+
+	$self->push("additional", $tsig) if $tsig;
+	return $tsig;
 }
 
 #------------------------------------------------------------------------------
@@ -642,7 +804,7 @@ sub parse_question {
 	$qtype  = $Net::DNS::typesbyval{$qtype};
 	$qclass = $Net::DNS::classesbyval{$qclass};
 
-	return (new Net::DNS::Question($qname, $qtype, $qclass), $offset);
+	return (Net::DNS::Question->new($qname, $qtype, $qclass), $offset);
 }
 
 #------------------------------------------------------------------------------
@@ -670,21 +832,21 @@ sub parse_rr {
 		if length($$data) < ($offset + &Net::DNS::RRFIXEDSZ);
 
 	my ($type, $class, $ttl, $rdlength) = unpack("\@$offset n2 N n", $$data);
-	$type  = $Net::DNS::typesbyval{$type};
-	$class = $Net::DNS::classesbyval{$class};
+	$type  = $Net::DNS::typesbyval{$type}    || $type;
+	$class = $Net::DNS::classesbyval{$class} || $class;
 
 	$offset += &Net::DNS::RRFIXEDSZ;
 
 	return (undef, undef)
 		if length($$data) < ($offset + $rdlength);
 
-	my $rrobj = new Net::DNS::RR($name,
-				     $type,
-				     $class,
-				     $ttl,
-				     $rdlength, 
-				     $data,
-				     $offset);
+	my $rrobj = Net::DNS::RR->new($name,
+				      $type,
+				      $class,
+				      $ttl,
+				      $rdlength, 
+				      $data,
+				      $offset);
 
 	return (undef, undef) unless defined $rrobj;
 
@@ -694,15 +856,15 @@ sub parse_rr {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Update>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 4.1, RFC 2136 Section 2
+RFC 1035 Section 4.1, RFC 2136 Section 2, RFC 2845
 
 =cut
 

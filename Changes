@@ -1,6 +1,194 @@
 Revision history for Net::DNS
 =============================
 
+Rewrote tests using Test::More.  Future versions will have a more 
+extensive test suite.
+
+Fixed bug in Net::DNS::RR::LOC in the precsize_valton() function 
+which caused out of range values for horizontal and vertical precision.
+
+Changed documentation to reflect new website at
+	 http://www.net-dns.org/
+
+Updated the README to reflect changes in Net::DNS meta.
+
+Fixed a few typos in the Changes document.
+
+Merged the following changes from the developement version:
+	
+	Added the persistent_tcp option to Net::DNS::Resolver to keep TCP
+	sockets open.
+
+	If Net::DNS is running under a SOCKSified Perl, it uses persistent
+	TCP sockets by default.  There appear to be problems with SOCKS
+	without these settings.  You can override these defaults by setting
+	$res->usevc(0) and $res->persistent_tcp(0).
+
+
+	Wrote the Net::DNS::Nameserver module for creating simple
+	nameservers. See the manual page for documentation and examples.
+
+	Fixed a bug in RR.pm that caused an incorrect Net::DNS::RR object to
+	be returned when creating it from a string that contained the root
+	(".") domain.  Thanks to Rob Brown for pointing out the bug and
+	providing the patch (and apologies for taking so long to apply it).
+
+	Continuing to work on the TSIG code.  Still finding bugs and
+	cleaning things up, so please use with caution and report any
+	problems.
+
+	Updated Net::DNS::RR::TSIG to force the class to ANY for
+	user-created RR objects (see RFC 2845 Section 2.3).  Signed
+	transactions had been working against BIND 8 nameservers but were
+	failing against BIND 9 with FORMERR because BIND 9 enforces RFC 2845
+	more completely than BIND 8 (comment from Mark Andrews).  Thanks to
+	George Michaelson for helping track this down.
+
+	Made sure all TSIG fields are set to a default value when creating a
+	TSIG record via Net::DNS::RR->new.  Net::DNS had been printing nasty
+	warnings when the programmer tried to access fields such as
+	mac_length and mac before they had been calculated.  Problem noted
+	by George Michaelson.
+
+	Added the Net::DNS::Resolver->tsig method to have the resolver
+	automatically sign all queries and updates with a TSIG record.
+
+	Updated the Net::DNS::Packet->sign_tsig method to accept a
+	Net::DNS::RR::TSIG object as an argument.
+
+	Added the Net::DNS::RR::TSIG->mac method to return the hex value of
+	the Message Authentication Code (MAC).  The programmer must call a
+	packet's data method before this will return anything meaningful.
+
+	Added the Net::DNS::RR::TSIG->mac_size method to return the size of
+	the MAC.  The programmer must call a packet's data method before
+	this will return anything meaningful.
+
+	Worked on a new version of Net::DNS::Resolver->axfr and made it a
+	front end for axfr_start and axfr_next.  The old axfr method is
+	still available as axfr_old.  Please report any problems.
+
+	Added some zone transfer tests to the private test suite.  These
+	aren't distrubted with Net::DNS because they use test zones on a
+	private nameserver.
+
+	Have done more work cleaning up the TSIG code.
+
+	Fixed a bug that caused the name in a TSIG record to be compressed
+	when it shouldn't have been.
+
+	Documented the bug that the TSIG code ignores the upper 16 bits of
+	the time_signed and other_data fields, which are supposed to be
+	48-bit unsigned integers (RFC 2845, Sections 2.3 and 4.5.2).
+
+	Have done additional work on TSIG and provided more documentation.
+	See the Net::DNS::Packet, Net::DNS::Update, and Net::DNS::RR::TSIG
+	manual pages.
+
+	Added support for TSIG resource records (Net::DNS::RR::TSIG).  See
+	the Net::DNS::Packet and Net::DNS::Update manual pages for examples
+	of making signed queries and dynamic updates.  TSIG support is based
+	heavily on code contributed by Chris Turbeville.
+
+	Net::DNS now requires the Digest::MD5 and MIME::Base64 modules to
+	support TSIG records.  The TODO list has an item to make these
+	modules optional for people who don't need them.
+
+	Updated Net::DNS::Packet->data to fix a bug that caused this method
+	to work only the first time it was called.
+
+	Updated DNS.pm to allow CHAOS as an alias for CH (CHAOS class).
+
+	Changed the tests to use the domain example.com.
+
+	Got rid of the 0.13bXX version numbers.  Has probably always caused
+	things like "use Net::DNS 0.13" not to work.  Aside from the version
+	number change, this version is nearly identical to Net::DNS 0.13b14.
+
+	Trimmed down Makefile.PL and added prerequisites to the
+	WriteMakefile call instead of checking for them manually.  All
+	prerequisites are part of the Perl 5.6.0 distribution, but we'll
+	check for them anyway just to be sure they haven't been lost. 
+	Version numbers are those distributed with Perl 5.6.0.
+
+
+	This version of Net::DNS requires Perl 5.6.0 or later.
+
+	Net::DNS should run under Win32 Perl now, though there are some
+	things to be aware of:
+
+	* I've had trouble getting UDP queries to work so TCP is the
+	default. This violates RFC 1123 Section 6.1.3.2.
+
+	* TCP Timeouts don't work.
+
+	Net::DNS::Resolver->res_init now has a check to see what OS we're
+	running under and calls res_init_unix or res_init_microsoft as
+	appropriate.  Reading the resolver configuration from the Registry
+	was originally suggested by Petja van der Lek; thanks to Cricket Liu
+	for contributing the necessary code.
+
+	Added Net::DNS::Resolver->nameserver.  This is just another name for
+	the nameservers method.
+
+	Added Net::DNS::Resolver->srcport to set the source port for queries
+	and zone transfers.
+
+	Added the Net::DNS::Resolver->srcaddr method to set the source
+	address for queries.  This is convenient for forcing queries out a
+	specific interface on multi-homed hosts.  Suggested by Peter Koch.
+
+	Added Net::DNS::Select as a front end to IO::Select.  Does nothing
+	under Win32 Perl -- this allowed minimal rewrites to the code to
+	support Win32, which doesn't appear to implement select() properly.
+
+	Made sure all leading and trailing dots are stripped when adding a
+	name to an update or query packet.  Problem noted by John M. Harres.
+
+	Made sure the recursion desired flag is set only for query packets.
+	RFC 2136 specifies that this part of the header should be
+	zero-filled in update packets.
+
+	Added a check to Net::DNS::Resolver->send_udp to distinguish between
+	a query timeout and failure on all nameservers.
+
+
+	Added Net::DNS::Resolver->axfr_start and
+	Net::DNS::Resolver->axfr_next. These methods provide a way to read a
+	zone transfer one record at a time.  Net::DNS::Resolver->axfr may
+	eventually be a front end to these two methods.
+
+	Added code to dn_expand and dn_comp (Packet.pm) to handle embedded
+	dots in a label.  Such characters are now returned as "\.";
+	hopefully this won't break anything.  The code in dn_comp uses
+	negative lookbehind assertions, which were introduced in Perl 5.005.
+	 Problem reported by Massimo Ianigro.
+
+	Changed Net::DNS::Resolver->send_udp to specify the destination in
+	$sock->send() instead of when calling IO::Socket::INET->new.
+	Specifying PeerAddr when creating the socket could cause the call to
+	hang under certain circumstances, such as when a PPP interface is
+	down.  Problem noted by Ken Neighbors.  Problem introducted by this
+	change: "connection refused" isn't returned.
+
+
+	Changed Net::DNS::Resolver::nextid to ensure its return value is 16
+	bits.  Problem noted by David Lindes.
+
+	Modified demo/check_soa to print nameservers' IP addresses as
+	they're queried.  Also added code to print the serial number a
+	nameserver has, even if it's not authoritative for the zone
+	(nameservers can go non-authoritative if the zone file has syntax
+	errors).
+
+	Added contrib/dnslookup.pl.  Contributed by Kent Hamilton.
+
+	Changed the examples to use the reserved domain example.com,
+	reserved by RFC 2606 for this purpose.  Long ago requested by one of
+	the hostmasters at gofast.net, which hosts the domain bar.com
+	(foo.com and bar.com had been used in many examples).
+
+
 
 *** 0.14  21 Jan 2002
 
@@ -8,7 +196,7 @@ Net::DNS is in a state of flux.  The module is now maintained by a group
 of people including Mike Fuhr (the original developer) and others.
 
 This is an interum release, intended to return Net::DNS to 
-CPAN, and encourage new devopement.  Version 2.0 is not far behind 
+CPAN, and encourage new devopement.  Version 0.20 is not far behind 
 with major changes including support for windows platforms, TSIG 
 and Net::DNS::Nameserver (a very simple nameserver). 
 
@@ -313,4 +501,4 @@ memory management.
 
 ---
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.11 1997/10/02 05:34:51 mfuhr Exp $
+$Id: Changes,v 1.7 2002/05/14 10:53:02 ctriv Exp $

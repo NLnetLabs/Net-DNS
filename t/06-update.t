@@ -1,15 +1,14 @@
-# $Id: 06-update.t,v 1.2 1997/07/05 17:47:06 mfuhr Exp $
+# $Id: 06-update.t,v 1.3 2002/02/27 05:16:25 ctriv Exp $
 
-BEGIN { $| = 1; print "1..65\n"; }
-END {print "not ok 1\n" unless $loaded;}
+use Test::More tests => 66;
+use strict;
 
-use Net::DNS;
 
-$loaded = 1;
-print "ok 1\n";
+BEGIN { use_ok('Net::DNS'); } #1
+
 
 sub is_empty {
-	my $string = shift;
+	my ($string) = @_;
 	return ($string eq "; no data" || $string eq "; rdlength = 0");
 }
 
@@ -17,266 +16,182 @@ sub is_empty {
 # Canned data.
 #------------------------------------------------------------------------------
 
-$zone	= "bar.com";
-$name	= "foo.bar.com";
-$class	= "HS";
-$class2 = "CH";
-$type	= "A";
-$ttl	= 43200;
-$rdata	= "10.1.2.3";
+my $zone	= "example.com";
+my $name	= "foo.example.com";
+my $class	= "HS";
+my $class2  = "CH";
+my $type	= "A";
+my $ttl	    = 43200;
+my $rdata	= "10.1.2.3";
+my $rr      = undef;
 
 #------------------------------------------------------------------------------
 # Packet creation.
 #------------------------------------------------------------------------------
 
-$packet = new Net::DNS::Update($zone, $class);
-print "not " unless $packet;
-print "ok 2\n";
+my $packet = Net::DNS::Update->new($zone, $class);
+my $z = ($packet->zone)[0];
 
-print "not " unless $packet->header->opcode eq "UPDATE";
-print "ok 3\n";
-
-print "not " unless ($packet->zone)[0]->zname eq $zone;
-print "ok 4\n";
-
-print "not " unless ($packet->zone)[0]->zclass eq $class;
-print "ok 5\n";
-
-print "not " unless ($packet->zone)[0]->ztype eq "SOA";
-print "ok 6\n";
+ok($packet,                                'new() returned packet');  #2
+is($packet->header->opcode, 'UPDATE',      'header opcode correct');  #3 
+is($z->zname,  $zone,                      'zname correct');          #4
+is($z->zclass, $class,                     'zclass correct');         #5
+is($z->ztype,  'SOA',                      'ztype correct');          #6       
 
 #------------------------------------------------------------------------------
 # RRset exists (value-independent).
 #------------------------------------------------------------------------------
 
 $rr = yxrrset("$name $class $type");
-print "not " unless $rr;
-print "ok 7\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 8\n";
+ok($rr,                                    'yxrrset() returned RR');  #7
+is($rr->name,  $name,                      'yxrrset - right name');   #8
+is($rr->ttl,   0,                          'yxrrset - right TTL');    #9
+is($rr->class, 'ANY',                      'yxrrset - right class');  #10
+is($rr->type,  $type,                      'yxrrset - right type');   #11
+ok(is_empty($rr->rdatastr),                'yxrrset - data empty');   #12
 
-print "not " unless $rr->ttl == 0;
-print "ok 9\n";
-
-print "not " unless $rr->class eq "ANY";
-print "ok 10\n";
-
-print "not " unless $rr->type eq $type;
-print "ok 11\n";
-
-print "not " unless is_empty($rr->rdatastr);
-print "ok 12\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # RRset exists (value-dependent).
 #------------------------------------------------------------------------------
 
 $rr = yxrrset("$name $class $type $rdata");
-print "not " unless $rr;
-print "ok 13\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 14\n";
+ok($rr,                                    'yxrrset() returned RR');  #13
+is($rr->name,     $name,                   'yxrrset - right name');   #14
+is($rr->ttl,      0,                       'yxrrset - right TTL');    #15
+is($rr->class,    $class,                  'yxrrset - right class');  #16
+is($rr->type,     $type,                   'yxrrset - right type');   #17
+is($rr->rdatastr, $rdata,                  'yxrrset - right data');   #18
 
-print "not " unless $rr->ttl == 0;
-print "ok 15\n";
-
-print "not " unless $rr->class eq $class;
-print "ok 16\n";
-
-print "not " unless $rr->type eq $type;
-print "ok 17\n";
-
-print "not " unless $rr->rdatastr eq $rdata;
-print "ok 18\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # RRset does not exist.
 #------------------------------------------------------------------------------
 
 $rr = nxrrset("$name $class $type");
-print "not " unless $rr;
-print "ok 19\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 20\n";
+ok($rr,                                    'nxrrset() returned RR');  #19
+is($rr->name,  $name,                      'nxrrset - right name');   #20
+is($rr->ttl,   0,                          'nxrrset - right ttl');    #21
+is($rr->class, 'NONE',                     'nxrrset - right class');  #22
+is($rr->type,  $type,                      'nxrrset - right type');   #23
+ok(is_empty($rr->rdatastr),                'nxrrset - data empty');   #24
 
-print "not " unless $rr->ttl == 0;
-print "ok 21\n";
-
-print "not " unless $rr->class eq "NONE";
-print "ok 22\n";
-
-print "not " unless $rr->type eq $type;
-print "ok 23\n";
-
-print "not " unless is_empty($rr->rdatastr);
-print "ok 24\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # Name is in use.
 #------------------------------------------------------------------------------
 
 $rr = yxdomain("$name $class");
-print "not " unless $rr;
-print "ok 25\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 26\n";
+ok($rr,                                    'yxdomain() returned RR'); #25
+is($rr->name,  $name,                      'yxdomain - right name');  #26
+is($rr->ttl,   0,                          'yxdomain - right ttl');   #27
+is($rr->class, 'ANY',                      'yxdomain - right class'); #28
+is($rr->type,  'ANY',                      'yxdomain - right type');  #29
+ok(is_empty($rr->rdatastr),                'yxdomain - data empty');  #30
 
-print "not " unless $rr->ttl == 0;
-print "ok 27\n";
-
-print "not " unless $rr->class eq "ANY";
-print "ok 28\n";
-
-print "not " unless $rr->type eq "ANY";
-print "ok 29\n";
-
-print "not " unless is_empty($rr->rdatastr);
-print "ok 30\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # Name is not in use.
 #------------------------------------------------------------------------------
 
 $rr = nxdomain("$name $class");
-print "not " unless $rr;
-print "ok 31\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 32\n";
+ok($rr,                                    'nxdomain() returned RR'); #31
+is($rr->name,  $name,                      'nxdomain - right name');  #32
+is($rr->ttl,   0,                          'nxdomain - right ttl');   #33
+is($rr->class, 'NONE',                     'nxdomain - right class'); #34
+is($rr->type,  'ANY',                      'nxdomain - right type');  #35
+ok(is_empty($rr->rdatastr),                'nxdomain - data empty');  #36
 
-print "not " unless $rr->ttl == 0;
-print "ok 33\n";
+undef $rr;
 
-print "not " unless $rr->class eq "NONE";
-print "ok 34\n";
-
-print "not " unless $rr->type eq "ANY";
-print "ok 35\n";
-
-print "not " unless is_empty($rr->rdatastr);
-print "ok 36\n";
 
 #------------------------------------------------------------------------------
 # Add to an RRset.
 #------------------------------------------------------------------------------
 
 $rr = rr_add("$name $ttl $class $type $rdata");
-print "not " unless $rr;
-print "ok 37\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 38\n";
+ok($rr,                                    'rr_add() returned RR');   #37
+is($rr->name,     $name,                   'rr_add - right name');    #38
+is($rr->ttl,      $ttl,                    'rr_add - right ttl');     #39
+is($rr->class,    $class,                  'rr_add - right class');   #40
+is($rr->type,     $type,                   'rr_add - right type');    #41
+is($rr->rdatastr, $rdata,                  'rr_add - right data');    #42
 
-print "not " unless $rr->ttl == $ttl;
-print "ok 39\n";
-
-print "not " unless $rr->class eq $class;
-print "ok 40\n";
-
-print "not " unless $rr->type eq $type;
-print "ok 41\n";
-
-print "not " unless $rr->rdatastr eq $rdata;
-print "ok 42\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # Delete an RRset.
 #------------------------------------------------------------------------------
 
 $rr = rr_del("$name $class $type");
-print "not " unless $rr;
-print "ok 43\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 44\n";
+ok($rr,                                    'rr_del() returned RR');   #43
+is($rr->name,  $name,                      'rr_del - right name');    #44
+is($rr->ttl,   0,                          'rr_del - right ttl');     #45
+is($rr->class, 'ANY',                      'rr_del - right class');   #46
+is($rr->type,  $type,                      'rr_del - right type');    #47
+ok(is_empty($rr->rdatastr),                'rr_del - data empty');    #48
 
-print "not " unless $rr->ttl == 0;
-print "ok 45\n";
-
-print "not " unless $rr->class eq "ANY";
-print "ok 46\n";
-
-print "not " unless $rr->type eq $type;
-print "ok 47\n";
-
-print "not " unless is_empty($rr->rdatastr);
-print "ok 48\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # Delete All RRsets From A Name.
 #------------------------------------------------------------------------------
 
 $rr = rr_del("$name $class");
-print "not " unless $rr;
-print "ok 49\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 50\n";
+ok($rr,                                    'rr_del() returned RR');   #49
+is($rr->name,  $name,                      'rr_del - right name');    #50
+is($rr->ttl,   0,                          'rr_del - right ttl');     #51
+is($rr->class, 'ANY',                      'rr_del - right class');   #52
+is($rr->type,  'ANY',                      'rr_del - right type');    #53
+ok(is_empty($rr->rdatastr),                'rr_del - data empty');    #54
 
-print "not " unless $rr->ttl == 0;
-print "ok 51\n";
-
-print "not " unless $rr->class eq "ANY";
-print "ok 52\n";
-
-print "not " unless $rr->type eq "ANY";
-print "ok 53\n";
-
-print "not " unless is_empty($rr->rdatastr);
-print "ok 54\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # Delete An RR From An RRset.
 #------------------------------------------------------------------------------
 
 $rr = rr_del("$name $class $type $rdata");
-print "not " unless $rr;
-print "ok 55\n";
 
-print "not " unless $rr->name eq $name;
-print "ok 56\n";
+ok($rr,                                    'rr_del() returned RR');   #55
+is($rr->name,     $name,                   'rr_del - right name');    #56
+is($rr->ttl,      0,                       'rr_del - right ttl');     #57
+is($rr->class,    'NONE',                  'rr_del - right class');   #58
+is($rr->type,     $type,                   'rr_del - right type');    #59
+is($rr->rdatastr, $rdata,                  'rr_del - right data');    #60
 
-print "not " unless $rr->ttl == 0;
-print "ok 57\n";
-
-print "not " unless $rr->class eq "NONE";
-print "ok 58\n";
-
-print "not " unless $rr->type eq $type;
-print "ok 59\n";
-
-print "not " unless $rr->rdatastr eq $rdata;
-print "ok 60\n";
+undef $rr;
 
 #------------------------------------------------------------------------------
 # Make sure RRs in an update packet have the same class as the zone, unless
 # the class is NONE or ANY.
 #------------------------------------------------------------------------------
 
-$packet = new Net::DNS::Update($zone, $class);
-print "not " unless $packet;
-print "ok 61\n";
+$packet = Net::DNS::Update->new($zone, $class);
+ok($packet,                               'packet created');          #61
 
-$rr = yxrrset("$name $class $type $rdata");
-$packet->push("pre", $rr);
-print "not " unless ($packet->pre)[0]->class eq $class;
-print "ok 62\n";
 
-$rr = yxrrset("$name $class2 $type $rdata");
-$packet->push("pre", $rr);
-print "not " unless ($packet->pre)[1]->class eq $class;
-print "ok 63\n";
+$packet->push("pre", yxrrset("$name $class $type $rdata"));
+$packet->push("pre", yxrrset("$name $class2 $type $rdata"));
+$packet->push("pre", yxrrset("$name $class2 $type"));
+$packet->push("pre", nxrrset("$name $class2 $type"));
 
-$rr = yxrrset("$name $class2 $type");
-$packet->push("pre", $rr);
-print "not " unless ($packet->pre)[2]->class eq "ANY";
-print "ok 64\n";
+my @pre = $packet->pre;
 
-$rr = nxrrset("$name $class2 $type");
-$packet->push("pre", $rr);
-print "not " unless ($packet->pre)[3]->class eq "NONE";
-print "ok 65\n";
+is(scalar(@pre), 4,                     'pushed inserted correctly'); #62
+is($pre[0]->class, $class,              'first class right');         #63
+is($pre[1]->class, $class,              'second class right');        #64
+is($pre[2]->class, 'ANY',               'third class right');         #65
+is($pre[3]->class, 'NONE',              'forth class right');         #66

@@ -1,6 +1,6 @@
 package Net::DNS::RR::LOC;
 
-# $Id: LOC.pm,v 1.4 1997/07/06 16:32:33 mfuhr Exp $
+# $Id: LOC.pm,v 1.3 2002/02/13 03:53:59 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT @EXPORT_OK @poweroften $reference_alt
@@ -207,7 +207,7 @@ sub precsize_valton {
 	my $val = shift;
 
 	my $exponent = 0;
-	while ($val > 10) {
+	while ($val >= 10) {
 		$val /= 10;
 		++$exponent;
 	}
@@ -349,9 +349,9 @@ below the WGS 84 reference spheroid used by GPS.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-1998 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 Some of the code and documentation is based on RFC 1876 and on code
 contributed by Christopher Davis.

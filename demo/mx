@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: mx,v 1.6 1997/10/02 05:00:51 mfuhr Exp $
+# $Id: mx,v 1.2 2002/02/07 03:54:18 ctriv Exp $
 
 =head1 NAME
 
@@ -15,7 +15,7 @@ C<mx> prints a domain's MX records, sorted by preference.
 
 =head1 AUTHOR
 
-Michael Fuhr <mfuhr@dimensional.com>
+Michael Fuhr <mike@fuhr.org>
 
 =head1 SEE ALSO
 
@@ -31,12 +31,11 @@ use Net::DNS;
 die "Usage: ", basename($0), " domain\n" unless (@ARGV == 1);
 
 my $dname = $ARGV[0];
-my $res = new Net::DNS::Resolver;
+my $res = Net::DNS::Resolver->new;
 my @mx = mx($res, $dname);
 
 if (@mx) {
-	my $rr;
-	foreach $rr (@mx) {
+	foreach my $rr (@mx) {
 		print $rr->preference, "\t", $rr->exchange, "\n";
 	}
 }

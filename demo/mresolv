@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: mresolv,v 1.1 1997/08/13 12:56:19 mfuhr Exp $
+# $Id: mresolv,v 1.2 2002/02/07 03:54:18 ctriv Exp $
 
 =head1 NAME
 
@@ -38,9 +38,9 @@ names will be read from the input stream.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2000 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
@@ -62,8 +62,8 @@ $opt_t = 15;	# timeout (seconds)
 
 getopts("dn:t:");
 
-my $res = new Net::DNS::Resolver;
-my $sel = new IO::Select;
+my $res = Net::DNS::Resolver->new;
+my $sel = IO::Select->new;
 my $eof = 0;
 
 while (1) {

@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSAP;
 
-# $Id: NSAP.pm,v 1.2 1997/06/13 03:33:54 mfuhr Exp $
+# $Id: NSAP.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -241,9 +241,9 @@ Returns the RR's NSAP selector.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-1998 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 

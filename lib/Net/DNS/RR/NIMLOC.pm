@@ -1,6 +1,6 @@
 package Net::DNS::RR::NIMLOC;
 
-# $Id: NIMLOC.pm,v 1.1 1997/05/31 20:40:51 mfuhr Exp $
+# $Id: NIMLOC.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -45,9 +45,9 @@ Returns the record's data section as binary data.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-1998 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 

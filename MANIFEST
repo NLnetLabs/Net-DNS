@@ -18,6 +18,7 @@ demo/mx
 demo/perldig
 lib/Net/DNS.pm
 lib/Net/DNS/Header.pm
+lib/Net/DNS/Nameserver.pm
 lib/Net/DNS/Packet.pm
 lib/Net/DNS/Question.pm
 lib/Net/DNS/RR.pm
@@ -45,9 +46,11 @@ lib/Net/DNS/RR/RP.pm
 lib/Net/DNS/RR/RT.pm
 lib/Net/DNS/RR/SOA.pm
 lib/Net/DNS/RR/SRV.pm
+lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TXT.pm
 lib/Net/DNS/RR/X25.pm
 lib/Net/DNS/Resolver.pm
+lib/Net/DNS/Select.pm
 lib/Net/DNS/Update.pm
 t/01-resolver.t
 t/02-header.t

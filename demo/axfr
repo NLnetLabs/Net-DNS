@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: axfr,v 1.5 1997/10/02 05:00:51 mfuhr Exp $
+# $Id: axfr,v 1.2 2002/02/07 03:44:18 ctriv Exp $
 
 =head1 NAME
 
@@ -21,6 +21,8 @@ Zones will be stored in a directory hierarchy.  For example, the
 zone transfer for foo.bar.com will be stored in the file
 $HOME/.dns-zones/com/bar/foo/axfr.  The directory can be changed
 with the B<-D> option.
+
+This programs requires that the Storable module be installed.
 
 =head1 OPTIONS
 
@@ -63,12 +65,12 @@ Default directory for storing zone files.
 
 =head1 AUTHOR
 
-Michael Fuhr <mfuhr@dimensional.com>
+Michael Fuhr <mike@fuhr.org>
 
 =head1 SEE ALSO
 
 L<perl(1)>, L<check_soa>, L<check_zone>, L<mresolv>, L<mx>, L<perldig>,
-L<Net::DNS>
+L<Net::DNS>, L<Storable>
 
 =cut
 
@@ -120,7 +122,7 @@ foreach $subdir (split(m#/#, $zonedir)) {
 # Get the zone.
 #------------------------------------------------------------------------------
 
-my $res = new Net::DNS::Resolver;
+my $res = Net::DNS::Resolver->new;
 $res->nameservers($nameserver) if $nameserver;
 
 my(@zone, $zoneref);
@@ -168,8 +170,7 @@ else {
 
 if (defined $opt_f) {
 	@zone = $res->axfr($zone);
-	die "couldn't transfer zone: ", $res->errorstring, "\n"
-		unless defined @zone;
+	die "couldn't transfer zone: ", $res->errorstring, "\n" unless @zone;
 	store \@zone, $zonefile or die "couldn't store zone to $zonefile: $!\n";
 	$zoneref = \@zone;
 }

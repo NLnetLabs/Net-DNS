@@ -1,95 +1,115 @@
-# $Id: 04-packet.t,v 1.3 1997/06/08 06:42:47 mfuhr Exp $
+# $Id: 04-packet.t,v 1.3 2002/02/26 04:21:06 ctriv Exp $
 
-BEGIN { $| = 1; print "1..18\n"; }
-END {print "not ok 1\n" unless $loaded;}
+use Test::More tests => 27;
+use strict;
 
-use Net::DNS;
+BEGIN { use_ok('Net::DNS'); }     #1
 
-$loaded = 1;
-print "ok 1\n";
 
-$domain = "foo.com";
-$type   = "MX";
-$class  = "IN";
+my $domain = "example.com";
+my $type   = "MX";
+my $class  = "IN";
 
-$packet = new Net::DNS::Packet($domain, $type, $class);
-print "not " unless defined $packet;
-print "ok 2\n";
+#------------------------------------------------------------------------------
+# Make sure we can create a DNS packet.
+#------------------------------------------------------------------------------
 
-print "not " unless defined $packet->header;
-print "ok 3\n";
+my $packet = Net::DNS::Packet->new($domain, $type, $class);
 
-@question = $packet->question;
-print "not " unless (defined @question)  && ($#question == 0);
-print "ok 4\n";
+ok($packet,                                 'new() returned something');         #2
+ok($packet->header,                         'header() method works');            #3
+ok($packet->header->isa('Net::DNS::Header'),'header() returns right thing');     #4
 
-@answer = $packet->answer;
-print "not " if defined @answer;
-print "ok 5\n";
 
-@authority = $packet->authority;
-print "not " if defined @authority;
-print "ok 6\n";
+my @question = $packet->question;
+ok(@question && @question == 1,             'question() returned right number of items'); #5
+ok($question[0]->isa('Net::DNS::Question'), 'question() returned the right thing');       #6
 
-@additional = $packet->additional;
-print "not " if defined @additional;
-print "ok 7\n";
 
-$packet->push("answer", new Net::DNS::RR(
-	Name    => "a1.bar.com",
-	Type    => "A",
-	Address => "10.0.0.1"));
-print "not " unless $packet->header->ancount == 1;
-print "ok 8\n";
+my @answer = $packet->answer;
+ok(@answer == 0,     'answer() works when empty');     #7
 
-$packet->push("answer", new Net::DNS::RR(
-	Name    => "a2.bar.com",
-	Type    => "A",
-	Address => "10.0.0.2"));
-print "not " unless $packet->header->ancount == 2;
-print "ok 9\n";
 
-$packet->push("authority", new Net::DNS::RR(
-	Name    => "a3.bar.com",
-	Type    => "A",
-	Address => "10.0.0.3"));
-print "not " unless $packet->header->nscount == 1;
-print "ok 10\n";
+my @authority = $packet->authority;
+ok(@authority == 0,  'authority() works when empty');  #8
 
-$packet->push("authority", new Net::DNS::RR(
-	Name    => "a4.bar.com",
-	Type    => "A",
-	Address => "10.0.0.4"));
-print "not " unless $packet->header->nscount == 2;
-print "ok 11\n";
+my @additional = $packet->additional;
+ok(@additional == 0, 'additional() works when empty'); #9
 
-$packet->push("additional", new Net::DNS::RR(
-	Name    => "a5.bar.com",
-	Type    => "A",
-	Address => "10.0.0.5"));
-print "not " unless $packet->header->adcount == 1;
-print "ok 12\n";
+$packet->push("answer", 
+	Net::DNS::RR->new(
+		Name    => "a1.example.com",
+		Type    => "A",
+		Address => "10.0.0.1"
+	)
+);
+is($packet->header->ancount, 1, 'First push into answer section worked');      #10
 
-$packet->push("additional", new Net::DNS::RR(
-	Name    => "a6.bar.com",
-	Type    => "A",
-	Address => "10.0.0.6"));
-print "not " unless $packet->header->adcount == 2;
-print "ok 13\n";
 
-$data = $packet->data;
-$packet2 = new Net::DNS::Packet(\$data);
-print "not " unless defined $packet2;
-print "ok 14\n";
+$packet->push("answer", 
+	Net::DNS::RR->new(
+		Name    => "a2.example.com",
+		Type    => "A",
+		Address => "10.0.0.2"
+	)
+);
+is($packet->header->ancount, 2, 'Second push into answer section worked');     #11
 
-print "not " unless $packet2->header->qdcount == 1;
-print "ok 15\n";
 
-print "not " unless $packet2->header->ancount == 2;
-print "ok 16\n";
+$packet->push("authority", 
+	Net::DNS::RR->new(
+		Name    => "a3.example.com",
+		Type    => "A",
+		Address => "10.0.0.3"
+	)
+);
+is($packet->header->nscount, 1, 'First push into authority section worked');   #12
 
-print "not " unless $packet2->header->nscount == 2;
-print "ok 17\n";
 
-print "not " unless $packet2->header->adcount == 2;
-print "ok 18\n";
+$packet->push("authority", 
+	Net::DNS::RR->new(
+		Name    => "a4.example.com",
+		Type    => "A",
+		Address => "10.0.0.4"
+	)
+);
+is($packet->header->nscount, 2, 'Second push into authority section worked');  #13
+
+$packet->push("additional", 
+	Net::DNS::RR->new(
+		Name    => "a5.example.com",
+		Type    => "A",
+		Address => "10.0.0.5"
+	)
+);
+is($packet->header->adcount, 1, 'First push into additional section worked');  #14
+
+$packet->push("additional", 
+	Net::DNS::RR->new(
+		Name    => "a6.example.com",
+		Type    => "A",
+		Address => "10.0.0.6"
+	)
+);
+is($packet->header->adcount, 2, 'Second push into additional section worked'); #15
+
+my $data = $packet->data;
+
+my $packet2 = Net::DNS::Packet->new(\$data);
+
+ok($packet2, 'new() from data buffer works');   #16
+
+is($packet->string, $packet2->string, 'string () works correctly');  #17
+
+
+my $string = $packet2->string;
+for (1 .. 6) {
+	my $ip = "10.0.0.$_";
+	ok($string =~ m/\Q$ip/,  "Found $ip in packet");  # 18 though 23
+}
+
+is($packet2->header->qdcount, 1, 'header question count correct');   #24
+is($packet2->header->ancount, 2, 'header answer count correct');     #25
+is($packet2->header->nscount, 2, 'header authority count correct');  #26 
+is($packet2->header->adcount, 2, 'header additional count correct'); #27
+

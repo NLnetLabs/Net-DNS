@@ -6,7 +6,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-# $Id: RR.pm,v 1.11 1997/10/02 05:27:29 mfuhr Exp $
+# $Id: RR.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -58,15 +58,16 @@ use Net::DNS::RR::RP;		$RR{"RP"}	= 1;
 use Net::DNS::RR::RT;		$RR{"RT"}	= 1;
 use Net::DNS::RR::SOA;		$RR{"SOA"}	= 1;
 use Net::DNS::RR::SRV;		$RR{"SRV"}	= 1;
+use Net::DNS::RR::TSIG;		$RR{"TSIG"}	= 1;
 use Net::DNS::RR::TXT;		$RR{"TXT"}	= 1;
 use Net::DNS::RR::X25;		$RR{"X25"}	= 1;
 
 =head2 new (from string)
 
-    $a = new Net::DNS::RR("foo.bar.com. 86400 A 10.1.2.3");
-    $mx = new Net::DNS::RR("bar.com. 7200 MX 10 mailhost.bar.com.");
-    $cname = new Net::DNS::RR("www.bar.com 300 IN CNAME www1.bar.com");
-    $txt = new Net::DNS::RR("baz.bar.com 3600 HS TXT 'text record'");
+    $a = Net::DNS::RR->new("foo.example.com. 86400 A 10.1.2.3");
+    $mx = Net::DNS::RR->new("example.com. 7200 MX 10 mailhost.example.com.");
+    $cname = Net::DNS::RR->new("www.example.com 300 IN CNAME www1.example.com");
+    $txt = Net::DNS::RR->new("baz.example.com 3600 HS TXT 'text record'");
 
 Returns a C<Net::DNS::RR> object of the appropriate type and
 initialized from the string passed by the user.  The format of the
@@ -83,16 +84,16 @@ All names must be fully qualified.  The trailing dot (.) is optional.
 
 =head2 new (from hash)
 
-    $rr = new Net::DNS::RR(
-	Name    => "foo.bar.com",
+    $rr = Net::DNS::RR->new(
+	Name    => "foo.example.com",
 	TTL     => 86400,
 	Class   => "IN",
         Type    => "A",
 	Address => "10.1.2.3",
     );
 
-    $rr = new Net::DNS::RR(
-	Name    => "foo.bar.com",
+    $rr = Net::DNS::RR->new(
+	Name    => "foo.example.com",
         Type    => "A",
     );
 
@@ -156,7 +157,7 @@ sub new_from_string {
 	my ($class, $rrstring, $update_type) = @_;
 	my ($s, %self, $retval);
 
-	my $name     = "";
+	my $name     = undef;
 	my $ttl      = 0;
 	my $rrclass  = "";
 	my $rrtype   = "";
@@ -165,18 +166,21 @@ sub new_from_string {
 	while ($rrstring =~ /\s*(\S+)\s*/g) {
 		$s = $1;
 
-		if (!$name) {
-			($name = $s) =~ s/\.+$//;
+		if (!defined($name)) {
+			#($name = $s) =~ s/\.+$//;
+			$name = $s;
+			$name =~ s/^\.+//;
+			$name =~ s/\.+$//;
 		}
 		elsif ($s =~ /^\d+$/) {
 			$ttl = $s;
 		}
 		elsif (!$rrclass && exists $Net::DNS::classesbyname{uc($s)}) {
-			$rrclass = $s;
+			$rrclass = uc($s);
 			$rdata = $';  # in case this is really type=ANY
 		}
 		elsif (exists $Net::DNS::typesbyname{uc($s)}) {
-			$rrtype = $s;
+			$rrtype = uc($s);
 			$rdata = $';
 			last;
 		}
@@ -195,7 +199,7 @@ sub new_from_string {
 		$rrclass = "IN";
 	}
 
-	unless ($rrtype) {
+	if (!$rrtype) {
 		$rrtype = "ANY";
 	}
 
@@ -433,9 +437,25 @@ sub data {
 	my ($self, $packet, $offset) = @_;
 	my $data;
 
-	$data  = $packet->dn_comp($self->{"name"}, $offset);
-	$data .= pack("n", $Net::DNS::typesbyname{uc($self->{"type"})});
-	$data .= pack("n", $Net::DNS::classesbyname{uc($self->{"class"})});
+	# Don't compress TSIG names.
+	if (uc($self->{"type"}) eq "TSIG") {
+		my $tmp_packet = Net::DNS::Packet->new("");
+		$data = $tmp_packet->dn_comp($self->{"name"}, 0);
+	}
+	else {
+		$data  = $packet->dn_comp($self->{"name"}, $offset);
+	}
+
+	my $qtype = uc($self->{"type"});
+	my $qtype_val = ($qtype =~ /^\d+$/) ? $qtype : $Net::DNS::typesbyname{$qtype};
+	$qtype_val = 0 if !defined($qtype_val);
+
+	my $qclass = uc($self->{"class"});
+	my $qclass_val = ($qclass =~ /^\d+$/) ? $qclass : $Net::DNS::classesbyname{$qclass};
+	$qclass_val = 0 if !defined($qclass_val);
+
+	$data .= pack("n", $qtype_val);
+	$data .= pack("n", $qclass_val);
 	$data .= pack("N", $self->{"ttl"});
 
 	$offset += length($data) + &Net::DNS::INT16SZ;	# allow for rdlength
@@ -488,9 +508,9 @@ RR objects.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 

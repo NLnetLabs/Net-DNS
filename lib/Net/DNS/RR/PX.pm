@@ -1,6 +1,6 @@
 package Net::DNS::RR::PX;
 
-# $Id: PX.pm,v 1.3 1997/07/06 16:31:54 mfuhr Exp $
+# $Id: PX.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -106,14 +106,14 @@ Returns the X.400 part of the RFC1327 mapping information.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2000 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1664 Section 4, RFC 1327
+RFC822, RFC 1327, RFC 2163
 
 =cut

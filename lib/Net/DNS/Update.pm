@@ -4,9 +4,8 @@ use strict;
 use vars qw($VERSION);
 
 use Net::DNS;
-# use Net::DNS::Packet;
 
-# $Id: Update.pm,v 1.3 1997/10/02 05:28:05 mfuhr Exp $
+# $Id: Update.pm,v 1.3 2002/05/14 10:51:24 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -23,16 +22,16 @@ C<Net::DNS::Update> is a front-end for creating C<Net::DNS::Packet>
 objects to be used for making DNS dynamic updates.  Programmers
 should refer to RFC 2136 for the semantics of dynamic updates.
 
-WARNING:  This code is still under development and shouldn't be
-used to maintain a production nameserver.
+WARNING:  This code is still under development.  Please use with
+caution on production nameservers.
 
 =head1 METHODS
 
 =head2 new
 
-    $packet = new Net::DNS::Update;
-    $packet = new Net::DNS::Update("foo.com");
-    $packet = new Net::DNS::Update("foo.com", "HS");
+    $packet = Net::DNS::Update->new;
+    $packet = Net::DNS::Update->new("example.com");
+    $packet = Net::DNS::Update->new("example.com", "HS");
 
 Returns a C<Net::DNS::Packet> object suitable for performing a DNS
 dynamic update.  Specifically, it creates a packet with the header
@@ -57,7 +56,7 @@ sub new {
 	my ($type, $packet);
 
 	unless ($zone) {
-		my $res = new Net::DNS::Resolver;
+		my $res = Net::DNS::Resolver->new;
 		$zone = ($res->searchlist)[0];
 		return unless $zone;
 	}
@@ -65,7 +64,7 @@ sub new {
 	$type  = "SOA";
 	$class = "IN" unless defined $class;
 
-	$packet = new Net::DNS::Packet($zone, $type, $class);
+	$packet = Net::DNS::Packet->new($zone, $type, $class);
 	if (defined $packet) {
 		$packet->header->opcode("UPDATE");
 		$packet->header->rd(0);
@@ -81,23 +80,23 @@ show only the creation of the update packet.
 
 =head2 Add a new host
 
-    #!/usr/local/bin/perl -w
+    #!/usr/bin/perl -w
     
     use Net::DNS;
     
     # Create the update packet.
-    $update = new Net::DNS::Update("bar.com");
+    $update = Net::DNS::Update->new("example.com");
     
     # Prerequisite is that no A records exist for the name.
-    $update->push("pre", nxrrset("foo.bar.com. A"));
+    $update->push("pre", nxrrset("foo.example.com. A"));
     
     # Add two A records for the name.
-    $update->push("update", rr_add("foo.bar.com. 86400 A 192.168.1.2"));
-    $update->push("update", rr_add("foo.bar.com. 86400 A 172.16.3.4"));
+    $update->push("update", rr_add("foo.example.com. 86400 A 192.168.1.2"));
+    $update->push("update", rr_add("foo.example.com. 86400 A 172.16.3.4"));
     
     # Send the update to the zone's primary master.
-    $res = new Net::DNS::Resolver;
-    $res->nameservers("primary-master.bar.com");
+    $res = Net::DNS::Resolver->new;
+    $res->nameservers("primary-master.example.com");
     $reply = $res->send($update);
     
     # Did it work?
@@ -115,43 +114,77 @@ show only the creation of the update packet.
 
 =head2 Add an MX record for a name that already exists
 
-    $update = new Net::DNS::Update("foo.com");
-    $update->push("pre", yxdomain("foo.com"));
-    $update->push("update", rr_add("foo.com MX 10 mailhost.foo.com"));
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("pre", yxdomain("example.com"));
+    $update->push("update", rr_add("example.com MX 10 mailhost.example.com"));
 
 =head2 Add a TXT record for a name that doesn't exist
 
-    $update = new Net::DNS::Update("foo.com");
-    $update->push("pre", nxdomain("info.foo.com"));
-    $update->push("update", rr_add("info.foo.com TXT 'yabba dabba doo'"));
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("pre", nxdomain("info.example.com"));
+    $update->push("update", rr_add("info.example.com TXT 'yabba dabba doo'"));
 
 =head2 Delete all A records for a name
 
-    $update = new Net::DNS::Update("bar.com");
-    $update->push("pre", yxrrset("foo.bar.com A"));
-    $update->push("update", rr_del("foo.bar.com A"));
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("pre", yxrrset("foo.example.com A"));
+    $update->push("update", rr_del("foo.example.com A"));
 
 =head2 Delete all RRs for a name
 
-    $update = new Net::DNS::Update("foo.com");
-    $update->push("pre", yxdomain("byebye.foo.com"));
-    $update->push("update", rr_del("byebye.foo.com"));
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("pre", yxdomain("byebye.example.com"));
+    $update->push("update", rr_del("byebye.example.com"));
+
+=head2 Perform a signed update
+
+    $key_name = "tsig-key";
+    $key = "awwLOtRfpGE+rRKF2+DEiw==";
+
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
+    $update->push("update", rr_add("bar.example.com A 10.4.5.6"));
+    $update->sign_tsig($key_name, $key);
+
+=head2 Another way to perform a signed update
+
+    $key_name = "tsig-key";
+    $key = "awwLOtRfpGE+rRKF2+DEiw==";
+
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
+    $update->push("update", rr_add("bar.example.com A 10.4.5.6"));
+    $update->push("additional", Net::DNS::RR->new("$key_name TSIG $key"));
+
+=head2 Perform a signed update with a customized TSIG record
+
+    $key_name = "tsig-key";
+    $key = "awwLOtRfpGE+rRKF2+DEiw==";
+
+    $tsig = Net::DNS::RR->new("$key_name TSIG $key");
+    $tsig->fudge(60);
+
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
+    $update->push("update", rr_add("bar.example.com A 10.4.5.6"));
+    $update->push("additional", $tsig);
 
 =head1 BUGS
 
-This code is still under development and shouldn't be used to maintain
-a production nameserver.
+This code is still under development.  Please use with caution on
+production nameservers.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself. 
 
 =head1 SEE ALSO
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Header>,
-L<Net::DNS::Packet>, L<Net::DNS::Question>, L<Net::DNS::RR>, RFC 2136
+L<Net::DNS::Packet>, L<Net::DNS::Question>, L<Net::DNS::RR>, RFC 2136,
+RFC 2845
 
 =cut
 

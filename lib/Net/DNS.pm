@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.14 1997/10/02 05:32:53 mfuhr Exp $
+# $Id: DNS.pm,v 1.4 2002/05/15 00:09:50 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -16,7 +16,7 @@ use vars qw(
 	%rcodesbyval
 );
 
-$VERSION = "0.14";
+$VERSION = "0.20";
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -123,7 +123,7 @@ sub mx {
 	my ($res, $name, $class);
 	my ($ans, @mxlist);
 
-	$res = ref $_[0] ? shift : new Net::DNS::Resolver;
+	$res = ref $_[0] ? shift : Net::DNS::Resolver->new;
 	($name, $class) = @_;
 	$class = "IN" unless defined $class;
 
@@ -499,14 +499,22 @@ the source distribution.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997 Michael Fuhr.  All rights reserved.  This program is free
-software; you can redistribute it and/or modify it under the same terms as
-Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This program 
+is free software; you can redistribute it and/or modify it under the same 
+terms as Perl itself. 
 
 =head1 AUTHOR INFORMATION
 
-Michael Fuhr <mfuhr@dimensional.com>
-http://www.dimensional.com/~mfuhr/perldns/
+Net::DNS is currently maintained by a group, led by:
+	Chris Reinhardt
+	ctriv@net-dns.org
+
+Net::DNS was created by:
+	Michael Fuhr
+	mike@fuhr.org
+
+For more information see:
+	http://www.net-dns.org/
 
 =head1 SEE ALSO
  
