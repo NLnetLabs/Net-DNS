@@ -356,7 +356,14 @@ must not preexist.
 
 =cut
 
-sub answer { return @{$_[0]->{'answer'}}; }
+sub answer { 
+    if (exists($_[0]->{'answer'})) {
+	return @{$_[0]->{'answer'}};
+    } else {
+	return ();
+    } 
+}
+  
 
 sub pre          { &answer }
 sub prerequisite { &answer }
@@ -373,7 +380,13 @@ specifies the RRs or RRsets to be added or delted.
 
 =cut
 
-sub authority { return @{$_[0]->{'authority'}}; }
+sub authority { 
+    if (exists($_[0]->{'authority'})) {
+	return @{$_[0]->{'authority'}};
+    } else {
+	return ();
+    } 
+}
 
 sub update    { &authority }
 
@@ -386,7 +399,13 @@ section of the packet.
 
 =cut
 
-sub additional { return @{$_[0]->{'additional'}}; }
+sub additional { 
+    if (exists($_[0]->{'additional'})) {
+	return @{$_[0]->{'additional'}};
+    } else {
+	return ();
+    } 
+}
 
 
 =head2 print
@@ -984,10 +1003,12 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
+Portions Copyright (c) 2002-2005 Olaf Kolkman
+
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
 
-DNSSEC/EDNS0 functionality courtesy of Olaf M. Kolkman, RIPE NCC.  
+
 
 =head1 SEE ALSO
 

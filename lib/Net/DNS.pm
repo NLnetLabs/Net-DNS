@@ -172,7 +172,7 @@ sub typesbyval {
         $val =~ m/^\s*\d+\s*$/;  
     
     $val =~ s/\s*//g; 
-    $val =~ s/^0*//; 
+    $val =~ s/^0*([0-9]+)/$1/;    #remove leading zeros 
     
     return $typesbyval{$val} if $typesbyval{$val};
     
@@ -228,7 +228,7 @@ sub classesbyval {
         $val=~/^\s*\d+\s*$/;
     
     $val =~ s/\s*//g;
-    $val =~ s/^0*//;
+    $val =~ s/^0*([0-9]+)/$1/;    #remove leading zeros 
     
     return $classesbyval{$val} if $classesbyval{$val};
     

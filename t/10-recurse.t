@@ -45,8 +45,8 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 
 # test the callback
 {
-	my $res = Net::DNS::Resolver::Recurse->new;
-
+	my $res = Net::DNS::Resolver::Recurse->new ;
+	
 	my $count;
 
 	$res->recursion_callback(sub {

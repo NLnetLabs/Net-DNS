@@ -2,6 +2,14 @@ Revision history for Net::DNS
 =============================
 
 
+*** 0.48_03
+
+Fix: Only remove leading zeros in the regular expressions for typesbyval
+     and classbyval methods. (patch by Ronald v.d. Pol)
+
+Fix: Properly return an empty array in the authority, additional and answer
+     methods (patch by Ronald v.d. Pol)
+
 *** 0.48_02 March 14, 2005 (Version 0.49 release candidate 2)
 
 Fix: Bug report by Bernhard Schmidt (concerning a bug on the IPv6 branch).
