@@ -1,6 +1,6 @@
-# $Id: 06-update.t,v 1.3 2002/02/27 05:16:25 ctriv Exp $
+# $Id: 06-update.t,v 1.4 2002/08/16 21:24:14 ctriv Exp $
 
-use Test::More tests => 66;
+use Test::More tests => 72;
 use strict;
 
 
@@ -112,6 +112,22 @@ is($rr->type,  'ANY',                      'nxdomain - right type');  #35
 ok(is_empty($rr->rdatastr),                'nxdomain - data empty');  #36
 
 undef $rr;
+
+#------------------------------------------------------------------------------
+# Name is not in use. (No Class)
+#------------------------------------------------------------------------------
+
+$rr = nxdomain("$name");
+
+ok($rr,                                    'nxdomain() returned RR'); #31
+is($rr->name,  $name,                      'nxdomain - right name');  #32
+is($rr->ttl,   0,                          'nxdomain - right ttl');   #33
+is($rr->class, 'NONE',                     'nxdomain - right class'); #34
+is($rr->type,  'ANY',                      'nxdomain - right type');  #35
+ok(is_empty($rr->rdatastr),                'nxdomain - data empty');  #36
+
+undef $rr;
+
 
 
 #------------------------------------------------------------------------------

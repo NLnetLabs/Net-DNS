@@ -1,4 +1,4 @@
-# $Id: 02-header.t,v 1.4 2002/08/01 10:10:51 ctriv Exp $
+# $Id: 02-header.t,v 1.5 2002/08/21 00:07:42 ctriv Exp $
 
 use Test::More tests => 3;
 use strict;
@@ -11,7 +11,7 @@ ok($header,                "new() returned something");
 
 $header->id(41);
 $header->qr(1);
-$header->opcode(0);
+$header->opcode('QUERY');
 $header->aa(1);
 $header->tc(0);
 $header->rd(1);

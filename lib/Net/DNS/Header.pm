@@ -5,7 +5,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use Net::DNS;
 
-# $Id: Header.pm,v 1.6 2002/08/01 10:11:29 ctriv Exp $
+# $Id: Header.pm,v 1.7 2002/08/20 16:27:40 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -273,7 +273,7 @@ sub AUTOLOAD {
 	*{$AUTOLOAD} = sub {
 		my ($self, $new_val) = @_;
 		
-		if ($new_val) {
+		if (defined $new_val) {
 			$self->{"$name"} = $new_val;
 		}
 		

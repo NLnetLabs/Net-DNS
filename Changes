@@ -1,6 +1,14 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.28 20 Aug 2002
+
+Fixed a bug in the new AUTOLOAD routines that made it impossible to set
+attributes to '0'.
+
+Fixed a bug in the RR pat that broke many updates. 
+
+
 *** 0.27 15 Aug 2002
 
 Added (untested) support for perl 5.004.
@@ -590,4 +598,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.30 2002/08/15 15:44:01 ctriv Exp $
+$Id: Changes,v 1.31 2002/08/21 00:10:25 ctriv Exp $

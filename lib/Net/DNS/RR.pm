@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 
-# $Id: RR.pm,v 1.22 2002/08/14 14:36:37 ctriv Exp $
+# $Id: RR.pm,v 1.25 2002/08/21 00:10:55 ctriv Exp $
 
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -32,9 +32,8 @@ any of its methods.  If you call an unknown method, you'll get a nasty
 warning message and C<Net::DNS::RR> will return C<undef> to the caller.
 
 =cut
-#' Stupid Emacs (I Don't even USE emacs!)
+#' Stupid Emacs (I Don't even USE emacs!) '
 
-#'  Ok... emacs must die
 
 # %RR needs to be available within the scope of the BEGIN block.
 # $RR_REGEX is a global just to be on the safe side.  
@@ -119,7 +118,7 @@ sub build_regex {
 	$RR_REGEX   = " ^ 
 					\\s*
     	            ([*_a-zA-Z0-9.-]+) # name
-    	            \\s+                
+    	            \\s*                
     	            (\\d+)?           
     	            \\s*
     	            ($classes)?
@@ -635,7 +634,7 @@ AMEN
 	*{$AUTOLOAD} = sub {
 		my ($self, $new_val) = @_;
 				
-		if ($new_val) {
+		if (defined $new_val) {
 			$self->{$name} = $new_val;
 		}
 		

@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.19 2002/08/11 05:35:15 ctriv Exp $
+# $Id: Resolver.pm,v 1.20 2002/08/20 16:27:40 ctriv Exp $
 
 =head1 NAME
 
@@ -1740,7 +1740,7 @@ sub AUTOLOAD {
 	*{$AUTOLOAD} = sub {
 		my ($self, $new_val) = @_;
 		
-		if ($new_val) {
+		if (defined $new_val) {
 			$self->{"$name"} = $new_val;
 		}
 		
