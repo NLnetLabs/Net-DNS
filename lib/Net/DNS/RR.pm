@@ -80,10 +80,6 @@ BEGIN {
 	# 
 
 	if ($Net::DNS::DNSSEC) { 
-	    require Net::DNS::RR::SIG; 
-	};
-
-	unless ($@) {
 		$RR{'SIG'} = 1;
 	
 		eval { require Net::DNS::RR::NXT; };
