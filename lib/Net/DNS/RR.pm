@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 
-# $Id: RR.pm,v 1.26 2002/10/14 21:12:07 ctriv Exp $
+# $Id: RR.pm,v 1.27 2003/01/08 18:18:08 ctriv Exp $
 
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -118,7 +118,7 @@ sub build_regex {
 				
 	$RR_REGEX   = " ^ 
 					\\s*
-    	            ([*_a-zA-Z0-9.-]+) # name
+    	            (\\S+) # name anything non-space will do 
     	            \\s*                
     	            (\\d+)?           
     	            \\s*
