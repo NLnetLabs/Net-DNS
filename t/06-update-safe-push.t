@@ -1,4 +1,4 @@
-# $Id: 04-pkt-safe-push.t,v 1.2 2002/12/05 07:07:03 ctriv Exp $
+# $Id: 06-update-safe-push.t,v 1.1 2003/12/11 10:04:40 ctriv Exp $
 
 use Test::More tests => 73;
 use strict;
@@ -59,14 +59,14 @@ foreach my $try (@tests) {
 	
 	while (my ($section, $count_meth) = each %sections) {
 	
-		my $packet = Net::DNS::Packet->new($domain);
+		my $packet = Net::DNS::Update->new($domain);
 		
 		$packet->safe_push($section, @rrs);
 	
 		is($packet->header->$count_meth(), $count, "$section right");
 	
 		# Now we test the parsing in new.
-		my $packet2 = Net::DNS::Packet->new(\($packet->data));
+		my $packet2 = Net::DNS::Update->new(\($packet->data));
 		$packet2->safe_push($section, @rrs);
 		
 		is($packet2->header->$count_meth(), $count, "$section right");
@@ -77,7 +77,7 @@ foreach my $try (@tests) {
 	# 
 	while (my ($section, $count_meth) = each %sections) {
 	
-		my $packet = Net::DNS::Packet->new($domain);
+		my $packet = Net::DNS::Update->new($domain);
 		
 		foreach (@rrs) {
 			$packet->safe_push($section, $_);
@@ -86,7 +86,7 @@ foreach my $try (@tests) {
 		is($packet->header->$count_meth(), $count, "$section right");
 	
 		# Now we test the parsing in new.
-		my $packet2 = Net::DNS::Packet->new(\($packet->data));
+		my $packet2 = Net::DNS::Update->new(\($packet->data));
 		foreach (@rrs) {
 			$packet2->safe_push($section, $_);
 		}

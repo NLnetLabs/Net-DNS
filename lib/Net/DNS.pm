@@ -1,6 +1,6 @@
 package Net::DNS;
 #
-# $Id: DNS.pm,v 1.77 2003/12/10 22:10:29 ctriv Exp $
+# $Id: DNS.pm,v 1.79 2003/12/12 00:15:12 ctriv Exp $
 #
 use strict;
 use vars qw(
@@ -20,11 +20,10 @@ use vars qw(
 	%opcodesbyval
 	%rcodesbyname
 	%rcodesbyval
-
 );
 
 
-$VERSION = '0.42_02';
+$VERSION = '0.43';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -396,9 +395,11 @@ The additional section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
 
 =back
 
-The L<Net::DNS::Update|Net::DNS::Update> package is a front-end to
+=head2 Update Objects
+
+The L<Net::DNS::Update|Net::DNS::Update> package is a subclass of
 L<Net::DNS::Packet|Net::DNS::Packet> for creating packet objects to be
-used in dynamic updates.
+used in dynamic updates.  
 
 =head2 Header Objects
 
@@ -456,13 +457,13 @@ update packet.  There are two forms, value-independent and
 value-dependent:
 
     # RRset exists (value-independent)
-    $packet->push("pre", yxrrset("host.example.com A"));
+    $update->push(pre => yxrrset("host.example.com A"));
 
 Meaning:  At least one RR with the specified name and type must
 exist.
 
     # RRset exists (value-dependent)
-    $packet->push("pre", yxrrset("host.example.com A 10.1.2.3"));
+    $packet->push(pre => yxrrset("host.example.com A 10.1.2.3"));
 
 Meaning:  At least one RR with the specified name and type must
 exist and must have matching data.
@@ -475,7 +476,7 @@ be created.
 Use this method to add an "RRset does not exist" prerequisite to
 a dynamic update packet.
 
-    $packet->push("pre", nxrrset("host.example.com A"));
+    $packet->push(pre => nxrrset("host.example.com A"));
 
 Meaning:  No RRs with the specified name and type can exist.
 
@@ -487,7 +488,7 @@ be created.
 Use this method to add a "name is in use" prerequisite to a dynamic
 update packet.
 
-    $packet->push("pre", yxdomain("host.example.com"));
+    $packet->push(pre => yxdomain("host.example.com"));
 
 Meaning:  At least one RR with the specified name must exist.
 
@@ -499,7 +500,7 @@ be created.
 Use this method to add a "name is not in use" prerequisite to a
 dynamic update packet.
 
-    $packet->push("pre", nxdomain("host.example.com"));
+    $packet->push(pre => nxdomain("host.example.com"));
 
 Meaning:  No RR with the specified name can exist.
 
@@ -510,7 +511,7 @@ be created.
 
 Use this method to add RRs to a zone.
 
-    $packet->push("update", rr_add("host.example.com A 10.1.2.3"));
+    $packet->push(update => rr_add("host.example.com A 10.1.2.3"));
 
 Meaning:  Add this RR to the zone.
 
@@ -527,17 +528,17 @@ Use this method to delete RRs from a zone.  There are three forms:
 delete an RRset, delete all RRsets, and delete an RR.
 
     # Delete an RRset.
-    $packet->push("update", rr_del("host.example.com A"));
+    $packet->push(update => rr_del("host.example.com A"));
 
 Meaning:  Delete all RRs having the specified name and type.
 
     # Delete all RRsets.
-    $packet->push("update", rr_del("host.example.com"));
+    $packet->push(update => rr_del("host.example.com"));
 
 Meaning:  Delete all RRs having the specified name.
 
     # Delete an RR.
-    $packet->push("update", rr_del("host.example.com A 10.1.2.3"));
+    $packet->push(update => rr_del("host.example.com A 10.1.2.3"));
 
 Meaning:  Delete all RRs having the specified name, type, and data.
 

@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Cygwin;
 #
-# $Id: Cygwin.pm,v 1.2 2003/12/01 11:46:17 ctriv Exp $
+# $Id: Cygwin.pm,v 1.3 2003/12/11 10:11:48 ctriv Exp $
 #
 
 use strict;
@@ -8,22 +8,22 @@ use vars qw(@ISA $VERSION);
 
 use Net::DNS::Resolver::Base ();
 
-@ISA     = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 1.2 $)[1];
+@ISA	 = qw(Net::DNS::Resolver::Base);
+$VERSION = (qw$Revision: 1.3 $)[1];
 
 sub getregkey {
-    my $key   = $_[0] . $_[1];
-    my $value = '';
+	my $key	  = $_[0] . $_[1];
+	my $value = '';
 
-	local *LM;    
+	local *LM;	  
 
-    if (open(LM, "<$key")) {
-        $value = <LM>;
-        $value =~ s/\0+$//;
-        close(LM);
-    }
-    
-    return $value;
+	if (open(LM, "<$key")) {
+		$value = <LM>;
+		$value =~ s/\0+$//;
+		close(LM);
+	}
+	
+	return $value;
 }
 
 sub init {
@@ -34,10 +34,10 @@ sub init {
 	
 	my $root = '/proc/registry/HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Services/Tcpip/Parameters/';
    
-    unless (-d $root) {
+	unless (-d $root) {
 		# Doesn't exist, maybe we are on 95/98/Me?
 		$root = '/proc/registry/HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Services/VxD/MSTCP/';
-        -d $root || Carp::croak "can't read registry: $!";
+		-d $root || Carp::croak "can't read registry: $!";
 	}
 
 	# Best effort to find a useful domain name for the current host
@@ -49,7 +49,7 @@ sub init {
 	# also see below for domain name devolution if so configured
 	# (also remove any duplicates later)
 	my $searchlist = "$domain ";
-	$searchlist  .= getregkey($root, 'SearchList');
+	$searchlist	 .= getregkey($root, 'SearchList');
 	
 	# This is (probably) adequate on NT4
 	my $nameservers = getregkey($root, 'NameServer') || getregkey($root, 'DhcpNameServer');
@@ -61,7 +61,7 @@ sub init {
 	my $dnsadapters = $root . "DNSRegisteredAdapters/";
 	if (opendir(LM, $dnsadapters)) {
 		my @adapters = grep($_ ne "." && $_ ne "..", readdir(LM));
-        closedir(LM);
+		closedir(LM);
 		foreach my $adapter (@adapters) {
 			my $regadapter = $dnsadapters . $adapter . '/';
 			if (-e $regadapter) {
@@ -77,15 +77,15 @@ sub init {
 	my $interfaces = $root . "Interfaces/";
 	if (opendir(LM, $interfaces)) {
 		my @ifacelist = grep($_ ne "." && $_ ne "..", readdir(LM));
-        closedir(LM);
+		closedir(LM);
 		foreach my $iface (@ifacelist) {
 			my $regiface = $interfaces . $iface . '/';
 			if (opendir(LM, $regiface)) {
-                closedir(LM);
+				closedir(LM);
 				my $ns;
-                $ns = getregkey($regiface, "NameServer");
+				$ns = getregkey($regiface, "NameServer");
 				$nameservers .= " $ns" if $ns;
-                $ns = getregkey($regiface, "DhcpNameServer");
+				$ns = getregkey($regiface, "DhcpNameServer");
 				$nameservers .= " $ns" if $ns;
 			}
 		}
@@ -107,9 +107,9 @@ sub init {
 				while ($entry =~ m#\..+\.#) {
 					$entry =~ s#^[^\.]+\.(.+)$#$1#;
 					$h{$entry} = $i++;
-					}
 				}
 			}
+		}
 		my @a;
 		$a[$h{$_}] = $_ foreach (keys %h);
 		$defaults->{'searchlist'} = \@a;

@@ -1,15 +1,14 @@
-package Net::DNS::RR::unkown;
+package Net::DNS::RR::Unknown;
 #
-# $Id: unknown.pm,v 1.2 2003/12/09 17:40:27 ctriv Exp $
+# $Id: Unknown.pm,v 1.1 2003/12/11 23:26:36 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Socket;
 use Net::DNS;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 1.2 $)[1];
+$VERSION = (qw$Revision: 1.1 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -42,7 +41,7 @@ __END__
 
 =head1 NAME
 
-Net::DNS::RR::unknown - DNS unkown RR record
+Net::DNS::RR::Unknown - Unknown RR record
 
 =head1 SYNOPSIS
 
@@ -53,8 +52,6 @@ C<use Net::DNS::RR>;
 Class for dealing with unknown RR types (RFC3597)
 
 =head1 METHODS
-
-
 
 =head1 COPYRIGHT
 
@@ -69,8 +66,6 @@ it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.4.1
+L<Net::DNS>, L<Net::DNS::RR>, RFC 3597
 
 =cut

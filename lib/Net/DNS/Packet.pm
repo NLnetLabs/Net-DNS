@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 1.24 2003/12/09 17:37:13 ctriv Exp $
+# $Id: Packet.pm,v 1.25 2003/12/11 10:04:40 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 1.24 $)[1];
+$VERSION = (qw$Revision: 1.25 $)[1];
 
 =head1 NAME
 
@@ -559,10 +559,16 @@ Adds unseen RRs to the specified section of the packet. This is useful
 to insure that the packets do not contain redundant RRs in any of the
 sections.
 
+This method will no longer be available in Net::DNS::Packet soon.  It 
+should only be used on Net::DNS::Update objects. 
+
 =cut
 
 sub safe_push {
 	my ($self, $section, @rrs) = @_;
+	
+	carp "Deprecated use of safe_push() on Net::DNS::Packet object, use Net::DNS::Update."
+		unless $self->isa('Net::DNS::Update');
 	
 	foreach my $rr (@rrs) {
 		next if $self->{'seen'}->{$rr->string};

@@ -1,6 +1,14 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.43 December 11, 2003
+
+Added warning of deprecation of Net::DNS::Packet::safe_push.  This will
+move into Net::DNS::Update, as Net::DNS::Update is now a proper subclass
+of Net::DNS::Packet.
+
+** 0.42_02 December 11, 2003
+
 Fixed a long standing bug with zone transfers in the "many-answers" format. 
 CPAN #1903.
 
@@ -19,7 +27,7 @@ instead. [Olaf Kolkman]
 Added two hashes for administrative use; they store which types are
 qtypes and metatypes (rfc2929). [Olaf Kolkman]
 
-*** 0.42_01 November 30, 2003
+** 0.42_01 November 30, 2003
 
 Major work to get Net::DNS functioning properly on Cygwin by Sidney 
 Markowitz.
@@ -332,4 +340,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.87 2003/12/11 08:43:45 ctriv Exp $
+$Id: Changes,v 1.89 2003/12/12 00:15:12 ctriv Exp $

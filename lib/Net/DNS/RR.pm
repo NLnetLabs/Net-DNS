@@ -1,15 +1,15 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 1.33 2003/12/09 17:37:13 ctriv Exp $
+# $Id: RR.pm,v 1.35 2003/12/11 23:27:08 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
 
 use Carp;
 use Net::DNS;
-use Net::DNS::RR::unknown;
+use Net::DNS::RR::Unknown;
 
-$VERSION = (qw$Revision: 1.33 $)[1];
+$VERSION = (qw$Revision: 1.35 $)[1];
 
 =head1 NAME
 
@@ -239,7 +239,7 @@ sub new_from_data {
 		my $subclass = $class->_get_subclass($rrtype);
 		return $subclass->new($self, $data, $offset);
 	} else {
-	    return Net::DNS::RR::unkown->new($self,$data,$offset);
+	    return Net::DNS::RR::Unknown->new($self, $data, $offset);
 	}
 
 }
@@ -247,7 +247,6 @@ sub new_from_data {
 sub new_from_string {
 	my ($class, $rrstring, $update_type) = @_;
 
-	
 	build_regex() unless $RR_REGEX;
 	
 	# strip out comments
@@ -270,8 +269,8 @@ sub new_from_string {
 
 	# RFC3597 tweaks
 	# This converts to known class and type if specified as TYPE###
-	$rrtype=Net::DNS::typesbyval(Net::DNS::typesbyname($rrtype))if $rrtype=~/^TYPE\d+/;
-	$rrclass=Net::DNS::classesbyval(Net::DNS::classesbyname($rrclass))if $rrclass=~/^CLASS\d+/;
+	$rrtype  = Net::DNS::typesbyval(Net::DNS::typesbyname($rrtype))      if $rrtype  =~ m/^TYPE\d+/;
+	$rrclass = Net::DNS::classesbyval(Net::DNS::classesbyname($rrclass)) if $rrclass =~ m/^CLASS\d+/;
 
 
 	if (!$rrtype && $rrclass && $rrclass eq 'ANY') {

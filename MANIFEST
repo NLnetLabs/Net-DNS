@@ -56,8 +56,8 @@ lib/Net/DNS/RR/SRV.pm
 lib/Net/DNS/RR/TKEY.pm
 lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TXT.pm
+lib/Net/DNS/RR/Unknown.pm
 lib/Net/DNS/RR/X25.pm
-lib/Net/DNS/RR/unknown.pm
 lib/Net/DNS/Select.pm
 lib/Net/DNS/Update.pm
 Makefile.PL
@@ -75,10 +75,10 @@ t/01-resolver.t
 t/02-header.t
 t/03-question.t
 t/04-packet.t
-t/04-pkt-safe-push.t
 t/05-rr-txt.t
 t/05-rr-unknown.t
 t/05-rr.t
+t/06-update-safe-push.t
 t/06-update.t
 t/07-misc.t
 t/08-online.t

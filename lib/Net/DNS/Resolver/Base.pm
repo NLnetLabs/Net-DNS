@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 1.10 2003/12/11 08:43:18 ctriv Exp $
+# $Id: Base.pm,v 1.11 2003/12/11 09:33:16 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::Select;
 
-$VERSION = (qw$Revision: 1.10 $)[1];
+$VERSION = (qw$Revision: 1.11 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -1133,6 +1133,8 @@ sub AUTOLOAD {
 	goto &{$AUTOLOAD};	
 }
 
+1;
+
 __END__
 
 =head1 NAME
@@ -1166,4 +1168,4 @@ L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>
 
 =cut
 
-1;
+
