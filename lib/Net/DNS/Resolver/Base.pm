@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 1.8 2003/09/03 04:41:51 ctriv Exp $
+# $Id: Base.pm,v 1.9 2003/10/08 09:27:42 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::Select;
 
-$VERSION = (qw$Revision: 1.8 $)[1];
+$VERSION = (qw$Revision: 1.9 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -52,6 +52,7 @@ $VERSION = (qw$Revision: 1.8 $)[1];
 		axfr_rr        => [],
 		axfr_soa_count => 0,
 		persistent_tcp => 0,
+		persistent_udp => 0,
 		dnssec         => 0,
 		udppacketsize  => 0,  # The actual default is lower bound by Net::DNS::PACKETSZ
 		cdflag         => 1,  # this is only used when {dnssec} == 1
@@ -88,6 +89,7 @@ my %public_attr = map { $_ => 1 } qw(
 	tcp_timeout
 	udp_timeout
 	persistent_tcp
+	persistent_udp
 	dnssec
 );
 
@@ -555,26 +557,33 @@ sub send_udp {
 	my $srcport = $self->{'srcport'};
 	my $srcaddr = $self->{'srcaddr'};
 
-	# IO::Socket carps on errors if Perl's -w flag is turned on.
-	# Uncomment the next two lines and the line following the "new"
-	# call to turn off these messages.
+	my $sock;
 
-	#my $old_wflag = $^W;
-	#$^W = 0;
+	if ($self->persistent_udp && $self->{'sockets'}{'UDP'}) {
+		$sock = $self->{'sockets'}{'UDP'};
+		print ";; using persistent socket\n"
+			if $self->{'debug'};
+	} else {
+		# IO::Socket carps on errors if Perl's -w flag is turned on.
+		# Uncomment the next two lines and the line following the "new"
+		# call to turn off these messages.
 
-	# XXX Why is PeerPort defined here?
-	my $sock = IO::Socket::INET->new(
-			    PeerPort  => $dstport,
-			    LocalAddr => $srcaddr,
-			    LocalPort => ($srcport || undef),
-			    Proto     => 'udp',
-	);
+		#my $old_wflag = $^W;
+		#$^W = 0;
 
-	#$^W = $old_wflag;
+		$sock = IO::Socket::INET->new(
+				    LocalAddr => $srcaddr,
+				    LocalPort => ($srcport || undef),
+				    Proto     => 'udp',
+		);
 
-	unless ($sock) {
-		$self->errorstring("couldn't create socket: $!");
-		return;
+		#$^W = $old_wflag;
+
+		unless ($sock) {
+			$self->errorstring("couldn't create socket: $!");
+			return;
+		}
+		$self->{'sockets'}{'UDP'} = $sock if ($self->persistent_udp);
 	}
 
 	my @ns = grep { $_->[0] && $_->[1] }

@@ -1,6 +1,17 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.42 October 26, 2003
+
+Fixed compilation problems on panther (Mac OS 10.3).
+
+Fixed a bug in Net::DNS::Resolver::Recurse which allowed an endless
+loop to arise in certain situations.  (cpan #3969, patch
+by Rob Brown) 
+
+Applied Mike Mitchell's patch implementing a presistant UDP socket.  
+See the Net::DNS::Resolver documentation for details.
+
 *** 0.41 October 3, 2003
 
 Added some documentation about modifying the behavior of Net::DNS::Resolver. 
@@ -296,4 +307,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.80 2003/10/03 15:45:22 ctriv Exp $
+$Id: Changes,v 1.83 2003/10/26 05:35:35 ctriv Exp $

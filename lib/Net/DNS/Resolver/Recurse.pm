@@ -1,13 +1,13 @@
 package Net::DNS::Resolver::Recurse;
 #
-# $Id: Recurse.pm,v 1.4 2003/08/10 15:20:24 ctriv Exp $
+# $Id: Recurse.pm,v 1.5 2003/10/25 02:01:54 ctriv Exp $
 #
 use strict;
 use Net::DNS::Resolver;
 
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 1.4 $)[1];
+$VERSION = (qw$Revision: 1.5 $)[1];
 @ISA = qw(Net::DNS::Resolver);
 
 sub hints {
@@ -208,13 +208,15 @@ sub _dorecursion {
       } elsif (my @authority = $packet->authority) {
         my %auth = ();
         foreach my $rr (@authority) {
-          if ($rr->type eq "NS") {
+          if ($rr->type =~ /^(NS|SOA)$/) {
+            my $server = lc ($1 eq "NS" ? $rr->nsdname : $rr->mname);
+            $server =~ s/\.*$/./;
             $of = lc $rr->name;
             $of =~ s/\.*$/./;
+            print ";; _dorecursion() Received authority [$of] [",$rr->type(),"] [$server]\n" if $self->{'debug'};
             if (length $of <= length $known_zone) {
               print ";; _dorecursion() Deadbeat name server did not provide new information.\n" if $self->{'debug'};
             } elsif ($of =~ /$known_zone$/) {
-              my $server = lc $rr->rdatastr;
               print ";; _dorecursion() FOUND closer authority for [$of] at [$server].\n" if $self->{'debug'};
               $auth{$server} ||= [];
             } else {
@@ -322,7 +324,7 @@ Copyright (c) 2002, Rob Brown.  All rights reserved.
 This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 
-$Id: Recurse.pm,v 1.4 2003/08/10 15:20:24 ctriv Exp $
+$Id: Recurse.pm,v 1.5 2003/10/25 02:01:54 ctriv Exp $
 
 =cut
 

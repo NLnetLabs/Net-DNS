@@ -1,12 +1,12 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm,v 1.40 2003/09/28 04:06:45 ctriv Exp $
+# $Id: Resolver.pm,v 1.41 2003/10/08 09:27:42 ctriv Exp $
 #
 
 use strict;
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 1.40 $)[1];
+$VERSION = (qw$Revision: 1.41 $)[1];
 
 BEGIN {
 	if ($^O eq 'MSWin32') {
@@ -161,6 +161,8 @@ An array reference of domains.
 =item dnsrch
 
 =item persistent_tcp
+
+=item persistent_udp
 
 =item dnssec
 
@@ -518,6 +520,16 @@ or updates to the same nameserver.
 
 This option defaults to false unless you're running under a
 SOCKSified Perl, in which case it defaults to true.
+
+=head2 persistent_udp
+
+    print 'Persistent UDP flag: ', $res->persistent_udp, "\n";
+    $res->persistent_udp(1);
+
+Get or set the persistent UDP setting.  If set to true, Net::DNS
+will keep a single UDP socket open for all queries.
+This is useful if you're using UDP and need to make a lot of queries
+or updates.
 
 =head2 igntc
 

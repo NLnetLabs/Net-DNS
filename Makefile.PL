@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.28 2003/09/27 00:21:16 ctriv Exp $
+# $Id: Makefile.PL,v 1.30 2003/10/26 05:31:45 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
@@ -35,8 +35,11 @@ my %Makefile = (
 	clean         => { FILES => 't/online.enabled compile.* DNS.o DNS.c DNS.bs' },
 );
 
-if ($^O eq 'Win32') {
+if ($^O eq 'MSWin32') {
 	$Makefile{'PREREQ_PM'}->{'Win32::Registry'} = 0;
+}
+if ($^O eq 'darwin' and $Config{'osvers'} =~ m/^7\./) {
+	$Makefile{'DEFINE'} = '-DBIND_8_COMPAT';
 }
 
 if ($] >= 5.005) {
