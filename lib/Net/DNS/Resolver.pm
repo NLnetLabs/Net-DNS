@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.31 2003/05/25 05:15:03 ctriv Exp $
+# $Id: Resolver.pm,v 1.32 2003/06/01 23:33:12 ctriv Exp $
 
 =head1 NAME
 
@@ -1235,6 +1235,8 @@ sub axfr {
 }
 
 sub axfr_old {
+	warn "Use of " . __PACKAGE__ . "::axfr_old() is deprecated.  Use axfr() or axfr_start()\n";
+	
 	my $self = shift;
 	my ($dname, $class) = @_;
 	$dname ||= $self->{'searchlist'}->[0];

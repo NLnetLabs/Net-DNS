@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.22 2003/05/28 22:33:56 ctriv Exp $
+# $Id: Makefile.PL,v 1.25 2003/06/05 22:21:30 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
@@ -103,6 +103,8 @@ EOT
 	} else {
 		unlink("t/online.enabled"); # just to be shure...
 	}
+} else {
+	unlink("t/online.enabled"); # just to be shure...
 }
 
 
@@ -137,7 +139,7 @@ EOF
 		unlink($file) || warn "Could not delete $file: $!\n";
 	}
 
-	return 1;
+	return ($ret == 0);
 }
 		
 

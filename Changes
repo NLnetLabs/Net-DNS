@@ -1,6 +1,17 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.38 Jun 5 2003
+
+Various buglets fixed in the new Makefile.PL.
+
+Use Dynaloader instead of XSLoader.  Turns out that XSLoader is only 
+in more recent perls.
+
+Added deprecation warning to Net::DNS::Resolver::axfr_old().
+
+HP-UX fixes [cpan #2710], I don't have the name of the reporter/patcher.
+
 *** 0.37 May 28 2003
 
 Renamed the test C file to compile.c, test.c was confusing the 'make test'
@@ -701,4 +712,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.56 2003/05/28 22:38:33 ctriv Exp $
+$Id: Changes,v 1.60 2003/06/05 23:41:40 ctriv Exp $

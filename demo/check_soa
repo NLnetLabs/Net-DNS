@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: check_soa,v 1.4 2002/05/28 07:50:07 ctriv Exp $
+# $Id: check_soa,v 1.5 2003/06/01 23:15:30 ctriv Exp $
 
 =head1 NAME
 
@@ -73,7 +73,7 @@ foreach my $nsrr (grep {$_->type eq "NS" } $ns_req->answer) {
 	my $ns = $nsrr->nsdname;
 	
 	# In order to lookup the IP(s) of the nameserver, we need a Resolver
-	# object that is set to our local, recurse nameserver.  So we create
+	# object that is set to our local, recursive nameserver.  So we create
 	# a new object just to do that.
 	
 	my $local_res = Net::DNS::Resolver->new();

@@ -1,7 +1,11 @@
 /*
- * $Id: DNS.xs,v 1.8 2003/05/23 00:12:37 ctriv Exp $
+ * $Id: DNS.xs,v 1.9 2003/06/01 23:18:57 ctriv Exp $
  *
  */
+
+#ifdef _HPUX_SOURCE
+#define _SYS_MAGIC_INCLUDED
+#endif
  
  
 #include "EXTERN.h"

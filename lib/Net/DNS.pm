@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.62 2003/05/28 22:33:56 ctriv Exp $
+# $Id: DNS.pm,v 1.64 2003/06/05 23:40:18 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -18,7 +18,7 @@ use vars qw(
 );
 
 
-$VERSION = '0.37';
+$VERSION = '0.38';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -27,10 +27,6 @@ use Net::DNS::Header;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-use XSLoader;
-
-eval { XSLoader::load __PACKAGE__ };
-
 BEGIN {
 	eval { require Net::DNS::RR::SIG };
 	# $@ will be true if any errors where encountered 
@@ -38,11 +34,12 @@ BEGIN {
 	$DNSSEC = $@ ? 0 : 1;
 }
  
- 
- 
-
+require DynaLoader;
 require Exporter;
-@ISA = qw(Exporter);
+@ISA = qw(Exporter DynaLoader);
+
+eval { __PACKAGE__->bootstrap() };
+
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
 
 %typesbyname = (
