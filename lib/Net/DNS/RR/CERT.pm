@@ -1,6 +1,6 @@
 package Net::DNS::RR::CERT;
 #
-# $Id: CERT.pm,v 1.5 2003/09/03 04:41:50 ctriv Exp $
+# $Id: CERT.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
 #
 # Written by Mike Schiraldi <raldi@research.netsol.com> for VeriSign
 
@@ -12,7 +12,7 @@ use Net::DNS::Packet;
 use MIME::Base64;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 1.5 $)[1];
+$VERSION = (qw$Revision: 2.100 $)[1];
 
 my %formats = 
     (

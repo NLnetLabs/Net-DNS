@@ -1,4 +1,4 @@
-# $Id: 04-packet.t,v 1.4 2002/05/22 18:09:36 ctriv Exp $
+# $Id: 04-packet.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
 
 use Test::More tests => 34;
 use strict;

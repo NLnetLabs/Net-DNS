@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: check_zone,v 1.2 2002/02/07 03:54:18 ctriv Exp $
+# $Id: check_zone,v 2.100 2003/12/13 01:37:04 ctriv Exp $
 
 =head1 NAME
 

@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: check_soa,v 1.5 2003/06/01 23:15:30 ctriv Exp $
+# $Id: check_soa,v 2.100 2003/12/13 01:37:04 ctriv Exp $
 
 =head1 NAME
 

@@ -1,4 +1,4 @@
-# $Id: 06-update-safe-push.t,v 1.1 2003/12/11 10:04:40 ctriv Exp $
+# $Id: 06-update-safe-push.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
 
 use Test::More tests => 73;
 use strict;

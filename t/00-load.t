@@ -1,4 +1,4 @@
-# $Id: 00-load.t,v 1.7 2003/12/01 04:33:51 ctriv Exp $
+# $Id: 00-load.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
 
 
 use Test::More tests => 73;

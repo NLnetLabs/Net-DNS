@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 1.35 2003/12/11 23:27:08 ctriv Exp $
+# $Id: RR.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -9,7 +9,7 @@ use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
 
-$VERSION = (qw$Revision: 1.35 $)[1];
+$VERSION = (qw$Revision: 2.100 $)[1];
 
 =head1 NAME
 

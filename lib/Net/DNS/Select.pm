@@ -1,6 +1,6 @@
 package Net::DNS::Select;
 #
-# $Id: Select.pm,v 1.5 2003/09/03 04:41:50 ctriv Exp $
+# $Id: Select.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
 #
 
 use IO::Select;
@@ -9,7 +9,7 @@ use Carp;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$Revision: 1.5 $)[1];
+$VERSION = (qw$Revision: 2.100 $)[1];
 
 sub new {
 	my ($class, @socks) = @_;

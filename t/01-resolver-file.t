@@ -1,4 +1,4 @@
-# $Id: 01-resolver-file.t,v 1.6 2003/06/11 09:56:13 ctriv Exp $
+# $Id: 01-resolver-file.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
 
 
 use Test::More tests => 8;

@@ -1,6 +1,6 @@
 package Net::DNS::RR::TSIG;
 #
-# $Id: TSIG.pm,v 1.4 2003/09/03 04:41:51 ctriv Exp $
+# $Id: TSIG.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -13,7 +13,7 @@ use constant DEFAULT_ALGORITHM => "HMAC-MD5.SIG-ALG.REG.INT";
 use constant DEFAULT_FUDGE     => 300;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 1.4 $)[1];
+$VERSION = (qw$Revision: 2.100 $)[1];
 
 # a signing function for the HMAC-MD5 algorithm. This can be overridden using
 # the sign_func element

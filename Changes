@@ -1,6 +1,18 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.44 December 12, 2003
+
+	The Wrath of CPAN Release.
+	
+CPAN.pm doesn't understand the nature of revision numbers.  1.10 is 
+newer than 1.9; but CPAN.pm treats them as floats.  This is bad.
+All the internal version numbers in Net::DNS has been bumped to
+2.100 in order to fix this.
+
+No actual code changes in this release.
+
+
 *** 0.43 December 11, 2003
 
 Added warning of deprecation of Net::DNS::Packet::safe_push.  This will
@@ -340,4 +352,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.89 2003/12/12 00:15:12 ctriv Exp $
+$Id: Changes,v 2.100 2003/12/13 01:37:03 ctriv Exp $

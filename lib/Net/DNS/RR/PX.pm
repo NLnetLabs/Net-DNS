@@ -1,6 +1,6 @@
 package Net::DNS::RR::PX;
 #
-# $Id: PX.pm,v 1.5 2003/09/03 04:41:51 ctriv Exp $
+# $Id: PX.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,7 +9,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 1.5 $)[1];
+$VERSION = (qw$Revision: 2.100 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;

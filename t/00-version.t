@@ -1,4 +1,4 @@
-# $Id: 00-version.t,v 1.2 2003/09/24 22:28:49 ctriv Exp $
+# $Id: 00-version.t,v 2.101 2003/12/13 01:43:30 ctriv Exp $
 
 use Test::More;
 use File::Spec;
@@ -21,6 +21,7 @@ if (!$@ and $can) {
 
 foreach my $file (@files) {
 	my $version = MM->parse_version($file);
+	diag("$file\t=>\t$version") if $ENV{'NET_DNS_DEBUG'};
 	isnt("$file: $version", "$file: undef", "$file has a version");
 }
 

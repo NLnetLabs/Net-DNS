@@ -1,4 +1,4 @@
-# $Id: 05-rr-txt.t,v 1.3 2003/06/11 10:36:46 ctriv Exp $
+# $Id: 05-rr-txt.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
 
 use Test::More tests => 28;
 use strict;

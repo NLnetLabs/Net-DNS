@@ -1,6 +1,6 @@
 package Net::DNS::RR::Unknown;
 #
-# $Id: Unknown.pm,v 1.1 2003/12/11 23:26:36 ctriv Exp $
+# $Id: Unknown.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -8,7 +8,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 1.1 $)[1];
+$VERSION = (qw$Revision: 2.100 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;

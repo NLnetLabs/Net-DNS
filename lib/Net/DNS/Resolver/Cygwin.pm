@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Cygwin;
 #
-# $Id: Cygwin.pm,v 1.3 2003/12/11 10:11:48 ctriv Exp $
+# $Id: Cygwin.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Resolver::Base ();
 
 @ISA	 = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 1.3 $)[1];
+$VERSION = (qw$Revision: 2.100 $)[1];
 
 sub getregkey {
 	my $key	  = $_[0] . $_[1];
