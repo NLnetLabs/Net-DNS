@@ -2,7 +2,7 @@ Revision history for Net::DNS
 =============================
 
 
-*** 0.49_01
+*** 0.48_01 March 2005 (Version 0.49 release candidate 1)
 
 
 Fix: rt.cpan.org  #8882  
@@ -10,10 +10,11 @@ Fix: rt.cpan.org  #8882
      and #6149 	 
       Does not search multiple DNS servers
  
-      Net::DNS::Resolver will now use the other nameservers in the list if the RCODE of the answer
-      is not NOERROR (0)  or NXDOMAIN (3). When send() exhausted the last nameserver from the 
-      it will return the answer that was received from the last
-      nameserver that responded with an RCODE.
+      Net::DNS::Resolver will now use the other nameservers in the
+      list if the RCODE of the answer is not NOERROR (0) or NXDOMAIN
+      (3). When send() exhausted the last nameserver from the it will
+      return the answer that was received from the last nameserver
+      that responded with an RCODE.
 
       The errorstring will be set to "RCODE: <rcode from last packet>"
 
@@ -62,9 +63,11 @@ Fix: Ticket #11106
 
       Corrected in the README and in Makefile.PL
 
-Imported the data into another subversion repository. I made sure the
-numbers jumped, but I did not have access to the "original" subversion
-repository so I lost some of the history.
+
+Olaf Kolkman took over maintenance responsibility from Chris
+Reinardt. This involved importing the code into another subversion
+repository. I made sure the numbers jumped, but I did not have access
+to the "original" subversion repository so I lost some of the history.
 
 
 *** 0.48 Aug 12, 2004

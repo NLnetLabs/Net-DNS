@@ -30,7 +30,7 @@ BEGIN {
     require Exporter;
     
     @ISA     = qw(Exporter DynaLoader);
-    $VERSION = '0.49_01';
+    $VERSION = '0.48_01';
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 
