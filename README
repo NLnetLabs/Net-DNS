@@ -218,7 +218,7 @@ exercise caution when using Net::DNS to maintain a production
 nameserver via dynamic updates.  Always test your code *thoroughly*.
 The Net::DNS author accepts no blame if you corrupt your zone.  That
 warning in place, I am aware of at least one large company that has
-used Net::DNS to make hundreds of dynamic updates per day for nearly
+used Net::DNS to make thousands of dynamic updates per day for nearly
 three years without any problems.
 
 If you find a bug, please report it to the author along with the
@@ -245,7 +245,7 @@ Please use the following form to submit bug reports:
 10. COPYRIGHT
 -------------
 
-Copyright (c) 1997-2000 Michael Fuhr.  All rights reserved.  This
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
 
@@ -298,4 +298,4 @@ proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 1.10 2002/06/30 14:43:57 ctriv Exp $
+$Id: README,v 1.11 2002/10/15 22:12:44 ctriv Exp $

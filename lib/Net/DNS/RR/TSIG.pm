@@ -1,6 +1,6 @@
 package Net::DNS::RR::TSIG;
 
-# $Id: TSIG.pm,v 1.1 2002/02/13 04:07:50 ctriv Exp $
+# $Id: TSIG.pm,v 1.2 2002/10/14 21:11:46 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -13,6 +13,20 @@ use constant DEFAULT_ALGORITHM => "HMAC-MD5.SIG-ALG.REG.INT";
 use constant DEFAULT_FUDGE     => 300;
 
 @ISA = qw(Net::DNS::RR);
+
+# a signing function for the HMAC-MD5 algorithm. This can be overridden using
+# the sign_func element
+sub sign_hmac {
+	my ($key, $data) = @_;
+
+	$key =~ s/ //g;
+	$key = decode_base64($key);
+
+	my $hmac = Digest::HMAC_MD5->new($key);
+	$hmac->add($data);
+
+	return $hmac->digest;
+}
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -66,6 +80,7 @@ sub new_from_string {
 	$self->{"error"}       = 0;
 	$self->{"other_len"}   = 0;
 	$self->{"other_data"}  = "";
+	$self->{"sign_func"}   = \&sign_hmac;
 
 	# RFC 2845 Section 2.3
 	$self->{"class"} = "ANY";
@@ -118,62 +133,65 @@ sub rdatastr {
 	return $rdatastr;
 }
 
+# return the data that needs to be signed/verified. This is useful for
+# external TSIG verification routines
+sub sig_data {
+	my ($self, $packet) = @_;
+	my ($newpacket, $sigdata);
+
+	# XXX this is horrible.  $pkt = Net::DNS::Packet->clone($packet); maybe?
+	bless($newpacket = {},"Net::DNS::Packet");
+	%{$newpacket} = %{$packet};
+	bless($newpacket->{"header"} = {},"Net::DNS::Header");
+	$newpacket->{"additional"} = [];
+	%{$newpacket->{"header"}} = %{$packet->{"header"}};
+	@{$newpacket->{"additional"}} = @{$packet->{"additional"}};
+	shift(@{$newpacket->{"additional"}});
+	$newpacket->{"header"}{"arcount"}--;
+	$newpacket->{"compnames"} = {};
+
+	# Add the request MAC if present (used to validate responses).
+	$sigdata .= pack("H*", $self->{"request_mac"})
+	    if $self->{"request_mac"};
+
+	$sigdata .= $newpacket->data;
+
+	# Don't compress the record (key) name.
+	my $tmppacket = Net::DNS::Packet->new("");
+	$sigdata .= $tmppacket->dn_comp(lc($self->{"name"}), 0);
+	
+	$sigdata .= pack("n", $Net::DNS::classesbyname{uc($self->{"class"})});
+	$sigdata .= pack("N", $self->{"ttl"});
+	
+	# Don't compress the algorithm name.
+	$tmppacket->{"compnames"} = {};
+	$sigdata .= $tmppacket->dn_comp(lc($self->{"algorithm"}), 0);
+	
+	$sigdata .= pack("nN", 0, $self->{"time_signed"});	# bug
+	$sigdata .= pack("n", $self->{"fudge"});
+	$sigdata .= pack("nn", $self->{"error"}, $self->{"other_len"});
+	
+	$sigdata .= pack("nN", 0, $self->{"other_data"})
+	    if $self->{"other_data"};
+	
+	return $sigdata;
+}
+
 sub rr_rdata {
 	my ($self, $packet, $offset) = @_;
-	my ($hmac, $newpacket, $newoffset, $key, $sigdata);
 	my $rdata = "";
 
 	if (exists $self->{"key"}) {
-		$key = $self->{"key"};
-		$key =~ s/ //g;
-		$key = decode_base64($key);
+		# form the data to be signed
+		my $sigdata = $self->sig_data($packet);
 
-		$hmac = Digest::HMAC_MD5->new($key);
-		bless($newpacket = {},"Net::DNS::Packet");
-		$newoffset = $offset;
-		%{$newpacket} = %{$packet};
-		bless($newpacket->{"header"} = {},"Net::DNS::Header");
-		$newpacket->{"additional"} = [];
-		%{$newpacket->{"header"}} = %{$packet->{"header"}};
-		@{$newpacket->{"additional"}} = @{$packet->{"additional"}};
-		shift(@{$newpacket->{"additional"}});
-		$newpacket->{"header"}{"arcount"}--;
-		$newpacket->{"compnames"} = {};
-
-		my $sigdata;
-
-		# Add the request MAC if present (used to validate responses).
-		$sigdata .= pack("H*", $self->{"request_mac"})
-		    if $self->{"request_mac"};
-
-		$sigdata .= $newpacket->data;
-
-		# Don't compress the record (key) name.
-		my $tmppacket = Net::DNS::Packet->new("");
-		$sigdata .= $tmppacket->dn_comp(lc($self->{"name"}), 0);
-
-        	$sigdata .= pack("n", $Net::DNS::classesbyname{uc($self->{"class"})});
-        	$sigdata .= pack("N", $self->{"ttl"});
-
-		# Don't compress the algorithm name.
-		$tmppacket->{"compnames"} = {};
-		$sigdata .= $tmppacket->dn_comp(lc($self->{"algorithm"}), 0);
-
-		$sigdata .= pack("nN", 0, $self->{"time_signed"});	# bug
-		$sigdata .= pack("n", $self->{"fudge"});
-		$sigdata .= pack("nn", $self->{"error"}, $self->{"other_len"});
-
-		$sigdata .= pack("nN", 0, $self->{"other_data"})
-		    if $self->{"other_data"};
-
-		$hmac->add($sigdata);
-
-		$self->{"mac"} = $hmac->digest;
+		# and call the signing function
+		$self->{"mac"} = &{$self->{"sign_func"}}($self->{"key"}, $sigdata);
 		$self->{"mac_size"} = length($self->{"mac"});
 
-		# Don't compress the algorithm name.
-		$tmppacket->{"compnames"} = {};
-		$rdata .= $tmppacket->dn_comp($self->{"algorithm"}, 0);
+		# construct the signed TSIG record
+		$packet->{"compnames"} = {};
+		$rdata .= $packet->dn_comp($self->{"algorithm"}, 0);
 
 		$rdata .= pack("nN", 0, $self->{"time_signed"});	# bug
 		$rdata .= pack("nn", $self->{"fudge"}, $self->{"mac_size"});
@@ -280,6 +298,28 @@ Returns the Other Data.  This field should be empty unless the
 error is BADTIME, in which case it will contain the server's
 time as the number of seconds since 1 Jan 1970 00:00:00 UTC.
 
+=head2 sig_data
+
+     my $sigdata = $tsig->sig_data($packet);
+
+Returns the packet packed according to RFC2845 in a form for signing. This
+is only needed if you want to supply an external signing function, such as is 
+needed for TSIG-GSS. 
+
+=head2 sign_func
+
+     sub my_sign_fn($$) {
+	     my ($key, $data) = @_;
+	     
+	     return some_digest_algorithm($key, $data);
+     }
+
+     $tsig->sign_func(\&my_sign_fn);
+
+This sets the signing function to be used for this TSIG record. 
+
+The default signing function is HMAC-MD5.
+
 =head1 BUGS
 
 This code is still under development.  Use with caution on production
@@ -290,7 +330,9 @@ integers (RFC 2845, Sections 2.3 and 4.5.2).  The current implementation
 ignores the upper 16 bits; this will cause problems for times later
 than 19 Jan 2038 03:14:07 UTC.
 
-The only algorithm currently supported is HMAC-MD5.SIG-ALG.REG.INT.
+The only builtin algorithm currently supported is
+HMAC-MD5.SIG-ALG.REG.INT. You can use other algorithms by supplying an
+appropriate sign_func.
 
 =head1 COPYRIGHT
 
@@ -301,7 +343,9 @@ the same terms as Perl itself.
 =head1 ACKNOWLEDGMENT
 
 Most of the code in the Net::DNS::RR::TSIG module was contributed
-by Chris Turbeville.
+by Chris Turbeville. 
+
+Support for external signing functions was added by Andrew Tridgell.
 
 =head1 SEE ALSO
 

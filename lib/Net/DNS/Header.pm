@@ -5,7 +5,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use Net::DNS;
 
-# $Id: Header.pm,v 1.7 2002/08/20 16:27:40 ctriv Exp $
+# $Id: Header.pm,v 1.8 2002/10/12 19:38:30 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -109,10 +109,7 @@ Dumps the header data to the standard output.
 
 =cut
 
-sub print {
-	my $self = shift;
-	print $self->string;
-}
+sub print {	print $_[0]->string; }
 
 =head2 string
 
@@ -283,10 +280,12 @@ sub AUTOLOAD {
 	goto &{$AUTOLOAD};	
 }
 
-sub zocount { my $self = shift; $self->qdcount(@_); }
-sub prcount { my $self = shift; $self->ancount(@_); }
-sub upcount { my $self = shift; $self->nscount(@_); }
-sub adcount { my $self = shift; $self->arcount(@_); }
+sub zocount { &qdcount; }
+sub prcount { &ancount; }
+sub upcount { &nscount; }
+sub adcount { &arcount; }
+
+
 
 =head2 data
 

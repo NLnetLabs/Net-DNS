@@ -6,7 +6,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-# $Id: Question.pm,v 1.4 2002/05/28 08:08:25 ctriv Exp $
+# $Id: Question.pm,v 1.5 2002/10/12 19:49:26 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -100,17 +100,32 @@ known as C<zclass> and refers to the zone's class.
 =cut
 
 sub AUTOLOAD {
-	my $self = shift;
+	my ($self) = @_;
+	
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
 
 	Carp::croak "$name: no such method" unless exists $self->{$name};
-	return $self->{$name};
+
+	no strict q/refs/;
+	
+	*{$AUTOLOAD} = sub {
+		my ($self, $new_val) = @_;
+		
+		if (defined $new_val) {
+			$self->{"$name"} = $new_val;
+		}
+		
+		return $self->{"$name"};
+	};
+	
+	goto &{$AUTOLOAD};	
 }
 
-sub zname  { my $self = shift; $self->qname(@_);  }
-sub ztype  { my $self = shift; $self->qtype(@_);  }
-sub zclass { my $self = shift; $self->qclass(@_); }
+
+sub zname  { &qname;  }
+sub ztype  { &qtype;  }
+sub zclass { &qclass; }
 
 =head2 print
 
@@ -120,10 +135,7 @@ Prints the question record on the standard output.
 
 =cut
 
-sub print {
-	my $self = shift;
-	print $self->string, "\n";
-}
+sub print {	print $_[0]->string, "\n"; }
 
 =head2 string
 

@@ -1,6 +1,6 @@
-# $Id: 07-misc.t,v 1.3 2002/08/06 02:38:28 ctriv Exp $
+# $Id: 07-misc.t,v 1.4 2002/10/15 22:13:02 ctriv Exp $
 
-use Test::More tests => 16;
+use Test::More tests => 12;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -29,16 +29,6 @@ eval { $srv = Net::DNS::RR->new('_rvp._tcp.t.net-dns.org. 60 IN SRV 0 0 80 im.ba
 ok(!$@,  'No errors');
 ok($srv, 'SRV got made');
 
-
-#
-# Make sure that we aren't loading any RR modules that we don't need... 
-#   and check other autoloading stuff...
-#
-ok($Net::DNS::RR::_LOADED{'Net::DNS::RR::A'},   'Net::DNS::RR::A marked as loaded.');
-ok(!$Net::DNS::RR::_LOADED{'Net::DNS::RR::MX'}, 'Net::DNS::RR::MX is not marked as loaded.');
-
-ok($INC{'Net/DNS/RR/A.pm'},                     'Net::DNS::RR::A is loaded');
-ok(!$INC{'Net/DNS/RR/MX.pm'},                   'Net::DNS::RR::MX is not loaded.');
 
 
 #

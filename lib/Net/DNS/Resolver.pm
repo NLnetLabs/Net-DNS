@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.23 2002/09/20 07:01:59 ctriv Exp $
+# $Id: Resolver.pm,v 1.24 2002/10/14 21:12:07 ctriv Exp $
 
 =head1 NAME
 
@@ -708,14 +708,11 @@ sub send_tcp {
 		print ';; sending ', length($packet_data), " bytes\n"
 			if $self->{'debug'};
 
-		unless ($sock->send($lenmsg)) {
-			$self->errorstring($!);
-			print ";; ERROR: send_tcp: length send failed: $!\n"
-				if $self->{'debug'};
-			next;
-		}
-
-		unless ($sock->send($packet_data)) {
+		# note that we send the length and packet data in a single call
+		# as this produces a single TCP packet rather than two. This
+		# is more efficient and also makes things much nicer for sniffers.
+		# (ethereal doesn't seem to reassemble DNS over TCP correctly)
+		unless ($sock->send($lenmsg . $packet_data)) {
 			$self->errorstring($!);
 			print ";; ERROR: send_tcp: data send failed: $!\n"
 				if $self->{'debug'};

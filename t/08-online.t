@@ -1,6 +1,6 @@
-# $Id: 08-online.t,v 1.4 2002/08/15 15:44:53 ctriv Exp $
+# $Id: 08-online.t,v 1.5 2002/10/12 19:49:26 ctriv Exp $
 
-use Test::More tests => 50;
+use Test::More tests => 52;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -33,7 +33,7 @@ my @rrs = (
 );
 
 SKIP: {
-	skip 'Online testing disabled.', 49
+	skip 'Online testing disabled.', 51
 		unless -e 't/online.enabled';
 		
 
@@ -60,5 +60,17 @@ SKIP: {
 			is($answer->$meth(), $data->{$meth}, "$meth correct");
 		}
 	}
+	
+	my $check_serv_res = Net::DNS::Resolver->new;
+	
+	$check_serv_res->nameservers('a.t.net-dns.org');
+	my $ip = ($check_serv_res->nameservers)[0];
+	is($ip, '10.0.1.128', 'Nameservers() looks up IP.');
+	
+	$check_serv_res->nameservers('cname.t.net-dns.org');
+	$ip = ($check_serv_res->nameservers)[0];
+	is($ip, '10.0.1.128', 'Nameservers() looks up cname.');
+	
+	
 }
 		

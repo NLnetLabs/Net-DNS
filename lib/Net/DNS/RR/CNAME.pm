@@ -1,6 +1,6 @@
 package Net::DNS::RR::CNAME;
 
-# $Id: CNAME.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: CNAME.pm,v 1.3 2002/10/23 21:36:08 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -48,6 +48,13 @@ sub rr_rdata {
 	}
 
 	return $rdata;
+}
+
+# rdata contains a compressed domainname... we should not have that.
+sub _canonicalRdata {	
+	my ($self) = @_;
+
+	return $self->_name2wire($self->{"cname"});
 }
 
 1;

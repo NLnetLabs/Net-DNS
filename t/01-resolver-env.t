@@ -1,4 +1,4 @@
-# $Id: 01-resolver-env.t,v 1.2 2002/10/02 05:56:14 ctriv Exp $
+# $Id: 01-resolver-env.t,v 1.3 2002/10/12 19:49:26 ctriv Exp $
 
 
 use Test::More tests => 11;
@@ -12,14 +12,8 @@ BEGIN {
 	local $ENV{'RES_OPTIONS'}     = 'retrans:3 retry:2 debug';
 
     use_ok('Net::DNS'); 
-	
-	$ENV{'RES_NAMESERVERS'} = '10.0.1.128 10.0.2.128';
-	$ENV{'RES_SEARCHLIST'}  = 'net-dns.org lib.net-dns.org';
-	$ENV{'LOCALDOMAIN'}     = 't.net-dns.org';
-	$ENV{'RES_OPTIONS'}     = 'retrans:3 retry:2 debug';
-	
-	
 }
+
 
 SKIP: {
 	skip 'ENV parsing only supported on unix.', 10

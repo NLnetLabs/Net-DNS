@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 
-# $Id: RR.pm,v 1.25 2002/08/21 00:10:55 ctriv Exp $
+# $Id: RR.pm,v 1.26 2002/10/14 21:12:07 ctriv Exp $
 
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -69,6 +69,7 @@ BEGIN {
 		RT
 		SOA
 		SRV
+		TKEY
 		TSIG
 		TXT
 		X25
@@ -493,8 +494,8 @@ sub data {
 	my $data;
 
 
-	# Don't compress TSIG names and don't mess with EDNS0 packets
-	if (uc($self->{"type"}) eq "TSIG") {
+	# Don't compress TSIG or TKEY names and don't mess with EDNS0 packets
+	if (uc($self->{"type"}) eq "TSIG" || uc($self->{"type"}) eq "TKEY") {
 		my $tmp_packet = Net::DNS::Packet->new("");
 		$data = $tmp_packet->dn_comp($self->{"name"}, 0);
 	} elsif (uc($self->{"type"}) eq "OPT") {

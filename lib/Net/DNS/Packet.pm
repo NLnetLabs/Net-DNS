@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 
-# $Id: Packet.pm,v 1.9 2002/08/14 14:38:11 ctriv Exp $
+# $Id: Packet.pm,v 1.11 2002/10/12 19:16:14 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -64,6 +64,7 @@ sub new {
 	my %self;
 
 	$self{"compnames"} = {};
+	$self{'seen'}      = {};
 
   PARSE: {
 	if (ref($_[0])) {
@@ -149,6 +150,8 @@ sub new {
 				       ? (undef, "answer section incomplete")
 				       : undef;
 			}
+			
+			$self{'seen'}{$rrobj->string}++;
 
 			push(@{$self{"answer"}}, $rrobj);
 			$rrobj->print if $debug;
@@ -180,6 +183,8 @@ sub new {
 				       ? (undef, "authority section incomplete")
 				       : undef;
 			}
+			
+			$self{'seen'}{$rrobj->string}++;
 
 			push(@{$self{"authority"}}, $rrobj);
 			$rrobj->print if $debug;
@@ -209,6 +214,9 @@ sub new {
 				       : undef;
 			}
 
+	
+			$self{'seen'}{$rrobj->string}++;
+		
 			push(@{$self{"additional"}}, $rrobj);
 			$rrobj->print if $debug;
 		}
@@ -331,20 +339,10 @@ must not preexist.
 
 =cut
 
-sub answer {
-	my $self = shift;
-	return @{$self->{"answer"}};
-}
+sub answer { return @{$_[0]->{'answer'}}; }
 
-sub pre {
-	my $self = shift;
-	$self->answer(@_);
-}
-
-sub prerequisite {
-	my $self = shift;
-	$self->answer(@_);
-}
+sub pre          { &answer }
+sub prerequisite { &answer }
 
 =head2 authority, update
 
@@ -358,15 +356,9 @@ specifies the RRs or RRsets to be added or delted.
 
 =cut
 
-sub authority {
-	my $self = shift;
-	return @{$self->{"authority"}};
-}
+sub authority { return @{$_[0]->{'authority'}}; }
 
-sub update {
-	my $self = shift;
-	$self->authority(@_);
-}
+sub update    { &authority }
 
 =head2 additional
 
@@ -377,10 +369,8 @@ section of the packet.
 
 =cut
 
-sub additional {
-	my $self = shift;
-	return @{$self->{"additional"}};
-}
+sub additional { return @{$_[0]->{'additional'}}; }
+
 
 =head2 print
 
@@ -391,9 +381,8 @@ similar to that used in DNS zone files.
 
 =cut
 
-sub print {
-	my $self = shift;
-	print $self->string;
+sub print { 
+	print $_[0]->string;
 }
 
 =head2 string
@@ -544,7 +533,35 @@ sub push {
 		$self->{"header"}->adcount($adcount + @rr);
 	}
 	else {
-		Carp::cluck(qq(invalid section "$section"\n));
+		Carp::carp(qq(invalid section "$section"\n));
+		return;
+	}
+	
+	$self->{'seen'}{$_->string}++ for @rr;
+}
+
+=head2 safe_push
+
+    $packet->safe_push("pre", $rr);
+    $packet->safe_push("update", $rr);
+    $packet->safe_push("additional", $rr);
+
+    $packet->safe_push("update", $rr1, $rr2, $rr3);
+    $packet->safe_push("update", @rr);
+
+Adds unseen RRs to the specified section of the packet. This is useful
+to insure that the packets do not contain redundant RRs in any of the
+sections.
+
+=cut
+
+sub safe_push {
+	my ($self, $section, @rrs) = @_;
+	
+	foreach my $rr (@rrs) {
+		next if $self->{'seen'}->{$rr->string};
+		
+		$self->push($section, $rr);
 	}
 }
 

@@ -1,9 +1,20 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.30 7 Nov 2002
+
+Applied Andrew Tridgell's (tridge@samba.org) patch for TKEY support.
+
+Added Net::DNS::Packet->safe_push() to allow for automatically
+checking for duplicate RRs being pushed into a packet.  Inspired by Luis
+Munoz.
+
+Added more tests.
+
+
 *** 0.29 2 Oct 2002
 
-Fixed $_ from creaping our of scope in Resolver.pm. Thanks to
+Fixed $_ from creaping out of scope in Resolver.pm. Thanks to
 Ilya Martynov for finding the problem and the patch to fix it.
 
 Fixed divide by zero bug there is no usable network interface(s).
@@ -608,4 +619,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.33 2002/10/02 06:01:34 ctriv Exp $
+$Id: Changes,v 1.36 2002/11/07 13:13:17 ctriv Exp $

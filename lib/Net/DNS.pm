@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.41 2002/10/02 06:01:34 ctriv Exp $
+# $Id: DNS.pm,v 1.46 2002/11/07 13:04:31 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -17,7 +17,7 @@ use vars qw(
 	%rcodesbyval
 );
 
-$VERSION = "0.29";
+$VERSION = "0.30";
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -87,6 +87,7 @@ require Exporter;
 	"UID"		=> 101,		# non-standard
 	"GID"		=> 102,		# non-standard
 	"UNSPEC"	=> 103,		# non-standard
+	"TKEY"		=> 249,	        # RFC 2930
 	"TSIG"		=> 250,		# RFC 2931
 	"IXFR"		=> 251,		# RFC 1995
 	"AXFR"		=> 252,		# RFC 1035
