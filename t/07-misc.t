@@ -1,6 +1,6 @@
-# $Id: 07-misc.t,v 1.1 2002/08/01 08:10:48 ctriv Exp $
+# $Id: 07-misc.t,v 1.2 2002/08/05 06:55:22 ctriv Exp $
 
-use Test::More tests => 11;
+use Test::More tests => 14;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -30,4 +30,23 @@ ok(!$Net::DNS::RR::_LOADED{'Net::DNS::RR::MX'}, 'Net::DNS::RR::MX is not marked 
 
 ok($INC{'Net/DNS/RR/A.pm'},                     'Net::DNS::RR::A is loaded');
 ok(!$INC{'Net/DNS/RR/MX.pm'},                   'Net::DNS::RR::MX is not loaded.');
+
+
+#
+# Test that the 5.005 Use of uninitialized value at
+# /usr/local/lib/perl5/site_perl/5.005/Net/DNS/RR.pm line 639. bug is gone
+#
+my $warning = 0;
+{
+	
+	local $^W = 1;
+	local $SIG{__WARN__} = sub { $warning++ };
+	
+	my $rr = Net::DNS::RR->new('mx.t.net-dns.org 60 IN MX 10 a.t.net-dns.org');
+	ok($rr, 'RR created');
+
+	is($rr->preference, 10, 'Preference works');
+}
+
+is($warning, 0, 'No evil warning');
 

@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 
-# $Id: RR.pm,v 1.19 2002/08/01 08:51:40 ctriv Exp $
+# $Id: RR.pm,v 1.20 2002/08/05 07:06:56 ctriv Exp $
 
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -599,7 +599,7 @@ sub _name2wire   {
 sub AUTOLOAD {
 	my ($self) = @_;  # If we do shift here, it will mess up the goto below.
 	
-	my ($class, $name) = $AUTOLOAD =~ m/^(.*)::(.*)$/;
+	my ($name) = $AUTOLOAD =~ m/^.*::(.*)$/;
 	
 	# XXX -- We should test that we do in fact carp on unknown methods.	
 	unless (exists $self->{$name}) {
@@ -628,7 +628,7 @@ AMEN
 	no strict q/refs/;
 	
 	# Build a method in the class.
-	*{"$class::$name"} = sub {
+	*{$AUTOLOAD} = sub {
 		my ($self, $new_val) = @_;
 				
 		if ($new_val) {
@@ -639,7 +639,7 @@ AMEN
 	};
 	
 	# And jump over to it.
-	goto &{"$class::$name"};
+	goto &{$AUTOLOAD};
 }
 
 

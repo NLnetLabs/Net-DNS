@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.11 2002/08/01 09:57:10 ctriv Exp $
+# $Id: Makefile.PL,v 1.12 2002/08/05 06:56:12 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 
@@ -11,8 +11,8 @@ properly with older perls such as yours, but bugs may lurk.
 
 AMEN
 
- # Check if we have internet connection
- # (I lifted this code from LWP... many thanks for this and more!)
+# Check if we have internet connection
+# (I lifted this code from LWP... many thanks for this and more!)
 require IO::Socket;
 my $s = IO::Socket::INET->new(
 	PeerAddr => "www.google.com:80",
@@ -33,7 +33,7 @@ EOT
 		open(ENABLED, ">t/online.enabled") || die "Can't touch ./t/online.enabled $!";
 		close(ENABLED);
 	} else {
-		unlink("t/online.enabled"); # just to shure...
+		unlink("t/online.enabled"); # just to be shure...
 	}
 }
 

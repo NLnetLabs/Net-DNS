@@ -1,6 +1,12 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.26 5 Aug 2002
+
+Fixed various bugs in the test suite.
+
+Fixed warning in Net::DNS::RR::AUTOLOAD with perl 5.005.
+
 *** 0.25 1 Aug 2002
 
 Implemented autoloading of the RR subclasses.  This provides a good
@@ -569,4 +575,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.25 2002/08/01 10:14:46 ctriv Exp $
+$Id: Changes,v 1.27 2002/08/05 20:06:23 ctriv Exp $
