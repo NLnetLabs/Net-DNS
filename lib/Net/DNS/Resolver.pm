@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.30 2003/05/08 07:07:04 ctriv Exp $
+# $Id: Resolver.pm,v 1.31 2003/05/25 05:15:03 ctriv Exp $
 
 =head1 NAME
 
@@ -703,7 +703,7 @@ A and IN.  If the name looks like an IP address (4 dot-separated numbers),
 then an appropriate PTR query will be performed.
 
 Returns a C<Net::DNS::Packet> object whether there were any answers or not.
-Use C<$packet-E<gt>header-E<gt>ancount> or C<$packet-E<gt>answer> to find out
+Use C<<$packet->header->ancount>> or C<<$packet->answer>> to find out
 if there were any records in the answer section.  Returns C<undef> if there
 was an error.
 
@@ -997,7 +997,7 @@ sub send_udp {
     $socket = $res->bgsend('user.passwd.example.com', 'TXT', 'HS');
 
 Performs a background DNS query for the given name, i.e., sends a
-query packet to the first nameserver listed in C<$res>->C<nameservers>
+query packet to the first nameserver listed in C<<$res->nameservers>>
 and returns immediately without waiting for a response.  The program
 can then perform other tasks while waiting for a response from the 
 nameserver.
@@ -1008,8 +1008,8 @@ A and IN.  If the name looks like an IP address (4 dot-separated numbers),
 then an appropriate PTR query will be performed.
 
 Returns an C<IO::Socket::INET> object.  The program must determine when
-the socket is ready for reading and call C<$res>->C<bgread> to get
-the response packet.  You can use C<$res>->C<bgisready> or C<IO::Select>
+the socket is ready for reading and call C<<$res->bgread>> to get
+the response packet.  You can use C<<$res->bgisready>> or C<IO::Select>
 to find out if the socket is ready before reading it.
 
 =cut
@@ -1109,7 +1109,7 @@ sub bgread {
     $socket = undef;
 
 Determines whether a socket is ready for reading.  The argument is
-an C<IO::Socket> object returned by C<$res>->C<bgsend>.
+an C<IO::Socket> object returned by C<<$res->bgsend>>.
 
 Returns true if the socket is ready, false if not.
 

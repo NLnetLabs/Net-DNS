@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.57 2003/05/22 21:31:49 ctriv Exp $
+# $Id: DNS.pm,v 1.60 2003/05/26 06:54:54 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -18,7 +18,7 @@ use vars qw(
 );
 
 
-$VERSION = "0.34_03";
+$VERSION = '0.35';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -232,55 +232,62 @@ I<DNS and BIND> (Albitz & Liu) for details.
 
 =head2 Resolver Objects
 
-A resolver object is an instance of the C<Net::DNS::Resolver> class.
-A program can have multiple resolver objects, each maintaining
-its own state information such as the nameservers to be queried, 
-whether recursion is desired, etc.
+A resolver object is an instance of the
+L<Net::DNS::Resolver|Net::DNS::Resolver> class. A program can have
+multiple resolver objects, each maintaining its own state information
+such as the nameservers to be queried, whether recursion is desired,
+etc.
 
 =head2 Packet Objects
 
-C<Net::DNS::Resolver> queries return C<Net::DNS::Packet> objects.  Packet
-objects have five sections:
+L<Net::DNS::Resolver|Net::DNS::Resolver> queries return
+L<Net::DNS::Packet|Net::DNS::Packet> objects.  Packet objects have five
+sections:
 
 =over 3
 
 =item *
 
-The header section, a C<Net::DNS::Header> object.
+The header section, a L<Net::DNS::Header|Net::DNS::Header> object.
 
 =item *
 
-The question section, a list of C<Net::DNS::Question> objects.
+The question section, a list of L<Net::DNS::Question|Net::DNS::Question>
+objects.
 
 =item *
 
-The answer section, a list of C<Net::DNS::RR> objects.
+The answer section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
 
 =item *
 
-The authority section, a list of C<Net::DNS::RR> objects.
+The authority section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
 
 =item *
 
-The additional section, a list of C<Net::DNS::RR> objects.
+The additional section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
 
 =back
 
-The C<Net::DNS::Update> package is a front-end to C<Net::DNS::Packet>
-for creating packet objects to be used in dynamic updates.
+The L<Net::DNS::Update|Net::DNS::Update> package is a front-end to
+L<Net::DNS::Packet|Net::DNS::Packet> for creating packet objects to be
+used in dynamic updates.
 
 =head2 Header Objects
 
-C<Net::DNS::Header> objects represent the header section of a DNS packet.
+L<Net::DNS::Header|Net::DNS::Header> objects represent the header
+section of a DNS packet.
 
 =head2 Question Objects
 
-C<Net::DNS::Question> objects represent the question section of a DNS packet.
+L<Net::DNS::Question|Net::DNS::Question> objects represent the question
+section of a DNS packet.
 
 =head2 RR Objects
 
-C<Net::DNS::RR> is the base class for DNS resource record (RR) objects in
-the answer, authority, and additional sections of a DNS packet.
+L<Net::DNS::RR|Net::DNS::RR> is the base class for DNS resource record
+(RR) objects in the answer, authority, and additional sections of a DNS
+packet.
 
 Don't assume that RR objects will be of the type you requested -- always
 check an RR object's type before calling any of its methods.
@@ -306,10 +313,10 @@ Returns the version of Net::DNS.
     my $res = Net::DNS::Resolver->new;
     my  @mx = mx($res, "example.com");
 
-Returns a list of C<Net::DNS::RR::MX> objects representing the MX
-records for the specified name; the list will be sorted by preference.
-Returns an empty list if the query failed or no MX records were
-found.
+Returns a list of L<Net::DNS::RR::MX|Net::DNS::RR::MX> objects
+representing the MX records for the specified name; the list will be
+sorted by preference. Returns an empty list if the query failed or no MX
+records were found.
 
 This method does not look up A records -- it only performs MX queries.
 
@@ -433,9 +440,8 @@ dynamic updates.
           next unless $rr->type eq "A";
           print $rr->address, "\n";
       }
-  }
-  else {
-      print "query failed: ", $res->errorstring, "\n";
+  } else {
+      warn "query failed: ", $res->errorstring, "\n";
   }
 
 =head2 Find the nameservers for a domain.
@@ -445,13 +451,12 @@ dynamic updates.
   my $query = $res->query("example.com", "NS");
   
   if ($query) {
-      foreach $rr ($query->answer) {
-          next unless $rr->type eq "NS";
+      foreach $rr (grep { $_->type eq 'NS' } $query->answer) {
           print $rr->nsdname, "\n";
       }
   }
   else {
-      print "query failed: ", $res->errorstring, "\n";
+      warn "query failed: ", $res->errorstring, "\n";
   }
 
 =head2 Find the MX records for a domain.
@@ -465,9 +470,8 @@ dynamic updates.
       foreach $rr (@mx) {
           print $rr->preference, " ", $rr->exchange, "\n";
       }
-  }
-  else {
-      print "can't find MX records for $name: ", $res->errorstring, "\n";
+  } else {
+      warn "Can't find MX records for $name: ", $res->errorstring, "\n";
   }
 
 
@@ -479,8 +483,7 @@ dynamic updates.
   
   if ($query) {
       ($query->answer)[0]->print;
-  }
-  else {
+  } else {
       print "query failed: ", $res->errorstring, "\n";
   }
 
@@ -536,14 +539,13 @@ has arrived.
 	      $sel->remove($sock);
 	      $sock = undef;
       }
-  }
-  else {
-      print "timed out after $timeout seconds\n";
+  } else {
+      warn "timed out after $timeout seconds\n";
   }
 
 =head1 BUGS
 
-C<Net::DNS> is slow.  Real slow.
+C<Net::DNS> is slow.
 
 For other items to be fixed, please see the TODO file included with
 the source distribution.

@@ -24,15 +24,6 @@ To Do list for Net::DNS
 		            $ans->authority);
   - IPv6 Support (?)		       
 
-* Work on the manual pages:
-
-  - Review the examples in the Net::DNS manual page.
-
-  - Make "->" non-breaking.
-
-  - Reorganize to put the most frequently-used methods first.  Suggested
-    by John Line.
-
 * Get rid of .* in AAAA.pm; write more tests for AAAA.pm.
 
 * Allow Net::DNS::RR::LOC->latlon to set the lat/lon.
@@ -41,12 +32,6 @@ To Do list for Net::DNS
 
   - Append the default zone in update packets if the name doesn't
     contain a dot.  Does this break people's code?
-
-  - Add the "new_from_string" method to the following RR types:
-
-      EID
-      NIMLOC
-      NULL
 
   - Do sanity checking on user-created RR objects.  Update the BUGS
     section in RR.pm when this is complete.
@@ -83,10 +68,6 @@ To Do list for Net::DNS
 * Restructure some of the code.  Some things to look at:
 
   - Net::DNS::Resolver->send (needs to be broken into smaller pieces).
-
-  - Net::DNS::Packet->dn_expand (get rid of the recursive call).
-
-  - Passing of references between Net::DNS::Packet and Net::DNS::RR.
 
 * Add more RR types.  Currently unimplemented are:
 
@@ -160,4 +141,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 1.6 2003/03/06 18:12:00 ctriv Exp $
+$Id: TODO,v 1.7 2003/05/25 05:27:34 ctriv Exp $

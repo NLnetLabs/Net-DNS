@@ -1,6 +1,10 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.35 May 26 2003
+
+POD fixes, added tests for POD.
+
 *** 0.34_03 May 22 2003
 
 Reworked Makefile.PL to try and detect if you have a working C compiler.
@@ -687,4 +691,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.52 2003/05/23 01:01:29 ctriv Exp $
+$Id: Changes,v 1.54 2003/05/26 06:53:54 ctriv Exp $

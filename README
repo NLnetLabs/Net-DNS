@@ -115,6 +115,17 @@ To build this module, run the following commands:
     make test
     make install
 
+Net::DNS can optionally link to the libresolv library.  This speeds
+up parts of the packet parsing process.  The Makefile.PL script will
+attempt to determine if the library can be used.  To override 
+Makefile.PL's guess, use the '--xs' option to force linking the library:
+
+	perl Makefile.PL --xs
+	
+Use the '--pm' option to use the pure perl version:
+
+	perl Makefile.PL --pm
+
 
 5. RUNNING TESTS
 ----------------
@@ -302,4 +313,4 @@ proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 1.12 2002/11/15 10:43:41 ctriv Exp $
+$Id: README,v 1.13 2003/05/26 06:53:40 ctriv Exp $
