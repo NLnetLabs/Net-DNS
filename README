@@ -13,10 +13,12 @@ TABLE OF CONTENTS
 6.  Demonstration Scripts
 7.  Dynamic Updates
 8.  Signed Queries & Updates
-9.  Bugs
-10. Copyright
-11. Author Information
-12. Acknowledgments
+9.  DNSSEC
+10. Bugs
+11. Copyright
+12. Author Information
+13. Staying Tuned
+14. Acknowledgments
 
 
 1. DESCRIPTION
@@ -54,15 +56,6 @@ The following link will always be the current released version:
 
     http://www.net-dns.org/download/Net-DNS-release.tar.gz
     
-Additionally a subversion repository is made available through
-
-	http://www.net-dns.org/svn/net-dns/
-
-The version on the "trunk" (http://www.net-dns.org/svn/net-dns/trunk) is
-the version that is targeted for next release.
-
-Please note that the SVN version at any given moment may be broken.
-
 
 
 3. PREREQUISITES
@@ -207,12 +200,21 @@ on production systems.  Feedback on TSIG functionality would be most
 welcome.
 
 
-9. BUGS
--------
+9. DNSSEC
+---------
 
-Net::DNS, while nearly four years old, is still under development
-and is sure to contain a few bugs.  Please see the TODO and Changes
-files for more information.
+The extensions to make Net::DNS DNSSEC aware are distributed seperatly
+as Net::DNS::SEC. The package is available from CPAN.  Because of its
+dependency on Crypt::OpenSSL and other not so standard libraries, it
+is distributed as a seperate package.
+
+
+10. BUGS
+--------
+
+Net::DNS, while over four years old, is still under development and is
+sure to contain a few bugs.  Please see the TODO and Changes files for
+more information.
 
 I recommend that you exercise caution when using Net::DNS to maintain a
 production nameserver via dynamic updates.  Always test your code
@@ -242,7 +244,7 @@ to insert some debugging lines and report back on the results.
 The more help and information you can provide, the better.
 
 
-10. COPYRIGHT
+11. COPYRIGHT
 -------------
 
 Copyright (c) 1997-2002 Michael Fuhr. 
@@ -255,7 +257,7 @@ All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
 
 
-11. AUTHOR INFORMATION
+12. AUTHOR INFORMATION
 ----------------------
 
 Net::DNS is currently maintained by:
@@ -271,13 +273,35 @@ Net::DNS was created by:
 	mike@fuhr.org 
 
 
-12. ACKNOWLEDGMENTS
--------------------
+13. STAYING TUNED
+--------------------
 
+http://www.net-dns.org is a web site dedicated to the development of
+Net::DNS. Announcements about Net::DNS and Net::DNS::SEC will be done
+through the Net::DNS weblog at http://www.net-dns.org/blog/. An RSS
+feed for the weblog is available.
+
+
+If you want to have access to the latest and greatest code a
+subversion repository is made available through
+
+	http://www.net-dns.org/svn/net-dns/
+
+The version on the "trunk" (http://www.net-dns.org/svn/net-dns/trunk) is
+the version that is targeted for next release.
+
+Please note that code from the SVN repositories trunk and development
+branches may be broken at any time. 
+
+
+13. ACKNOWLEDGMENTS
+-------------------
 
 Thanks to Mike for letting me take care of his baby.
 
-Thanks to Rob Brown for all their patches and input.
+Thanks to Chris for maintaing Net::DNS for a couple of years.
+
+Thanks to Rob Brown for all his patches and input.
 
 Thanks to all who have used Net::DNS and reported bugs, made
 suggestions, contributed code, and encouraged me to add certain
@@ -298,7 +322,9 @@ which I've used exclusively while developing Net::DNS.
 Thanks to Andreas Gustafsson for DNAME support, and for all the work
 he has done on BIND 9.
 
-Thanks to the team that maintains ethereal.
+Thanks to the team that maintains ethereal, without its marvelous
+interface debuging of bugs in wireformat would be so much more
+difficult.
 
 Thanks to the thousands who participate in the open-source community.
 I've always developed Net::DNS using open-source systems and I'm

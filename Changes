@@ -11,31 +11,34 @@ Fix: rt.cpan.org  #8882
       Does not search multiple DNS servers
  
       Net::DNS::Resolver will now use the other nameservers in the
-      list if the RCODE of the answer is not NOERROR (0) or NXDOMAIN
-      (3). When send() exhausted the last nameserver from the it will
-      return the answer that was received from the last nameserver
-      that responded with an RCODE.
+      list if the RCODE of the answer is not NO ERROR (0) or NAME
+      ERROR (3). When send() exhausted the last nameserver from the it
+      will return the answer that was received from the last
+      nameserver that responded with an RCODE.
 
-      The errorstring will be set to "RCODE: <rcode from last packet>"
+      The error string will be set to "RCODE: <rcode from last packet>"
 
 
-Fix: rt.cpan.org #8803 
+Fix: rt.cpan.org #8803  
+
       TXT records don't work with semicolons 
 
-      Since we are expecting "zonefile" presentation at input 
-      a comment will need to be escaped ( \; ).
+      Since we are expecting presentation format at input a comment
+      will need to be escaped ( \; ).
 
-      It could be argued that this is a to strict interpertation of 
+      It could be argued that this is a to strict interpretation of 
       1035 section 5.1.
 
       While working on this I discovered there are more problems with
-      TXT RRs. Eg; 0100 is a perfectly legal character string that
-      should be represented as "\000" in a zonefile. Net::DNS does 
-      pass character strings with "non-ASCII" chars from the wire
-      to the char_str_lst array but the print functions do not
-      properly escape them when prining.
+      TXT RRs. e.g.; '0100' (a character string content represented in
+      hex) is a perfectly legal and should be represented as "\000" in
+      presentation format. Net::DNS does pass character strings with
+      "non-ASCII" chars from the wire to the char_str_lst array but
+      the print functions do not properly escape them when printing.
 
-      Properly dealing with zonefile presentation format and binary 
+      Some tests with TXT RRs added to 07-misc.t
+
+      Properly dealing with zone file presentation format and binary 
       data is still to be done.
 
 

@@ -1,6 +1,24 @@
 To Do list for Net::DNS
 =======================
 
+( While taking over Net::DNS maintenance I've also inhereted this TODO list.
+  I have not yet "updated" the TODO list to reflect my feeling of priority 
+  with these items. 
+
+  Olaf March 2005
+)
+
+
+* Proper handling of binary data; The mapping from zonefile format to wire
+  format is not consistent. This is partly due to variations in
+  dn_expand functions in libresolv, and partly due because of not 
+  being implemented.
+
+  This only bytes us in special occassions, like 8 bit characters in 
+  character-strings (TXT RR data).
+
+   (Coming Soon, there is a branch on the Subversion repository)
+
 * Work on Resolver.pm:
 
   - Show more info about the query when $res->debug(1).
@@ -11,25 +29,18 @@ To Do list for Net::DNS
 
   - Work on efficiency of IO::Socket handling.
 
-  - Implement AAONLY queries.  Here's a code fragment to set the
+  - Implement AA ONLY queries.  Here's a code fragment to set the
     nameserver list to the hosts returned in the authority section:
 
 	  $res->nameservers(map  { $_->nsdname }
 	                    grep { $_->type eq "NS" }
 		            $ans->authority);
 
-  - IPv6 Support (Coming Soon!)		       
+  - IPv6 Support (Coming Soon, there is a branch on the Subversion
+    repository)
   
   - Need more tests
 
-
-* Proper handling of binary data; The mapping from zonefile format to wire
-  format is not consistent. This is partly due to variations in
-  dn_expand functions in libresolv, and partly due because of not 
-  being implemented.
-
-  This only bytes us in special occassions, like 8 bit characters in 
-  character-strings (TXT RR data).
 
 * Get rid of .* in AAAA.pm; write more tests for AAAA.pm.
 
@@ -98,4 +109,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO 101 2004-08-12 05:12:05Z ctriv $
+$Id$
