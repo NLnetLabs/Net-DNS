@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.12 2002/08/05 06:56:12 ctriv Exp $
+# $Id: Makefile.PL,v 1.13 2002/08/10 04:06:27 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 
@@ -48,6 +48,7 @@ WriteMakefile(
 		Digest::MD5		 => 2.12,
 		Digest::HMAC_MD5 => 1.00,
 	},
+	'clean'			=> { FILES => 't/online.enabled' },
 	
    ($] >= 5.005 ?    
 	('AUTHOR'		=> 'Chris Reinhardt <ctriv@net-dns.org>',

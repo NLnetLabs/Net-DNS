@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.17 2002/08/01 08:53:50 ctriv Exp $
+# $Id: Resolver.pm,v 1.19 2002/08/11 05:35:15 ctriv Exp $
 
 =head1 NAME
 
@@ -951,7 +951,7 @@ sub bgsend {
 
 	unless ($sock->send($packet_data, 0, $dst_sockaddr)) {
 		my $err = $!;
-		print ";; send ERROR($dstaddr): $err\n";
+		print ";; send ERROR($dstaddr): $err\n" if $self->{'debug'};
 		$self->errorstring($err);
 		return;
 	}
@@ -974,27 +974,27 @@ The programmer should close or destroy the socket object after reading it.
 =cut
 
 sub bgread {
-	my $self = shift;
-	my $sock = shift;
+	my ($self, $sock) = @_;
 
 	my $buf = '';
 
-	my $sock2 = $sock->recv($buf, $self->_packetsz);
-	if ($sock2) {
-		print ';; answer from ', $sock2->peerhost, ':',
-		      $sock2->peerport, ' : ', length($buf), " bytes\n"
+	my $peeraddr = $sock->recv($buf, $self->_packetsz);
+	
+	if ($peeraddr) {
+		print ';; answer from ', $sock->peerhost, ':',
+		      $sock->peerport, ' : ', length($buf), " bytes\n"
 			if $self->{'debug'};
 
 		my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
+		
 		if (defined $ans) {
 			$self->errorstring($ans->header->rcode);
-		}
-		elsif (defined $err) {
+		} elsif (defined $err) {
 			$self->errorstring($err);
 		}
+		
 		return $ans;
-	}
-	else {
+	} else {
 		$self->errorstring($!);
 		return;
 	}

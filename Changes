@@ -1,11 +1,26 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.27 15 Aug 2002
+
+Added (untested) support for perl 5.004.
+
+We now allow whitespace at the begining of a RR.
+
+Fixed an issue that gave Net::DNS::SEC problems, %Net::DNS::RR::RR is now 
+in a scope that the Net::DNS::SEC hook can see it from.
+
+Fixed SRV records.
+
+Fixed debug message in Net::DNS::Resolver::bgread().
+
+
 *** 0.26 5 Aug 2002
 
 Fixed various bugs in the test suite.
 
 Fixed warning in Net::DNS::RR::AUTOLOAD with perl 5.005.
+
 
 *** 0.25 1 Aug 2002
 
@@ -575,4 +590,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.27 2002/08/05 20:06:23 ctriv Exp $
+$Id: Changes,v 1.30 2002/08/15 15:44:01 ctriv Exp $

@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 
-# $Id: RR.pm,v 1.20 2002/08/05 07:06:56 ctriv Exp $
+# $Id: RR.pm,v 1.22 2002/08/14 14:36:37 ctriv Exp $
 
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -34,48 +34,51 @@ warning message and C<Net::DNS::RR> will return C<undef> to the caller.
 =cut
 #' Stupid Emacs (I Don't even USE emacs!)
 
+#'  Ok... emacs must die
 
 # %RR needs to be available within the scope of the BEGIN block.
 # $RR_REGEX is a global just to be on the safe side.  
 # %_LOADED is used internally for autoloading the RR subclasses.
 use vars qw(%RR %_LOADED $RR_REGEX);
 
-%RR = map { $_ => 1 } qw(
-	A
-	AAAA
-	AFSDB
-	CNAME
-	CERT
-	DNAME
-	EID
-	HINFO
-	ISDN
-	LOC
-	MB
-	MG
-	MINFO
-	MR
-	MX
-	NAPTR
-	NIMLOC
-	NS
-	NSAP
-	NULL
-	PTR
-	PX
-	RP
-	RT
-	SOA
-	SRV
-	TSIG
-	TXT
-	X25
-	OPT
-);
-
-#  Only load DNSSEC if available
-# 
 BEGIN {
+
+	%RR = map { $_ => 1 } qw(
+		A
+		AAAA
+		AFSDB
+		CNAME
+		CERT
+		DNAME
+		EID
+		HINFO
+		ISDN
+		LOC
+		MB
+		MG
+		MINFO
+		MR
+		MX
+		NAPTR
+		NIMLOC
+		NS
+		NSAP
+		NULL
+		PTR
+		PX
+		RP
+		RT
+		SOA
+		SRV
+		TSIG
+		TXT
+		X25
+		OPT
+	);
+
+	#  Only load DNSSEC if available
+	# 
+
 	eval { require Net::DNS::RR::SIG; };
 
 	unless ($@) {
@@ -114,7 +117,8 @@ sub build_regex {
 	my $types   = join('|', sort { length $b <=> length $a } keys %Net::DNS::typesbyname);
 				
 	$RR_REGEX   = " ^ 
-    	            ([*a-zA-Z0-9.-]+) # name
+					\\s*
+    	            ([*_a-zA-Z0-9.-]+) # name
     	            \\s+                
     	            (\\d+)?           
     	            \\s*
@@ -231,7 +235,7 @@ sub new_from_string {
 	$rrstring   =~ s/;.*//g;
 	
 	($rrstring =~ m/$RR_REGEX/xso) || 
-		confess qq|qInteral Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
+		confess qq|qInternal Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
 
 	my $name    = $1;
 	my $ttl     = $2 || 0;

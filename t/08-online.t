@@ -1,4 +1,4 @@
-# $Id: 08-online.t,v 1.3 2002/08/01 09:57:30 ctriv Exp $
+# $Id: 08-online.t,v 1.4 2002/08/15 15:44:53 ctriv Exp $
 
 use Test::More tests => 50;
 use strict;
@@ -40,7 +40,7 @@ SKIP: {
 	foreach my $data (@rrs) {
 		my $packet = $res->send($data->{'name'}, $data->{'type'}, 'IN');
 		
-		ok($packet, 'Got an answer for $data->{name} IN $data->{type}');
+		ok($packet, "Got an answer for $data->{name} IN $data->{type}");
 		is($packet->header->qdcount, 1, 'Only one question');
 		is($packet->header->ancount, 1, 'Got single answer');
 		

@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 
-# $Id: Packet.pm,v 1.8 2002/08/01 09:42:27 ctriv Exp $
+# $Id: Packet.pm,v 1.9 2002/08/14 14:38:11 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -615,7 +615,7 @@ sub dn_comp {
 	$name = "" unless defined($name);
 
 	my $compname = "";
-	my @names = map { s/\\\././g; $_ } split(/(?<!\\)\./, $name);
+	my @names = map { s/\\\././g; $_ } split(/(?=[^\\]|^)\./, $name);
 
 	while (@names) {
 		my $dname = join(".", @names);

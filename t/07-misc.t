@@ -1,6 +1,6 @@
-# $Id: 07-misc.t,v 1.2 2002/08/05 06:55:22 ctriv Exp $
+# $Id: 07-misc.t,v 1.3 2002/08/06 02:38:28 ctriv Exp $
 
-use Test::More tests => 14;
+use Test::More tests => 16;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -19,6 +19,15 @@ is($rr->ttl,      60,               'TTL is correct'    );
 is($rr->class,   'IN',              'CLASS is correct'  );
 is($rr->type,    'A',               'TYPE is correct'   );
 is($rr->address, '10.0.0.1',        'Address is correct');
+
+#
+# Make sure the underscore in SRV hostnames work.
+#
+my $srv;
+eval { $srv = Net::DNS::RR->new('_rvp._tcp.t.net-dns.org. 60 IN SRV 0 0 80 im.bastardsinc.biz'); };
+
+ok(!$@,  'No errors');
+ok($srv, 'SRV got made');
 
 
 #
