@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 2.105 2004/02/10 00:27:47 ctriv Exp $
+# $Id: Base.pm,v 2.107 2004/02/21 12:40:29 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use IO::Select;
 use Net::DNS;
 use Net::DNS::Packet;
 
-$VERSION = (qw$Revision: 2.105 $)[1];
+$VERSION = (qw$Revision: 2.107 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -119,7 +119,11 @@ sub _process_args {
 				UNIVERSAL::isa($args{$attr}, 'ARRAY');
 		}
 		
-		$self->{$attr} = $args{$attr};
+		if ($attr eq 'nameservers') {
+			$self->nameservers(@{$args{$attr}});
+		} else {
+			$self->{$attr} = $args{$attr};
+		}
 	}
 }
 			
@@ -325,14 +329,19 @@ sub search {
 	my ($name, $type, $class) = @_;
 	my $ans;
 
-	$type  = 'A'  unless defined($type);
-	$class = 'IN' unless defined($class);
+	$type  ||= 'A';
+	$class ||= 'IN';
 
 	# If the name looks like an IP address then do an appropriate
 	# PTR query.
 	if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
 		$name = "$4.$3.$2.$1.in-addr.arpa.";
 		$type = 'PTR';
+	}
+	
+	# pass IPv6 addresses right to query()
+	if (index($name, ':') > 0 and index($name, '.') < 0) {
+		return $self->query($name);
 	}
 
 	# If the name contains at least one dot then try it as is first.
@@ -368,8 +377,8 @@ sub search {
 sub query {
 	my ($self, $name, $type, $class) = @_;
 
-	$type  = 'A'  unless defined($type);
-	$class = 'IN' unless defined($class);
+	$type  ||= 'A';
+	$class ||= 'IN';
 
 	# If the name doesn't contain any dots then append the default domain.
 	if ((index($name, '.') < 0) && (index($name, ':') < 0) && $self->{'defnames'}) {

@@ -1,11 +1,11 @@
-# $Id: 08-online.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: 08-online.t,v 2.101 2004/02/21 12:40:29 ctriv Exp $
 
 use Test::More;
 use strict;
 
 BEGIN {
 	if (-e 't/online.enabled') {
-		plan tests => 52;
+		plan tests => 60;
 	} else {
 		plan skip_all => 'Online tests disabled.';
 	}
@@ -76,3 +76,31 @@ is_deeply($names, $wanted_names, "mx() seems to be working");
 		
 # some people seem to use mx() in scalar context
 is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
+
+#
+# test that search() and query() DTRT with reverse lookups
+#
+{
+	my @tests = (
+		{
+			ip => '198.41.0.4',
+			host => 'a.root-servers.net',
+		},
+		{
+			ip => '2001:500:1::803f:235',
+			host => 'h.root-servers.net',
+		},
+	);
+
+	foreach my $test (@tests) {
+		foreach my $method (qw(search query)) {
+			my $packet = $res->$method($test->{'ip'});
+			
+			isa_ok($packet, 'Net::DNS::Packet');
+			
+			next unless $packet;
+			
+			is(($packet->answer)[0]->ptrdname, $test->{'host'}, "$method($test->{'ip'}) works");
+		}
+	}
+}

@@ -1,12 +1,12 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: Resolver.pm,v 2.101 2004/02/17 05:21:03 ctriv Exp $
 #
 
 use strict;
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 BEGIN {
 	if ($^O eq 'MSWin32') {
@@ -74,7 +74,7 @@ recursion is desired, etc.
   	debug       => 1,
   );
 
-Returns a resolver object.  If given no argurments, C<new()> returns an
+Returns a resolver object.  If given no arguments, C<new()> returns an
 object configured to your system's defaults.  On UNIX systems the 
 defaults are read from the following files, in the order indicated:
 
@@ -340,7 +340,7 @@ The programmer should close or destroy the socket object after reading it.
 
     $socket = $res->bgsend('foo.example.com');
     until ($res->bgisready($socket)) {
-	# do some other processing
+        # do some other processing
     }
     $packet = $res->bgread($socket);
     $socket = undef;
@@ -371,13 +371,13 @@ See also L</axfr_start> and L</axfr_next>.
 Here's an example that uses a timeout:
 
     $res->tcp_timeout(10);
-    @zone = $res->axfr('example.com');
+    my @zone = $res->axfr('example.com');
+
     if (@zone) {
-        foreach $rr (@zone) {
+        foreach my $rr (@zone) {
             $rr->print;
         }
-    }
-    else {
+    } else {
         print 'Zone transfer failed: ', $res->errorstring, "\n";
     }
 
@@ -391,15 +391,19 @@ Starts a zone transfer from the first nameserver listed in C<nameservers>.
 If the zone is omitted, it defaults to the first zone listed in the resolver's
 search list.  If the class is omitted, it defaults to IN.
 
-Returns the C<IO::Socket::INET> object that will be used for reading, or
-C<undef> on error.
+B<IMPORTANT>:
+
+This method currently returns the C<IO::Socket::INET> object that will
+be used for reading, or C<undef> on error.  DO NOT DEPEND ON C<axfr_next()>
+returning a socket object.  THIS WILL CHANGE in future releases.
 
 Use C<axfr_next> to read the zone records one at a time.
 
 =head2 axfr_next
 
     $res->axfr_start('example.com');
-    while ($rr = $res->axfr_next) {
+
+    while (my $rr = $res->axfr_next) {
 	    $rr->print;
     }
 
@@ -412,7 +416,7 @@ See also L</axfr>.
 
 =head2 tsig
 
-    $tsig = $res->tsig;
+    my $tsig = $res->tsig;
 
     $res->tsig(Net::DNS::RR->new("$key_name TSIG $key"));
 
@@ -592,7 +596,7 @@ to 1.
     $res->udppacketsize(2048);
 
 udppacketsize will set or get the packet size. If set to a value greater than 
-&Net::DNS::PACKETSZ an EDNS extention will be added indicating suppport for MTU path 
+&Net::DNS::PACKETSZ an EDNS extension will be added indicating suppport for MTU path 
 recovery.
 
 Default udppacketsize is &Net::DNS::PACKETSZ (512)

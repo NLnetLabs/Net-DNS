@@ -1,6 +1,6 @@
 package Net::DNS::RR::TXT;
 #
-# $Id: TXT.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
+# $Id: TXT.pm,v 2.104 2004/02/17 03:37:51 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
@@ -9,7 +9,7 @@ use Net::DNS::Packet;
 use Text::ParseWords;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.104 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -39,21 +39,25 @@ sub new_from_string {
 
 sub txtdata {
 	my $self = shift;
-	return join(' ',  $self->char_str_list()  );
+	return join(' ',  $self->char_str_list());
 }
 
 sub rdatastr {
 	my $self = shift;
-	return defined $self->txtdata()
-		? join(' ', map { my $str = $_;  
-				$str =~ s/"/\\"/g ;  
-				q("). $str. q(") 
-				}  @{ $self->{'char_str_list'} }  )
-		: '';
+		
+	if ($self->char_str_list) {
+		return join(' ', map { 
+			my $str = $_;  
+			$str =~ s/"/\\"/g;  
+			qq("$str");
+		} @{$self->{'char_str_list'}});
+	} 
+	
+	return '';
 }
 
 sub _build_char_str_list {
-	my ( $self, $rdata_string ) = @_;
+	my ($self, $rdata_string) = @_;
 	
 	my @words = shellwords($rdata_string);
 
@@ -70,13 +74,11 @@ sub _build_char_str_list {
 sub char_str_list {
 	my $self = shift;
 	
-	# Unfortunately, RR->new_from_hash() breaks encapsulation 
-	# of data in child objects.
-	if ( not defined $self->{'char_str_list'} ) {
+	if (not $self->{'char_str_list'}) {
 		$self->_build_char_str_list( $self->{'txtdata'} );
 	}
 
-	return @{ $self->{'char_str_list'} };	# unquoted strings
+	return @{$self->{'char_str_list'}}; # unquoted strings
 }
 
 sub rr_rdata {
