@@ -1,6 +1,11 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.37 May 28 2003
+
+Renamed the test C file to compile.c, test.c was confusing the 'make test'
+target.
+
 *** 0.36 May 28 2003
 
 Removed Rob Brown's RPM stuff.  Something odd happened in the 0.35 tarball
@@ -696,4 +701,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.55 2003/05/28 22:15:58 ctriv Exp $
+$Id: Changes,v 1.56 2003/05/28 22:38:33 ctriv Exp $

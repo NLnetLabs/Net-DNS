@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.21 2003/05/28 22:15:58 ctriv Exp $
+# $Id: Makefile.PL,v 1.22 2003/05/28 22:33:56 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
@@ -115,8 +115,8 @@ sub test_cc {
 	#
 	print "Testing if you have a C compiler and the needed header files....\n";
 
-	unless (open(F, ">test.c")) {
-	    warn "Cannot write test.c, skipping test compilation and installing pure Perl version.\n";
+	unless (open(F, ">compile.c")) {
+	    warn "Cannot write compile.c, skipping test compilation and installing pure Perl version.\n";
 		return;
 	}
 
@@ -131,9 +131,9 @@ EOF
 	
 	close(F) or return;
 
-	my $ret = system("$Config{'make'} test$Config{obj_ext}");
+	my $ret = system("$Config{'make'} compile$Config{obj_ext}");
 	
-	foreach my $file (glob('test*')) {
+	foreach my $file (glob('compile*')) {
 		unlink($file) || warn "Could not delete $file: $!\n";
 	}
 
