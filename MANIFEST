@@ -65,6 +65,7 @@ lib/Net/DNS/Select.pm
 lib/Net/DNS/Update.pm
 t/00-load.t
 t/00-pod.t
+t/00-version.t
 t/01-resolver.t
 t/01-resolver-env.t
 t/01-resolver-file.t

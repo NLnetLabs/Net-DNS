@@ -1,4 +1,4 @@
-# $Id: 00-load.t,v 1.5 2003/06/16 14:42:08 ctriv Exp $
+# $Id: 00-load.t,v 1.6 2003/08/28 15:11:54 ctriv Exp $
 
 
 use Test::More tests => 71;
@@ -16,7 +16,7 @@ sub is_rr_loaded {
 	return $INC{"Net/DNS/RR/$rr.pm"} ? 1 : 0;
 }
 
-my %skip = map { $_ => 1 } qw(SIG NXT KEY DS);
+my %skip = map { $_ => 1 } qw(SIG NXT KEY DS NSEC RRSIG DNSKEY);
 
 my @rrs = grep { !$skip{$_} } keys %Net::DNS::RR::RR;
 

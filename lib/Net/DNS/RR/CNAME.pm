@@ -1,13 +1,14 @@
 package Net::DNS::RR::CNAME;
-
-# $Id: CNAME.pm,v 1.3 2002/10/23 21:36:08 ctriv Exp $
-
+#
+# $Id: CNAME.pm,v 1.4 2003/08/26 23:58:10 ctriv Exp $
+#
 use strict;
-use vars qw(@ISA);
+use vars qw(@ISA $VERSION);
 
 use Net::DNS::Packet;
 
-@ISA = qw(Net::DNS::RR);
+@ISA     = qw(Net::DNS::RR);
+$VERSION = (qw$Revision: 1.4 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;

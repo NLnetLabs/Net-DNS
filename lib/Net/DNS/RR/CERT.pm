@@ -1,15 +1,18 @@
 package Net::DNS::RR::CERT;
-
+#
+# $Id: CERT.pm,v 1.4 2003/08/26 23:58:10 ctriv Exp $
+#
 # Written by Mike Schiraldi <raldi@research.netsol.com> for VeriSign
 
 use strict;
-use vars qw(@ISA);
+use vars qw(@ISA $VERSION);
 
 use Net::DNS;
 use Net::DNS::Packet;
 use MIME::Base64;
 
-@ISA = qw(Net::DNS::RR);
+@ISA     = qw(Net::DNS::RR);
+$VERSION = (qw$Revision: 1.4 $)[1];
 
 my %formats = 
     (

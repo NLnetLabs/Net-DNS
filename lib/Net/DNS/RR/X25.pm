@@ -1,13 +1,14 @@
 package Net::DNS::RR::X25;
-
-# $Id: X25.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
-
+#
+# $Id: X25.pm,v 1.3 2003/08/26 23:58:10 ctriv Exp $
+#
 use strict;
-use vars qw(@ISA);
+use vars qw(@ISA $VERSION);
 
 use Net::DNS::Packet;
 
-@ISA = qw(Net::DNS::RR);
+@ISA     = qw(Net::DNS::RR);
+$VERSION = (qw$Revision: 1.3 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;

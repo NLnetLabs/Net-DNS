@@ -1,21 +1,20 @@
 package Net::DNS::RR::LOC;
-
-# $Id: LOC.pm,v 1.3 2002/02/13 03:53:59 ctriv Exp $
-
+#
+# $Id: LOC.pm,v 1.4 2003/08/26 23:58:10 ctriv Exp $
+#
 use strict;
-use vars qw(@ISA @EXPORT @EXPORT_OK @poweroften $reference_alt
-	    $reference_latlon $conv_sec $conv_min $conv_deg
-	    $default_min $default_sec $default_size
-	    $default_horiz_pre $default_vert_pre);
+use vars qw(
+        @ISA $VERSION @poweroften $reference_alt
+        $reference_latlon $conv_sec $conv_min $conv_deg
+        $default_min $default_sec $default_size
+        $default_horiz_pre $default_vert_pre
+);
 
-require Exporter;
 use Net::DNS;
 use Net::DNS::Packet;
 
-@ISA = qw(Net::DNS::RR Exporter);
-
-@EXPORT = qw();
-@EXPORT_OK = qw();
+@ISA     = qw(Net::DNS::RR);
+$VERSION = (qw$Revision: 1.4 $)[1];
 
 # Powers of 10 from 0 to 9 (used to speed up calculations).
 @poweroften = (1, 10, 100, 1_000, 10_000, 100_000, 1_000_000,

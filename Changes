@@ -1,6 +1,13 @@
 Revision history for Net::DNS
 =============================
 
+** 0.39_02 August 28, 2003
+
+Net-DNS-SEC updates, seems that IETF has been busy redefining DNSSEC.
+[Olaf]
+
+Added version to all the modules in the distribution.
+
 ** 0.39_01 August 12 2003
 
 Added a META.yaml.  The crystal ball says an upgrade to Module::Install may
@@ -757,4 +764,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.67 2003/08/12 04:07:16 ctriv Exp $
+$Id: Changes,v 1.69 2003/08/28 15:11:54 ctriv Exp $

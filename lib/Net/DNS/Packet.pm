@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 1.20 2003/08/10 15:20:24 ctriv Exp $
+# $Id: Packet.pm,v 1.21 2003/08/28 15:11:54 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 1.20 $)[1];
+$VERSION = (qw$Revision: 1.21 $)[1];
 
 =head1 NAME
 
@@ -833,7 +833,12 @@ sub sign_sig0 {
     
     if (@_ == 1 && ref($_[0])) {
 	if (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG::Private")){
+	    Carp::carp ('Net::DNS::RR::SIG::Private is deprecated use Net::DNS::SEC::Private instead');
 	    $sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
+
+	}elsif (UNIVERSAL::isa($_[0],"Net::DNS::SEC::Private")){
+	    $sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
+
 	}elsif (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG")){
 	    $sig0 = $_[0];
 	}else{

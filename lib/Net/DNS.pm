@@ -1,6 +1,6 @@
 package Net::DNS;
 #
-# $Id: DNS.pm,v 1.68 2003/08/10 15:20:24 ctriv Exp $
+# $Id: DNS.pm,v 1.69 2003/08/28 15:11:54 ctriv Exp $
 #
 use strict;
 use vars qw(
@@ -19,7 +19,7 @@ use vars qw(
 );
 
 
-$VERSION = '0.39_01';
+$VERSION = '0.39_02';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -68,12 +68,16 @@ eval { __PACKAGE__->bootstrap() };
 	"RT"		=> 21,		# RFC 1183, Section 3.3
 	"NSAP"		=> 22,		# RFC 1706, Section 5
 	"NSAP_PTR"	=> 23,		# RFC 1348 (obsolete)
+					# The following 2 RRs are impemented in
+					# Net::DNS::SEC
  	"SIG"		=> 24,		# RFC 2535, Section 4.1
  	"KEY"		=> 25,		# RFC 2535, Section 3.1
  	"PX"		=> 26,		# RFC 2163,
 	"GPOS"		=> 27,		# RFC 1712 (obsolete)
 	"AAAA"		=> 28,		# RFC 1886, Section 2.1
 	"LOC"		=> 29,		# RFC 1876
+					# The following RR is impemented in
+					# Net::DNS::SEC
 	"NXT"		=> 30,		# RFC 2535, Section 5.2
 	"EID"		=> 31,		# draft-ietf-nimrod-dns-xx.txt
 	"NIMLOC"	=> 32,		# draft-ietf-nimrod-dns-xx.txt
@@ -83,13 +87,19 @@ eval { __PACKAGE__->bootstrap() };
 	"KX"		=> 36,		# RFC 2230
  	"CERT"		=> 37,		# RFC 2538
 	"DNAME"		=> 39,		# RFC 2672
-	"OPT"       => 41,      # RFC 2671
-	"DS"		=> 43,		# Not ASSIGNED YET...!!! draft
+	"OPT"  		=> 41,		# RFC 2671
+					# The following 4 RRs are impemented in
+					# Net::DNS::SEC
+					# Aug 2003: These RRs will be published as RFCs shortly 
+	"DS"		=> 43,		# draft-ietf-dnsext-delegation-signer
+	"RRSIG"		=> 46,		# draft-ietf-dnsext-dnssec-2535typecode-change
+	"NSEC"		=> 47,		# draft-ietf-dnsext-dnssec-2535typecode-change
+	"DNSKEY"	=> 48,		# draft-ietf-dnsext-dnssec-2535typecode-change
 	"UINFO"		=> 100,		# non-standard
 	"UID"		=> 101,		# non-standard
 	"GID"		=> 102,		# non-standard
 	"UNSPEC"	=> 103,		# non-standard
-	"TKEY"		=> 249,	    # RFC 2930
+	"TKEY"		=> 249,		# RFC 2930
 	"TSIG"		=> 250,		# RFC 2931
 	"IXFR"		=> 251,		# RFC 1995
 	"AXFR"		=> 252,		# RFC 1035

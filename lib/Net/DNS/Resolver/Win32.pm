@@ -1,14 +1,15 @@
 package Net::DNS::Resolver::Win32;
 #
-# $Id: Win32.pm,v 1.2 2003/08/07 22:18:18 ctriv Exp $
+# $Id: Win32.pm,v 1.3 2003/08/26 23:58:10 ctriv Exp $
 #
 
 use strict;
-use vars qw(@ISA);
+use vars qw(@ISA $VERSION);
 
 use Net::DNS::Resolver::Base ();
 
-@ISA = qw(Net::DNS::Resolver::Base);
+@ISA     = qw(Net::DNS::Resolver::Base);
+$VERSION = (qw$Revision: 1.3 $)[1];
 
 use Win32::Registry;
 

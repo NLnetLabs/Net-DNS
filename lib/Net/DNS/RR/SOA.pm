@@ -1,13 +1,14 @@
 package Net::DNS::RR::SOA;
-
-# $Id: SOA.pm,v 1.4 2002/06/20 02:42:25 ctriv Exp $
-
+#
+# $Id: SOA.pm,v 1.5 2003/08/26 23:58:10 ctriv Exp $
+#
 use strict;
-use vars qw(@ISA);
+use vars qw(@ISA $VERSION);
 
 use Net::DNS::Packet;
 
-@ISA = qw(Net::DNS::RR);
+@ISA     = qw(Net::DNS::RR);
+$VERSION = (qw$Revision: 1.5 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;

@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 1.29 2003/08/10 15:20:24 ctriv Exp $
+# $Id: RR.pm,v 1.30 2003/08/28 15:11:54 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -8,7 +8,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$Revision: 1.29 $)[1];
+$VERSION = (qw$Revision: 1.30 $)[1];
 
 =head1 NAME
 
@@ -100,12 +100,33 @@ BEGIN {
 		}
 
 	 	eval { require Net::DNS::RR::DS; };
-	 	
+
 	 	unless ($@) {
 		    $RR{"DS"} = 1;
+
 		} else {
 		    die $@;
 		}
+
+	 	eval { require Net::DNS::RR::RRSIG; };
+
+	 	unless ($@) {
+		    $RR{"RRSIG"} = 1;
+		    # If RRSIG is available so should the other DNSSEC types
+		    eval { require Net::DNS::RR::NSEC; };
+		    unless ($@) {
+		      $RR{"NSEC"} = 1;
+		    } else {
+		    die $@;
+		  }
+		    eval { require Net::DNS::RR::DNSKEY; };
+		    unless ($@) {
+		      $RR{"DNSKEY"} = 1;
+		    } else {
+		      die $@;
+		    }
+		} 
+
     }
 }
 

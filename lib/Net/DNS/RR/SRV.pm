@@ -1,14 +1,15 @@
 package Net::DNS::RR::SRV;
-
-# $Id: SRV.pm,v 1.4 2002/05/29 04:58:17 ctriv Exp $
-
+#
+# $Id: SRV.pm,v 1.5 2003/08/26 23:58:10 ctriv Exp $
+#
 use strict;
-use vars qw(@ISA);
+use vars qw(@ISA $VERSION);
 
 use Net::DNS;
 use Net::DNS::Packet;
 
-@ISA = qw(Net::DNS::RR);
+@ISA     = qw(Net::DNS::RR);
+$VERSION = (qw$Revision: 1.5 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
