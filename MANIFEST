@@ -82,3 +82,4 @@ t/09-tkey.t
 t/10-recurse.t
 t/custom.txt
 t/.resolv.conf
+META.yml                                Module meta-data (added by MakeMaker)

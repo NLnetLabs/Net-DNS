@@ -18,7 +18,7 @@ The latest version of this FAQ can be found at
 
 =head2 What is Net::DNS?
 
-Net::DNS is a pure perl implementation of a DNS resolver.  
+Net::DNS is a perl implementation of a DNS resolver.  
 
 =head1 INSTALLATION
 
@@ -41,5 +41,5 @@ from the libresolv C library, which has similar behaviors.
 
 =head1 VERSION
 
- $Id: FAQ.pod,v 1.5 2003/08/02 13:45:02 ctriv Exp $
+ $Id: FAQ.pod,v 1.6 2003/08/10 15:32:05 ctriv Exp $
  

@@ -1,12 +1,13 @@
 package Net::DNS::Update;
-
+#
+# $Id: Update.pm,v 1.5 2003/08/10 15:20:24 ctriv Exp $
+#
 use strict;
 use vars qw($VERSION);
 
 use Net::DNS;
 
-# $Id: Update.pm,v 1.4 2002/05/31 03:58:19 ctriv Exp $
-$VERSION = $Net::DNS::VERSION;
+$VERSION = (qw$Revision: 1.5 $)[1];
 
 =head1 NAME
 

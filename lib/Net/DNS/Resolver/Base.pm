@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 1.3 2003/07/29 04:53:23 ctriv Exp $
+# $Id: Base.pm,v 1.4 2003/08/10 15:20:24 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::Select;
 
-$VERSION = $Net::DNS::Resolver::VERSION;
+$VERSION = (qw$Revision: 1.4 $)[1];
 
 #
 # Set up a closure to be our class data.

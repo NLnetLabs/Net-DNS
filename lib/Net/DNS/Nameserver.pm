@@ -1,14 +1,17 @@
 package Net::DNS::Nameserver;
-# $Id: Nameserver.pm,v 1.3 2002/05/31 08:46:47 ctriv Exp $
+#
+# $Id: Nameserver.pm,v 1.4 2003/08/10 15:20:24 ctriv Exp $
+#
 
 use Net::DNS;
 use IO::Socket;
 use IO::Select;
 use Carp qw(cluck);
+
 use strict;
 use vars qw($VERSION);
 
-$VERSION = $Net::DNS::Version;
+$VERSION = (qw$Revision: 1.4 $)[1];
 
 use constant DEFAULT_ADDR => INADDR_ANY;
 use constant DEFAULT_PORT => 53;

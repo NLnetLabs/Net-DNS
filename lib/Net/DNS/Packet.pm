@@ -1,7 +1,7 @@
 package Net::DNS::Packet;
-
-# $Id: Packet.pm,v 1.19 2003/08/04 03:41:52 ctriv Exp $
-
+#
+# $Id: Packet.pm,v 1.20 2003/08/10 15:20:24 ctriv Exp $
+#
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
 
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = $Net::DNS::VERSION;
+$VERSION = (qw$Revision: 1.20 $)[1];
 
 =head1 NAME
 

@@ -1,15 +1,14 @@
 package Net::DNS::RR;
-
-# $Id: RR.pm,v 1.28 2003/05/25 05:15:03 ctriv Exp $
-
+#
+# $Id: RR.pm,v 1.29 2003/08/10 15:20:24 ctriv Exp $
+#
 use strict;
 use vars qw($VERSION $AUTOLOAD);
 
 use Carp;
 use Net::DNS;
 
-
-$VERSION = $Net::DNS::VERSION;
+$VERSION = (qw$Revision: 1.29 $)[1];
 
 =head1 NAME
 
