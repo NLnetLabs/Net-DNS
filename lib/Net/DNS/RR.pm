@@ -6,7 +6,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-# $Id: RR.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
+# $Id: RR.pm,v 1.7 2002/05/28 08:08:25 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -30,8 +30,10 @@ any of its methods.  If you call an unknown method, you'll get a nasty
 warning message and C<Net::DNS::RR> will return C<undef> to the caller.
 
 =cut
+#'
 
-my %RR;
+# %RR needs to be available within the scope of the BEGIN block.
+use vars qw( %RR );
 
 # Need to figure out a good way to autoload these.
 use Net::DNS::RR::A;		$RR{"A"}	= 1;
@@ -61,6 +63,42 @@ use Net::DNS::RR::SRV;		$RR{"SRV"}	= 1;
 use Net::DNS::RR::TSIG;		$RR{"TSIG"}	= 1;
 use Net::DNS::RR::TXT;		$RR{"TXT"}	= 1;
 use Net::DNS::RR::X25;		$RR{"X25"}	= 1;
+use Net::DNS::RR::OPT;		$RR{"OPT"}	= 1;
+
+#  Only load DNSSEC if available
+# 
+BEGIN {
+	eval { require Net::DNS::RR::SIG; };
+
+	unless ($@) {
+		$RR{"SIG"} = 1;
+	
+		eval { require Net::DNS::RR::NXT; };
+		
+		unless ($@) {
+		    $RR{"NXT"}	= 1;
+		} else {
+		    die $@;
+		}
+		
+		eval { require Net::DNS::RR::KEY; };
+		
+		unless ($@) {
+		    $RR{"KEY"} = 1;
+		} else {
+		    die $@;
+		}
+
+	 	eval { require Net::DNS::RR::DS; };
+	 	
+	 	unless ($@) {
+		    $RR{"DS"} = 1;
+		} else {
+		    die $@;
+		}
+    }
+}
+
 
 =head2 new (from string)
 
@@ -110,6 +148,9 @@ The fields are case-insensitive, but starting each with uppercase
 is recommended.
 
 =cut
+
+#' Stupid Emacs
+
 
 sub new {
 	my $retval;
@@ -272,9 +313,9 @@ sub new_from_hash {
 		$self{lc($key)} = $val;
 	}
 
-	Carp::confess("RR name not specified")
+	Carp::croak("RR name not specified")
 		unless exists $self{"name"};
-	Carp::confess("RR type not specified")
+	Carp::croak("RR type not specified")
 		unless exists $self{"type"};
 
 	$self{"ttl"}   = 0    unless exists $self{"ttl"};
@@ -285,7 +326,13 @@ sub new_from_hash {
 
 	if ($RR{$self{"type"}}) {
 		my $subclass = $class . "::" . $self{"type"};
+	    if (uc $self{"type"} ne "OPT"){
 		$retval = bless \%self, $subclass;
+	    }else{  # Special processing of OPT. Since TTL and CLASS are
+		    # set by other variables. See Net::DNS::RR::OPT 
+                    # documentation
+		$retval = $subclass->new_from_hash(\%self);
+	    }
 	}
 	else {
 		$retval = bless \%self, $class;
@@ -308,7 +355,7 @@ Prints the record to the standard output.  Calls the
 B<string> method to get the RR's string representation.
 
 =cut
-
+#'
 sub print {
 	my $self = shift;
 	print $self->string, "\n";
@@ -405,7 +452,7 @@ Returns the length of the record's data section.
 Returns the record's data section as binary data.
 
 =cut
-
+#'
 sub rdata {
 	my $self = shift;
 	my $retval = undef;
@@ -437,13 +484,16 @@ sub data {
 	my ($self, $packet, $offset) = @_;
 	my $data;
 
-	# Don't compress TSIG names.
+
+	# Don't compress TSIG names and don't mess with EDNS0 packets
 	if (uc($self->{"type"}) eq "TSIG") {
 		my $tmp_packet = Net::DNS::Packet->new("");
 		$data = $tmp_packet->dn_comp($self->{"name"}, 0);
-	}
-	else {
-		$data  = $packet->dn_comp($self->{"name"}, $offset);
+	}elsif (uc($self->{"type"}) eq "OPT") {
+		my $tmp_packet = Net::DNS::Packet->new("");
+		$data = $tmp_packet->dn_comp("", 0);
+	}else {
+	        $data  = $packet->dn_comp($self->{"name"}, $offset);
 	}
 
 	my $qtype = uc($self->{"type"});
@@ -453,9 +503,16 @@ sub data {
 	my $qclass = uc($self->{"class"});
 	my $qclass_val = ($qclass =~ /^\d+$/) ? $qclass : $Net::DNS::classesbyname{$qclass};
 	$qclass_val = 0 if !defined($qclass_val);
-
 	$data .= pack("n", $qtype_val);
-	$data .= pack("n", $qclass_val);
+	# If the type is OPT then class will need to contain a decimal number
+	# containing the UDP payload size. (RFC2671 section 4.3)
+
+	if (uc($self->{"type"}) ne "OPT"){
+	    $data .= pack("n", $qclass_val);
+	} else
+	{
+	    $data .= pack("n", $self->{"class"});
+	}
 	$data .= pack("N", $self->{"ttl"});
 
 	$offset += length($data) + &Net::DNS::INT16SZ;	# allow for rdlength
@@ -466,6 +523,69 @@ sub data {
 	$data .= $rdata;
 
 	return $data;
+}
+
+
+
+
+
+#------------------------------------------------------------------------------
+#  This method is called by SIG objects verify method. 
+#  It is almost the same as data but needed to get an representation of the
+#  packets in wire format withoud domain name compression.
+#  It is essential to DNSSEC RFC 2535 section 8
+#------------------------------------------------------------------------------
+
+sub _canonicaldata {
+    my $self = shift;
+    my $data="";
+    {   my @dname= split /\./,lc($self->{"name"});
+	for (my $i=0;$i<@dname;$i++){
+	    $data .= pack ("C",length $dname[$i] );
+	    $data .= $dname[$i] ;
+	}
+	$data .= pack ("C","0");
+    }
+    $data .= pack("n", $Net::DNS::typesbyname{uc($self->{"type"})});
+    $data .= pack("n", $Net::DNS::classesbyname{uc($self->{"class"})});
+    $data .= pack("N", $self->{"ttl"});
+    
+    
+    my $rdata = $self->_canonicalRdata;
+
+    $data .= pack("n", length $rdata);
+    $data .= $rdata;
+    return $data;
+
+
+}
+
+# These are methods that are used in the DNSSEC context...  Some RR
+# have domain names in them. Verification works only on RRs with
+# uncompressed domain names. (Canonical format as in sect 8 of
+# RFC2535) _canonicalRdata is overwritten in those RR objects that
+# have domain names in the RDATA and _name2label is used to convert a
+# domain name to "wire format"
+
+sub _canonicalRdata {
+    my $self = shift;
+    my $rdata = $self->rr_rdata;
+    return $rdata;
+}
+
+
+
+sub _name2wire   {   
+    my ($self,$name)=@_;
+
+    my $rdata="";
+    my @dname= split /\./,lc($name);
+    for (my $i=0;$i<@dname;$i++){
+	$rdata .= pack ("C",length $dname[$i] );
+	$rdata .= $dname[$i] ;
+    }
+    $rdata .= pack ("C","0");
+    return $rdata;
 }
 
 sub AUTOLOAD {
@@ -512,6 +632,7 @@ Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. 
 
+EDNS0 extensions by Olaf Kolkman.
 =head1 SEE ALSO
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,

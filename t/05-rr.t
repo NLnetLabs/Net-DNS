@@ -1,4 +1,4 @@
-# $Id: 05-rr.t,v 1.5 2002/03/26 22:48:55 ctriv Exp $
+# $Id: 05-rr.t,v 1.7 2002/05/29 04:58:43 ctriv Exp $
 
 use Test::More tests => 202;
 use strict;
@@ -191,16 +191,11 @@ while (@answer and @rrs) {
 	is($rr->ttl,     $ttl,        	"$type - ttl() correct");                
 	foreach my $meth (keys %{$data}) {
 		
-		is($rr->$meth, $data->{$meth}, "$type - $meth() correct");
+		is($rr->$meth(), $data->{$meth}, "$type - $meth() correct");
 	}
 	
-	SKIP: {
-		skip "Net::DNS::RR::${type}::new_from_string is not implemented", 1
-			if $type eq 'NSAP';
-		
-		my $rr2 = Net::DNS::RR->new($rr->string);
-		is($rr2->string, $rr->string,   "$type - Parsing from string works");
-	}
+	my $rr2 = Net::DNS::RR->new($rr->string);
+	is($rr2->string, $rr->string,   "$type - Parsing from string works");
 }
 
 

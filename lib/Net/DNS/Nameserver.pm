@@ -1,5 +1,5 @@
 package Net::DNS::Nameserver;
-# $Id: Nameserver.pm,v 1.2 2002/05/14 10:51:23 ctriv Exp $
+# $Id: Nameserver.pm,v 1.3 2002/05/31 08:46:47 ctriv Exp $
 
 use Net::DNS;
 use IO::Socket;
@@ -56,6 +56,8 @@ sub new {
 	print "creating UDP socket..." if $self{"Verbose"};
 
 	my $sock_udp = IO::Socket::INET->new(
+		LocalAddr => $addr,
+		LocalPort => $port,
 		Proto => "udp",
 	);
 
@@ -66,13 +68,6 @@ sub new {
 
 	print "done.\n" if $self{"Verbose"};
 
-	print "binding UDP socket..." if $self{"Verbose"};
-	my $sockaddr = sockaddr_in($port, inet_aton($addr));
-	if (!$sock_udp->bind($sockaddr)) {
-		cluck "couldn't bind UDP socket: $!";
-		return;
-	}
-	print "done.\n";
 
 	#--------------------------------------------------------------------------
 	# Create the Select object.

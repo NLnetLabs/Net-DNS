@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: check_soa,v 1.3 2002/02/07 03:54:18 ctriv Exp $
+# $Id: check_soa,v 1.4 2002/05/28 07:50:07 ctriv Exp $
 
 =head1 NAME
 
@@ -30,8 +30,7 @@ L<perl(1)>, L<axfr>, L<check_zone>, L<mresolv>, L<mx>, L<perldig>, L<Net::DNS>
 =cut
 
 use File::Basename;
-use Net::DNS::Resolver;
-use Net::DNS::RR;
+use Net::DNS;
 use strict;
 
 #------------------------------------------------------------------------------
@@ -55,27 +54,35 @@ my $ns_req = $res->query($domain, "NS");
 die "No nameservers found for $domain: ", $res->errorstring, "\n"
 	unless defined($ns_req) and ($ns_req->header->ancount > 0);
 
-#------------------------------------------------------------------------------
-# Check the SOA record on each nameserver.
-#------------------------------------------------------------------------------
 
+# Send out non-recursive queries
 $res->recurse(0);
+# Do not buffer standard out
 $| = 1;
 
 
+#------------------------------------------------------------------------------
+# Check the SOA record on each nameserver.
+#------------------------------------------------------------------------------
 
 foreach my $nsrr (grep {$_->type eq "NS" } $ns_req->answer) {
 	
 	#----------------------------------------------------------------------
 	# Set the resolver to query this nameserver.
 	#----------------------------------------------------------------------
-
 	my $ns = $nsrr->nsdname;
 	
-	my $a_req = $res->query($ns, 'A');
+	# In order to lookup the IP(s) of the nameserver, we need a Resolver
+	# object that is set to our local, recurse nameserver.  So we create
+	# a new object just to do that.
+	
+	my $local_res = Net::DNS::Resolver->new();
+	
+	my $a_req = $local_res->query($ns, 'A');
+
 
 	unless ($a_req) {
-		warn ": can't find address: ", $res->errorstring, "\n";
+		warn "Can not find address for $ns: ", $res->errorstring, "\n";
 		next;
 	}
 	
@@ -91,8 +98,7 @@ foreach my $nsrr (grep {$_->type eq "NS" } $ns_req->answer) {
 		# Get the SOA record.
 		#----------------------------------------------------------------------
 	
-		my $packet = Net::DNS::Packet->new($domain, "SOA", "IN");
-		my $soa_req = $res->send($packet);
+		my $soa_req = $res->send($domain, 'SOA', 'IN');
 		
 		unless (defined($soa_req)) {
 			warn $res->errorstring, "\n";

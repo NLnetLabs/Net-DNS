@@ -1,6 +1,6 @@
 package Net::DNS::RR::NSAP;
 
-# $Id: NSAP.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: NSAP.pm,v 1.4 2002/05/29 19:18:11 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -60,17 +60,35 @@ sub new {
 	return bless $self, $class;
 }
 
+sub new_from_string {
+	my ($class, $self, $string) = @_;
+	
+	if ($string) {
+		$string =~ s/\.//g;  # remove all dots.
+		$string =~ s/^0x//;  # remove leading 0x
+		
+		if ($string =~ /^[a-zA-Z0-9]{40}$/) {
+			@{ $self }{ qw(afi idi dfi aa rsvd rd area id sel) } = 
+				unpack("A2A4A2A6A4A4A4A12A2", $string);
+		} 
+	}
+	
+	return bless $self, $class;
+}
+	
+
 sub idp {
 	my $self = shift;
 
-	return join(".", $self->{"afi"},
-		         $self->{"idi"});
+	return join('', $self->{"afi"},
+		            $self->{"idi"});
 }
 
 sub dsp {
 	my $self = shift;
 
-	return join(".", $self->{"dfi"},
+	return join('', 
+			 $self->{"dfi"},
 			 $self->{"aa"},
 			 $self->rsvd,
 			 $self->{"rd"},
@@ -91,10 +109,10 @@ sub rdatastr {
 
 	if (exists $self->{"afi"}) {
 		if ($self->{"afi"} eq "47") {
-			$rdatastr = join(".", $self->idp, $self->dsp);
+			$rdatastr = join('', $self->idp, $self->dsp);
 		}
 		else {
-			$rdatastr = "; AFI $self->{afi} not supported";
+			$rdatastr = "; AFI $self->{'afi'} not supported";
 		}
 	}
 	else {

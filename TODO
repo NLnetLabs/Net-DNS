@@ -32,10 +32,6 @@ To Do list for Net::DNS
   - Reorganize to put the most frequently-used methods first.  Suggested
     by John Line.
 
-  - Add manual pages for individual RR types to the homepage.
-
-* Consider using function prototypes.
-
 * Get rid of .* in AAAA.pm; write more tests for AAAA.pm.
 
 * Allow Net::DNS::RR::LOC->latlon to set the lat/lon.
@@ -49,7 +45,6 @@ To Do list for Net::DNS
 
       EID
       NIMLOC
-      NSAP
       NULL
 
   - Do sanity checking on user-created RR objects.  Update the BUGS
@@ -69,8 +64,6 @@ To Do list for Net::DNS
   it possibly in $rr->string.
 
 * Improve the error handling and reporting.  Some things to do:
-
-  - Get rid of Carp::confess as many places as possible.
 
   - Make sure empty RDATA sections don't cause the program to print
     the obnoxious "no such method" warning.
@@ -101,11 +94,7 @@ To Do list for Net::DNS
     WKS		RFC 1035
     NSAP_PTR	RFC 1348 (deprecated)
     GPOS	RFC 1712 (withdrawn)
-    KEY		RFC 2065
-    NXT		RFC 2065
-    SIG		RFC 2065
     ATMA	???
-    TSIG	draft-ietf-dnsind-tsig-xx.txt
 
 * Fix the TXT RR to handle more than 1 string in the RDATA section
   (RFC 1035, Section 3.3.14).
@@ -173,4 +162,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 1.2 2002/03/26 22:10:38 ctriv Exp $
+$Id: TODO,v 1.4 2002/05/29 19:17:50 ctriv Exp $

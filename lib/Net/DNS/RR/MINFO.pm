@@ -1,6 +1,6 @@
 package Net::DNS::RR::MINFO;
 
-# $Id: MINFO.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: MINFO.pm,v 1.3 2002/05/22 18:09:36 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -57,6 +57,20 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+sub _canonicalRdata {
+	my ($self, $packet, $offset) = @_;
+	my $rdata = "";
+
+	if (exists $self->{"rmailbx"}) {
+		$rdata .= $self->_name2wire($self->{"rmailbx"});
+		$rdata .=  $self->_name2wire($self->{"emailbx"});
+	}
+
+	return $rdata;
+}
+
 
 1;
 __END__

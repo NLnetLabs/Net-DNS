@@ -25,6 +25,7 @@ lib/Net/DNS/RR.pm
 lib/Net/DNS/RR/A.pm
 lib/Net/DNS/RR/AAAA.pm
 lib/Net/DNS/RR/AFSDB.pm
+lib/Net/DNS/RR/CERT.pm
 lib/Net/DNS/RR/CNAME.pm
 lib/Net/DNS/RR/EID.pm
 lib/Net/DNS/RR/HINFO.pm
@@ -40,6 +41,7 @@ lib/Net/DNS/RR/NIMLOC.pm
 lib/Net/DNS/RR/NS.pm
 lib/Net/DNS/RR/NSAP.pm
 lib/Net/DNS/RR/NULL.pm
+lib/Net/DNS/RR/OPT.pm
 lib/Net/DNS/RR/PTR.pm
 lib/Net/DNS/RR/PX.pm
 lib/Net/DNS/RR/RP.pm

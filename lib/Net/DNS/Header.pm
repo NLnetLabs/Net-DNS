@@ -5,7 +5,7 @@ use vars qw($VERSION $AUTOLOAD);
 
 use Net::DNS;
 
-# $Id: Header.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
+# $Id: Header.pm,v 1.5 2002/05/28 08:08:25 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -59,6 +59,8 @@ sub new {
 			"tc"		=> ($a[1] >> 1) & 0x1,
 			"rd"		=> $a[1] & 0x1,
 			"ra"		=> ($a[2] >> 7) & 0x1,
+			"ad"		=> ($a[2] >> 5) & 0x1,
+			"cd"		=> ($a[2] >> 4) & 0x1,
 			"rcode"		=> $a[2] & 0xf,
 			"qdcount"	=> $a[3],
 			"ancount"	=> $a[4],
@@ -66,7 +68,7 @@ sub new {
 			"arcount"	=> $a[6],
 		);
 	}
-	else {
+	else { 
 		%self = (
 			"id"		=> Net::DNS::Resolver::nextid(),
 			"qr"		=> 0,
@@ -75,6 +77,8 @@ sub new {
 			"tc"		=> 0,
 			"rd"		=> 1,
 			"ra"		=> 0,
+			"ad"		=> 0,
+			"cd"		=> 0,  
 			"rcode"		=> 0,
 			"qdcount"	=> 1,
 			"ancount"	=> 0,
@@ -142,6 +146,8 @@ sub string {
 		           "rd = $self->{rd}\n";
 
 		$retval .= ";; ra = $self->{ra}    " .
+		           "ad = $self->{ad}    "         .
+		           "cd = $self->{cd}    "         .
 		           "rcode  = $self->{rcode}\n";
 
 		$retval .= ";; qdcount = $self->{qdcount}  " .
@@ -194,6 +200,14 @@ Gets or sets the truncated packet flag.
     $header->rd(0);
 
 Gets or sets the recursion desired flag.
+
+
+=head2 cd
+
+    print "checking was ", $header->cd ? "not" : "", "desired\n";
+    $header->cd(0);
+
+Gets or sets the checking disabled flag.
 
 =head2 ra
 
@@ -251,7 +265,7 @@ sub AUTOLOAD {
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
 
-	Carp::confess "$name: no such method"
+	Carp::croak "$name: no such method"
 		unless exists $self->{$name};
 
 	$self->{$name} = shift if @_;
@@ -285,6 +299,7 @@ sub data {
 	          | $self->{"rd"};
 
 	my $byte3 = ($self->{"ra"} << 7)
+                  | ($self->{"cd"} << 4)
 	          | $rcode;
 
 	return pack("n C2 n4", $self->{"id"},
@@ -298,7 +313,7 @@ sub data {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+Copyright (c) 1997-2000 Michael Fuhr.  All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. 
 

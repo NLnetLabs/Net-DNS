@@ -1,18 +1,19 @@
 package Net::DNS::Packet;
+# $Id: Packet.pm,v 1.6 2002/06/02 11:52:31 ctriv Exp $
+
+use strict;
+use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
 
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(dn_expand);
-
-use strict;
-use vars qw($VERSION $AUTOLOAD);
 
 use Carp;
 use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-# $Id: Packet.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
+
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -53,7 +54,7 @@ error string.  The error string will only be defined if the
 packet object is undefined (i.e., couldn't be created).
 
 Returns B<undef> if unable to create a packet object (e.g., if
-the packet data is truncated).
+the packet data is truncated).'
 
 =cut
 
@@ -63,7 +64,7 @@ sub new {
 
 	$self{"compnames"} = {};
 
-	PARSE: {
+  PARSE: {
 	if (ref($_[0])) {
 		my $data = shift;
 		my $debug = @_ ? shift : 0;
@@ -256,6 +257,9 @@ sub data {
 	#----------------------------------------------------------------------
 	# Get the data for each section in the packet.
 	#----------------------------------------------------------------------
+	# Note that EDNS OPT RR data should inly be appended to the additional
+        # section of the packet. TODO: Packet is dropped silently if is tried to
+	# have it appended to one of the other section
 
 	my $data = $self->{"header"}->data;
 
@@ -651,7 +655,7 @@ packet.
 Returns B<(undef, undef)> if the domain name couldn't be expanded.
 
 =cut
-
+# '
 sub dn_expand {
 	my ($packet, $offset) = @_;
 	my %seen;
@@ -771,6 +775,52 @@ sub sign_tsig {
 	return $tsig;
 }
 
+
+
+=head2 sign_sig0
+
+SIG0 support is provided through the Net::DNS::RR::SIG class. This class is not part
+of the default Net::DNS distribution but resides in the Net::DNS::SEC distribution.
+
+    $update = Net::DNS::Update->new("example.com");
+    $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
+    $update->sign_sig0("Kexample.com+003+25317.private");
+
+
+SIG0 support is experimental see Net::DNS::RR::SIG for details.
+
+The method will call C<Carp::croak()> if Net::DNS::RR::SIG cannot be found.
+
+
+=cut
+
+sub sign_sig0 {
+    my $self = shift;
+
+    Carp::croak('The sign_sig0() method is only available when the Net::DNS::SEC package is installed.') 
+    		unless $Net::DNS::DNSSEC;
+    
+    
+    my $sig0;
+    
+    if (@_ == 1 && ref($_[0])) {
+		$sig0 = $_[0];
+    } elsif (@_ == 1 && ! ref($_[0])) {
+		my $key_name = $_[0];
+		
+	    $sig0 = Net::DNS::RR::SIG->create('', $key_name) if $key_name
+
+    }
+    
+    $self->push('additional', $sig0) if $sig0;
+    return $sig0;
+}
+
+
+
+
+
+
 #------------------------------------------------------------------------------
 # parse_question
 #
@@ -832,8 +882,15 @@ sub parse_rr {
 		if length($$data) < ($offset + &Net::DNS::RRFIXEDSZ);
 
 	my ($type, $class, $ttl, $rdlength) = unpack("\@$offset n2 N n", $$data);
+
 	$type  = $Net::DNS::typesbyval{$type}    || $type;
-	$class = $Net::DNS::classesbyval{$class} || $class;
+
+	# Special case for OPT RR where CLASS should be interperted as 16 bit 
+	# unsigned 2671 sec 4.3
+	if ($type ne "OPT") {
+	    $class = $Net::DNS::classesbyval{$class} || $class;
+	} 
+	# else just keep at its numerical value
 
 	$offset += &Net::DNS::RRFIXEDSZ;
 
@@ -856,9 +913,12 @@ sub parse_rr {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
-program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself. 
+Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This program is free
+software; you can redistribute it and/or modify it under the same terms as
+Perl itself. 
+
+
+DNSSEC/EDNS0 functionality courtesy of Olaf M. Kolkman, RIPE NCC.  
 
 =head1 SEE ALSO
 

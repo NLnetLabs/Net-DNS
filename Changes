@@ -1,6 +1,29 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.21  3 June 2002
+
+Net::DNS::RR::NSAP::new_from_string() is now implemented.  
+Thanks to Matts for a much faster implementation.
+
+In complaince  with RFC 1706, Net::DNS::RR::NSAP's print and string
+methods no longer join data fields with '.'s.
+
+Changed a good number of calls to Carp::croak from Carp::confess.
+
+Fixed a bug in demo/check_soa that broke nameserver lookups in some 
+situations.
+
+Fixed rr.t to run properly on older perls.
+
+Added Olaf M. Kolkman's (olaf@ripe.net) hooks, allowing his DNSSEC 
+extension to be packaged seperatly.
+
+Cleaned up a bug regarding bind() with older perls. 
+Net::DNS now works with 5.005_03 again.
+
+*** 0.20  15 May 2002 
+
 Rewrote tests using Test::More.  Future versions will have a more 
 extensive test suite.
 
@@ -500,5 +523,6 @@ Initial release for testing.  Still some bugs, particularly in
 memory management.
 
 ---
+Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.7 2002/05/14 10:53:02 ctriv Exp $
+$Id: Changes,v 1.13 2002/06/03 21:13:25 ctriv Exp $

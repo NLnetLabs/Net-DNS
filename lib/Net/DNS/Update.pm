@@ -5,7 +5,7 @@ use vars qw($VERSION);
 
 use Net::DNS;
 
-# $Id: Update.pm,v 1.3 2002/05/14 10:51:24 ctriv Exp $
+# $Id: Update.pm,v 1.4 2002/05/31 03:58:19 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -83,9 +83,10 @@ show only the creation of the update packet.
     #!/usr/bin/perl -w
     
     use Net::DNS;
+    use strict;
     
     # Create the update packet.
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     
     # Prerequisite is that no A records exist for the name.
     $update->push("pre", nxrrset("foo.example.com. A"));
@@ -95,76 +96,75 @@ show only the creation of the update packet.
     $update->push("update", rr_add("foo.example.com. 86400 A 172.16.3.4"));
     
     # Send the update to the zone's primary master.
-    $res = Net::DNS::Resolver->new;
+    my $res = Net::DNS::Resolver->new;
     $res->nameservers("primary-master.example.com");
-    $reply = $res->send($update);
+    
+    my $reply = $res->send($update);
     
     # Did it work?
     if (defined $reply) {
-	if ($reply->header->rcode eq "NOERROR") {
-	    print "Update succeeded\n";
-	}
-	else {
+	    if ($reply->header->rcode eq "NOERROR") {
+	        print "Update succeeded\n";
+    	} else {
             print "Update failed: ", $reply->header->rcode, "\n";
-	}
-    }
-    else {
+	    }
+    } else {
         print "Update failed: ", $res->errorstring, "\n";
     }
 
 =head2 Add an MX record for a name that already exists
 
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     $update->push("pre", yxdomain("example.com"));
     $update->push("update", rr_add("example.com MX 10 mailhost.example.com"));
 
 =head2 Add a TXT record for a name that doesn't exist
 
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     $update->push("pre", nxdomain("info.example.com"));
     $update->push("update", rr_add("info.example.com TXT 'yabba dabba doo'"));
 
 =head2 Delete all A records for a name
 
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     $update->push("pre", yxrrset("foo.example.com A"));
     $update->push("update", rr_del("foo.example.com A"));
 
 =head2 Delete all RRs for a name
 
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     $update->push("pre", yxdomain("byebye.example.com"));
     $update->push("update", rr_del("byebye.example.com"));
 
 =head2 Perform a signed update
 
-    $key_name = "tsig-key";
-    $key = "awwLOtRfpGE+rRKF2+DEiw==";
+    my $key_name = "tsig-key";
+    my $key      = "awwLOtRfpGE+rRKF2+DEiw==";
 
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
     $update->push("update", rr_add("bar.example.com A 10.4.5.6"));
     $update->sign_tsig($key_name, $key);
 
 =head2 Another way to perform a signed update
 
-    $key_name = "tsig-key";
-    $key = "awwLOtRfpGE+rRKF2+DEiw==";
+    my $key_name = "tsig-key";
+    my $key      = "awwLOtRfpGE+rRKF2+DEiw==";
 
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
     $update->push("update", rr_add("bar.example.com A 10.4.5.6"));
     $update->push("additional", Net::DNS::RR->new("$key_name TSIG $key"));
 
 =head2 Perform a signed update with a customized TSIG record
 
-    $key_name = "tsig-key";
-    $key = "awwLOtRfpGE+rRKF2+DEiw==";
+    my $key_name = "tsig-key";
+    my $key      = "awwLOtRfpGE+rRKF2+DEiw==";
 
-    $tsig = Net::DNS::RR->new("$key_name TSIG $key");
+    my $tsig = Net::DNS::RR->new("$key_name TSIG $key");
     $tsig->fudge(60);
 
-    $update = Net::DNS::Update->new("example.com");
+    my $update = Net::DNS::Update->new("example.com");
     $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
     $update->push("update", rr_add("bar.example.com A 10.4.5.6"));
     $update->push("additional", $tsig);

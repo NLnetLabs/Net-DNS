@@ -22,7 +22,7 @@ TABLE OF CONTENTS
 1. DESCRIPTION
 --------------
 
-Net::DNS is DNS resolver implemented in Perl.  It allows the
+Net::DNS is a DNS resolver implemented in Perl.  It allows the
 programmer to perform nearly any type of DNS query from a Perl
 script.  For details and examples, please read the Net::DNS manual
 page.
@@ -53,7 +53,7 @@ Perl Archive Network (CPAN) or from the module's homepage:
     http://www.perl.org/CPAN/modules/by-module/Net/
     http://www.net-dns.org/
 
-The following links will always be the current released version:
+The following link will always be the current released version:
 
     http://www.net-dns.org/download/Net-DNS-release.tar.gz
     
@@ -62,7 +62,7 @@ are at:
 
 	http://www.dyndns.org/~ctriv/net-dns-snaps/
 	
-Note that the CVS version at any given moment may be broken.
+Please note that the CVS version at any given moment may be broken.
 
 
 
@@ -77,6 +77,13 @@ Net::DNS has been tested with the following:
     Version of IO::Socket distributed with Perl 5.6.1
     Version of IO::Select distributed with Perl 5.6.1
     Version of FileHandle distributed with Perl 5.6.1
+
+	Perl 5.005_03
+	
+    Version of Socket distributed with Perl 5.005_03
+    Version of IO::Socket distributed with Perl 5.005_03
+    Version of IO::Select distributed with Perl 5.005_03
+    Version of FileHandle distributed with Perl 5.005_03
 
     Digest::MD5  2.12
     MIME::Base64 2.11
@@ -195,7 +202,8 @@ generate keys and configure the nameserver to use them:
 http://www.nominum.com/resources/faqs/bind-faq.html
 
 TSIG support is new and isn't yet complete.  Please use with caution
-on production systems.  
+on production systems.  Feedback on TSIG functionality would be most
+welcome.
 
 
 9. BUGS
@@ -209,14 +217,14 @@ As mentioned in the Dynamic Updates section, I recommend that you
 exercise caution when using Net::DNS to maintain a production
 nameserver via dynamic updates.  Always test your code *thoroughly*.
 The Net::DNS author accepts no blame if you corrupt your zone.  That
-warning in place, I'm aware of at least one large company that has
+warning in place, I am aware of at least one large company that has
 used Net::DNS to make hundreds of dynamic updates per day for nearly
 three years without any problems.
 
 If you find a bug, please report it to the author along with the
 following information:
 
-    * version of Perl
+    * version of Perl (output of 'perl -V' is best)
     * version of Net::DNS
     * operating system type and version
     * version of nameserver (if known)
@@ -258,6 +266,8 @@ devel-request@lists.net-dns.org with "subscribe" in the subject.
 12. ACKNOWLEDGMENTS
 -------------------
 
+Thanks to Mike for letting me take care of his baby.
+
 Thanks to all who have used Net::DNS and reported bugs, made
 suggestions, contributed code, and encouraged me to add certain
 features.  Many of these people are mentioned by name in the Changes
@@ -280,4 +290,4 @@ proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 1.6 2002/05/15 00:10:18 ctriv Exp $
+$Id: README,v 1.8 2002/06/02 11:05:32 ctriv Exp $

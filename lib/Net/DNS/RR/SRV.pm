@@ -1,6 +1,6 @@
 package Net::DNS::RR::SRV;
 
-# $Id: SRV.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: SRV.pm,v 1.4 2002/05/29 04:58:17 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -65,6 +65,20 @@ sub rr_rdata {
 				     $self->{"port"});
 		$rdata .= $packet->dn_comp($self->{"target"},
 					   $offset + length $rdata);
+	}
+
+	return $rdata;
+}
+
+
+sub _canonicalRdata {
+    my $self  = shift;
+    my $rdata = '';
+    
+    if (exists $self->{"priority"}) {
+	$rdata .= pack("n3", $self->{"priority"}, $self->{"weight"},
+		       $self->{"port"});
+	$rdata .= $self->name_2wire($self->{"target"});
 	}
 
 	return $rdata;

@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-# $Id: perldig,v 1.2 2002/02/07 03:54:18 ctriv Exp $
+# $Id: perldig,v 1.3 2002/05/28 07:55:08 ctriv Exp $
 
 =head1 NAME
 
@@ -32,6 +32,7 @@ use File::Basename;
 use Net::DNS;
 
 my $res = Net::DNS::Resolver->new;
+
 if (@ARGV && ($ARGV[0] =~ /^@/)) {
 	my $nameserver = shift;
 	$nameserver =~ s/^@//;
@@ -46,22 +47,24 @@ $type  ||= "A";
 $class ||= "IN";
 
 if (uc($type) eq "AXFR") {
-	my @zone = $res->axfr($name, $class);
-	if (@zone) {
-		foreach (@zone) {
-			$_->print;
-		}
+	
+	my @rrs = $res->axfr($name, $class);
+	
+	if (@rrs) {
+		foreach my $rr (@rrs) {
+			$rr->print;
+		}		
+	} else {
+		die "zone transfer failed: ", $res->errorstring, "\n";
 	}
-	else {
-		print "zone transfer failed: ", $res->errorstring, "\n";
-	}
-}
-else {
+	
+} else {
+
 	my $answer = $res->send($name, $type, $class);
-	if (defined($answer)) {
+	
+	if ($answer) {
 		$answer->print;
-	}
-	else {
-		print "query failed: ", $res->errorstring, "\n";
+	} else {
+		die "query failed: ", $res->errorstring, "\n";
 	}
 }

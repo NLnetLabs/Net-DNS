@@ -1,6 +1,6 @@
 package Net::DNS::RR::PTR;
 
-# $Id: PTR.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: PTR.pm,v 1.3 2002/05/22 18:09:36 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -45,6 +45,17 @@ sub rr_rdata {
 
 	if (exists $self->{"ptrdname"}) {
 		$rdata .= $packet->dn_comp($self->{"ptrdname"}, $offset);
+	}
+
+	return $rdata;
+}
+
+sub  _canonicalRdata {
+	my ($self, $packet, $offset) = @_;
+	my $rdata = "";
+
+	if (exists $self->{"ptrdname"}) {
+		$rdata .= $self->_name2wire($self->{"ptrdname"});
 	}
 
 	return $rdata;

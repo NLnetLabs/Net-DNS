@@ -1,6 +1,6 @@
 package Net::DNS::RR::SOA;
 
-# $Id: SOA.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: SOA.pm,v 1.3 2002/05/22 18:09:36 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -98,6 +98,32 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+
+sub _canonicalRdata {
+    my $self=shift;
+    my $rdata = "";
+
+    # Assume that if one field exists, they all exist.  Script will
+    # print a warning otherwise.
+    
+    if (exists $self->{"mname"}) {
+	$rdata .= $self->_name2wire($self->{"mname"});
+	
+	$rdata .=  $self->_name2wire($self->{"rname"});
+
+		$rdata .= pack("N5", $self->{"serial"},
+				     $self->{"refresh"},
+				     $self->{"retry"},
+				     $self->{"expire"},
+				     $self->{"minimum"});
+	}
+
+	return $rdata;
+}
+
+
 
 1;
 __END__

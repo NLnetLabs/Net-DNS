@@ -1,6 +1,6 @@
 package Net::DNS::RR::AFSDB;
 
-# $Id: AFSDB.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: AFSDB.pm,v 1.3 2002/05/22 18:09:36 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -56,6 +56,20 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+
+sub _canonicalRdata {
+    # rdata contains a compressed domainname... we should not have that.
+	my ($self) = @_;
+	my $rdata;
+	if (exists $self->{"subtype"}) {
+	    $rdata .= pack("n", $self->{"subtype"});
+	    $rdata .=  $self->_name2wire($self->{"hostname"});
+	}
+	return $rdata;
+}
+
 
 1;
 __END__

@@ -1,9 +1,10 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.4 2002/05/15 00:09:50 ctriv Exp $
+# $Id: DNS.pm,v 1.13 2002/06/03 21:12:39 ctriv Exp $
 
 use strict;
 use vars qw(
 	$VERSION
+	$DNSSEC
 	@ISA
 	@EXPORT
 	%typesbyname
@@ -16,7 +17,7 @@ use vars qw(
 	%rcodesbyval
 );
 
-$VERSION = "0.20";
+$VERSION = "0.21";
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -25,12 +26,24 @@ use Net::DNS::Header;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
+
+BEGIN {
+	eval { require Net::DNS::RR::SIG };
+	# $@ will be true if any errors where encountered 
+	# loading SIG.pm
+	$DNSSEC = $@ ? 0 : 1;
+}
+ 
+ 
+ 
+
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
 
-%typesbyname= (
-	"A"		=> 1,		# RFC 1035, Section 3.4.1
+%typesbyname = (
+ 	"SIGZERO"   => 0,       # RFC2931 consider this a pseudo type
+	"A"		    => 1,		# RFC 1035, Section 3.4.1
 	"NS"		=> 2,		# RFC 1035, Section 3.3.11
 	"MD"		=> 3,		# RFC 1035, Section 3.3.4 (obsolete)
 	"MF"		=> 4,		# RFC 1035, Section 3.3.5 (obsolete)
@@ -53,19 +66,22 @@ require Exporter;
 	"RT"		=> 21,		# RFC 1183, Section 3.3
 	"NSAP"		=> 22,		# RFC 1706, Section 5
 	"NSAP_PTR"	=> 23,		# RFC 1348 (obsolete)
-	"SIG"		=> 24,		# RFC 2065, Section 4.1
-	"KEY"		=> 25,		# RFC 2065, Section 3.1
-	"PX"		=> 26,		# RFC 1664, Section 4
+ 	"SIG"		=> 24,		# RFC 2535, Section 4.1
+ 	"KEY"		=> 25,		# RFC 2535, Section 3.1
+ 	"PX"		=> 26,		# RFC 2163,
 	"GPOS"		=> 27,		# RFC 1712 (obsolete)
 	"AAAA"		=> 28,		# RFC 1886, Section 2.1
 	"LOC"		=> 29,		# RFC 1876
-	"NXT"		=> 30,		# RFC 2065, Section 5.2
+	"NXT"		=> 30,		# RFC 2535, Section 5.2
 	"EID"		=> 31,		# draft-ietf-nimrod-dns-xx.txt
 	"NIMLOC"	=> 32,		# draft-ietf-nimrod-dns-xx.txt
 	"SRV"		=> 33,		# RFC 2052
 	"ATMA"		=> 34,		# ???
 	"NAPTR"		=> 35,		# RFC 2168
-	"TSIG"		=> 36,		# draft-ietf-dnsind-tsig-xx.txt
+	"TSIG"		=> 36,		# RFC 2931
+ 	"CERT"		=> 37,		# RFC 2538
+	"OPT"       => 41,      # RFC 2671
+	"DS"		=> 43,		# Not ASSIGNED YET...!!! draft
 	"UINFO"		=> 100,		# non-standard
 	"UID"		=> 101,		# non-standard
 	"GID"		=> 102,		# non-standard
@@ -76,7 +92,8 @@ require Exporter;
 	"MAILA"		=> 254,		# RFC 1035 (obsolete - see MX)
 	"ANY"		=> 255,		# RFC 1035
 );
-%typesbyval = map { ($typesbyname{$_} => $_) } keys %typesbyname;
+%typesbyval = reverse %typesbyname;
+
 
 %classesbyname = (
 	"IN"		=> 1,		# RFC 1035
@@ -85,7 +102,8 @@ require Exporter;
 	"NONE"		=> 254,		# RFC 2136
 	"ANY"		=> 255,		# RFC 1035
 );
-%classesbyval = map { ($classesbyname{$_} => $_) } keys %classesbyname;
+%classesbyval = reverse %classesbyname;
+
 
 %opcodesbyname = (
 	"QUERY"		=> 0,		# RFC 1035
@@ -94,7 +112,8 @@ require Exporter;
 	"NS_NOTIFY_OP"	=> 4,		# RFC 1996
 	"UPDATE"	=> 5,		# RFC 2136
 );
-%opcodesbyval = map { ($opcodesbyname{$_} => $_) } keys %opcodesbyname;
+%opcodesbyval = reverse %opcodesbyname;
+
 
 %rcodesbyname = (
 	"NOERROR"	=> 0,		# RFC 1035
@@ -109,7 +128,8 @@ require Exporter;
 	"NOTAUTH"	=> 9,		# RFC 2136
 	"NOTZONE"	=> 10,		# RFC 2136
 );
-%rcodesbyval = map { ($rcodesbyname{$_} => $_) } keys %rcodesbyname;
+%rcodesbyval = reverse %rcodesbyname;
+
 
 sub version	{ $VERSION; }
 sub PACKETSZ	{ 512; }
@@ -119,22 +139,34 @@ sub RRFIXEDSZ	{  10; }
 sub INT32SZ	{   4; }
 sub INT16SZ	{   2; }
 
+
+
+# mx()
+#
+# Usage:
+#    my @mxes = mx('example.com', 'IN');
+#
 sub mx {
-	my ($res, $name, $class);
-	my ($ans, @mxlist);
+	# If the first argument is a object, use that as our resolver.
+	my $res = ref $_[0] ? shift : Net::DNS::Resolver->new;
 
-	$res = ref $_[0] ? shift : Net::DNS::Resolver->new;
-	($name, $class) = @_;
-	$class = "IN" unless defined $class;
+	# assign our arguments, setting class to 'IN' if not set for us.
+	my ($name, $class) = @_;
+	$class ||= 'IN';
 
-	$ans = $res->query($name, "MX", $class);
+	# We return failure unless we get an answer.
+	my $ans = $res->query($name, "MX", $class) || return;
 
-	if (defined $ans) {
-		@mxlist = grep { $_->type eq "MX" } $ans->answer;
-		@mxlist = sort { $a->preference <=> $b->preference } @mxlist;
-	}
+	# This construct is best read backwords.
+	#
+	# First we take the answer secion of the packet.
+	# Then we take just the MX records from that list
+	# Then we sort the list by preference
+	# Then we return it.
+	return sort { $a->preference <=> $b->preference } 
+	       grep { $_->type eq 'MX'} $ans->answer;
 
-	return @mxlist;
+
 }
 
 sub yxrrset {
@@ -258,12 +290,12 @@ Returns the version of Net::DNS.
 
     # Use a default resolver -- can't get an error string this way.
     use Net::DNS;
-    @mx = mx("foo.com");
+    my @mx = mx("example.com");
 
     # Use your own resolver object.
     use Net::DNS;
-    $res = new Net::DNS::Resolver;
-    @mx = mx($res, "foo.com");
+    my $res = Net::DNS::Resolver->new;
+    my  @mx = mx($res, "example.com");
 
 Returns a list of C<Net::DNS::RR::MX> objects representing the MX
 records for the specified name; the list will be sorted by preference.
@@ -281,13 +313,13 @@ update packet.  There are two forms, value-independent and
 value-dependent:
 
     # RRset exists (value-independent)
-    $packet->push("pre", yxrrset("foo.bar.com A"));
+    $packet->push("pre", yxrrset("host.example.com A"));
 
 Meaning:  At least one RR with the specified name and type must
 exist.
 
     # RRset exists (value-dependent)
-    $packet->push("pre", yxrrset("foo.bar.com A 10.1.2.3"));
+    $packet->push("pre", yxrrset("host.example.com A 10.1.2.3"));
 
 Meaning:  At least one RR with the specified name and type must
 exist and must have matching data.
@@ -300,7 +332,7 @@ be created.
 Use this method to add an "RRset does not exist" prerequisite to
 a dynamic update packet.
 
-    $packet->push("pre", nxrrset("foo.bar.com A"));
+    $packet->push("pre", nxrrset("host.example.com A"));
 
 Meaning:  No RRs with the specified name and type can exist.
 
@@ -312,7 +344,7 @@ be created.
 Use this method to add a "name is in use" prerequisite to a dynamic
 update packet.
 
-    $packet->push("pre", yxdomain("foo.bar.com"));
+    $packet->push("pre", yxdomain("host.example.com"));
 
 Meaning:  At least one RR with the specified name must exist.
 
@@ -324,7 +356,7 @@ be created.
 Use this method to add a "name is not in use" prerequisite to a
 dynamic update packet.
 
-    $packet->push("pre", nxdomain("foo.bar.com"));
+    $packet->push("pre", nxdomain("host.example.com"));
 
 Meaning:  No RR with the specified name can exist.
 
@@ -335,7 +367,7 @@ be created.
 
 Use this method to add RRs to a zone.
 
-    $packet->push("update", rr_add("foo.bar.com A 10.1.2.3"));
+    $packet->push("update", rr_add("host.example.com A 10.1.2.3"));
 
 Meaning:  Add this RR to the zone.
 
@@ -352,17 +384,17 @@ Use this method to delete RRs from a zone.  There are three forms:
 delete an RRset, delete all RRsets, and delete an RR.
 
     # Delete an RRset.
-    $packet->push("update", rr_del("foo.bar.com A"));
+    $packet->push("update", rr_del("host.example.com A"));
 
 Meaning:  Delete all RRs having the specified name and type.
 
     # Delete all RRsets.
-    $packet->push("update", rr_del("foo.bar.com"));
+    $packet->push("update", rr_del("host.example.com"));
 
 Meaning:  Delete all RRs having the specified name.
 
     # Delete an RR.
-    $packet->push("update", rr_del("foo.bar.com A 10.1.2.3"));
+    $packet->push("update", rr_del("host.example.com A 10.1.2.3"));
 
 Meaning:  Delete all RRs having the specified name, type, and data.
 
@@ -384,10 +416,11 @@ dynamic updates.
 =head2 Look up a host's addresses.
 
   use Net::DNS;
-  $res = new Net::DNS::Resolver;
-  $query = $res->search("foo.bar.com");
+  my $res   = Net::DNS::Resolver->new;
+  my $query = $res->search("host.example.com");
+  
   if ($query) {
-      foreach $rr ($query->answer) {
+      foreach my $rr ($query->answer) {
           next unless $rr->type eq "A";
           print $rr->address, "\n";
       }
@@ -399,8 +432,9 @@ dynamic updates.
 =head2 Find the nameservers for a domain.
 
   use Net::DNS;
-  $res = new Net::DNS::Resolver;
-  $query = $res->query("foo.com", "NS");
+  my $res   = Net::DNS::Resolver->new;
+  my $query = $res->query("example.com", "NS");
+  
   if ($query) {
       foreach $rr ($query->answer) {
           next unless $rr->type eq "NS";
@@ -414,9 +448,10 @@ dynamic updates.
 =head2 Find the MX records for a domain.
 
   use Net::DNS;
-  $name = "foo.com";
-  $res = new Net::DNS::Resolver;
-  @mx = mx($res, $name);
+  my $name = "example.com";
+  my $res  = Net::DNS::Resolver->new;
+  my @mx   = mx($res, $name);
+  
   if (@mx) {
       foreach $rr (@mx) {
           print $rr->preference, " ", $rr->exchange, "\n";
@@ -430,8 +465,9 @@ dynamic updates.
 =head2 Print a domain's SOA record in zone file format.
 
   use Net::DNS;
-  $res = new Net::DNS::Resolver;
-  $query = $res->query("foo.com", "SOA");
+  my $res   = Net::DNS::Resolver->new;
+  my $query = $res->query("example.com", "SOA");
+  
   if ($query) {
       ($query->answer)[0]->print;
   }
@@ -442,9 +478,11 @@ dynamic updates.
 =head2 Perform a zone transfer and print all the records.
 
   use Net::DNS;
-  $res = new Net::DNS::Resolver;
-  $res->nameservers("ns.foo.com");
-  @zone = $res->axfr("foo.com");
+  my $res  = Net::DNS::Resolver->new;
+  $res->nameservers("ns.example.com");
+  
+  my @zone = $res->axfr("example.com");
+  
   foreach $rr (@zone) {
       $rr->print;
   }
@@ -453,13 +491,15 @@ dynamic updates.
 for the answer.
 
   use Net::DNS;
-  $res = new Net::DNS::Resolver;
-  $socket = $res->bgsend("foo.bar.com");
+  my $res    = Net::DNS::Resolver->new;
+  my $socket = $res->bgsend("host.example.com");
+
   until ($res->bgisready($socket)) {
       # do some work here while waiting for the answer
       # ...and some more here
   }
-  $packet = $res->bgread($socket);
+
+  my $packet = $res->bgread($socket);
   $packet->print;
 
 
@@ -468,22 +508,24 @@ has arrived.
 
   use Net::DNS;
   use IO::Select;
-  $timeout = 5;
-  $res = new Net::DNS::Resolver;
-  $bgsock = $res->bgsend("foo.bar.com");
-  $sel = new IO::Select($bgsock);
+  
+  my $timeout = 5;
+  my $res     = Net::DNS::Resolver->new;
+  my $bgsock  = $res->bgsend("host.example.com");
+  my $sel     = IO::Select->new($bgsock);
+  
   # Add more sockets to $sel if desired.
-  @ready = $sel->can_read($timeout);
+  my @ready = $sel->can_read($timeout);
   if (@ready) {
-      foreach $sock (@ready) {
+      foreach my $sock (@ready) {
           if ($sock == $bgsock) {
-              $packet = $res->bgread($bgsock);
+              my $packet = $res->bgread($bgsock);
               $packet->print;
               $bgsock = undef;
           }
-	  # Check for the other sockets.
-	  $sel->remove($sock);
-	  $sock = undef;
+	      # Check for the other sockets.
+	      $sel->remove($sock);
+	      $sock = undef;
       }
   }
   else {

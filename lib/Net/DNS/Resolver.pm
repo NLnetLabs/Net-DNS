@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.5 2002/05/14 10:51:23 ctriv Exp $
+# $Id: Resolver.pm,v 1.11 2002/05/31 08:46:58 ctriv Exp $
 
 =head1 NAME
 
@@ -36,7 +36,7 @@ The default domain.
 
 A space-separated list of domains to put in the search list.
 
-=item B<nameserver>
+item B<nameserver>
 
 A space-separated list of nameservers to query.
 
@@ -50,6 +50,9 @@ see L</ENVIRONMENT>.
 =head1 METHODS
 
 =cut
+
+#'  Stupid Emacs!
+
 use Config;
 use strict;
 
@@ -128,6 +131,9 @@ push(@confpath, '.');
 	axfr_rr        => [],
 	axfr_soa_count => 0,
 	persistent_tcp => 0,
+    dnssec         => 0,
+    udppacketsize  => 0,  # The actual default is lower bound by Net::DNS::PACKETSZ
+    cdflag         => 1,  # this is only used when {dnssec} == 1
 );
 
 %global = (
@@ -157,8 +163,7 @@ sub DESTROY {}
 sub res_init {
 	if ($os eq 'unix') {
 		res_init_unix();
-	}
-	elsif ($os eq 'microsoft') {
+	} elsif ($os eq 'microsoft') {
 		res_init_microsoft();
 	}
 
@@ -194,10 +199,10 @@ sub res_init_microsoft {
 	my $root = 'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
 
 	$main::HKEY_LOCAL_MACHINE->Open($root, $resobj)
-		or Carp::confess "can't read registry: $!";
+		or Carp::croak "can't read registry: $!";
 
 	$resobj->GetValues(\%keys)
-		or Carp::confess "can't read registry values: $!";
+		or Carp::croak "can't read registry values: $!";
 
 	my $domain      = $keys{'Domain'}->[2] || $keys{'DhcpDomain'}->[2];
 	my $searchlist  = $keys{'SearchList'}->[2];
@@ -232,7 +237,7 @@ sub read_config {
 	my @searchlist;
 	local *FILE;
 
-	open(FILE, $file) or Carp::confess "can't open $file: $!";
+	open(FILE, $file) or die "can't open $file: $!";
 	local $/ = "\n";
 
 	while (<FILE>) {
@@ -305,6 +310,7 @@ sub print {
 Returns a string representation of the resolver state.
 
 =cut
+#"
 
 sub string {
 	my $self = shift;
@@ -382,7 +388,7 @@ The default is 0.0.0.0, meaning any local address.
 =cut
 
 sub nameservers {
-	my $self = shift;
+	my $self   = shift;
 	my $defres = Net::DNS::Resolver->new;
 
 	if (@_) {
@@ -425,7 +431,7 @@ sub nameserver { &nameservers }
 
 
 sub cname_addr {
-	my $names = shift;
+	my $names  = shift;
 	my $packet = shift;
 	my @addr;
 	my @names = @{$names};
@@ -440,6 +446,17 @@ sub cname_addr {
 		}
 	}
 	return @addr;
+}
+
+
+# if ($self->{"udppacketsize"}  > &Net::DNS::PACKETSZ 
+# then we use EDNS and $self->{"udppacketsize"} 
+# should be taken as the maximum packet_data length
+sub _packetsz {
+	my ($self) = @_;
+
+	return $self->{"udppacketsize"} > &Net::DNS::PACKETSZ ? 
+		   $self->{"udppacketsize"} : &Net::DNS::PACKETSZ; 
 }
 
 =head2 search
@@ -544,6 +561,7 @@ Returns a C<Net::DNS::Packet> object, or C<undef> if no answers
 were found.
 
 =cut
+#'
 
 sub query {
 	my ($self, $name, $type, $class) = @_;
@@ -565,6 +583,9 @@ sub query {
 
 	print ";; query($name, $type, $class)\n" if $self->{'debug'};
 	my $packet = Net::DNS::Packet->new($name, $type, $class);
+
+
+	
 	my $ans = $self->send($packet);
 
 	return (defined($ans) && ($ans->header->ancount > 0)) ? $ans : undef;
@@ -599,21 +620,23 @@ sub send {
 
 	my $ans;
 
-	if ($self->{'usevc'} || length $packet_data > &Net::DNS::PACKETSZ) {
-		$ans = $self->send_tcp($packet, $packet_data);
-	}
-	else {
-		$ans = $self->send_udp($packet, $packet_data);
-
-		if ($ans && $ans->header->tc && !$self->{'igntc'}) {
-			print ";;\n;; packet truncated: retrying using TCP\n"
-				if $self->{'debug'};
+	if ($self->{'usevc'} || length $packet_data > $self->_packetsz) {
+	  
+	    $ans = $self->send_tcp($packet, $packet_data);
+	    
+	} else {
+	    $ans = $self->send_udp($packet, $packet_data);
+	    
+	    if ($ans && $ans->header->tc && !$self->{'igntc'}) {
+			print ";;\n;; packet truncated: retrying using TCP\n" if $self->{'debug'};
 			$ans = $self->send_tcp($packet, $packet_data);
-		}
+	    }
 	}
-
+	
 	return $ans;
 }
+
+
 
 sub send_tcp {
 	my ($self, $packet, $packet_data) = @_;
@@ -750,7 +773,7 @@ sub send_udp {
 
 	my $dstport = $self->{'port'};
 	my $srcport = $self->{'srcport'};
-	my $srcaddr = inet_aton($self->{'srcaddr'});
+	my $srcaddr = $self->{'srcaddr'};
 
 	# IO::Socket carps on errors if Perl's -w flag is turned on.
 	# Uncomment the next two lines and the line following the "new"
@@ -759,7 +782,12 @@ sub send_udp {
 	#my $old_wflag = $^W;
 	#$^W = 0;
 
-	my $sock = IO::Socket::INET->new(Proto => 'udp');
+	my $sock = IO::Socket::INET->new(
+			    PeerPort  => $dstport,
+			    LocalAddr => $srcaddr,
+			    LocalPort => ($srcport || undef),
+			    Proto     => 'udp',
+	);
 
 	#$^W = $old_wflag;
 
@@ -768,16 +796,9 @@ sub send_udp {
 		return;
 	}
 
-	my $src_sockaddr = sockaddr_in($srcport, $srcaddr);
-
-	unless ($sock->bind($src_sockaddr)) {
-		$self->errorstring("couldn't bind socket: $!");
-		return;
-	}
-
 	my @ns = grep { $_->[0] && $_->[1] }
-		 map  { [ $_, scalar(sockaddr_in($dstport, inet_aton($_))) ] }
-		 @{$self->{'nameservers'}};
+	         map  { [ $_, scalar(sockaddr_in($dstport, inet_aton($_))) ] }
+	         @{$self->{'nameservers'}};
 
 	unless (@ns) {
 		$self->errorstring('no nameservers');
@@ -811,37 +832,42 @@ sub send_udp {
 
 			foreach my $ready (@ready) {
 				my $buf = '';
-				if ($ready->recv($buf, &Net::DNS::PACKETSZ)) {
+
+				if ($ready->recv($buf, $self->_packetsz)) {
+				
 					$self->answerfrom($ready->peerhost);
 					$self->answersize(length $buf);
+				
 					print ';; answer from ',
 					      $ready->peerhost, ':',
 					      $ready->peerport, ' : ',
 					      length($buf), " bytes\n"
 						if $self->{'debug'};
+				
 					my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
+				
 					if (defined $ans) {
 						next unless $ans->header->qr;
 						next unless $ans->header->id == $packet->header->id;
 						$self->errorstring($ans->header->rcode);
 						$ans->answerfrom($self->answerfrom);
 						$ans->answersize($self->answersize);
-					}
-					elsif (defined $err) {
+					} elsif (defined $err) {
 						$self->errorstring($err);
 					}
+					
 					return $ans;
-				}
-				else {
+				} else {
 					$self->errorstring($!);
+					
 					print ';; recv ERROR(',
 					      $ready->peerhost, ':',
 					      $ready->peerport, '): ',
 					      $self->errorstring, "\n"
 						if $self->{'debug'};
 
-					@ns = grep { $_->[0] ne $ready->peerhost }
-					      @ns;
+					@ns = grep { $_->[0] ne $ready->peerhost } @ns;
+					
 					return unless @ns;
 				}
 			}
@@ -904,10 +930,9 @@ sub bgsend {
 	my $sock = IO::Socket::INET->new(Proto => 'udp');
 
 	unless ($sock) {
-		$self->errorstring(q|couldn't get socket|);
+		$self->errorstring(q|couldn't get socket|);   #'
 		return;
 	}
-
 	my $src_sockaddr = sockaddr_in($srcport, inet_aton($srcaddr));
 	unless ($sock->bind($src_sockaddr)) {
 	    $self->errorstring("can't bind socket: $!");
@@ -948,7 +973,7 @@ sub bgread {
 
 	my $buf = '';
 
-	my $sock2 = $sock->recv($buf, &Net::DNS::PACKETSZ);
+	my $sock2 = $sock->recv($buf, $self->_packetsz);
 	if ($sock2) {
 		print ';; answer from ', $sock2->peerhost, ':',
 		      $sock2->peerport, ' : ', length($buf), " bytes\n"
@@ -996,10 +1021,9 @@ sub make_query_packet {
 	my $self = shift;
 	my $packet;
 
-	if (ref($_[0]) eq 'Net::DNS::Packet') {
+	if (ref($_[0]) and $_[0]->isa('Net::DNS::Packet')) {
 		$packet = shift;
-	}
-	else {
+	} else {
 		my ($name, $type, $class) = @_;
 
 		$type  = 'A'  unless defined($type);
@@ -1018,6 +1042,34 @@ sub make_query_packet {
 	if ($packet->header->opcode eq 'QUERY') {
 		$packet->header->rd($self->{'recurse'});
 	}
+
+    if ($self->{'dnssec'}) {
+	    # RFC 3225
+    	print ";; Adding EDNS extention with UDP packetsize $self->{'udppacketsize'} and DNS OK bit set\n" 
+    		if $self->{'debug'};
+    	
+    	my $optrr = Net::DNS::RR->new(
+						Type         => 'OPT',
+						Name         => '',
+						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload
+						ednsflags    => 0x8000, # first bit set see RFC 3225 
+				   );
+				 
+	    $packet->push('additional', $optrr);
+	    
+	} elsif ($self->{'udppacketsize'} > &Net::DNS::PACKETSZ) {
+	    print ";; Adding EDNS extention with UDP packetsize  $self->{'udppacketsize'}.\n" if $self->{'debug'};
+	    # RFC 3225
+	    my $optrr = Net::DNS::RR->new( 
+						Type         => 'OPT',
+						Name         => '',
+						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload
+						TTL          => 0x0000 # RCODE 32bit Hex
+				    );
+				    
+	    $packet->push('additional', $optrr);
+	}
+	
 
 	if ($self->{'tsig_rr'}) {
 		if (!grep { $_->type eq 'TSIG' } $packet->additional) {
@@ -1268,15 +1320,15 @@ sub axfr_start {
 	if ($self->{'persistent_tcp'} && $self->{'sockets'}->{$sock_key}) {
 	    $sock = $self->{'sockets'}->{$sock_key};
 	    print ";; using persistent socket\n" if $self->{'debug'};
-	}
-	else {
+	    
+	} else {
 
 		# IO::Socket carps on errors if Perl's -w flag is turned on.
 		# Uncomment the next two lines and the line following the "new"
 		# call to turn off these messages.
 
-		my $old_wflag = $^W;
-		$^W = 0;
+		#my $old_wflag = $^W;
+		#$^W = 0;
 
 		$sock = IO::Socket::INET->new(
 		    PeerAddr  => $ns,
@@ -1287,7 +1339,7 @@ sub axfr_start {
 		    Timeout   => $self->{'tcp_timeout'}
 		 );
 
-		$^W = $old_wflag;
+		#$^W = $old_wflag;
 
 		unless ($sock) {
 			$self->errorstring(q|couldn't connect|);
@@ -1633,6 +1685,39 @@ response to a query.
 Returns the size in bytes of the last answer we received in
 response to a query.
 
+
+=head2 dnssec
+
+    print "dnssec flag: ", $res->dnssec, "\n";
+    $res->dnssec(0);
+
+Enabled DNSSEC this will set the checking disabled flag in the query header
+and add EDNS0 data as in RFC2671 and RFC3225
+
+When set to true the answer and additional section of queries from
+secured zones will contain KEY, NXT and SIG records.
+
+
+=head2 cdflag
+
+    print "checking disabled flag: ", $res->dnssec, "\n";
+    $res->dnssec(1);
+    $res->cdflag(1);
+
+Sets or gets the CD bit for a dnssec query.  This bit is always zero
+for non dnssec queries. When the dnssec is enabled the flag can be set
+to 1.
+
+=head2 udppacketsize
+
+    print "udppacketsize: ", $res->udppacketsize, "\n";
+    $res->udppacketsize(2048);
+
+udppacketsize will set or get the packet size. If set to a value greater than 
+&Net::DNS::PACKETSZ an EDNS extention will be added indicating suppport for MTU path 
+recovery.
+
+Default udppacketsize is &Net::DNS::PACKETSZ (512)
 =cut
 
 sub AUTOLOAD {
@@ -1640,7 +1725,7 @@ sub AUTOLOAD {
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
 
-	Carp::confess "$name: no such method" unless exists $self->{$name};
+	Carp::croak "$name: no such method" unless exists $self->{$name};
 	$self->{$name} = shift if @_;
 	return $self->{$name};
 }
@@ -1704,7 +1789,7 @@ No validation of server replies is performed.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.  All rights reserved.  This
+Copyright (c) 1997-2000 Michael Fuhr.  All rights reserved.  This
 program is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself. 
 

@@ -6,7 +6,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-# $Id: Question.pm,v 1.3 2002/05/14 10:51:23 ctriv Exp $
+# $Id: Question.pm,v 1.4 2002/05/28 08:08:25 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -104,7 +104,7 @@ sub AUTOLOAD {
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
 
-	Carp::confess "$name: no such method" unless exists $self->{$name};
+	Carp::croak "$name: no such method" unless exists $self->{$name};
 	return $self->{$name};
 }
 
