@@ -1,22 +1,19 @@
 package Net::DNS::RR::PX;
 #
-# $Id: PX.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
+# $Id: PX.pm,v 2.104 2004/05/05 20:35:43 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Net::DNS;
-use Net::DNS::Packet;
-
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.104 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
 	if ($self->{"rdlength"} > 0) {
 		($self->{"preference"}) = unpack("\@$offset n", $$data);
-		$offset += &Net::DNS::INT16SZ;
+		$offset += Net::DNS::INT16SZ();
 
 		($self->{"map822"},  $offset) = Net::DNS::Packet::dn_expand($data, $offset);
 		($self->{"mapx400"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
@@ -118,7 +115,7 @@ Returns the X.400 part of the RFC1327 mapping information.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

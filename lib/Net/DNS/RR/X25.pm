@@ -1,14 +1,12 @@
 package Net::DNS::RR::X25;
 #
-# $Id: X25.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
+# $Id: X25.pm,v 2.103 2004/05/05 20:35:43 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Net::DNS::Packet;
-
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.103 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -80,7 +78,7 @@ Returns the PSDN address.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 2.107 2004/02/21 12:40:29 ctriv Exp $
+# $Id: Base.pm,v 2.109 2004/05/05 20:35:43 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use IO::Select;
 use Net::DNS;
 use Net::DNS::Packet;
 
-$VERSION = (qw$Revision: 2.107 $)[1];
+$VERSION = (qw$Revision: 2.109 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -307,14 +307,14 @@ sub cname_addr {
 }
 
 
-# if ($self->{"udppacketsize"}  > &Net::DNS::PACKETSZ 
+# if ($self->{"udppacketsize"}  > Net::DNS::PACKETSZ() 
 # then we use EDNS and $self->{"udppacketsize"} 
 # should be taken as the maximum packet_data length
 sub _packetsz {
 	my ($self) = @_;
 
-	return $self->{"udppacketsize"} > &Net::DNS::PACKETSZ ? 
-		   $self->{"udppacketsize"} : &Net::DNS::PACKETSZ; 
+	return $self->{"udppacketsize"} > Net::DNS::PACKETSZ() ? 
+		   $self->{"udppacketsize"} : Net::DNS::PACKETSZ(); 
 }
 
 sub _reset_errorstring {
@@ -535,7 +535,7 @@ sub send_tcp {
 		my $sel = IO::Select->new($sock);
 
 		if ($sel->can_read($timeout)) {
-			my $buf = read_tcp($sock, &Net::DNS::INT16SZ, $self->{'debug'});
+			my $buf = read_tcp($sock, Net::DNS::INT16SZ(), $self->{'debug'});
 			next unless length($buf);
 			my ($len) = unpack('n', $buf);
 			next unless $len;
@@ -841,7 +841,7 @@ sub make_query_packet {
 				 
 	    $packet->push('additional', $optrr);
 	    
-	} elsif ($self->{'udppacketsize'} > &Net::DNS::PACKETSZ) {
+	} elsif ($self->{'udppacketsize'} > Net::DNS::PACKETSZ()) {
 	    print ";; Adding EDNS extention with UDP packetsize  $self->{'udppacketsize'}.\n" if $self->{'debug'};
 	    # RFC 3225
 	    my $optrr = Net::DNS::RR->new( 
@@ -997,7 +997,7 @@ sub axfr_next {
 			return wantarray ? (undef, $err) : undef;
 		}
 
-		my $buf = read_tcp($ready[0], &Net::DNS::INT16SZ, $self->{'debug'});
+		my $buf = read_tcp($ready[0], Net::DNS::INT16SZ(), $self->{'debug'});
 		unless (length $buf) {
 			$err = 'truncated zone transfer';
 			$self->errorstring($err);
@@ -1194,7 +1194,7 @@ for all your resolving needs.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

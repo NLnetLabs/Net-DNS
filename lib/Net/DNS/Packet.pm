@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 2.102 2004/04/01 06:57:46 ctriv Exp $
+# $Id: Packet.pm,v 2.104 2004/05/05 20:35:43 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$Revision: 2.104 $)[1];
 
 =head1 NAME
 
@@ -86,7 +86,7 @@ sub new {
 
 		$self{"header"}->print if $debug;
 
-		my $offset = &Net::DNS::HFIXEDSZ;
+		my $offset = Net::DNS::HFIXEDSZ();
 
 		#--------------------------------------------------------------
 		# Parse the question/zone section.
@@ -688,7 +688,7 @@ sub dn_expand_PP {
 	my $name = "";
 	my $len;
 	my $packetlen = length $$packet;
-	my $int16sz = &Net::DNS::INT16SZ;
+	my $int16sz = Net::DNS::INT16SZ();
 
 	# Debugging
 	#warn "USING PURE PERL dn_expand()\n";
@@ -877,10 +877,10 @@ sub parse_question {
 	return (undef, undef) unless defined $qname;
 
 	return (undef, undef)
-		if length($$data) < ($offset + 2 * &Net::DNS::INT16SZ);
+		if length($$data) < ($offset + 2 * Net::DNS::INT16SZ());
 
 	my ($qtype, $qclass) = unpack("\@$offset n2", $$data);
-	$offset += 2 * &Net::DNS::INT16SZ;
+	$offset += 2 * Net::DNS::INT16SZ();
 
 	$qtype  = Net::DNS::typesbyval($qtype);
 	$qclass = Net::DNS::classesbyval($qclass);
@@ -910,7 +910,7 @@ sub parse_rr {
 	return (undef, undef) unless defined $name;
 
 	return (undef, undef)
-		if length($$data) < ($offset + &Net::DNS::RRFIXEDSZ);
+		if length($$data) < ($offset + Net::DNS::RRFIXEDSZ());
 
 	my ($type, $class, $ttl, $rdlength) = unpack("\@$offset n2 N n", $$data);
 
@@ -923,7 +923,7 @@ sub parse_rr {
 	} 
 	# else just keep at its numerical value
 
-	$offset += &Net::DNS::RRFIXEDSZ;
+	$offset += Net::DNS::RRFIXEDSZ();
 
 	return (undef, undef)
 		if length($$data) < ($offset + $rdlength);
@@ -948,7 +948,7 @@ sub parse_rr {
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

@@ -1,14 +1,12 @@
 package Net::DNS::RR::Unknown;
 #
-# $Id: Unknown.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: Unknown.pm,v 2.102 2004/05/05 20:35:43 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Net::DNS;
-
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.102 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -57,7 +55,7 @@ Class for dealing with unknown RR types (RFC3597)
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 Portions Copyright (c) 2003  Olaf M. Kolkman, RIPE NCC.
 

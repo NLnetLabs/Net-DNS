@@ -1,6 +1,6 @@
 package Net::DNS::Nameserver;
 #
-# $Id: Nameserver.pm,v 2.102 2004/03/24 00:40:29 ctriv Exp $
+# $Id: Nameserver.pm,v 2.104 2004/05/05 20:35:43 ctriv Exp $
 #
 
 use Net::DNS;
@@ -11,7 +11,7 @@ use Carp qw(cluck);
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$Revision: 2.104 $)[1];
 
 use constant DEFAULT_ADDR => INADDR_ANY;
 use constant DEFAULT_PORT => 53;
@@ -216,7 +216,7 @@ sub udp_connection {
 	my ($self, $sock) = @_;
 
 	my $buf = "";
-	my $peer_sockaddr         = $sock->recv($buf, &Net::DNS::PACKETSZ);
+	my $peer_sockaddr         = $sock->recv($buf, Net::DNS::PACKETSZ());
 	my ($peerport, $peeraddr) = sockaddr_in($peer_sockaddr);
 	my $peerhost              = inet_ntoa($peeraddr);
 
@@ -385,7 +385,7 @@ Net::DNS::Nameserver objects can handle only one query at a time.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

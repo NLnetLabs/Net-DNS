@@ -1,6 +1,6 @@
 package Net::DNS::RR::LOC;
 #
-# $Id: LOC.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
+# $Id: LOC.pm,v 2.104 2004/05/05 20:35:43 ctriv Exp $
 #
 use strict;
 use vars qw(
@@ -10,11 +10,8 @@ use vars qw(
         $default_horiz_pre $default_vert_pre
 );
 
-use Net::DNS;
-use Net::DNS::Packet;
-
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.104 $)[1];
 
 # Powers of 10 from 0 to 9 (used to speed up calculations).
 @poweroften = (1, 10, 100, 1_000, 10_000, 100_000, 1_000_000,
@@ -61,13 +58,13 @@ sub new {
 			++$offset;
 	
 			my ($latitude) = unpack("\@$offset N", $$data);
-			$offset += &Net::DNS::INT32SZ;
+			$offset += Net::DNS::INT32SZ();
 	
 			my ($longitude) = unpack("\@$offset N", $$data);
-			$offset += &Net::DNS::INT32SZ;
+			$offset += Net::DNS::INT32SZ();
 	
 			my ($altitude) = unpack("\@$offset N", $$data);
-			$offset += &Net::DNS::INT32SZ;
+			$offset += Net::DNS::INT32SZ();
 	
 			$self->{"size"}      = $size;
 			$self->{"horiz_pre"} = $horiz_pre;
@@ -347,7 +344,7 @@ below the WGS 84 reference spheroid used by GPS.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

@@ -1,20 +1,20 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm,v 2.102 2004/02/25 12:34:54 ctriv Exp $
+# $Id: Resolver.pm,v 2.105 2004/05/05 20:35:43 ctriv Exp $
 #
 
 use strict;
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$Revision: 2.105 $)[1];
 
 BEGIN {
 	if ($^O eq 'MSWin32') {
 		require Net::DNS::Resolver::Win32;
 		@ISA = qw(Net::DNS::Resolver::Win32);
 	} elsif ($^O eq 'cygwin') {
-		 require Net::DNS::Resolver::Cygwin;
-		 @ISA = qw(Net::DNS::Resolver::Cygwin);
+		require Net::DNS::Resolver::Cygwin;
+		@ISA = qw(Net::DNS::Resolver::Cygwin);
 	} else {   
 		require Net::DNS::Resolver::UNIX;
 		@ISA = qw(Net::DNS::Resolver::UNIX);
@@ -596,10 +596,10 @@ to 1.
     $res->udppacketsize(2048);
 
 udppacketsize will set or get the packet size. If set to a value greater than 
-&Net::DNS::PACKETSZ an EDNS extension will be added indicating suppport for MTU path 
+Net::DNS::PACKETSZ() an EDNS extension will be added indicating suppport for MTU path 
 recovery.
 
-Default udppacketsize is &Net::DNS::PACKETSZ (512)
+Default udppacketsize is Net::DNS::PACKETSZ() (512)
 
 =head1 CUSTOMIZING
 
@@ -682,7 +682,7 @@ No validation of server replies is performed.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

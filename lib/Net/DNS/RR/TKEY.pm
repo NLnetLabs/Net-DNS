@@ -1,16 +1,15 @@
 package Net::DNS::RR::TKEY;
 #
-# $Id: TKEY.pm,v 2.101 2004/01/04 04:31:11 ctriv Exp $
+# $Id: TKEY.pm,v 2.103 2004/05/04 23:16:18 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Net::DNS::Packet;
 use Digest::HMAC_MD5;
 use MIME::Base64;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.103 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -21,18 +20,18 @@ sub new {
 		($self->{"algorithm"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
 
 		@{$self}{qw(inception expiration)} = unpack("\@$offset NN", $$data);
-		$offset += &Net::DNS::INT32SZ + &Net::DNS::INT32SZ;
+		$offset += Net::DNS::INT32SZ() + Net::DNS::INT32SZ();
 
 		@{$self}{qw(inception expiration)} = unpack("\@$offset nn", $$data);
-		$offset += &Net::DNS::INT16SZ + &Net::DNS::INT16SZ;
+		$offset += Net::DNS::INT16SZ() + Net::DNS::INT16SZ();
 
 		my ($key_len) = unpack("\@$offset n", $$data);
-		$offset += &Net::DNS::INT16SZ;
+		$offset += Net::DNS::INT16SZ();
 		$self->{"key"} = substr($$data, $offset, $key_len);
 		$offset += $key_len;
 
 		my ($other_len) = unpack("\@$offset n", $$data);
-		$offset += &Net::DNS::INT16SZ;
+		$offset += Net::DNS::INT16SZ();
 		$self->{"other_data"} = substr($$data, $offset, $other_len);
 		$offset += $other_len;
 	}

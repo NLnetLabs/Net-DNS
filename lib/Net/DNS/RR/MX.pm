@@ -1,15 +1,12 @@
 package Net::DNS::RR::MX;
 #
-# $Id: MX.pm,v 2.102 2004/02/09 23:28:31 ctriv Exp $
+# $Id: MX.pm,v 2.105 2004/05/05 20:35:43 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA $VERSION);
 
-use Net::DNS;
-use Net::DNS::Packet;
-
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$Revision: 2.105 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
@@ -17,7 +14,7 @@ sub new {
 	if ($self->{"rdlength"} > 0) {
 		($self->{"preference"}) = unpack("\@$offset n", $$data);
 		
-		$offset += &Net::DNS::INT16SZ;
+		$offset += Net::DNS::INT16SZ();
 		
 		($self->{"exchange"}) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
@@ -104,7 +101,7 @@ Returns name of this mail exchange.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

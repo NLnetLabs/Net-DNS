@@ -1,17 +1,15 @@
 package Net::DNS::RR::OPT;
 #
-# $Id: OPT.pm,v 2.101 2004/01/04 04:31:10 ctriv Exp $
+# $Id: OPT.pm,v 2.102 2004/05/04 23:16:18 ctriv Exp $
 #
 
 use strict;
 use vars qw(@ISA $VERSION %extendedrcodesbyname %extendedrcodesbyval $EDNSVERSION);
 
-use Socket;
-use Net::DNS;
 use Carp;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$Revision: 2.101 $)[1];
+$VERSION = (qw$Revision: 2.102 $)[1];
 
 $EDNSVERSION = 0;
 
@@ -87,7 +85,7 @@ sub new_from_hash {
 	$self->{"extendedrcode"} = 0 unless exists $self->{"extendedrcode"};
 	
 	$self->{"ednsflags"}   = 0 unless exists $self->{"ednsflags"};
-	$self->{"ednsversion"} =  $Net::DNS::RR::OPT::EDNSVERSION unless exists $self->{"ednsversion"};
+	$self->{"ednsversion"} = $EDNSVERSION unless exists $self->{"ednsversion"};
 	$self->{"ttl"}= unpack ("N", 
 		pack("C", $self->{"extendedrcode"}) .
 		pack("C", $self->{"ednsversion"})  .

@@ -1,7 +1,7 @@
-# $Id: 00-load.t,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: 00-load.t,v 2.101 2004/05/04 22:42:11 ctriv Exp $
 
 
-use Test::More tests => 73;
+use Test::More tests => 75;
 use strict;
 
 BEGIN { 

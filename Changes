@@ -1,6 +1,25 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.47_01 May 6, 2004
+
+** NOTICE **
+
+RR subclasses no longer pull in parts of Net::DNS; Net::DNS is assumed
+to be up and running when the subclass is compiled.  If you were using 
+a RR subclass directly, this may break your code.  It was never documented
+that you could use them directly however, so hopefully you never did...
+
+Fixed bug where SRV records with a priority of 0 did not function 
+correctly.  CPAN #6214
+
+Calls to various constants where using the &NAME syntax, which is not
+inlined.  Changed to NAME().
+
+Added SSHFP support. [Olaf]
+
+CERT fixes.  [Olaf]
+
 *** 0.47 April 1, 2004
 
 safe_push() is back in Net::DNS::Packet, due to the excellent debate
@@ -369,4 +388,4 @@ Fixed warning in Net::DNS::RR::AUTOLOAD with perl 5.005.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 2.120 2004/04/01 07:32:40 ctriv Exp $
+$Id: Changes,v 2.125 2004/05/06 19:16:34 ctriv Exp $

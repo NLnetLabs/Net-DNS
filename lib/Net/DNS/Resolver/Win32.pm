@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Win32;
 #
-# $Id: Win32.pm,v 2.103 2004/02/10 00:42:30 ctriv Exp $
+# $Id: Win32.pm,v 2.104 2004/05/05 20:35:43 ctriv Exp $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Resolver::Base ();
 
 @ISA     = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 2.103 $)[1];
+$VERSION = (qw$Revision: 2.104 $)[1];
 
 use Win32::Registry;
 
@@ -160,7 +160,7 @@ for all your resolving needs.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

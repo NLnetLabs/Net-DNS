@@ -53,6 +53,7 @@ lib/Net/DNS/RR/RP.pm
 lib/Net/DNS/RR/RT.pm
 lib/Net/DNS/RR/SOA.pm
 lib/Net/DNS/RR/SRV.pm
+lib/Net/DNS/RR/SSHFP.pm
 lib/Net/DNS/RR/TKEY.pm
 lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TXT.pm
@@ -60,8 +61,8 @@ lib/Net/DNS/RR/Unknown.pm
 lib/Net/DNS/RR/X25.pm
 lib/Net/DNS/Update.pm
 Makefile.PL
-MANIFEST
-META.yml			Module meta-data (added by MakeMaker)
+MANIFEST			This list of files
+META.yml
 README
 t/.resolv.conf
 t/00-load.t
@@ -75,6 +76,7 @@ t/02-header.t
 t/03-question.t
 t/04-packet-unique-push.t
 t/04-packet.t
+t/05-rr-sshfp.t
 t/05-rr-txt.t
 t/05-rr-unknown.t
 t/05-rr.t

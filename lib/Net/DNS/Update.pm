@@ -1,6 +1,6 @@
 package Net::DNS::Update;
 #
-# $Id: Update.pm,v 2.102 2004/04/01 06:57:46 ctriv Exp $
+# $Id: Update.pm,v 2.103 2004/05/05 20:35:43 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION @ISA);
@@ -8,7 +8,7 @@ use vars qw($VERSION @ISA);
 use Net::DNS;
 
 @ISA     = qw(Net::DNS::Packet);
-$VERSION = (qw$Revision: 2.102 $)[1];
+$VERSION = (qw$Revision: 2.103 $)[1];
 
 =head1 NAME
 
@@ -181,7 +181,7 @@ production nameservers.
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2003 Chris Reinhardt.
+Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
