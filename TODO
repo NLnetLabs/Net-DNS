@@ -22,6 +22,15 @@ To Do list for Net::DNS
   
   - Need more tests
 
+
+* Proper handling of binary data; The mapping from zonefile format to wire
+  format is not consistent. This is partly due to variations in
+  dn_expand functions in libresolv, and partly due because of not 
+  being implemented.
+
+  This only bytes us in special occassions, like 8 bit characters in 
+  character-strings (TXT RR data).
+
 * Get rid of .* in AAAA.pm; write more tests for AAAA.pm.
 
 * Allow Net::DNS::RR::LOC->latlon to set the lat/lon.

@@ -251,9 +251,11 @@ sub new_from_string {
 	my ($class, $rrstring, $update_type) = @_;
 
 	build_regex() unless $RR_REGEX;
-	
+
 	# strip out comments
-	$rrstring   =~ s/;.*//g;
+	# Test for non escaped ";" by means of the look-behind assertion
+	# (the backslash is escaped)
+	$rrstring   =~ s/(?<!\\);.*//g;
 	
 	($rrstring =~ m/$RR_REGEX/xso) || 
 		confess qq|qInternal Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
@@ -268,6 +270,9 @@ sub new_from_string {
 
 	$rdata =~ s/\s+$// if $rdata;
 	$name  =~ s/\.$//  if $name;
+
+	
+
 
 
 	# RFC3597 tweaks

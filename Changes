@@ -4,6 +4,24 @@ Revision history for Net::DNS
 
 *** 0.49_01
 
+Fix: rt.cpan.org #8803 
+      TXT records don't work with semicolons 
+
+      Since we are expecting "zonefile" presentation at input 
+      a comment will need to be escaped.
+      It could be argued that this is a to strict interpertation of 
+      1035 section 5.1.
+
+      While working on this I discovered there are more problems with
+      TXT RRs. Eg; 0100 is a perfectly legal character string that
+      should be represented as "\000" in a zonefile. Net::DNS does 
+      pass character strings with "non-ASCII" chars from the wire
+      to the char_str_lst array but the print functions do not
+      properly escape them when prining.
+
+      Properly dealing with zonefile presentation format and binary 
+      data is still to be done.
+
 
 Fix: rt.cpan.org Ticket #8483 
 	eval tests for DNS::RR::SIG fail when using a die handler 

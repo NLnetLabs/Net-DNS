@@ -1,12 +1,13 @@
-# $Id: 07-misc.t 101 2004-08-12 05:12:05Z ctriv $
+# $Id: 07-misc.t 101 2004-08-12 05:12:05Z ctriv $ -*-perl-*-
 
-use Test::More tests => 17;
+use Test::More tests => 22;
 use strict;
 
-BEGIN { use_ok('Net::DNS'); }
+BEGIN { use_ok('Net::DNS'); 
+}
 
 
-#
+
 # test to make sure that wildcarding works.
 #
 my $rr;
@@ -64,3 +65,70 @@ is($warning, 0, 'No evil warning');
 	like($srv->string, '/0 2 3 target.net-dns.org/');
 	is($srv->rdatastr, '0 2 3 target.net-dns.org');
 }
+
+
+
+
+#
+#
+# Below are some thests that have to do with TXT RRs 
+#
+#
+
+
+#;; QUESTION SECTION:
+#;txt2.t.net-dns.org.		IN	TXT
+
+#;; ANSWER SECTION:
+#txt2.t.net-dns.org.	60	IN	TXT	"Net-DNS\; complicated $tuff" "sort of \" text\; and binary \000 data"
+
+#;; AUTHORITY SECTION:
+#net-dns.org.		3600	IN	NS	ns1.net-dns.org.
+#net-dns.org.		3600	IN	NS	ns.ripe.net.
+#net-dns.org.		3600	IN	NS	ns.hactrn.net.
+
+#;; ADDITIONAL SECTION:
+#ns1.net-dns.org.	3600	IN	A	193.0.4.49
+#ns1.net-dns.org.	3600	IN	AAAA
+
+my $UUencodedPacket='
+11 99 85 00 00 01
+00 01 00 03 00 02 04 74  78 74 32 01 74 07 6e 65
+74 2d 64 6e 73 03 6f 72  67 00 00 10 00 01 c0 0c
+00 10 00 01 00 00 00 3c  00 3d 1a 4e 65 74 2d 44
+4e 53 3b 20 63 6f 6d 70  6c 69 63 61 74 65 64 20
+24 74 75 66 66 21 73 6f  72 74 20 6f 66 20 22 20
+74 65 78 74 3b 20 61 6e  64 20 62 69 6e 61 72 79
+20 00 20 64 61 74 61 c0  13 00 02 00 01 00 00 0e
+10 00 06 03 6e 73 31 c0  13 c0 13 00 02 00 01 00
+00 0e 10 00 0d 02 6e 73  04 72 69 70 65 03 6e 65
+74 00 c0 13 00 02 00 01  00 00 0e 10 00 0c 02 6e
+73 06 68 61 63 74 72 6e  c0 93 c0 79 00 01 00 01
+00 00 0e 10 00 04 c1 00  04 31 c0 79 00 1c 00 01
+00 00 0e 10 00 10 20 01  06 10 02 40 00 03 00 00
+12 34 be 21 e3 1e                               
+';
+
+$UUencodedPacket =~ s/\s*//g;
+my $packetdata = pack('H*',$UUencodedPacket);
+my $packet     = Net::DNS::Packet->new(\$packetdata);
+my $TXTrr=($packet->answer)[0];
+is(($TXTrr->char_str_list())[0],'Net-DNS; complicated $tuff',"First Char string in TXT RR read from wireformat");
+
+# Compare the second char_str this contains a NULL byte (space NULL
+# space=200020 in hex)
+
+is(unpack('H*',($TXTrr->char_str_list())[1]),"736f7274206f66202220746578743b20616e642062696e61727920002064617461", "Second Char string in TXT RR read from wireformat");
+
+
+my $TXTrr2=Net::DNS::RR->new('txt2.t.net-dns.org.	60	IN	TXT  "Test1 \" \; more stuff"  "Test2"');
+
+is(($TXTrr2->char_str_list())[0],'Test1 " ; more stuff', "First arg string in TXT RR read from zonefileformat");
+is(($TXTrr2->char_str_list())[1],'Test2',"Second Char string in TXT RR read from zonefileformat");
+
+
+my $TXTrr3   = Net::DNS::RR->new("baz.example.com 3600 HS TXT '\"' 'Char Str2'");
+
+is( ($TXTrr3->char_str_list())[0],'"',"Escaped \" between the  single quotes");
+
+
