@@ -1,6 +1,6 @@
 package Net::DNS::RR::CERT;
 #
-# $Id: CERT.pm 102 2004-08-12 05:16:06Z ctriv $
+# $Id: CERT.pm 208 2005-03-02 14:59:43Z olaf $
 #
 # Written by Mike Schiraldi <raldi@research.netsol.com> for VeriSign
 
@@ -10,7 +10,7 @@ use vars qw(@ISA $VERSION);
 use MIME::Base64;
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision: 102 $)[1];
+$VERSION = (qw$LastChangedRevision$)[1];
 
 my %formats = (
 	PKIX => 1,

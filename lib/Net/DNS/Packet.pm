@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm 102 2004-08-12 05:16:06Z ctriv $
+# $Id: Packet.pm 208 2005-03-02 14:59:43Z olaf $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$LastChangedRevision: 102 $)[1];
+$VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 

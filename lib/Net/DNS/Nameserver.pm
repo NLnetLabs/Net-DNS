@@ -1,6 +1,6 @@
 package Net::DNS::Nameserver;
 #
-# $Id: Nameserver.pm 102 2004-08-12 05:16:06Z ctriv $
+# $Id: Nameserver.pm 208 2005-03-02 14:59:43Z olaf $
 #
 
 use Net::DNS;
@@ -11,7 +11,7 @@ use Carp qw(cluck);
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$LastChangedRevision: 102 $)[1];
+$VERSION = (qw$LastChangedRevision$)[1];
 
 use constant DEFAULT_ADDR => INADDR_ANY;
 use constant DEFAULT_PORT => 53;
