@@ -47,29 +47,43 @@ sub init {
 	# NameServer overrides DhcpNameServer if both exist
 	my $nt4nameservers = $keys{'NameServer'}->[2] || $keys{'DhcpNameServer'}->[2];
 	my $nameservers = "";
-	#
-	# but on W2K/XP the registry layout is more advanced due to dynamically
-	# appearing connections. So we attempt to handle them, too...
-	# opt to silently fail if something isn't ok (maybe we're on NT4)
-	# drop any duplicates later, but must ignore NT4 style entries if in 2K/XP
-	my $dnsadapters;
-	$resobj->Open("DNSRegisteredAdapters", $dnsadapters);
-	if ($dnsadapters) {
-		my @adapters;
-		$dnsadapters->GetKeys(\@adapters);
-		foreach my $adapter (@adapters) {
-			my $regadapter;
-			$dnsadapters->Open($adapter, $regadapter);
-			if ($regadapter) {
-				my($type,$ns);
-				$regadapter->QueryValueEx("DNSServerAddresses", $type, $ns);
-				while (length($ns) >= 4) {
-					my $addr = join('.', unpack("C4", substr($ns,0,4,"")));
-					$nameservers .= " $addr";
-				}
-			}
-		}
-	}
+
+
+
+#
+#
+#  This code is agued to be broken see ticket rt.cpan.org ticket 11931
+#  There seems to be sufficient reason to remove this code
+#
+#  For details see https://rt.cpan.org/Ticket/Display.html?id=11931
+#
+#
+#	#
+#	# but on W2K/XP the registry layout is more advanced due to dynamically
+#	# appearing connections. So we attempt to handle them, too...
+#	# opt to silently fail if something isn't ok (maybe we're on NT4)
+#	# drop any duplicates later, but must ignore NT4 style entries if in 2K/XP
+#	my $dnsadapters;
+#	$resobj->Open("DNSRegisteredAdapters", $dnsadapters);
+#	if ($dnsadapters) {
+#		my @adapters;
+#		$dnsadapters->GetKeys(\@adapters);
+#		foreach my $adapter (@adapters) {
+#			my $regadapter;
+#			$dnsadapters->Open($adapter, $regadapter);
+#			if ($regadapter) {
+#				my($type,$ns);
+#				$regadapter->QueryValueEx("DNSServerAddresses", $type, $ns);
+#				while (length($ns) >= 4) {
+#					my $addr = join('.', unpack("C4", substr($ns,0,4,"")));
+#					$nameservers .= " $addr";
+#				}
+#			}
+#		}
+#	}
+
+
+
 
 	my $interfaces;
 	$resobj->Open("Interfaces", $interfaces);
