@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Cygwin;
 #
-# $Id: Cygwin.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: Cygwin.pm,v 2.101 2003/12/29 07:14:32 ctriv Exp $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Resolver::Base ();
 
 @ISA	 = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 sub getregkey {
 	my $key	  = $_[0] . $_[1];
@@ -52,11 +52,14 @@ sub init {
 	$searchlist	 .= getregkey($root, 'SearchList');
 	
 	# This is (probably) adequate on NT4
-	my $nameservers = getregkey($root, 'NameServer') || getregkey($root, 'DhcpNameServer');
+	my $nt4nameservers = getregkey($root, 'NameServer') || getregkey($root, 'DhcpNameServer');
+	my $nameservers = "";
 	#
 	# but on W2K/XP the registry layout is more advanced due to dynamically
 	# appearing connections. So we attempt to handle them, too...
 	# opt to silently fail if something isn't ok (maybe we're on NT4)
+    # If this doesn't fail override any NT4 style result we found, as it
+    # may be there but is not valid.
 	# drop any duplicates later
 	my $dnsadapters = $root . "DNSRegisteredAdapters/";
 	if (opendir(LM, $dnsadapters)) {
@@ -83,12 +86,15 @@ sub init {
 			if (opendir(LM, $regiface)) {
 				closedir(LM);
 				my $ns;
-				$ns = getregkey($regiface, "NameServer");
-				$nameservers .= " $ns" if $ns;
-				$ns = getregkey($regiface, "DhcpNameServer");
+				$ns = getregkey($regiface, "NameServer") ||
+					getregkey($regiface, "DhcpNameServer") || '';
 				$nameservers .= " $ns" if $ns;
 			}
 		}
+	}
+
+	if (!$nameservers) {
+		$nameservers = $nt4nameservers;
 	}
 
 	if ($domain) {
@@ -120,7 +126,7 @@ sub init {
 		my @a;
 		my %h;
 		foreach my $ns (split(m/[\s,]+/, $nameservers)) {
-			push @a, $ns unless $h{$ns};
+			push @a, $ns unless (!$ns || $h{$ns});
 			$h{$ns} = 1;
 		}
 		$defaults->{'nameservers'} = \@a;

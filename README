@@ -67,23 +67,19 @@ Please note that the CVS version at any given moment may be broken.
 
 Net::DNS has been tested with the following:
 
-    Perl 5.6.1
+    Perl 5.8.2
 
+    Version of Socket distributed with Perl 5.8.2
+    Version of IO::Socket distributed with Perl 5.8.2
+    Version of IO::Select distributed with Perl 5.8.2
+    Version of FileHandle distributed with Perl 5.8.2
+
+	Perl 5.6.1
+	
     Version of Socket distributed with Perl 5.6.1
     Version of IO::Socket distributed with Perl 5.6.1
     Version of IO::Select distributed with Perl 5.6.1
     Version of FileHandle distributed with Perl 5.6.1
-
-	Perl 5.005_03
-	
-    Version of Socket distributed with Perl 5.005_03
-    Version of IO::Socket distributed with Perl 5.005_03
-    Version of IO::Select distributed with Perl 5.005_03
-    Version of FileHandle distributed with Perl 5.005_03
-
-    Digest::MD5  2.12
-    MIME::Base64 2.11
-	Test::More   0.18
 
 You can obtain the latest version of Perl from:
 
@@ -118,9 +114,14 @@ Makefile.PL's guess, use the '--xs' option to force linking the library:
 
 	perl Makefile.PL --xs
 	
-Use the '--pm' option to use the pure perl version:
+Use the '--no-xs' option to use the pure perl version:
 
-	perl Makefile.PL --pm
+	perl Makefile.PL --no-xs
+
+
+If you wish to not run the online tests, the '--no-online-tests'
+option can be used.  Similarly, '--online-tests' will enable the 
+online tests.
 
 
 5. RUNNING TESTS
@@ -158,7 +159,7 @@ updates, so if you have problems using Net::DNS that might be the
 cause.  If you're running BIND 9, you should be using the latest
 version available from the Internet Software Consortium (ISC,
 www.isc.org) or from your OS vendor.  As of this writing, the latest
-production version of BIND 9 available from the ISC is 9.2.0.
+production version of BIND 9 available from the ISC is 9.2.3.
 
 Here's a summary of the update semantics for those interested (see
 RFC 2136 for details):
@@ -295,4 +296,4 @@ proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 2.100 2003/12/13 01:37:03 ctriv Exp $
+$Id: README,v 2.101 2003/12/13 10:37:47 ctriv Exp $

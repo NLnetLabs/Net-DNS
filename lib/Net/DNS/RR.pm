@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 2.100 2003/12/13 01:37:05 ctriv Exp $
+# $Id: RR.pm,v 2.102 2004/01/02 23:21:17 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -9,7 +9,7 @@ use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
 
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.102 $)[1];
 
 =head1 NAME
 
@@ -744,7 +744,23 @@ sub _get_subclass {
 }	
 		
 	
+sub STORABLE_freeze {
+	my ($self, $cloning) = @_;
+
+	return if $cloning;
 	
+	return ('', {%$self});
+}
+
+sub STORABLE_thaw {
+	my ($self, $cloning, undef, $data) = @_;
+
+	%{$self}  = %{$data};
+	
+	__PACKAGE__->_get_subclass($self->{'type'});
+	
+	return $self;
+}
 
 =head1 BUGS
 

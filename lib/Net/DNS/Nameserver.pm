@@ -1,6 +1,6 @@
 package Net::DNS::Nameserver;
 #
-# $Id: Nameserver.pm,v 2.100 2003/12/13 01:37:04 ctriv Exp $
+# $Id: Nameserver.pm,v 2.101 2003/12/30 22:45:39 ctriv Exp $
 #
 
 use Net::DNS;
@@ -11,7 +11,7 @@ use Carp qw(cluck);
 use strict;
 use vars qw($VERSION);
 
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 use constant DEFAULT_ADDR => INADDR_ANY;
 use constant DEFAULT_PORT => 53;
@@ -106,6 +106,12 @@ sub make_reply {
 		return $reply;
 	}
 	
+	if ($query->header->qr()) {
+		print "ERROR: invalid packet (qr was set, dropping)\n" if $self->{"Verbose"};
+		return;
+	}
+
+	
 	my $qr = ($query->question)[0];
 	
 	my $qname  = $qr ? $qr->qname  : "";
@@ -122,7 +128,7 @@ sub make_reply {
 			my ($rcode, $ans, $auth, $add);
 			
 			($rcode, $ans, $auth, $add, $headermask) =
-				&{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost);
+				&{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
 			
 			print "$rcode\n" if $self->{"Verbose"};
 			
@@ -188,7 +194,8 @@ sub tcp_connection {
 		print "got ", length($buf), " bytes\n" if $self->{"Verbose"};
 
 		my $query = Net::DNS::Packet->new(\$buf);
-		my $reply = $self->make_reply($query, $peerhost);
+		
+		my $reply = $self->make_reply($query, $peerhost) || last;
 		my $reply_data = $reply->data;
 
 		print "writing response..." if $self->{"Verbose"};
@@ -209,14 +216,15 @@ sub udp_connection {
 	my ($self, $sock) = @_;
 
 	my $buf = "";
-	my $peer_sockaddr = $sock->recv($buf, &Net::DNS::PACKETSZ);
+	my $peer_sockaddr         = $sock->recv($buf, &Net::DNS::PACKETSZ);
 	my ($peerport, $peeraddr) = sockaddr_in($peer_sockaddr);
-	my $peerhost = inet_ntoa($peeraddr);
+	my $peerhost              = inet_ntoa($peeraddr);
 
 	print "UDP connection from $peerhost:$peerport\n" if $self->{"Verbose"};
 
 	my $query = Net::DNS::Packet->new(\$buf);
-	my $reply = $self->make_reply($query, $peerhost);
+
+	my $reply = $self->make_reply($query, $peerhost) || return;
 	my $reply_data = $reply->data;
 
 	print "writing response..." if $self->{"Verbose"};
@@ -234,24 +242,21 @@ sub main_loop {
 	local $| = 1;
 
 	while (1) {
-	print "waiting for connections..." if $self->{"Verbose"};
-	my @ready = $self->{"select"}->can_read;
-
-	foreach my $sock (@ready) {
+		print "waiting for connections..." if $self->{"Verbose"};
+		my @ready = $self->{"select"}->can_read;
+	
+		foreach my $sock (@ready) {
 			my $proto = getprotobynumber($sock->protocol);
-
+	
 			if (!$proto) {
 				print "ERROR: connection with unknown protocol\n"
 					if $self->{"Verbose"};
-			}
-			elsif (lc($proto) eq "tcp") {
+			} elsif (lc($proto) eq "tcp") {
 				my $client = $sock->accept;
 				$self->tcp_connection($client);
-			}
-			elsif (lc($proto) eq "udp") {
+			} elsif (lc($proto) eq "udp") {
 				$self->udp_connection($sock);
-			}
-			else {
+			} else {
 				print "ERROR: connection with unsupported protocol $proto\n"
 					if $self->{"Verbose"};
 			}
@@ -368,14 +373,10 @@ additional filtering on its basis may be applied.
      LocalPort    => 5353,
      ReplyHandler => \&reply_handler,
      Verbose      => 1,
- );
+ ) || die "couldn't create nameserver object\n";
  
- if ($ns) {
-     $ns->main_loop;
- } else {
-    die "couldn't create nameserver object\n";
- }
-
+ $ns->main_loop;
+ 
 =head1 BUGS
 
 Net::DNS::Nameserver objects can handle only one query at a time.

@@ -1,13 +1,35 @@
 Revision history for Net::DNS
 =============================
 
+Net::DNS::RR objects were not playing nice with Storable, this caused 
+the axfr demo script to fail.  Thanks to Joe Dial for the report.
+
+** NOTICE **
+This may cause RR objects that are already serialize to not deserialize
+correctly.  
+
+Reply handlers in Net::DNS::Nameserver are now passed the query object.
+
+Fixed a nasty bug in Nameserver.pm related to the qr bit.  As Olaf
+explained:
+
+  Replies are sent if the query has its "qr" bit set. The "qr" bit is an
+  indication that the packet is sent as a response to a query. Since
+  there are more implementations that suffer from this bug one can cause
+  all kinds of nasty ping-pong loops by spoofing the initial packet or
+  have an infinite query loop by spoofing a query from the localhost:53
+  address.
+
+Various Win32/Cygwin cleanups from Sidney Markowitz.
+
+
 *** 0.44 December 12, 2003
 
 	The Wrath of CPAN Release.
 	
 CPAN.pm doesn't understand the nature of revision numbers.  1.10 is 
 newer than 1.9; but CPAN.pm treats them as floats.  This is bad.
-All the internal version numbers in Net::DNS has been bumped to
+All the internal version numbers in Net::DNS have been bumped to
 2.100 in order to fix this.
 
 No actual code changes in this release.
@@ -352,4 +374,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 2.100 2003/12/13 01:37:03 ctriv Exp $
+$Id: Changes,v 2.105 2004/01/02 23:30:43 ctriv Exp $

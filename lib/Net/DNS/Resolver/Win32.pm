@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Win32;
 #
-# $Id: Win32.pm,v 2.100 2003/12/13 01:37:06 ctriv Exp $
+# $Id: Win32.pm,v 2.101 2003/12/29 07:14:32 ctriv Exp $
 #
 
 use strict;
@@ -9,7 +9,7 @@ use vars qw(@ISA $VERSION);
 use Net::DNS::Resolver::Base ();
 
 @ISA     = qw(Net::DNS::Resolver::Base);
-$VERSION = (qw$Revision: 2.100 $)[1];
+$VERSION = (qw$Revision: 2.101 $)[1];
 
 use Win32::Registry;
 
@@ -43,12 +43,14 @@ sub init {
 	$searchlist  .= $keys{'SearchList'}->[2];
 	
 	# This is (probably) adequate on NT4
-	my $nameservers = $keys{'NameServer'}->[2] || $keys{'DhcpNameServer'}->[2];
+	# NameServer overrides DhcpNameServer if both exist
+	my $nt4nameservers = $keys{'NameServer'}->[2] || $keys{'DhcpNameServer'}->[2];
+	my $nameservers = "";
 	#
 	# but on W2K/XP the registry layout is more advanced due to dynamically
 	# appearing connections. So we attempt to handle them, too...
 	# opt to silently fail if something isn't ok (maybe we're on NT4)
-	# drop any duplicates later
+	# drop any duplicates later, but must ignore NT4 style entries if in 2K/XP
 	my $dnsadapters;
 	$resobj->Open("DNSRegisteredAdapters", $dnsadapters);
 	if ($dnsadapters) {
@@ -79,12 +81,16 @@ sub init {
 			if ($regiface) {
 				my $ns;
 				my $type;
+				# NameServer overrides DhcpNameServer if both exist
 				$regiface->QueryValueEx("NameServer", $type, $ns);
-				$nameservers .= " $ns" if $ns;
-				$regiface->QueryValueEx("DhcpNameServer", $type, $ns);
+				$regiface->QueryValueEx("DhcpNameServer", $type, $ns) unless $ns;
 				$nameservers .= " $ns" if $ns;
 			}
 		}
+	}
+
+	if (!$nameservers) {
+		$nameservers = $nt4nameservers;
 	}
 
 	if ($domain) {
@@ -112,11 +118,11 @@ sub init {
 	}
 
 	if ($nameservers) {
-		# just in case dups were introduced...
+		# remove blanks and dupes
 		my @a;
 		my %h;
 		foreach my $ns (split(m/[\s,]+/, $nameservers)) {
-			push @a, $ns unless $h{$ns};
+			push @a, $ns unless (!$ns || $h{$ns});
 			$h{$ns} = 1;
 		}
 		$defaults->{'nameservers'} = \@a;
