@@ -467,6 +467,8 @@ Fixed various bugs in the test suite.
 Fixed warning in Net::DNS::RR::AUTOLOAD with perl 5.005.
 
 ---
-Chris Reinhardt <ctriv@net-dns.org>
-Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes 116 2004-08-13 00:29:04Z ctriv $
+Olaf Kolkman <olaf@net-dns.org>
+Chris Reinhardt 
+Michael Fuhr 
+
+$Id$

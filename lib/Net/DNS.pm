@@ -1,6 +1,6 @@
 package Net::DNS;
 #
-# $Id: DNS.pm 114 2004-08-13 00:23:41Z ctriv $
+# $Id$
 #
 use strict;
 use vars qw(
@@ -689,18 +689,26 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
+Portions Copyright (c) 2005 Olaf Kolkman (RIPE NCC)
+
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
 
 =head1 AUTHOR INFORMATION
 
-Net::DNS is currently maintained by a group, led by:
-    Chris Reinhardt
-    ctriv@net-dns.org
+Net::DNS is currently maintained by:
+        Olaf Kolkman
+	olaf@net-dns.org
+
+Between 2002 and 2004 Net::DNS was maintained by:
+       Chris Reinhardt
+
 
 Net::DNS was created by:
-    Michael Fuhr
-    mike@fuhr.org
+	Michael Fuhr
+	mike@fuhr.org 
+
+
 
 For more information see:
     http://www.net-dns.org/

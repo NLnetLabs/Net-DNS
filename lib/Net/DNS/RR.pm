@@ -1,6 +1,6 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm 102 2004-08-12 05:16:06Z ctriv $
+# $Id$
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -779,6 +779,8 @@ RR objects.
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
+
+Portions Copyright (c) 2005 Olaf Kolkman 
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
