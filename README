@@ -87,13 +87,17 @@ Net::DNS has been tested with the following:
 
     Digest::MD5  2.12
     MIME::Base64 2.11
+	Test::More   0.18
 
 You can obtain the latest version of Perl from:
 
-    http://www.perl.com/
+    http://www.cpan.org/src/
 
 Some of the demonstration and contributed scripts may require
 additional modules -- see demo/README and contrib/README for details.
+
+Note that the Test::More module is actually part of the Test-Simple
+distrobution.  See the FAQ (lib/Net/DNS/FAQ.pod) for more information.
 
 
 4. INSTALLATION
@@ -298,4 +302,4 @@ proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 1.11 2002/10/15 22:12:44 ctriv Exp $
+$Id: README,v 1.12 2002/11/15 10:43:41 ctriv Exp $

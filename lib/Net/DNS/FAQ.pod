@@ -1,7 +1,7 @@
-$Id: FAQ.pod,v 1.2 2002/10/10 22:05:11 ctriv Exp $
+$Id: FAQ.pod,v 1.3 2002/11/15 10:43:53 ctriv Exp $
 =head1 NAME
 
-Net::DNS::FAQ -- Frequently Asked Net::DNS Questions
+Net::DNS::FAQ - Frequently Asked Net::DNS Questions
 
 =head1 SYNOPSIS
 

@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.13 2002/08/10 04:06:27 ctriv Exp $
+# $Id: Makefile.PL,v 1.14 2002/11/15 10:43:08 ctriv Exp $
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 
@@ -42,17 +42,26 @@ WriteMakefile(
 	'NAME'			=> 'Net::DNS',
 	'VERSION_FROM'	=> 'lib/Net/DNS.pm',
 	'PREREQ_PM'		=> {
-		Test::More		 => 0.18,
+		Test::More       => 0.18,
 		IO::Socket		 => 0,
 		MIME::Base64	 => 2.11,
 		Digest::MD5		 => 2.12,
 		Digest::HMAC_MD5 => 1.00,
 	},
 	'clean'			=> { FILES => 't/online.enabled' },
-	
+
    ($] >= 5.005 ?    
 	('AUTHOR'		=> 'Chris Reinhardt <ctriv@net-dns.org>',
 	'ABSTRACT'		=> 'Perl DNS resolver module', ) : ()),
 );
 
+package MY;
 
+sub processPL {
+  my $self = shift;
+  my $block = $self->SUPER::processPL(@_);
+  # "Version:" in spec needs to match
+  # "$VERSION" from VERSION_FROM
+  $block =~ s%(spec.PL\s*)$%$1 \$\(VERSION_FROM\)%m;
+  $block;
+}

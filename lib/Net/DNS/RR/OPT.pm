@@ -1,6 +1,6 @@
 package Net::DNS::RR::OPT;
 
-# $Id: OPT.pm,v 1.3 2002/07/28 23:18:06 ctriv Exp $
+# $Id: OPT.pm,v 1.4 2002/11/17 04:03:34 ctriv Exp $
 
 
 use strict;
@@ -80,10 +80,12 @@ sub new_from_hash {
     }
     
     $self->{"extendedrcode"}   = 0 unless exists $self->{"extendedrcode"};
+
     $self->{"ednsflags"}  = 0 unless exists $self->{"ednsflags"};
+    $self->{"ednsversion"}  =  $Net::DNS::RR::OPT::EDNSVERSION unless exists $self->{"ednsversion"};
     $self->{"ttl"}= unpack ("N", 
 			  pack("C", $self->{"extendedrcode"} ) .
-			  pack("C", $Net::DNS::RR::OPT::EDNSVERSION )  .
+			  pack("C", $self->{"ednsversion"} )  .
 			  pack("n", $self->{"ednsflags"}));
 
     if (exists  $self->{"optioncode"}) {
@@ -99,7 +101,8 @@ sub new_from_hash {
 
 sub string {
    my  $self=shift;
-    return "; EDNS Version ". $self->{"ednsversion"} . 
+   return
+     "; EDNS Version ". $self->{"ednsversion"} . 
         "\t UDP Packetsize: " .  $self->{"class"} . 
 	"\n; EDNS-RCODE:\t". $self->{"extendedrcode"} .
 	   " (" . $extendedrcodesbyval{ $self->{"extendedrcode"} }. ")" .

@@ -1,6 +1,18 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.31 17 Nov 2002
+
+Applied Olaf's patch for an initialization bug in OPT.pm
+
+Applied Rob Brown's patch for udp timeouts.
+
+Added stuff from Rob Brown for making RPM creation easier.
+
+Fixed a typo in FAQ.pod that was making aropos and whatis
+grumpy.  Thanks to Florian Hinzmann for pointing it out and a patch.
+
+
 *** 0.30 7 Nov 2002
 
 Applied Andrew Tridgell's (tridge@samba.org) patch for TKEY support.
@@ -619,4 +631,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.36 2002/11/07 13:13:17 ctriv Exp $
+$Id: Changes,v 1.38 2002/11/18 04:22:31 ctriv Exp $

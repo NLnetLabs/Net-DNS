@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.24 2002/10/14 21:12:07 ctriv Exp $
+# $Id: Resolver.pm,v 1.25 2002/11/15 10:50:51 ctriv Exp $
 
 =head1 NAME
 
@@ -127,6 +127,7 @@ push(@confpath, '.');
 	answersize     => 0,
 	querytime      => undef,
 	tcp_timeout    => 120,
+	udp_timeout    => undef,
 	axfr_sel       => undef,
 	axfr_rr        => [],
 	axfr_soa_count => 0,
@@ -773,6 +774,8 @@ sub send_udp {
 	my $retrans = $self->{'retrans'};
 	my $timeout = $retrans;
 
+	my $stop_time = time + $self->{'udp_timeout'} if $self->{'udp_timeout'};
+
 	$self->errorstring($default{'errorstring'});
 
 	my $dstport = $self->{'port'};
@@ -821,6 +824,16 @@ sub send_udp {
 
 		# Try each nameserver.
 		foreach my $ns (@ns) {
+			if ($stop_time) {
+				my $now = time;
+				if ($stop_time < $now) {
+					$self->errorstring('query timed out');
+					return;
+				}
+				if ($timeout > 1 && $timeout > ($stop_time-$now)) {
+					$timeout = $stop_time-$now;
+				}
+			}
 			my $nsname = $ns->[0];
 			my $nsaddr = $ns->[1];
 
@@ -1647,6 +1660,15 @@ is false.
 
 Get or set the TCP timeout in seconds.  A timeout of C<undef> means
 indefinite.  The default is 120 seconds (2 minutes).
+
+=head2 udp_timeout
+
+    print 'UDP timeout: ', $res->udp_timeout, "\n";
+    $res->udp_timeout(10);
+
+Get or set the UDP timeout in seconds.  A timeout of C<undef> means
+the retry and retrans settings will be just utilized to perform the
+retries until they are exhausted.  The default is C<undef>.
 
 =head2 persistent_tcp
 
