@@ -104,20 +104,20 @@ sub init {
 	my $usedevolution = getregkey($root, 'UseDomainNameDevolution');
 	if ($searchlist) {
 		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
-		my $i = 0;
+		my @a;
 		my %h;
 		foreach my $entry (split(m/[\s,]+/, $searchlist)) {
-			$h{$entry} = $i++;
+			push(@a, $entry) unless $h{$entry};
+			$h{$entry} = 1;
 			if ($usedevolution) {
 				# as long there's more than two pieces, cut
 				while ($entry =~ m#\..+\.#) {
 					$entry =~ s#^[^\.]+\.(.+)$#$1#;
-					$h{$entry} = $i++;
+					push(@a, $entry) unless $h{$entry};
+					$h{$entry} = 1;
+					}
 				}
 			}
-		}
-		my @a;
-		$a[$h{$_}] = $_ foreach (keys %h);
 		$defaults->{'searchlist'} = \@a;
 	}
 
