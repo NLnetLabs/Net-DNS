@@ -1,5 +1,5 @@
 package Net::DNS;
-# $Id: DNS.pm,v 1.18 2002/06/11 22:31:16 ctriv Exp $
+# $Id: DNS.pm,v 1.25 2002/07/06 20:00:21 ctriv Exp $
 
 use strict;
 use vars qw(
@@ -17,7 +17,7 @@ use vars qw(
 	%rcodesbyval
 );
 
-$VERSION = "0.23";
+$VERSION = "0.24";
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -80,6 +80,7 @@ require Exporter;
 	"NAPTR"		=> 35,		# RFC 2168
 	"KX"		=> 36,		# RFC 2230
  	"CERT"		=> 37,		# RFC 2538
+	"DNAME"		=> 39,		# RFC 2672
 	"OPT"       => 41,      # RFC 2671
 	"DS"		=> 43,		# Not ASSIGNED YET...!!! draft
 	"UINFO"		=> 100,		# non-standard

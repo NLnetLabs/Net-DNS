@@ -1,5 +1,6 @@
 Changes
 MANIFEST
+MANIFEST.SKIP
 Makefile.PL
 README
 TODO
@@ -27,6 +28,7 @@ lib/Net/DNS/RR/AAAA.pm
 lib/Net/DNS/RR/AFSDB.pm
 lib/Net/DNS/RR/CERT.pm
 lib/Net/DNS/RR/CNAME.pm
+lib/Net/DNS/RR/DNAME.pm
 lib/Net/DNS/RR/EID.pm
 lib/Net/DNS/RR/HINFO.pm
 lib/Net/DNS/RR/ISDN.pm

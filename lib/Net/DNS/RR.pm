@@ -6,7 +6,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-# $Id: RR.pm,v 1.7 2002/05/28 08:08:25 ctriv Exp $
+# $Id: RR.pm,v 1.11 2002/06/30 14:41:19 ctriv Exp $
 $VERSION = $Net::DNS::VERSION;
 
 =head1 NAME
@@ -40,6 +40,7 @@ use Net::DNS::RR::A;		$RR{"A"}	= 1;
 use Net::DNS::RR::AAAA;		$RR{"AAAA"}	= 1;
 use Net::DNS::RR::AFSDB;	$RR{"AFSDB"}	= 1;
 use Net::DNS::RR::CNAME;	$RR{"CNAME"}	= 1;
+use Net::DNS::RR::DNAME;	$RR{"DNAME"}	= 1;
 use Net::DNS::RR::EID;		$RR{"EID"}	= 1;
 use Net::DNS::RR::HINFO;	$RR{"HINFO"}	= 1;
 use Net::DNS::RR::ISDN;		$RR{"ISDN"}	= 1;
@@ -246,31 +247,27 @@ sub new_from_string {
 
 	if ($update_type) {
 		$update_type = lc $update_type;
+		
 		if ($update_type eq "yxrrset") {
 			$ttl = 0;
 			$rrclass = "ANY" unless $rdata;
-		}
-		elsif ($update_type eq "nxrrset") {
+		} elsif ($update_type eq "nxrrset") {
 			$ttl = 0;
 			$rrclass = "NONE";
 			$rdata = "";
-		}
-		elsif ($update_type eq "yxdomain") {
+		} elsif ($update_type eq "yxdomain") {
 			$ttl = 0;
 			$rrclass = "ANY";
 			$rrtype = "ANY";
 			$rdata = "";
-		}
-		elsif ($update_type eq "nxdomain") {
+		} elsif ($update_type eq "nxdomain") {
 			$ttl = 0;
 			$rrclass = "NONE";
 			$rrtype = "ANY";
 			$rdata = "";
-		}
-		elsif ($update_type =~ /^(rr_)?add$/) {
+		} elsif ($update_type =~ /^(rr_)?add$/) {
 			$ttl = 86400 unless $ttl;
-		}
-		elsif ($update_type =~ /^(rr_)?del(ete)?$/) {
+		} elsif ($update_type =~ /^(rr_)?del(ete)?$/) {
 			$ttl = 0;
 			$rrclass = $rdata ? "NONE" : "ANY";
 		}
@@ -291,12 +288,10 @@ sub new_from_string {
 		if ($RR{$rrtype}) {
 			my $subclass = $class . "::" . $rrtype;
 			$retval = $subclass->new_from_string(\%self, $rdata);
-		}
-		else {
+		} else {
 			$retval = bless \%self, $class;
 		}
-	}
-	else {
+	} else {
 		$retval = undef;
 	}
 
@@ -327,11 +322,12 @@ sub new_from_hash {
 	if ($RR{$self{"type"}}) {
 		my $subclass = $class . "::" . $self{"type"};
 	    if (uc $self{"type"} ne "OPT"){
-		$retval = bless \%self, $subclass;
-	    }else{  # Special processing of OPT. Since TTL and CLASS are
-		    # set by other variables. See Net::DNS::RR::OPT 
-                    # documentation
-		$retval = $subclass->new_from_hash(\%self);
+			$retval = bless \%self, $subclass;
+	    } else {  
+			# Special processing of OPT. Since TTL and CLASS are
+			# set by other variables. See Net::DNS::RR::OPT 
+			# documentation
+			$retval = $subclass->new_from_hash(\%self);
 	    }
 	}
 	else {

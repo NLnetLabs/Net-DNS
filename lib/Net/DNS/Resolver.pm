@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.13 2002/06/11 18:27:35 ctriv Exp $
+# $Id: Resolver.pm,v 1.16 2002/06/19 19:59:27 ctriv Exp $
 
 =head1 NAME
 
@@ -436,17 +436,22 @@ sub cname_addr {
 	my @addr;
 	my @names = @{$names};
 
+	my $oct2 = '(?:2[0-4]\d|25[0-5]|[0-1]?\d\d|\d)';
+
 	RR: foreach my $rr ($packet->answer) {
 		next RR unless grep {$rr->name} @names;
-		
+				
 		if ($rr->type eq 'CNAME') {
 			push(@names, $rr->cname);
 		} elsif ($rr->type eq 'A') {
-			# Run a basic taint check.  Nothing fancy, or strict.
-			next RR unless $rr->address =~ /^([\d\.]+)$/;
+			# Run a basic taint check.
+			next RR unless $rr->address =~ m/^($oct2\.$oct2\.$oct2\.$oct2)$/o;
+			
 			push(@addr, $1)
 		}
 	}
+	
+	
 	return @addr;
 }
 
@@ -1028,8 +1033,9 @@ sub make_query_packet {
 	} else {
 		my ($name, $type, $class) = @_;
 
-		$type  = 'A'  unless defined($type);
-		$class = 'IN' unless defined($class);
+		$name  ||= '';
+		$type  ||= 'A';
+		$class ||= 'IN';
 
 		# If the name looks like an IP address then do an appropriate
 		# PTR query.

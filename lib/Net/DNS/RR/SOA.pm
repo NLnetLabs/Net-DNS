@@ -1,6 +1,6 @@
 package Net::DNS::RR::SOA;
 
-# $Id: SOA.pm,v 1.3 2002/05/22 18:09:36 ctriv Exp $
+# $Id: SOA.pm,v 1.4 2002/06/20 02:42:25 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
@@ -37,6 +37,8 @@ sub new_from_string {
 
 	if ($string) {
 		$string =~ tr/()//d;
+		
+		# XXX do we need to strip out comments here now that RR.pm does it?
 		$string =~ s/;.*$//mg;
 
 		my ($mname, $rname, $serial,

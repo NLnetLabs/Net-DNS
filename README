@@ -60,7 +60,7 @@ The following link will always be the current released version:
 Additionally, nightly cvs snapshots of the current developement version
 are at:
 
-	http://www.dyndns.org/~ctriv/net-dns-snaps/
+	http://www.net-dns.org/snaps/
 	
 Please note that the CVS version at any given moment may be broken.
 
@@ -237,6 +237,11 @@ If I don't have access to a system similar to yours, I may ask you
 to insert some debugging lines and report back on the results.
 The more help and information you can provide, the better.
 
+The hope is to do all of Net::DNS's bug tracking using rt.cpan.org.
+Please use the following form to submit bug reports:
+
+     https://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-DNS
+
 10. COPYRIGHT
 -------------
 
@@ -284,10 +289,13 @@ I was developing Net::DNS, and I was proud to contribute to it.
 Thanks to Paul Vixie and all who have worked on the BIND nameserver,
 which I've used exclusively while developing Net::DNS.
 
+Thanks to Andreas Gustafsson for DNAME support, and for all the work
+he has done on BIND 9.
+
 Thanks to the thousands who participate in the open-source community.
 I've always developed Net::DNS using open-source systems and I'm
 proud to make Net::DNS freely available to the world.
 
 
 ----
-$Id: README,v 1.8 2002/06/02 11:05:32 ctriv Exp $
+$Id: README,v 1.10 2002/06/30 14:43:57 ctriv Exp $

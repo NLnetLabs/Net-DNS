@@ -1,6 +1,6 @@
-# $Id: 05-rr.t,v 1.7 2002/05/29 04:58:43 ctriv Exp $
+# $Id: 05-rr.t,v 1.8 2002/07/06 20:07:25 ctriv Exp $
 
-use Test::More tests => 202;
+use Test::More tests => 209;
 use strict;
 
 
@@ -143,6 +143,11 @@ my @rrs = (
 		longitude    => 1856783648,
 		altitude     => 9997600,
 	},
+	{  #[23]
+		type         => 'DNAME',
+		dname        => 'dname.example.com',
+	}
+	
 );
 
 #------------------------------------------------------------------------------
