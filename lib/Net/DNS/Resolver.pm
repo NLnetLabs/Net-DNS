@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 
-# $Id: Resolver.pm,v 1.26 2002/12/07 23:14:14 ctriv Exp $
+# $Id: Resolver.pm,v 1.28 2003/02/18 20:22:33 ctriv Exp $
 
 =head1 NAME
 
@@ -196,6 +196,17 @@ sub res_init_unix {
 
 sub res_init_microsoft {
 	my ($resobj, %keys);
+	
+	# This will *not* work on win95/98/ME...OTOH, who cares?
+	# Ok, so some do...simplest is probably to parse output
+	# of: (these are best guesses - no such systems to test on)
+	# (on 95) 'winipcfg /all /batch'
+	# (on 98 & ME) 'ipconfig /all /batch'
+	# There might be the required data resident under .../VxD/MSTCP in 
+	# the registry on those machines but this is hearsay
+	# Actually, the trick of parsing 'ipconfig' could be applied
+	# to NT/W2K/XP too for some insulation...
+	
 	my $root = 'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
 
 	$main::HKEY_LOCAL_MACHINE->Open($root, $resobj)
@@ -204,20 +215,76 @@ sub res_init_microsoft {
 	$resobj->GetValues(\%keys)
 		or Carp::croak "can't read registry values: $!";
 
+	# Best effort to find a useful domain name for the current host
+	# if domain ends up blank, we're probably (?) not connected anywhere
+	# a DNS server is interesting either...
 	my $domain      = $keys{'Domain'}->[2] || $keys{'DhcpDomain'}->[2];
-	my $searchlist  = $keys{'SearchList'}->[2];
+	
+	# If nothing else, the searchlist should probably contain our own domain
+	# also see below for domain name devolution if so configured
+	# (also remove any duplicates later)
+	my $searchlist = "$domain ";
+	$searchlist  .= $keys{'SearchList'}->[2];
+	
+	# This is (probably) adequate on NT4
 	my $nameservers = $keys{'NameServer'}->[2] || $keys{'DhcpNameServer'}->[2];
+	#
+	# but on W2K/XP the registry layout is more advanced due to dynamically
+	# appearing connections. So we attempt to handle them, too...
+	# opt to silently fail if something isn't ok (maybe we're on NT4)
+	# drop any duplicates later
+	my $dnsadapters;
+	my $interfaces;
+	$resobj->Open("DNSRegisteredAdapters", $dnsadapters);
+	$resobj->Open("Interfaces", $interfaces);
+	if ($dnsadapters and $interfaces) {
+		my @ifacelist;
+		$dnsadapters->GetKeys(\@ifacelist);
+		foreach my $iface (@ifacelist) {
+			my $regiface;
+			$interfaces->Open($iface, $regiface);
+			if ($regiface) {
+				my $ns;
+				my $type;
+				$regiface->QueryValueEx("NameServer", $type, $ns);
+				$nameservers .= " $ns" if $ns;
+			}
+		}
+	}
 
 	if ($domain) {
 		$default{'domain'} = $domain;
 	}
 
+	my $usedevolution = $keys{'UseDomainNameDevolution'}->[2];
 	if ($searchlist) {
-		$default{'searchlist'} = [ split(' ', $searchlist) ];
+		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
+		my $i = 0;
+		my %h;
+		foreach my $entry (split(' ', $searchlist)) {
+			$h{$entry} = $i++;
+			if ($usedevolution) {
+				# as long there's more than two pieces, cut
+				while ($entry =~ m#\..+\.#) {
+					$entry =~ s#^[^\.]+\.(.+)$#$1#;
+					$h{$entry} = $i++;
+					}
+				}
+			}
+		my @a;
+		$a[$h{$_}] = $_ foreach (keys %h);
+		$default{'searchlist'} = \@a;
 	}
 
 	if ($nameservers) {
-		$default{'nameservers'} = [ split(' ', $nameservers) ];
+		# just in case dups were introduced...
+		my @a;
+		my %h;
+		foreach my $ns (split(' ', $nameservers)) {
+			push @a, $ns unless $h{$ns};
+			$h{$ns} = 1;
+		}
+		$default{'nameservers'} = \@a;
 	}
 
 	read_env();
@@ -1472,6 +1539,11 @@ sub axfr_next {
 		($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
 
 		if ($ans) {
+			if ($ans->header->rcode ne 'NOERROR') {	
+				$self->errorstring('Response code from server: ' . $ans->header->rcode);
+				print ';; Response code from server: ' . $ans->header->rcode . "\n" if $self->{'debug'};
+				return wantarray ? (undef, $err) : undef;
+			}
 			if ($ans->header->ancount < 1) {
 				$err = 'truncated zone transfer';
 				$self->errorstring($err);

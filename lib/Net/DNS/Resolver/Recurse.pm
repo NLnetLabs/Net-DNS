@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Recurse;
 
-# $Id: Recurse.pm,v 1.1 2003/01/05 21:18:33 ctriv Exp $
+# $Id: Recurse.pm,v 1.2 2003/03/05 19:17:13 ctriv Exp $
 
 use strict;
 use Net::DNS::Resolver;
@@ -57,7 +57,9 @@ sub hints {
       }
     }
     $self->{'hints'} = \%hints;
-  }
+  } else {
+    $self->{'hints'} = {};
+  } 
   if (%{ $self->{'hints'} }) {
     if ($self->{'debug'}) {
       print ";; USING THE FOLLOWING HINT IPS:\n";
@@ -320,7 +322,7 @@ Copyright (c) 2002, Rob Brown.  All rights reserved.
 This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 
-$Id: Recurse.pm,v 1.1 2003/01/05 21:18:33 ctriv Exp $
+$Id: Recurse.pm,v 1.2 2003/03/05 19:17:13 ctriv Exp $
 
 =cut
 

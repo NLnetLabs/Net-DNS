@@ -1,6 +1,20 @@
 Revision history for Net::DNS
 =============================
 
+*** 0.34 6 Mar 2003
+
+Applied David Carmean's patch for handling more than one string in a 
+TXT RR's RDATA section.
+
+Applied Net::DNS::Resolver::Recurse bug fixes from Rob Brown.
+
+Added check of the answer's rcode in Net::DNS::Resolver::axfr_next().
+
+Applied Kenneth Olving <kenneth.olving@eoncompany.com> Windows changes.
+
+Applied patch from Dan Sully (daniel@electricrain.com) allowing multiple
+questions to be part of a DNS packet.
+
 *** 0.33 8 Jan 2003
 
 Fixed 00-load.t to skip the Net::DNS::SEC modules.  The test suite
@@ -654,4 +668,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.40 2003/01/08 18:23:27 ctriv Exp $
+$Id: Changes,v 1.46 2003/03/06 19:05:49 ctriv Exp $

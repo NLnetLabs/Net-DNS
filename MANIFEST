@@ -70,6 +70,7 @@ t/03-question.t
 t/04-packet.t
 t/04-pkt-safe-push.t
 t/05-rr.t
+t/05-rr-txt.t
 t/06-update.t
 t/07-misc.t
 t/08-online.t

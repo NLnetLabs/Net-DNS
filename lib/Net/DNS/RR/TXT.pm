@@ -1,54 +1,83 @@
 package Net::DNS::RR::TXT;
 
-# $Id: TXT.pm,v 1.2 2002/02/13 03:53:59 ctriv Exp $
+# $Id: TXT.pm,v 1.3 2003/03/06 18:09:27 ctriv Exp $
 
 use strict;
 use vars qw(@ISA);
 
 use Net::DNS::Packet;
+use Text::ParseWords;
 
 @ISA = qw(Net::DNS::RR);
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		my ($len) = unpack("\@$offset C", $$data);
-		++$offset;
-		my $txtdata = substr($$data, $offset, $len);
-		$offset += $len;
-
-		$self->{"txtdata"} = $txtdata;
+	
+	my $rdlength = $self->{'rdlength'} or return bless $self, $class;
+	my $end = $offset + $rdlength;
+	while ( $offset < $end ) {
+		my $strlen = unpack("\@$offset C", $$data );
+		++$offset ;
+		my $char_str = substr($$data, $offset, $strlen);
+		$offset += $strlen;
+		push( @{ $self->{'char_str_list'} }, $char_str );
 	}
 
 	return bless $self, $class;
 }
 
 sub new_from_string {
-	my ($class, $self, $string) = @_;
+    my ( $class, $self, $rdata_string ) = @_ ;
+    
+    bless $self, $class;
+    $self->_build_char_str_list($rdata_string);
 
-	if ($string && $string =~ /^\s*["']?(.*?)["']?\s*$/) {
-		$self->{"txtdata"} = $1;
-	}
+    return $self ;
+}
 
-	return bless $self, $class;
+sub txtdata {
+	my $self = shift;
+	return join(' ',  $self->char_str_list()  ) ;
 }
 
 sub rdatastr {
 	my $self = shift;
+	return defined $self->txtdata()
+		? join(' ', map { my $str = $_;  
+				$str =~ s/"/\\"/g ;  
+				q("). $str. q(") 
+				}  @{ $self->{'char_str_list'} }  )
+		: "; no data"  ;
+}
 
-	return exists $self->{"txtdata"}
-	       ? qq("$self->{txtdata}")
-	       : "; no data";
+sub _build_char_str_list {
+	my ( $self, $rdata_string ) = @_ ;
+	my @words = &shellwords($rdata_string) ;
+	foreach my $string ( @words ) {
+	    $string =~ s/\\"/"/go ;
+	    push( @{ $self->{'char_str_list'} }, $string );
+	}
+}
+
+sub char_str_list {
+	my $self = shift;
+	
+	# Unfortunately, RR->new_from_hash() breaks encapsulation 
+	# of data in child objects.
+	if ( not defined $self->{'char_str_list'} ) {
+		$self->_build_char_str_list( $self->{'txtdata'} );
+	}
+
+	return @{ $self->{'char_str_list'} } ;	# unquoted strings
 }
 
 sub rr_rdata {
 	my $self = shift;
 	my $rdata = "";
 
-	if (exists $self->{"txtdata"}) {
-		$rdata .= pack("C", length $self->{"txtdata"});
-		$rdata .= $self->{"txtdata"};
+	foreach my $string ( $self->char_str_list() ) {
+	    $rdata .= pack("C", length $string );
+	    $rdata .= $string;
 	}
 
 	return $rdata;
@@ -75,7 +104,19 @@ Class for DNS Text (TXT) resource records.
 
     print "txtdata = ", $rr->txtdata, "\n";
 
-Returns the descriptive text.
+Returns the descriptive text as a single string, regardless of actual 
+number of <character-string> elements.  Of questionable value.  Should 
+be deprecated.  
+
+Use C<TXT-E<gt>rdatastr()> or C<TXT-E<gt>char_str_list()> instead.
+
+=head2 char_str_list
+
+    print "Individual <character-string> list: \n\t", \
+		    join ( "\n\t", $rr->char_str_list() );
+
+Returns a list of the individual <character-string> elements, 
+as unquoted strings.  Used by TXT->rdatastr and TXT->rr_rdata.
 
 =head1 COPYRIGHT
 

@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 
-# $Id: Packet.pm,v 1.13 2002/12/05 07:07:03 ctriv Exp $
+# $Id: Packet.pm,v 1.14 2003/01/28 07:12:36 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -531,6 +531,11 @@ sub push {
 		push(@{$self->{"additional"}}, @rr);
 		my $adcount = $self->{"header"}->adcount;
 		$self->{"header"}->adcount($adcount + @rr);
+	}
+	elsif ($section eq "question") {
+		push(@{$self->{"question"}}, @rr);
+		my $qdcount = $self->{"header"}->qdcount;
+		$self->{"header"}->qdcount($qdcount + @rr);
 	}
 	else {
 		Carp::carp(qq(invalid section "$section"\n));

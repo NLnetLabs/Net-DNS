@@ -97,9 +97,6 @@ To Do list for Net::DNS
     GPOS	RFC 1712 (withdrawn)
     ATMA	???
 
-* Fix the TXT RR to handle more than 1 string in the RDATA section
-  (RFC 1035, Section 3.3.14).
-
 * Check the EID, NIMLOC, and NULL RR handling.
 
 * Add test cases for NULL, EID, and NIMLOC to private zone data.
@@ -163,4 +160,4 @@ To Do list for Net::DNS
   or possibly going back to using Dave Shield's resparse library.
 
 ---
-$Id: TODO,v 1.5 2002/07/16 09:18:58 ctriv Exp $
+$Id: TODO,v 1.6 2003/03/06 18:12:00 ctriv Exp $
