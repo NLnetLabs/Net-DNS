@@ -447,7 +447,6 @@ sub send {
 	    
 	} else {
 	    $ans = $self->send_udp($packet, $packet_data);
-	    
 	    if ($ans && $ans->header->tc && !$self->{'igntc'}) {
 			print ";;\n;; packet truncated: retrying using TCP\n" if $self->{'debug'};
 			$ans = $self->send_tcp($packet, $packet_data);
@@ -462,6 +461,8 @@ sub send {
 sub send_tcp {
 	my ($self, $packet, $packet_data) = @_;
 
+	my $lastanswer;
+
 	unless (@{$self->{'nameservers'}}) {
 		$self->errorstring('no nameservers');
 		print ";; ERROR: send_tcp: no nameservers\n" if $self->{'debug'};
@@ -471,7 +472,7 @@ sub send_tcp {
 	$self->_reset_errorstring;
 	my $timeout = $self->{'tcp_timeout'};
 
-	foreach my $ns (@{$self->{'nameservers'}}) {
+	NAMESERVER: foreach my $ns (@{$self->{'nameservers'}}) {
 		my $srcport = $self->{'srcport'};
 		my $srcaddr = $self->{'srcaddr'};
 		my $dstport = $self->{'port'};
@@ -565,6 +566,16 @@ sub send_tcp {
 				$self->errorstring($ans->header->rcode);
 				$ans->answerfrom($self->answerfrom);
 				$ans->answersize($self->answersize);
+
+				if ($ans->header->rcode ne "NOERROR" &&
+				    $ans->header->rcode ne "NXDOMAIN"){
+					# Remove this one from the stack
+					print "RCODE: ".$ans->header->rcode ."; tying next nameserver\n" if $self->{'debug'};
+					$lastanswer=$ans;
+					next NAMESERVER ;
+					
+				}
+
 			}
 			elsif (defined $err) {
 				$self->errorstring($err);
@@ -578,6 +589,12 @@ sub send_tcp {
 		}
 	}
 
+	if ($lastanswer){
+		$self->errorstring('RCODE: '.$lastanswer->header->rcode );
+		return $lastanswer;
+
+	}
+
 	return;
 }
 
@@ -586,6 +603,8 @@ sub send_udp {
 	my $retrans = $self->{'retrans'};
 	my $timeout = $retrans;
 
+	my $lastanswer;
+
 	my $stop_time = time + $self->{'udp_timeout'} if $self->{'udp_timeout'};
 
 	$self->_reset_errorstring;
@@ -593,6 +612,7 @@ sub send_udp {
 	my $dstport = $self->{'port'};
 	my $srcport = $self->{'srcport'};
 	my $srcaddr = $self->{'srcaddr'};
+
 
 	my $sock;
 
@@ -642,7 +662,7 @@ sub send_udp {
 		$timeout = 1 if ($timeout < 1);
 
 		# Try each nameserver.
-		foreach my $ns (@ns) {
+	      NAMESERVER: foreach my $ns (@ns) {
 			if ($stop_time) {
 				my $now = time;
 				if ($stop_time < $now) {
@@ -667,7 +687,7 @@ sub send_udp {
 
 			my @ready = $sel->can_read($timeout);
 
-			foreach my $ready (@ready) {
+			SELECTOR: foreach my $ready (@ready) {
 				my $buf = '';
 
 				if ($ready->recv($buf, $self->_packetsz)) {
@@ -684,11 +704,20 @@ sub send_udp {
 					my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
 				
 					if (defined $ans) {
-						next unless $ans->header->qr;
-						next unless $ans->header->id == $packet->header->id;
+						next SELECTOR unless $ans->header->qr;
+						next SELECTOR unless $ans->header->id == $packet->header->id;
 						$self->errorstring($ans->header->rcode);
 						$ans->answerfrom($self->answerfrom);
 						$ans->answersize($self->answersize);
+						if ($ans->header->rcode ne "NOERROR" &&
+						    $ans->header->rcode ne "NXDOMAIN"){
+							# Remove this one from the stack
+							@ns = grep { $_->[0] ne $ready->peerhost } @ns;
+							print "RCODE: ".$ans->header->rcode ."; tying next nameserver\n" if $self->{'debug'};
+							$lastanswer=$ans;
+							next NAMESERVER ;
+							
+						    }
 					} elsif (defined $err) {
 						$self->errorstring($err);
 					}
@@ -710,6 +739,13 @@ sub send_udp {
 			}
 		}
 	}
+
+	if ($lastanswer){
+		$self->errorstring('RCODE: '.$lastanswer->header->rcode );
+		return $lastanswer;
+
+	}
+
 
 	if ($sel->handles) {
 		$self->errorstring('query timed out');
@@ -940,9 +976,11 @@ sub axfr_start {
 		#$^W = $old_wflag;
 
 		unless ($sock) {
-			$self->errorstring(q|couldn't connect|);
+			$self->errorstring(q|couldn't connect|);  # Comment to sattisfy emacs' font-lock mode.
 			return;
 		}
+
+
 
 		$self->{'sockets'}->{$sock_key} = $sock;
 	}
