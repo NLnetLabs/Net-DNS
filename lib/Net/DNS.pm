@@ -31,16 +31,11 @@ BEGIN {
     
     @ISA     = qw(Exporter DynaLoader);
     $VERSION = '0.49_01';
-    $HAVE_XS = eval { __PACKAGE__->bootstrap(); 1 } ? 1 : 0;
+    $HAVE_XS = eval { 
+	local $SIG{'__DIE__'} = 'DEFAULT';
+	__PACKAGE__->bootstrap(); 1 
+	} ? 1 : 0;
 }
-
-use Net::DNS::Resolver;
-use Net::DNS::Packet;
-use Net::DNS::Update;
-use Net::DNS::Header;
-use Net::DNS::Question;
-use Net::DNS::RR;
-
 
 BEGIN {
 
@@ -49,7 +44,19 @@ BEGIN {
 	    require Net::DNS::SEC; 
 	    1 
 	    } ? 1 : 0;
+
 }
+
+
+use Net::DNS::Resolver;
+use Net::DNS::Packet;
+use Net::DNS::Update;
+use Net::DNS::Header;
+use Net::DNS::Question;
+use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
+
+
+
 
 
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
