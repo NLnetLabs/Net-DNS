@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm,v 1.9 2003/10/08 09:27:42 ctriv Exp $
+# $Id: Base.pm,v 1.10 2003/12/11 08:43:18 ctriv Exp $
 #
 
 use strict;
@@ -19,7 +19,7 @@ use Net::DNS;
 use Net::DNS::Packet;
 use Net::DNS::Select;
 
-$VERSION = (qw$Revision: 1.9 $)[1];
+$VERSION = (qw$Revision: 1.10 $)[1];
 
 #
 # Set up a closure to be our class data.
@@ -836,7 +836,7 @@ sub axfr {
 		while (($rr, $err) = $self->axfr_next, $rr && !$err) {
 			push @zone, $rr;
 		}
-		@zone = () if $err && $err ne 'no zone transfer in progress';
+		@zone = () if $err;
 	}
 
 	return @zone;
@@ -935,11 +935,14 @@ sub axfr_start {
 sub axfr_next {
 	my $self = shift;
 	my $err  = '';
-
+	
 	unless (@{$self->{'axfr_rr'}}) {
 		unless ($self->{'axfr_sel'}) {
-			$err = 'no zone transfer in progress';
+			my $err = 'no zone transfer in progress';
+			
+			print ";; $err\n" if $self->{'debug'};
 			$self->errorstring($err);
+					
 			return wantarray ? (undef, $err) : undef;
 		}
 
@@ -1030,6 +1033,10 @@ sub axfr_next {
 
 		if ($self->{'axfr_soa_count'} >= 2) {
 			$self->{'axfr_sel'} = undef;
+			# we need to mark the transfer as over if the responce was in 
+			# many answers.  Otherwise, the user will call axfr_next again
+			# and that will cause a 'no transfer in progress' error.
+			push(@{$self->{'axfr_rr'}}, undef);
 		}
 	}
 

@@ -1,12 +1,19 @@
-# $Id: Makefile.PL,v 1.30 2003/10/26 05:31:45 ctriv Exp $
+# $Id: Makefile.PL,v 1.31 2003/12/11 08:42:49 ctriv Exp $
+
+use strict;
+$^W = 1;
 
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
 use Config qw(%Config);
+use Getopt::Long  qw(GetOptions);
+
+sub DEBUG { 0; }
 
 # An existing makefile can confuse the CC test.
 unlink('Makefile');
-
+# clean up the online testing flag file.
+unlink("t/online.enabled"); 
 
 warn <<AMEN if $] < 5.005;
 
@@ -16,6 +23,23 @@ properly with older perls such as yours, but bugs may lurk.
 
 
 AMEN
+
+
+#
+# Get the command line args
+#
+my ($use_xs, $online_tests);
+
+GetOptions(
+	'xs!'           => \$use_xs,
+	'pm'            => sub { 
+		warn qq/\n\tWARNING: Use of "--pm" is deprecated.  Use "--no-xs" instead.\n\n/;
+		$use_xs = 0;
+	},
+	'online-tests!' => \$online_tests,
+);
+
+
 
 #
 # Get our makefile started...
@@ -50,12 +74,6 @@ if ($] >= 5.005) {
 #
 # Check if we have a C compiler
 
-my $use_xs;
-for (@ARGV) {
-	/^--pm/ and $use_xs = 0;
-	/^--xs/ and $use_xs = 1;
-}
-
 unless (defined $use_xs) {
 	if (test_cc()) {
 		print "You have a working compiler.\n";
@@ -64,7 +82,7 @@ unless (defined $use_xs) {
 		$use_xs = 0;
 		print <<END;
 	
-I cannot determine if you have a C compiler. I will install a 
+I cannot determine if you have a C compiler. I will install the 
 perl-only implementation.
 	
 You can force installation of the XS version with:
@@ -76,41 +94,41 @@ END
 
 if ($use_xs) {
 	# turn the XS bits on.
+	print "Activating XS Magic...\n" if DEBUG; 
 	delete $Makefile{'XS'};
 	delete $Makefile{'C'};
 	$Makefile{'LIBS'} = ['-lresolv'];
 }
 
-
 #
 # Check if we have internet connection
 # (I lifted this code from LWP... )
 #
-my $s = IO::Socket::INET->new(
-	PeerAddr => "www.google.com:80",
-	Timeout  => 10,
-);
-
-if ($s) {
-	close($s);
-
-	print <<EOT;
-
+unless (defined $online_tests) {
+	my $s = IO::Socket::INET->new(
+		PeerAddr => "www.google.com:80",
+		Timeout  => 10,
+	);
+	
+	if ($s) {
+		close($s);
+	
+		print <<EOT;
+	
 You appear to be directly connected to the Internet.  I have some tests
 that try to query live nameservers.
-
+	
 EOT
-
-	if (prompt("Do you want to enable these tests?", "y") =~ /^y/i) {
-		open(ENABLED, ">t/online.enabled") || die "Can't touch ./t/online.enabled $!";
-		close(ENABLED);
-	} else {
-		unlink("t/online.enabled"); # just to be shure...
+	
+		$online_tests = prompt("Do you want to enable these tests?", "y") =~ /^y/i ? 1 : 0;
 	}
-} else {
-	unlink("t/online.enabled"); # just to be shure...
 }
 
+if ($online_tests) {
+	print "Activating Online Tests...\n" if DEBUG; 
+	open(ENABLED, ">t/online.enabled") || die "Can't touch ./t/online.enabled $!";
+	close(ENABLED)                     || die "Can't touch ./t/online.enabled $!";
+}
 
 WriteMakefile(%Makefile);
 

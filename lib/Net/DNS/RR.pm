@@ -1,14 +1,15 @@
 package Net::DNS::RR;
 #
-# $Id: RR.pm,v 1.32 2003/10/27 14:44:42 ctriv Exp $
+# $Id: RR.pm,v 1.33 2003/12/09 17:37:13 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
 
 use Carp;
 use Net::DNS;
+use Net::DNS::RR::unknown;
 
-$VERSION = (qw$Revision: 1.32 $)[1];
+$VERSION = (qw$Revision: 1.33 $)[1];
 
 =head1 NAME
 
@@ -32,7 +33,6 @@ warning message and C<Net::DNS::RR> will return C<undef> to the caller.
 
 =cut
 #' Stupid Emacs (I Don't even USE emacs!) '
-
 
 # %RR needs to be available within the scope of the BEGIN block.
 # $RR_REGEX is a global just to be on the safe side.  
@@ -81,12 +81,12 @@ BEGIN {
 	eval { require Net::DNS::RR::SIG; };
 
 	unless ($@) {
-		$RR{"SIG"} = 1;
+		$RR{'SIG'} = 1;
 	
 		eval { require Net::DNS::RR::NXT; };
 		
 		unless ($@) {
-		    $RR{"NXT"}	= 1;
+		    $RR{'NXT'}	= 1;
 		} else {
 		    die $@;
 		}
@@ -94,7 +94,7 @@ BEGIN {
 		eval { require Net::DNS::RR::KEY; };
 		
 		unless ($@) {
-		    $RR{"KEY"} = 1;
+		    $RR{'KEY'} = 1;
 		} else {
 		    die $@;
 		}
@@ -102,7 +102,7 @@ BEGIN {
 	 	eval { require Net::DNS::RR::DS; };
 
 	 	unless ($@) {
-		    $RR{"DS"} = 1;
+		    $RR{'DS'} = 1;
 
 		} else {
 		    die $@;
@@ -111,17 +111,17 @@ BEGIN {
 	 	eval { require Net::DNS::RR::RRSIG; };
 
 	 	unless ($@) {
-		    $RR{"RRSIG"} = 1;
+		    $RR{'RRSIG'} = 1;
 		    # If RRSIG is available so should the other DNSSEC types
 		    eval { require Net::DNS::RR::NSEC; };
 		    unless ($@) {
-		      $RR{"NSEC"} = 1;
+		      $RR{'NSEC'} = 1;
 		    } else {
 		    die $@;
 		  }
 		    eval { require Net::DNS::RR::DNSKEY; };
 		    unless ($@) {
-		      $RR{"DNSKEY"} = 1;
+		      $RR{'DNSKEY'} = 1;
 		    } else {
 		      die $@;
 		    }
@@ -131,10 +131,12 @@ BEGIN {
 }
 
 sub build_regex {
-	my $classes = join('|', keys %Net::DNS::classesbyname);
-		
+	my $classes = join('|', keys %Net::DNS::classesbyname, 'CLASS\\d+');
+
 	# Longest ones go first, so the regex engine will match AAAA before A.
 	my $types   = join('|', sort { length $b <=> length $a } keys %Net::DNS::typesbyname);
+
+	$types .= '|TYPE\\d+';
 				
 	$RR_REGEX   = " ^ 
 					\\s*
@@ -149,18 +151,16 @@ sub build_regex {
     	            (.*)
     	            \$";
 
-
-
-	#print STDERR "Regex: $RR_REGEX\n";
+#	print STDERR "Regex: $RR_REGEX\n";
 }
 
 
 =head2 new (from string)
 
-    $a = Net::DNS::RR->new("foo.example.com. 86400 A 10.1.2.3");
-    $mx = Net::DNS::RR->new("example.com. 7200 MX 10 mailhost.example.com.");
-    $cname = Net::DNS::RR->new("www.example.com 300 IN CNAME www1.example.com");
-    $txt = Net::DNS::RR->new("baz.example.com 3600 HS TXT 'text record'");
+ $a     = Net::DNS::RR->new("foo.example.com. 86400 A 10.1.2.3");
+ $mx    = Net::DNS::RR->new("example.com. 7200 MX 10 mailhost.example.com.");
+ $cname = Net::DNS::RR->new("www.example.com 300 IN CNAME www1.example.com");
+ $txt   = Net::DNS::RR->new("baz.example.com 3600 HS TXT 'text record'");
 
 Returns a C<Net::DNS::RR> object of the appropriate type and
 initialized from the string passed by the user.  The format of the
@@ -177,18 +177,18 @@ All names must be fully qualified.  The trailing dot (.) is optional.
 
 =head2 new (from hash)
 
-    $rr = Net::DNS::RR->new(
-	Name    => "foo.example.com",
-	TTL     => 86400,
-	Class   => "IN",
-        Type    => "A",
-	Address => "10.1.2.3",
-    );
-
-    $rr = Net::DNS::RR->new(
-	Name    => "foo.example.com",
-        Type    => "A",
-    );
+ $rr = Net::DNS::RR->new(
+	 name    => "foo.example.com",
+	 ttl     => 86400,
+	 class   => "IN",
+	 type    => "A",
+	 address => "10.1.2.3",
+ );
+ 
+ $rr = Net::DNS::RR->new(
+	 name => "foo.example.com",
+	 yype => "A",
+ );
 
 Returns an RR object of the appropriate type, or a C<Net::DNS::RR>
 object if the type isn't implemented.  See the manual pages for
@@ -225,29 +225,28 @@ sub new_from_data {
 	my ($name, $rrtype, $rrclass, $ttl, $rdlength, $data, $offset) = @_;
 
 	my $self = {
-		"name"		=> $name,
-		"type"		=> $rrtype,
-		"class"		=> $rrclass,
-		"ttl"		=> $ttl,
-		"rdlength"	=> $rdlength,
-		"rdata"		=> substr($$data, $offset, $rdlength),
+		'name'		=> $name,
+		'type'		=> $rrtype,
+		'class'		=> $rrclass,
+		'ttl'		=> $ttl,
+		'rdlength'	=> $rdlength,
+		'rdata'		=> substr($$data, $offset, $rdlength),
+
 	};
 
 
 	if ($RR{$rrtype}) {
 		my $subclass = $class->_get_subclass($rrtype);
-		
 		return $subclass->new($self, $data, $offset);
 	} else {
-		bless $self, $class;
-		
-		return $self
+	    return Net::DNS::RR::unkown->new($self,$data,$offset);
 	}
 
 }
 
 sub new_from_string {
 	my ($class, $rrstring, $update_type) = @_;
+
 	
 	build_regex() unless $RR_REGEX;
 	
@@ -260,17 +259,26 @@ sub new_from_string {
 	my $name    = $1;
 	my $ttl     = $2 || 0;
 	my $rrclass = $3 || '';
+
+
 	my $rrtype  = $4 || '';
 	my $rdata   = $5 || '';
 
 	$rdata =~ s/\s+$// if $rdata;
 	$name  =~ s/\.$//  if $name;
 
+
+	# RFC3597 tweaks
+	# This converts to known class and type if specified as TYPE###
+	$rrtype=Net::DNS::typesbyval(Net::DNS::typesbyname($rrtype))if $rrtype=~/^TYPE\d+/;
+	$rrclass=Net::DNS::classesbyval(Net::DNS::classesbyname($rrclass))if $rrclass=~/^CLASS\d+/;
+
+
 	if (!$rrtype && $rrclass && $rrclass eq 'ANY') {
 		$rrtype  = 'ANY';
 		$rrclass = 'IN';
 	} elsif (!$rrclass) {
-		$rrclass = "IN";
+		$rrclass = 'IN';
 	}
 
 	$rrtype ||= 'ANY';
@@ -279,28 +287,28 @@ sub new_from_string {
 	if ($update_type) {
 		$update_type = lc $update_type;
 		
-		if ($update_type eq "yxrrset") {
-			$ttl = 0;
-			$rrclass = "ANY" unless $rdata;
-		} elsif ($update_type eq "nxrrset") {
-			$ttl = 0;
-			$rrclass = "NONE";
-			$rdata = "";
-		} elsif ($update_type eq "yxdomain") {
-			$ttl = 0;
-			$rrclass = "ANY";
-			$rrtype = "ANY";
-			$rdata = "";
-		} elsif ($update_type eq "nxdomain") {
-			$ttl = 0;
-			$rrclass = "NONE";
-			$rrtype = "ANY";
-			$rdata = "";
+		if ($update_type eq 'yxrrset') {
+			$ttl     = 0;
+			$rrclass = 'ANY' unless $rdata;
+		} elsif ($update_type eq 'nxrrset') {
+			$ttl     = 0;
+			$rrclass = 'NONE';
+			$rdata   = '';
+		} elsif ($update_type eq 'yxdomain') {
+			$ttl     = 0;
+			$rrclass = 'ANY';
+			$rrtype  = 'ANY';
+			$rdata   = '';
+		} elsif ($update_type eq 'nxdomain') {
+			$ttl     = 0;
+			$rrclass = 'NONE';
+			$rrtype  = 'ANY';
+			$rdata   = '';
 		} elsif ($update_type =~ /^(rr_)?add$/) {
 			$ttl = 86400 unless $ttl;
 		} elsif ($update_type =~ /^(rr_)?del(ete)?$/) {
-			$ttl = 0;
-			$rrclass = $rdata ? "NONE" : "ANY";
+			$ttl     = 0;
+			$rrclass = $rdata ? 'NONE' : 'ANY';
 		}
 	}
 
@@ -308,24 +316,71 @@ sub new_from_string {
 	# we just defaulted it to ANY earlier....
 
 	my $self = {
-		"name"		=> $name,
-		"type"		=> $rrtype,
-		"class"		=> $rrclass,
-		"ttl"		=> $ttl,
-		"rdlength"      => 0,
-		"rdata"         => "",
+		'name'     => $name,
+		'type'     => $rrtype,
+		'class'    => $rrclass,
+		'ttl'      => $ttl,
+		'rdlength' => 0,
+		'rdata'    => '',
 	};
 
 	
+	# $rdata!~/^\s*\\\#/ means that the rdata does not start with \# (rfc3597)
 
-	if ($RR{$rrtype}) {
+	if ($RR{$rrtype} && $rdata !~ m/^\s*\\\#/ ) {
 		my $subclass = $class->_get_subclass($rrtype);
-			
+		
 		return $subclass->new_from_string($self, $rdata);
-	} else {
+	} elsif ($RR{$rrtype}) {   # A RR type known to Net::DNS starting with \#
+		$rdata =~ m/\\\#\s+(\d+)\s+(.*)$/;
+
+		my $rdlength = $1;
+		my $hexdump  = $2;		
+		$hexdump =~ s/\s*//g;
+
+		die "$rdata is inconsistent; length does not match content" 
+			if length($hexdump) != $rdlength*2;
+
+		$rdata = pack('H*', $hexdump);
+	
+		return Net::DNS::RR->new_from_data(
+			$name, 
+			$rrtype, 
+			$rrclass, 
+			$ttl, 
+			$rdlength, 
+			\$rdata, 
+			length($rdata) - $rdlength
+		);
+	} elsif ($rdata=~/\s*\\\#\s+\d+\s+/) {   
+		#We are now dealing with the truly unknown.
+		die 'Expected RFC3597 representation of RDATA' 
+			unless $rdata =~ m/\\\#\s+(\d+)\s+(.*)$/;
+
+		my $rdlength = $1;
+		my $hexdump  = $2;		
+		$hexdump =~ s/\s*//g;
+
+		die "$rdata is inconsistent; length does not match content" 
+			if length($hexdump) != $rdlength*2;
+
+		$rdata = pack('H*', $hexdump);
+
+		return Net::DNS::RR->new_from_data(
+			$name,
+			$rrtype,
+			$rrclass,
+			$ttl,
+			$rdlength,
+			\$rdata,
+			length($rdata) - $rdlength
+		);
+	} else {  
+		#God knows how to handle these... bless them in the RR class.
 		bless $self, $class;
-		return $self;
+		return $self
 	}
+	
 }
 
 sub new_from_hash {
@@ -402,10 +457,10 @@ B<rdatastr> method to get the RR-specific data.
 sub string {
 	my $self = shift;
 
-	return $self->{"name"}  . ".\t" .
-	       $self->{"ttl"}   . "\t"  .
-	       $self->{"class"} . "\t"  .
-	       $self->{"type"}  . "\t"  .
+	return $self->{'name'}  . ".\t" .
+	       $self->{'ttl'}   . "\t"  .
+	       $self->{'class'} . "\t"  .
+	       $self->{'type'}  . "\t"  .
 	       $self->rdatastr;
 }
 
@@ -420,9 +475,9 @@ to implement this method.
 
 sub rdatastr {
 	my $self = shift;
-	return exists $self->{"rdlength"}
-	       ? "; rdlength = " . $self->{"rdlength"}
-	       : "; no data";
+	return exists $self->{'rdlength'}
+	       ? '; rdlength = ' . $self->{'rdlength'}
+	       : '; no data';
 }
 
 =head2 name
@@ -453,12 +508,12 @@ sub class {
 	my $self = shift;
 
 	if (@_) {
-		$self->{"class"} = shift;
-	} elsif (!exists $self->{"class"}) {
-		Carp::carp("class: no such method");
+		$self->{'class'} = shift;
+	} elsif (!exists $self->{'class'}) {
+		Carp::carp('class: no such method');
 		return undef;
 	}
-	return $self->{"class"};
+	return $self->{'class'};
 }
 	
 
@@ -490,8 +545,8 @@ sub rdata {
 		my ($packet, $offset) = @_;
 		$retval = $self->rr_rdata($packet, $offset);
 	}
-	elsif (exists $self->{"rdata"}) {
-		$retval = $self->{"rdata"};
+	elsif (exists $self->{'rdata'}) {
+		$retval = $self->{'rdata'};
 	}
 
 	return $retval;
@@ -499,7 +554,7 @@ sub rdata {
 
 sub rr_rdata {
 	my $self = shift;
-	return exists $self->{"rdata"} ? $self->{"rdata"} : "";
+	return exists $self->{'rdata'} ? $self->{'rdata'} : '';
 }
 
 #------------------------------------------------------------------------------
@@ -515,40 +570,40 @@ sub data {
 
 
 	# Don't compress TSIG or TKEY names and don't mess with EDNS0 packets
-	if (uc($self->{"type"}) eq "TSIG" || uc($self->{"type"}) eq "TKEY") {
-		my $tmp_packet = Net::DNS::Packet->new("");
-		$data = $tmp_packet->dn_comp($self->{"name"}, 0);
-	} elsif (uc($self->{"type"}) eq "OPT") {
-		my $tmp_packet = Net::DNS::Packet->new("");
-		$data = $tmp_packet->dn_comp("", 0);
+	if (uc($self->{'type'}) eq 'TSIG' || uc($self->{'type'}) eq 'TKEY') {
+		my $tmp_packet = Net::DNS::Packet->new('');
+		$data = $tmp_packet->dn_comp($self->{'name'}, 0);
+	} elsif (uc($self->{'type'}) eq 'OPT') {
+		my $tmp_packet = Net::DNS::Packet->new('');
+		$data = $tmp_packet->dn_comp('', 0);
 	} else {
-		$data  = $packet->dn_comp($self->{"name"}, $offset);
+		$data  = $packet->dn_comp($self->{'name'}, $offset);
 	}
 
-	my $qtype = uc($self->{"type"});
-	my $qtype_val = ($qtype =~ /^\d+$/) ? $qtype : $Net::DNS::typesbyname{$qtype};
-	$qtype_val = 0 if !defined($qtype_val);
+	my $qtype     = uc($self->{'type'});
+	my $qtype_val = ($qtype =~ m/^\d+$/) ? $qtype : Net::DNS::typesbyname($qtype);
+	$qtype_val    = 0 if !defined($qtype_val);
 
-	my $qclass = uc($self->{"class"});
-	my $qclass_val = ($qclass =~ /^\d+$/) ? $qclass : $Net::DNS::classesbyname{$qclass};
-	$qclass_val = 0 if !defined($qclass_val);
-	$data .= pack("n", $qtype_val);
+	my $qclass     = uc($self->{'class'});
+	my $qclass_val = ($qclass =~ m/^\d+$/) ? $qclass : Net::DNS::classesbyname($qclass);
+	$qclass_val    = 0 if !defined($qclass_val);
+	$data .= pack('n', $qtype_val);
 	
 	# If the type is OPT then class will need to contain a decimal number
 	# containing the UDP payload size. (RFC2671 section 4.3)
-	if (uc($self->{"type"}) ne "OPT") {
-	    $data .= pack("n", $qclass_val);
+	if (uc($self->{'type'}) ne 'OPT') {
+	    $data .= pack('n', $qclass_val);
 	} else {
-	    $data .= pack("n", $self->{"class"});
+	    $data .= pack('n', $self->{'class'});
 	}
 	
-	$data .= pack("N", $self->{"ttl"});
+	$data .= pack('N', $self->{'ttl'});
 
 	$offset += length($data) + &Net::DNS::INT16SZ;	# allow for rdlength
 
 	my $rdata = $self->rdata($packet, $offset);
 
-	$data .= pack("n", length $rdata);
+	$data .= pack('n', length $rdata);
 	$data .= $rdata;
 
 	return $data;
@@ -566,25 +621,26 @@ sub data {
 #------------------------------------------------------------------------------
 
 sub _canonicaldata {
-    my $self = shift;
-    my $data="";
-    {   my @dname= split /\./,lc($self->{"name"});
-	for (my $i=0;$i<@dname;$i++){
-	    $data .= pack ("C",length $dname[$i] );
-	    $data .= $dname[$i] ;
+	my $self = shift;
+	my $data='';
+	{   
+		my @dname= split /\./,lc($self->{'name'});
+		for (my $i=0;$i<@dname;$i++){
+			$data .= pack ('C',length $dname[$i] );
+			$data .= $dname[$i] ;
+		}
+		$data .= pack ('C','0');
 	}
-	$data .= pack ("C","0");
-    }
-    $data .= pack("n", $Net::DNS::typesbyname{uc($self->{"type"})});
-    $data .= pack("n", $Net::DNS::classesbyname{uc($self->{"class"})});
-    $data .= pack("N", $self->{"ttl"});
-    
-    
-    my $rdata = $self->_canonicalRdata;
-
-    $data .= pack("n", length $rdata);
-    $data .= $rdata;
-    return $data;
+	$data .= pack('n', Net::DNS::typesbyname(uc($self->{'type'})));
+	$data .= pack('n', Net::DNS::classesbyname(uc($self->{'class'})));
+	$data .= pack('N', $self->{'ttl'});
+	
+	
+	my $rdata = $self->_canonicalRdata;
+	
+	$data .= pack('n', length $rdata);
+	$data .= $rdata;
+	return $data;
 
 
 }

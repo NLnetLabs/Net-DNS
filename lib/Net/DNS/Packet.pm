@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm,v 1.23 2003/10/27 14:44:42 ctriv Exp $
+# $Id: Packet.pm,v 1.24 2003/12/09 17:37:13 ctriv Exp $
 #
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
-$VERSION = (qw$Revision: 1.23 $)[1];
+$VERSION = (qw$Revision: 1.24 $)[1];
 
 =head1 NAME
 
@@ -888,8 +888,8 @@ sub parse_question {
 	my ($qtype, $qclass) = unpack("\@$offset n2", $$data);
 	$offset += 2 * &Net::DNS::INT16SZ;
 
-	$qtype  = $Net::DNS::typesbyval{$qtype};
-	$qclass = $Net::DNS::classesbyval{$qclass};
+	$qtype  = Net::DNS::typesbyval($qtype);
+	$qclass = Net::DNS::classesbyval($qclass);
 
 	return (Net::DNS::Question->new($qname, $qtype, $qclass), $offset);
 }
@@ -920,12 +920,12 @@ sub parse_rr {
 
 	my ($type, $class, $ttl, $rdlength) = unpack("\@$offset n2 N n", $$data);
 
-	$type  = $Net::DNS::typesbyval{$type}    || $type;
+	$type  = Net::DNS::typesbyval($type)    || $type;
 
 	# Special case for OPT RR where CLASS should be interperted as 16 bit 
 	# unsigned 2671 sec 4.3
 	if ($type ne "OPT") {
-	    $class = $Net::DNS::classesbyval{$class} || $class;
+	    $class = Net::DNS::classesbyval($class) || $class;
 	} 
 	# else just keep at its numerical value
 

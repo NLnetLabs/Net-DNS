@@ -1,6 +1,6 @@
 package Net::DNS::Question;
 #
-# $Id: Question.pm,v 1.7 2003/09/03 04:41:50 ctriv Exp $
+# $Id: Question.pm,v 1.8 2003/12/09 17:37:13 ctriv Exp $
 #
 use strict;
 use vars qw($VERSION $AUTOLOAD);
@@ -8,7 +8,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$Revision: 1.7 $)[1];
+$VERSION = (qw$Revision: 1.8 $)[1];
 
 =head1 NAME
 
@@ -50,6 +50,7 @@ sub new {
 	$qclass = defined($qclass) ? uc($qclass) : "ANY";
 
 	# Check if the caller has the type and class reversed.
+	# We are not that kind for unknown types.... :-)
 	if ((!exists $Net::DNS::typesbyname{$qtype} ||
 	     !exists $Net::DNS::classesbyname{$qclass})
 	    && exists $Net::DNS::classesbyname{$qtype}
@@ -170,8 +171,8 @@ sub data {
 
 	my $data = $packet->dn_comp($self->{"qname"}, $offset);
 
-	$data .= pack("n", $Net::DNS::typesbyname{uc($self->{"qtype"})});
-	$data .= pack("n", $Net::DNS::classesbyname{uc($self->{"qclass"})});
+	$data .= pack("n", Net::DNS::typesbyname(uc($self->{"qtype"})));
+	$data .= pack("n", Net::DNS::classesbyname(uc($self->{"qclass"})));
 	
 	return $data;
 }

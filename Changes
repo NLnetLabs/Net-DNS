@@ -1,6 +1,24 @@
 Revision history for Net::DNS
 =============================
 
+Fixed a long standing bug with zone transfers in the "many-answers" format. 
+CPAN #1903.
+
+Added the '--online-tests' flag to Makefile.PL.  This activates the online
+tests without asking the user interactively.  "--no-online-tests" turns
+the tests off.  
+
+Cleaned up Makefile.PL a little.  The "--pm" flag is now deprecated, use
+"--no-xs" instead.
+
+Added support for unknown RR types (rfc3597). Note for developers: the
+typesbyname, typesbyval, classesbyname and classesbyval hashes should
+not be used directly, use the same named wrapper functions
+instead. [Olaf Kolkman]
+
+Added two hashes for administrative use; they store which types are
+qtypes and metatypes (rfc2929). [Olaf Kolkman]
+
 *** 0.42_01 November 30, 2003
 
 Major work to get Net::DNS functioning properly on Cygwin by Sidney 
@@ -314,4 +332,4 @@ Net::DNS now works with 5.005_03 again.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.85 2003/12/01 04:33:50 ctriv Exp $
+$Id: Changes,v 1.87 2003/12/11 08:43:45 ctriv Exp $

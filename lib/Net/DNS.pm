@@ -1,6 +1,6 @@
 package Net::DNS;
 #
-# $Id: DNS.pm,v 1.75 2003/12/01 04:33:50 ctriv Exp $
+# $Id: DNS.pm,v 1.77 2003/12/10 22:10:29 ctriv Exp $
 #
 use strict;
 use vars qw(
@@ -10,16 +10,21 @@ use vars qw(
 	@EXPORT
 	%typesbyname
 	%typesbyval
+	%qtypesbyname
+	%qtypesbyval
+	%metatypesbyname
+	%metatypesbyval
 	%classesbyname
 	%classesbyval
 	%opcodesbyname
 	%opcodesbyval
 	%rcodesbyname
 	%rcodesbyval
+
 );
 
 
-$VERSION = '0.42_01';
+$VERSION = '0.42_02';
 
 use Net::DNS::Resolver;
 use Net::DNS::Packet;
@@ -43,105 +48,228 @@ eval { __PACKAGE__->bootstrap() };
 
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
 
+#
+# If you implement an RR record make sure you also add it to 
+# %Net::DNS::RR::RR hash otherwise it will be treated as unknown type.
+# 
+
+# Do not use these tybesby hashes directly. Use the interface
+# functions, see below.
+
 %typesbyname = (
- 	"SIGZERO"   => 0,       # RFC2931 consider this a pseudo type
-	"A"		    => 1,		# RFC 1035, Section 3.4.1
-	"NS"		=> 2,		# RFC 1035, Section 3.3.11
-	"MD"		=> 3,		# RFC 1035, Section 3.3.4 (obsolete)
-	"MF"		=> 4,		# RFC 1035, Section 3.3.5 (obsolete)
-	"CNAME"		=> 5,		# RFC 1035, Section 3.3.1
-	"SOA"		=> 6,		# RFC 1035, Section 3.3.13
-	"MB"		=> 7,		# RFC 1035, Section 3.3.3
-	"MG"		=> 8,		# RFC 1035, Section 3.3.6
-	"MR"		=> 9,		# RFC 1035, Section 3.3.8
-	"NULL"		=> 10,		# RFC 1035, Section 3.3.10
-	"WKS"		=> 11,		# RFC 1035, Section 3.4.2 (deprecated)
-	"PTR"		=> 12,		# RFC 1035, Section 3.3.12
-	"HINFO"		=> 13,		# RFC 1035, Section 3.3.2
-	"MINFO" 	=> 14,		# RFC 1035, Section 3.3.7
-	"MX"		=> 15,		# RFC 1035, Section 3.3.9
-	"TXT"		=> 16,		# RFC 1035, Section 3.3.14
-	"RP"		=> 17,		# RFC 1183, Section 2.2
-	"AFSDB"		=> 18,		# RFC 1183, Section 1
-	"X25"		=> 19,		# RFC 1183, Section 3.1
-	"ISDN"		=> 20,		# RFC 1183, Section 3.2
-	"RT"		=> 21,		# RFC 1183, Section 3.3
-	"NSAP"		=> 22,		# RFC 1706, Section 5
-	"NSAP_PTR"	=> 23,		# RFC 1348 (obsolete)
-					# The following 2 RRs are impemented in
-					# Net::DNS::SEC
- 	"SIG"		=> 24,		# RFC 2535, Section 4.1
- 	"KEY"		=> 25,		# RFC 2535, Section 3.1
- 	"PX"		=> 26,		# RFC 2163,
-	"GPOS"		=> 27,		# RFC 1712 (obsolete)
-	"AAAA"		=> 28,		# RFC 1886, Section 2.1
-	"LOC"		=> 29,		# RFC 1876
-					# The following RR is impemented in
-					# Net::DNS::SEC
-	"NXT"		=> 30,		# RFC 2535, Section 5.2
-	"EID"		=> 31,		# draft-ietf-nimrod-dns-xx.txt
-	"NIMLOC"	=> 32,		# draft-ietf-nimrod-dns-xx.txt
-	"SRV"		=> 33,		# RFC 2052
-	"ATMA"		=> 34,		# ???
-	"NAPTR"		=> 35,		# RFC 2168
-	"KX"		=> 36,		# RFC 2230
- 	"CERT"		=> 37,		# RFC 2538
-	"DNAME"		=> 39,		# RFC 2672
-	"OPT"  		=> 41,		# RFC 2671
-					# The following 4 RRs are impemented in
-					# Net::DNS::SEC
-					# Aug 2003: These RRs will be published as RFCs shortly 
-	"DS"		=> 43,		# draft-ietf-dnsext-delegation-signer
-	"RRSIG"		=> 46,		# draft-ietf-dnsext-dnssec-2535typecode-change
-	"NSEC"		=> 47,		# draft-ietf-dnsext-dnssec-2535typecode-change
-	"DNSKEY"	=> 48,		# draft-ietf-dnsext-dnssec-2535typecode-change
-	"UINFO"		=> 100,		# non-standard
-	"UID"		=> 101,		# non-standard
-	"GID"		=> 102,		# non-standard
-	"UNSPEC"	=> 103,		# non-standard
-	"TKEY"		=> 249,		# RFC 2930
-	"TSIG"		=> 250,		# RFC 2931
-	"IXFR"		=> 251,		# RFC 1995
-	"AXFR"		=> 252,		# RFC 1035
-	"MAILB"		=> 253,		# RFC 1035 (MB, MG, MR)
-	"MAILA"		=> 254,		# RFC 1035 (obsolete - see MX)
-	"ANY"		=> 255,		# RFC 1035
+ 	'SIGZERO'   => 0,       # RFC2931 consider this a pseudo type
+	'A'			=> 1,		# RFC 1035, Section 3.4.1
+	'NS'		=> 2,		# RFC 1035, Section 3.3.11
+	'MD'		=> 3,		# RFC 1035, Section 3.3.4 (obsolete)
+	'MF'		=> 4,		# RFC 1035, Section 3.3.5 (obsolete)
+	'CNAME'		=> 5,		# RFC 1035, Section 3.3.1
+	'SOA'		=> 6,		# RFC 1035, Section 3.3.13
+	'MB'		=> 7,		# RFC 1035, Section 3.3.3
+	'MG'		=> 8,		# RFC 1035, Section 3.3.6
+	'MR'		=> 9,		# RFC 1035, Section 3.3.8
+	'NULL'		=> 10,		# RFC 1035, Section 3.3.10
+	'WKS'		=> 11,		# RFC 1035, Section 3.4.2 (deprecated)
+	'PTR'		=> 12,		# RFC 1035, Section 3.3.12
+	'HINFO'		=> 13,		# RFC 1035, Section 3.3.2
+	'MINFO' 	=> 14,		# RFC 1035, Section 3.3.7
+	'MX'		=> 15,		# RFC 1035, Section 3.3.9
+	'TXT'		=> 16,		# RFC 1035, Section 3.3.14
+	'RP'		=> 17,		# RFC 1183, Section 2.2
+	'AFSDB'		=> 18,		# RFC 1183, Section 1
+	'X25'		=> 19,		# RFC 1183, Section 3.1
+	'ISDN'		=> 20,		# RFC 1183, Section 3.2
+	'RT'		=> 21,		# RFC 1183, Section 3.3
+	'NSAP'		=> 22,		# RFC 1706, Section 5
+	'NSAP_PTR'	=> 23,		# RFC 1348 (obsolete)
+	# The following 2 RRs are impemented in Net::DNS::SEC
+ 	'SIG'		=> 24,		# RFC 2535, Section 4.1
+ 	'KEY'		=> 25,		# RFC 2535, Section 3.1
+ 	'PX'		=> 26,		# RFC 2163,
+	'GPOS'		=> 27,		# RFC 1712 (obsolete)
+	'AAAA'		=> 28,		# RFC 1886, Section 2.1
+	'LOC'		=> 29,		# RFC 1876
+	# The following RR is impemented in Net::DNS::SEC
+	'NXT'		=> 30,		# RFC 2535, Section 5.2
+	'EID'		=> 31,		# draft-ietf-nimrod-dns-xx.txt
+	'NIMLOC'	=> 32,		# draft-ietf-nimrod-dns-xx.txt
+	'SRV'		=> 33,		# RFC 2052
+	'ATMA'		=> 34,		# ???
+	'NAPTR'		=> 35,		# RFC 2168
+	'KX'		=> 36,		# RFC 2230
+ 	'CERT'		=> 37,		# RFC 2538
+	'DNAME'		=> 39,		# RFC 2672
+	'OPT'  		=> 41,		# RFC 2671
+	# The following 4 RRs are impemented in Net::DNS::SEC
+	# Aug 2003: These RRs will be published as RFCs shortly 
+	'DS'		=> 43,		# draft-ietf-dnsext-delegation-signer
+	'RRSIG'		=> 46,		# draft-ietf-dnsext-dnssec-2535typecode-change
+	'NSEC'		=> 47,		# draft-ietf-dnsext-dnssec-2535typecode-change
+	'DNSKEY'	=> 48,		# draft-ietf-dnsext-dnssec-2535typecode-change
+	'UINFO'		=> 100,		# non-standard
+	'UID'		=> 101,		# non-standard
+	'GID'		=> 102,		# non-standard
+	'UNSPEC'	=> 103,		# non-standard
+	'TKEY'		=> 249,		# RFC 2930
+	'TSIG'		=> 250,		# RFC 2931
+	'IXFR'		=> 251,		# RFC 1995
+	'AXFR'		=> 252,		# RFC 1035
+	'MAILB'		=> 253,		# RFC 1035 (MB, MG, MR)
+	'MAILA'		=> 254,		# RFC 1035 (obsolete - see MX)
+	'ANY'		=> 255,		# RFC 1035
 );
 %typesbyval = reverse %typesbyname;
 
 
+#
+# typesbyval and typesbyname functions are wrappers around the similarly named
+# hashes. They are used for 'unknown' DNS RR types (RFC3597)
+
+# typesbyname returns they TYPEcode as a function of the TYPE
+# mnemonic. If the TYPE mapping is not specified the generic mnemonic
+# TYPE### is returned.
+
+
+# typesbyval returns they TYPE mnemonic as a function of the TYPE
+# code. If the TYPE mapping is not specified the generic mnemonic
+# TYPE### is returned.
+#
+
+sub typesbyname {
+	my $name = uc shift;
+
+	return $typesbyname{$name} if $typesbyname{$name};
+	
+	die "Net::DNS::typesbyval() argument is not TYPE### ($name)" unless 
+		$name =~ m/^\s*TYPE(\d+)\s*$/;  
+	
+	my $val = $1;
+	
+	die 'Net::DNS::typesbyval() argument larger than ' . 0xffff if $val > 0xffff;
+	
+	return $val;
+}
+
+
+
+sub typesbyval {
+	my $val = shift;
+	
+	die "Net::DNS::typesbyname() argument is not numeric ($val)" unless 
+		$val =~ m/^\s*\d+\s*$/;  
+	
+	$val =~ s/\s*//g; 
+	$val =~ s/^0*//; 
+	
+	return $typesbyval{$val} if $typesbyval{$val};
+	
+	die 'Net::DNS::typesbyname() argument larger than '. 0xffff if 
+		$val > 0xffff;
+	
+	return "TYPE$val";
+}
+
+
+
+#
+# Do not use these classesby hashes directly. See below. 
+#
+ 
 %classesbyname = (
-	"IN"		=> 1,		# RFC 1035
-	"CH"		=> 3,		# RFC 1035
-	"HS"		=> 4,		# RFC 1035
-	"NONE"		=> 254,		# RFC 2136
-	"ANY"		=> 255,		# RFC 1035
+	'IN'		=> 1,		# RFC 1035
+	'CH'		=> 3,		# RFC 1035
+	'HS'		=> 4,		# RFC 1035
+	'NONE'		=> 254,		# RFC 2136
+	'ANY'		=> 255,		# RFC 1035
 );
 %classesbyval = reverse %classesbyname;
 
 
+
+# classesbyval and classesbyname functions are wrappers around the
+# similarly named hashes. They are used for 'unknown' DNS RR classess
+# (RFC3597)
+
+# See typesbyval and typesbyname, these beasts have the same functionality
+
+sub classesbyname {
+	my $name = uc shift;
+	return $classesbyname{$name} if $classesbyname{$name};
+	
+	die "Net::DNS::classesbyval() argument is not CLASS### ($name)" unless 
+		$name =~ m/^\s*CLASS(\d+)\s*$/;
+	
+	my $val = $1;
+	
+	die 'Net::DNS::classesbyval() argument larger than '. 0xffff if $val > 0xffff;
+	
+	return $val;
+}
+
+
+
+sub classesbyval {
+	my $val = shift;
+	
+	die "Net::DNS::classesbyname() argument is not numeric ($val)" unless 
+		$val=~/^\s*\d+\s*$/;
+	
+	$val =~ s/\s*//g;
+	$val =~ s/^0*//;
+	
+	return $classesbyval{$val} if $classesbyval{$val};
+	
+	die 'Net::DNS::classesbyname() argument larger than ' . 0xffff if $val > 0xffff;
+	
+	return "CLASS$val";
+}
+
+
+
+# The qtypesbyval and metatypesbyval specify special typecodes
+# See rfc2929 and the relevant IANA registry
+# http://www.iana.org/assignments/dns-parameters
+
+
+%qtypesbyname = (
+	'IXFR'   => 251,  # incremental transfer                [RFC1995]
+	'AXFR'   => 252,  # transfer of an entire zone          [RFC1035]
+	'MAILB'  => 253,  # mailbox-related RRs (MB, MG or MR)	 [RFC1035]
+	'MAILA'  => 254,  # mail agent RRs (Obsolete - see MX)	 [RFC1035]
+	'ANY'    => 255,  # all records		                 [RFC1035]
+);
+%qtypesbyval = reverse %qtypesbyname;
+
+
+%metatypesbyname = (
+	'TKEY'        => 249,    # Transaction Key   [RFC2930]
+	'TSIG'        => 250,    # Transaction Signature  [RFC2845]
+	'OPT'         => 41,     # RFC 2671
+);
+%metatypesbyval = reverse %metatypesbyname;
+
+
 %opcodesbyname = (
-	"QUERY"		=> 0,		# RFC 1035
-	"IQUERY"	=> 1,		# RFC 1035
-	"STATUS"	=> 2,		# RFC 1035
-	"NS_NOTIFY_OP"	=> 4,		# RFC 1996
-	"UPDATE"	=> 5,		# RFC 2136
+	'QUERY'	       => 0,		# RFC 1035
+	'IQUERY'       => 1,		# RFC 1035
+	'STATUS'       => 2,		# RFC 1035
+	'NS_NOTIFY_OP' => 4,		# RFC 1996
+	'UPDATE'       => 5,		# RFC 2136
 );
 %opcodesbyval = reverse %opcodesbyname;
 
 
 %rcodesbyname = (
-	"NOERROR"	=> 0,		# RFC 1035
-	"FORMERR"	=> 1,		# RFC 1035
-	"SERVFAIL"	=> 2,		# RFC 1035
-	"NXDOMAIN"	=> 3,		# RFC 1035
-	"NOTIMP"	=> 4,		# RFC 1035
-	"REFUSED"	=> 5,		# RFC 1035
-	"YXDOMAIN"	=> 6,		# RFC 2136
-	"YXRRSET"	=> 7,		# RFC 2136
-	"NXRRSET"	=> 8,		# RFC 2136
-	"NOTAUTH"	=> 9,		# RFC 2136
-	"NOTZONE"	=> 10,		# RFC 2136
+	'NOERROR'	=> 0,		# RFC 1035
+	'FORMERR'	=> 1,		# RFC 1035
+	'SERVFAIL'	=> 2,		# RFC 1035
+	'NXDOMAIN'	=> 3,		# RFC 1035
+	'NOTIMP'	=> 4,		# RFC 1035
+	'REFUSED'	=> 5,		# RFC 1035
+	'YXDOMAIN'	=> 6,		# RFC 2136
+	'YXRRSET'	=> 7,		# RFC 2136
+	'NXRRSET'	=> 8,		# RFC 2136
+	'NOTAUTH'	=> 9,		# RFC 2136
+	'NOTZONE'	=> 10,		# RFC 2136
 );
 %rcodesbyval = reverse %rcodesbyname;
 
@@ -167,7 +295,7 @@ sub mx {
 	my ($name, $class) = @_;
 	$class ||= 'IN';
 
-	my $ans = $res->query($name, "MX", $class) || return;
+	my $ans = $res->query($name, 'MX', $class) || return;
 
 	# This construct is best read backwords.
 	#
@@ -184,27 +312,27 @@ sub mx {
 }
 
 sub yxrrset {
-	return Net::DNS::RR->new_from_string(shift, "yxrrset");
+	return Net::DNS::RR->new_from_string(shift, 'yxrrset');
 }
 
 sub nxrrset {
-	return Net::DNS::RR->new_from_string(shift, "nxrrset");
+	return Net::DNS::RR->new_from_string(shift, 'nxrrset');
 }
 
 sub yxdomain {
-	return Net::DNS::RR->new_from_string(shift, "yxdomain");
+	return Net::DNS::RR->new_from_string(shift, 'yxdomain');
 }
 
 sub nxdomain {
-	return Net::DNS::RR->new_from_string(shift, "nxdomain");
+	return Net::DNS::RR->new_from_string(shift, 'nxdomain');
 }
 
 sub rr_add {
-	return Net::DNS::RR->new_from_string(shift, "rr_add");
+	return Net::DNS::RR->new_from_string(shift, 'rr_add');
 }
 
 sub rr_del {
-	return Net::DNS::RR->new_from_string(shift, "rr_del");
+	return Net::DNS::RR->new_from_string(shift, 'rr_del');
 }
 
 1;
