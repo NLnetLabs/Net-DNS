@@ -102,7 +102,7 @@ use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
     'AAAA'      => 28,      # RFC 1886, Section 2.1
     'LOC'       => 29,      # RFC 1876
     # The following RR is impemented in Net::DNS::SEC
-    'NXT'       => 30,      # RFC 2535, Section 5.2
+    'NXT'       => 30,      # RFC 2535, Section 5.2 obsoleted by RFC3755
     'EID'       => 31,      # draft-ietf-nimrod-dns-xx.txt
     'NIMLOC'    => 32,      # draft-ietf-nimrod-dns-xx.txt
     'SRV'       => 33,      # RFC 2052
@@ -113,12 +113,11 @@ use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
     'DNAME'     => 39,      # RFC 2672
     'OPT'       => 41,      # RFC 2671
     # The following 4 RRs are impemented in Net::DNS::SEC
-    # Aug 2003: These RRs will be published as RFCs shortly 
-    'DS'        => 43,      # draft-ietf-dnsext-delegation-signer
-    'SSHFP'     => 44,          # draft-ietf-secsh-dns (No RFC # yet at time of coding)
-    'RRSIG'     => 46,      # draft-ietf-dnsext-dnssec-2535typecode-change
-    'NSEC'      => 47,      # draft-ietf-dnsext-dnssec-2535typecode-change
-    'DNSKEY'    => 48,      # draft-ietf-dnsext-dnssec-2535typecode-change
+    'DS'        => 43,      # RFC 4034
+    'SSHFP'     => 44,      # draft-ietf-secsh-dns (No RFC # yet at time of coding)
+    'RRSIG'     => 46,      # RFC 4034
+    'NSEC'      => 47,      # RFC 4034
+    'DNSKEY'    => 48,      # RFC 4034
     'UINFO'     => 100,     # non-standard
     'UID'       => 101,     # non-standard
     'GID'       => 102,     # non-standard

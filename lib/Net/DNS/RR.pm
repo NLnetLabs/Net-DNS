@@ -719,14 +719,14 @@ sub AUTOLOAD {
 ***
 ***  $rr_string
 ***
-***  This object doesn't have a method "$name".  THIS IS A BUG
+***  This object doesn not have a method "$name".  THIS IS A BUG
 ***  IN THE CALLING SOFTWARE, which has incorrectly assumed that
 ***  the object would be of a particular type.  The calling
 ***  software should check the type of each RR object before
 ***  calling any of its methods.
 ***
 ***  Net::DNS has returned undef to the caller.
-***
+*** 
 
 AMEN
 		return;

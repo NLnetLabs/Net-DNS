@@ -579,7 +579,7 @@ Enabled DNSSEC this will set the checking disabled flag in the query header
 and add EDNS0 data as in RFC2671 and RFC3225
 
 When set to true the answer and additional section of queries from
-secured zones will contain KEY, NXT and SIG records.
+secured zones will contain DNSKEY, NSEC and RRSIG records.
 
 
 =head2 cdflag
