@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Win32;
 #
-# $Id: Win32.pm,v 1.1 2003/06/11 09:56:13 ctriv Exp $
+# $Id: Win32.pm,v 1.2 2003/08/07 22:18:18 ctriv Exp $
 #
 
 use strict;
@@ -95,7 +95,7 @@ sub init {
 		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
 		my $i = 0;
 		my %h;
-		foreach my $entry (split(' ', $searchlist)) {
+		foreach my $entry (split(m/[\s,]+/, $searchlist)) {
 			$h{$entry} = $i++;
 			if ($usedevolution) {
 				# as long there's more than two pieces, cut
@@ -114,7 +114,7 @@ sub init {
 		# just in case dups were introduced...
 		my @a;
 		my %h;
-		foreach my $ns (split(' ', $nameservers)) {
+		foreach my $ns (split(m/[\s,]+/, $nameservers)) {
 			push @a, $ns unless $h{$ns};
 			$h{$ns} = 1;
 		}

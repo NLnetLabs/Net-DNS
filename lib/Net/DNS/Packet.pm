@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 
-# $Id: Packet.pm,v 1.17 2003/05/25 05:15:03 ctriv Exp $
+# $Id: Packet.pm,v 1.19 2003/08/04 03:41:52 ctriv Exp $
 
 use strict;
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
@@ -679,18 +679,19 @@ Returns B<(undef, undef)> if the domain name couldn't be expanded.
 
 =cut
 # '
-sub dn_expand {
-	my ($packet, $offset) = @_;
 
+# This is very hot code, so we try to keep things fast.  This makes for
+# odd style sometimes.
+{
 	if (defined &dn_expand_XS) {
-		return dn_expand_XS($packet, $offset);
+		*dn_expand = \&dn_expand_XS;
 	} else {
-		return dn_expand2($packet, $offset, {});
+		*dn_expand = \&dn_expand_PP;
 	}
 }
 
-sub dn_expand2 {
-	my ($packet, $offset, $seen) = @_;
+sub dn_expand_PP {
+	my ($packet, $offset) = @_; # $seen from $_[2] for debugging
 	my $name = "";
 	my $len;
 	my $packetlen = length $$packet;
@@ -718,7 +719,7 @@ sub dn_expand2 {
 
 			my $ptr = unpack("\@$offset n", $$packet);
 			$ptr &= 0x3fff;
-			my($name2) = dn_expand2($packet, $ptr, $seen);
+			my($name2) = dn_expand_PP($packet, $ptr); # pass $seen for debugging
 
 			return (undef, undef) unless defined $name2;
 

@@ -1,6 +1,11 @@
 Revision history for Net::DNS
 =============================
 
+** 0.39 August 7 2003
+
+Fixed a bug on Win32 where some machines seperated lists with commas, 
+not whitespace.  Thanks to Jim White for pointing it out.
+
 ** 0.38_02 July 29 2003
 
 Reworked the POD for Net::DNS::Resolver.
@@ -14,7 +19,7 @@ Broke Net::DNS::Resolver into seperate classes.  UNIX and Win32
 classes are currently implemented.  Many of the globals in 
 Net::DNS::Resolver no longer exist.  They were never documented
 so you never used them.... right?
-
+ 
 Options to Net::DNS::Resolver->new() are now supported, including
 using your own configuration file.  See the Net::DNS::Resolver man
 page for details.
@@ -741,4 +746,4 @@ memory management.
 ---
 Chris Reinhardt <ctriv@net-dns.org>
 Michael Fuhr <mfuhr@dimensional.com>
-$Id: Changes,v 1.64 2003/07/29 09:26:51 ctriv Exp $
+$Id: Changes,v 1.65 2003/08/07 22:18:17 ctriv Exp $
