@@ -11,3 +11,14 @@
 \.old$
 \#$
 ^\.#
+netdnslib/netdns.o$
+netdnslib/netdns.a$
+netdnslib/Makefile$
+DNS.bs
+DNS.c
+DNS.o
+MANIFEST.SKIP
+t/online.enabled
+^Net-DNS-\d+.\d+.*/
+.*\.ts$
+.*\.tar\.gz$

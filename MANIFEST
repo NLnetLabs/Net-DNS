@@ -64,6 +64,9 @@ lib/Net/DNS/Update.pm
 Makefile.PL
 MANIFEST			This list of files
 META.yml
+netdnslib/Makefile.PL
+netdnslib/netdns.c
+netdnslib/netdns.h
 README
 t/.resolv.conf
 t/00-load.t
@@ -87,5 +90,6 @@ t/08-online.t
 t/09-tkey.t
 t/10-recurse.t
 t/11-escapedchars.t
+t/11-inet6.t
 t/custom.txt
 TODO
