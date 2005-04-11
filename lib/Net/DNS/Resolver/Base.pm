@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Base;
 #
-# $Id: Base.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 
 use strict;
@@ -1371,6 +1371,23 @@ sub axfr_next {
 
 	return wantarray ? ($rr, undef) : $rr;
 }
+
+
+
+
+sub dnssec {
+    my ($self, $new_val) = @_;
+    if (defined $new_val) {
+	$self->{"dnssec"} = $new_val;
+	# Setting the udppacket size to some higher default
+	$self->udppacketsize(2048) if $new_val;
+    }
+    
+    Carp::carp ("You called the Net::DNS::Resolver::dnssec() method but do not have Net::DNS::SEC installed") if $self->{"dnssec"} && ! $Net::DNS::DNSSEC;
+    
+    return $self->{"dnssec"};
+};
+
 
 
 sub tsig {

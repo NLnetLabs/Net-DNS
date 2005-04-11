@@ -83,6 +83,9 @@ foreach my $test (qw(nameservers searchlist)) {
 	}
 }
 
+
+
+
 undef $res;
 
 my %bad_input = (
@@ -103,4 +106,8 @@ $res = Net::DNS::Resolver->new(%bad_input);
 foreach my $key (keys %bad_input) {
 	isnt($res->{$key}, 'set', "$key is not set");
 }
+
+
+
+
 

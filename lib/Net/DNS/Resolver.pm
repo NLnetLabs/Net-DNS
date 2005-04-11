@@ -1,6 +1,6 @@
 package Net::DNS::Resolver;
 #
-# $Id: Resolver.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 
 use strict;
@@ -587,6 +587,20 @@ and add EDNS0 data as in RFC2671 and RFC3225
 
 When set to true the answer and additional section of queries from
 secured zones will contain DNSKEY, NSEC and RRSIG records.
+
+Setting calling the dnssec method with a non-zero value will set the
+UDP packet size to the default value of 2048. If that is to small or
+to big for your environement you should call the udppacketsize()
+method immeditatly after.
+
+   $res->dnssec(1);    # turns on DNSSEC and sets udp packetsize to 2048
+   $res->udppacketsize(1028);   # lowers the UDP pakcet size
+
+The method will Croak::croak with the message "You called the
+Net::DNS::Resolver::dnssec() method but do not have Net::DNS::SEC
+installed at ..." if you call it without Net::DNS::SEC being in your
+@INC path.
+
 
 
 =head2 cdflag
