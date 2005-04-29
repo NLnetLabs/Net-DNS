@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Recurse;
 #
-# $Id: Recurse.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 use strict;
 use Net::DNS::Resolver;
@@ -24,7 +24,11 @@ sub hints {
   # for who it thinks is authoritative for
   # the (root) zone as a sanity check.
   # Nice idea.
-  my $packet = $self->query(".", "NS", "IN");
+  
+  $self->recurse(0); #play fair.. do not recurse.
+  
+  my $packet=$self->query(".", "NS", "IN");
+  
   my %hints = ();
   if ($packet) {
     if (my @ans = $packet->answer) {
@@ -39,21 +43,30 @@ sub hints {
         }
       }
       foreach my $rr ($packet->additional) {
-        print ";; ADDITIONAL: ",$rr->string,"\n" if $self->{'debug'};
-        if (my $server = lc $rr->name and
-            $rr->type eq "A") {
-          #print ";; ADDITIONAL HELP: $server -> [".$rr->rdatastr."]\n" if $self->{'debug'};
-          if ($hints{$server}) {
-            print ";; STORING IP: $server IN A ",$rr->rdatastr,"\n" if $self->{'debug'};
-            push @{ $hints{$server} }, $rr->rdatastr;
-          }
-        }
+	print ";; ADDITIONAL: ",$rr->string,"\n" if $self->{'debug'};
+	if (my $server = lc $rr->name){
+	  if ( $rr->type eq "A") {
+	    #print ";; ADDITIONAL HELP: $server -> [".$rr->rdatastr."]\n" if $self->{'debug'};
+	    if ($hints{$server}) {
+	      print ";; STORING IP: $server IN A ",$rr->rdatastr,"\n" if $self->{'debug'};
+	      push @{ $hints{$server} }, $rr->rdatastr;
+	    }
+	  }
+	  if ( $rr->type eq "AAAA") {
+	    #print ";; ADDITIONAL HELP: $server -> [".$rr->rdatastr."]\n" if $self->{'debug'};
+	    if ($hints{$server}) {
+	      print ";; STORING IP6: $server IN AAAA ",$rr->rdatastr,"\n" if $self->{'debug'};
+	      push @{ $hints{$server} }, $rr->rdatastr;
+	    }
+	  }
+	  
+	} 
       }
     }
     foreach my $server (keys %hints) {
       if (!@{ $hints{$server} }) {
-        # Wipe the servers without lookups
-        delete $hints{$server};
+	# Wipe the servers without lookups
+	delete $hints{$server};
       }
     }
     $self->{'hints'} = \%hints;
@@ -64,18 +77,18 @@ sub hints {
     if ($self->{'debug'}) {
       print ";; USING THE FOLLOWING HINT IPS:\n";
       foreach my $ips (values %{ $self->{'hints'} }) {
-        foreach my $server (@{ $ips }) {
-          print ";;  $server\n";
-        }
+	foreach my $server (@{ $ips }) {
+	  print ";;  $server\n";
+	}
       }
     }
   } else {
     warn "Server [".($self->nameservers)[0]."] did not give answers";
   }
-
+  
   # Disable recursion flag.
   $self->recurse(0);
-
+  
   return $self->nameservers( map { @{ $_ } } values %{ $self->{'hints'} } );
 }
 
@@ -102,8 +115,8 @@ sub query_dorecursion {
   $self->hints unless $self->{'hints'};
 
   # Make sure the authority cache is clean.
-  # It is only used to store A records of
-  # authoritative name servers.
+  # It is only used to store A and AAAA records of
+  # the suposedly authoritative name servers.
   $self->{'authority_cache'} = {};
 
   # Obtain real question Net::DNS::Packet
@@ -149,15 +162,28 @@ sub _dorecursion {
       if (!@{ $known_authorities->{$ns} }) {
         print ";; _dorecursion() Manual lookup for authority [$ns]\n" if $self->{'debug'};
         my $auth_packet =
-          $self->_dorecursion
-          ($self->make_query_packet($ns,"A"),  # packet
-           ".",               # known_zone
-           $self->{'hints'},  # known_authorities
-           $depth+1);         # depth
+	    $self->_dorecursion
+	    ($self->make_query_packet($ns,"AAAA"),  # packet
+	     ".",               # known_zone
+	     $self->{'hints'},  # known_authorities
+	     $depth+1);         # depth
+	my @ans;
+	@ans = $auth_packet->answer if $auth_packet;
+	
+	
+	$auth_packet =
+	    $self->_dorecursion
+	    ($self->make_query_packet($ns,"A"),  # packet
+	     ".",               # known_zone
+	     $self->{'hints'},  # known_authorities
+	     $depth+1);         # depth
+	
+	push (@ans,$auth_packet->answer ) if $auth_packet;
 
-        if ($auth_packet and my @ans = $auth_packet->answer) {
+        if ( @ans ) {
           print ";; _dorecursion() Answers found for [$ns]\n" if $self->{'debug'};
           foreach my $rr (@ans) {
+	    print ";; RR:".$rr->string."\n" if $self->{'debug'};
             if ($rr->type eq "CNAME") {
               # Follow CNAME
               if (my $server = lc $rr->name) {
@@ -171,7 +197,7 @@ sub _dorecursion {
                   next;
                 }
               }
-            } elsif ($rr->type eq "A") {
+            } elsif ($rr->type eq "A" ||$rr->type eq "AAAA" ) {
               if (my $server = lc $rr->name) {
                 $server =~ s/\.*$/./;
                 if ($known_authorities->{$server}) {
@@ -258,11 +284,12 @@ sub _dorecursion {
                 next;
               }
             }
-          } elsif ($rr->type eq "A") {
+          } elsif ($rr->type eq "A" || $rr->type eq "AAAA") {
             if (my $server = lc $rr->name) {
               $server =~ s/\.*$/./;
               if ($auth{$server}) {
-                print ";; _dorecursion() STORING: $server IN A ",$rr->rdatastr,"\n" if $self->{'debug'};
+                print ";; _dorecursion() STORING: $server IN A    ",$rr->rdatastr,"\n" if $self->{'debug'} &&  $rr->type eq "A";
+                print ";; _dorecursion() STORING: $server IN AAAA ",$rr->rdatastr,"\n" if $self->{'debug'}&&  $rr->type eq "AAAA";
                 push @{ $auth{$server} }, $rr->rdatastr;
                 next;
               }
@@ -354,7 +381,7 @@ Copyright (c) 2002, Rob Brown.  All rights reserved.
 This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 
-$Id: Recurse.pm 208 2005-03-02 14:59:43Z olaf $
+$Id$
 
 =cut
 

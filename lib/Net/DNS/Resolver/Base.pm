@@ -39,14 +39,17 @@ $VERSION = (qw$LastChangedRevision$)[1];
 #  socketfamily type to store the socket handlers.  We know this could
 #  be done more efficient but programmers time is more expensive than
 #  memory.
+
  
 #  inet_pton is not available on WIN32, so we only use the getaddrinfo
 #  call to translate IP addresses to socketaddress
+
+
  
- 
-#  Set the $force_inet4_only variable inside the BEGIN block to force not to use the 
-#  IPv6 stuff. You can use this for compatibility test. We do not see a need to do this 
-#  from the calling code.
+#  Set the $force_inet4_only variable inside the BEGIN block to force
+#  not to use the IPv6 stuff. You can use this for compatibility
+#  test. We do not see a need to do this from the calling code.
+
  
 # Olaf Kolkman, RIPE NCC, December 2003.
  
@@ -66,6 +69,8 @@ BEGIN {
     }else{
  	$has_inet6=0;
     }
+
+
 }
 	    
  
@@ -180,6 +185,8 @@ sub _process_args {
 			$self->{$attr} = $args{$attr};
 		}
 	}
+
+
 }
 			
 			
@@ -303,7 +310,7 @@ sub searchlist {
 sub nameservers {
     my $self   = shift;
     my $defres = Net::DNS::Resolver->new;
-    
+
     if (@_) {
 	my @a;
 	foreach my $ns (@_) {
@@ -737,6 +744,8 @@ sub send_udp {
  							 Proto     => 'udp',
  							 );
  		
+
+
  		#$^W = $old_wflag;
  	    }
 
@@ -749,23 +758,22 @@ sub send_udp {
  						   LocalAddr => $srcaddr,
  						   LocalPort => ($srcport || undef),
  						   Proto     => 'udp',
- 						   );
+ 						   ) ;
  	    
  	    #$^W = $old_wflag;
  	    
  	    
- 	    
-  
+
   
  
- 	    unless (scalar(@sock)) {
+ 	    unless (defined $sock[AF_INET] || defined $sock[AF_INET6]) {
  		$self->errorstring("could not get socket");   #'
  		return;
  	    }
  
  	    
- 	    $self->{'sockets'}[AF_INET]{'UDP'} = $sock[AF_INET] if ($self->persistent_udp);
- 	    $self->{'sockets'}[AF_INET6]{'UDP'} = $sock[AF_INET6] if $has_inet6 && ($self->persistent_udp);
+ 	    $self->{'sockets'}[AF_INET]{'UDP'} = $sock[AF_INET] if ($self->persistent_udp) && defined( $sock[AF_INET] );
+ 	    $self->{'sockets'}[AF_INET6]{'UDP'} = $sock[AF_INET6] if $has_inet6 && ($self->persistent_udp) && defined( $sock[AF_INET6] );
  	    
 	    
 	}
@@ -774,7 +782,6 @@ sub send_udp {
  	# Constructing an array of arrays that contain 3 elements: The
  	# nameserver IP address, its sockaddr and the sockfamily for
  	# which the sockaddr structure is constructed.
- 	
 	
       NSADDRESS: foreach my $ns_address (@{$self->{'nameservers'}}){
 	  # The logic below determines the $dst_sockaddr.
@@ -817,15 +824,15 @@ sub send_udp {
 	  
       }
 
-	
       	unless (@ns) {
 	    $self->errorstring('no nameservers');
 	    return;
 	}
 
- 	my $sel = IO::Select->new($sock[AF_INET]);
- 	$sel->add($sock[AF_INET6]) if $has_inet6;
+ 	my $sel = IO::Select->new($sock[AF_INET]) ;
+ 	$sel->add($sock[AF_INET6]) if $has_inet6 &&  defined ($sock[AF_INET6]);
 	
+
 	# Perform each round of retries.
 	for (my $i = 0;
 	     $i < $self->{'retry'};
@@ -848,6 +855,19 @@ sub send_udp {
 			my $nsname = $ns->[0];
 			my $nsaddr = $ns->[1];
 			my $nssockfamily = $ns->[2];
+
+			# If we do not have a socket for the transport
+			# we are supposed to reach the namserver on we
+			# should skip it.
+			unless (defined ($sock[ $nssockfamily ])){
+			    $self->errorstring("Send error: cannot reach $nsname (" .
+					       ( ($nssockfamily == AF_INET6) ? "IPv6" : "" ).
+					       ( ($nssockfamily == AF_INET) ? "IPv4" : "" ).
+					       ") not available"
+
+);
+			    next NAMESERVER ;
+			    }
 
 			print ";; send_udp($nsname:$dstport)\n"
 				if $self->{'debug'};
