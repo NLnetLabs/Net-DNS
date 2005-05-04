@@ -5,6 +5,8 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.49_01    (Version 0.50 release candidate 1)
 
+Patch: Makefile.PL: Minor tweak to recognize Tiger.
+
 
 Feature: Calling the Net::DNS::Resolver::dnssec method with a non-zero
          argument will set the udppacketsize to 2048. The method will

@@ -70,6 +70,23 @@ Please note that the SVN version at any given moment may be broken.
 3. PREREQUISITES
 ----------------
 
+
+The availability of prerequisites for Net::DNS is tested at
+installation time. These are the core packages that need to be
+available.
+
+     Test::More       
+     IO::Socket      
+     MIME::Base64     
+     Digest::MD5  
+     Digest::HMAC_MD5
+     Net::IP
+
+
+For IPv6 support you will need Socket6 and IO::Socket::INET6. The availability
+of these is tested at runtime.
+
+
 Net::DNS has been tested with the following:
 
     Perl 5.8.2
@@ -85,6 +102,7 @@ Net::DNS has been tested with the following:
     Version of IO::Socket distributed with Perl 5.6.1
     Version of IO::Select distributed with Perl 5.6.1
     Version of FileHandle distributed with Perl 5.6.1
+
 
 You can obtain the latest version of Perl from:
 
