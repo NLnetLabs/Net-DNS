@@ -644,6 +644,14 @@ For example, if we wanted to cache lookups:
  } 
 
 
+=head1 IPv6 transport
+
+The Net::DNS::Resolver library will use IPv6 transport if the
+appropriate libraries are available and the peer address is an IPv6
+address.
+
+
+
 =head1 ENVIRONMENT
 
 The following environment variables can also be used to configure

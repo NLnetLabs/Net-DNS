@@ -1,13 +1,41 @@
-# $Id$
+# $Id$ -*-perl-*-
 
 use Test::More;
 use strict;
 
 BEGIN {
 	if (-e 't/online.enabled') {
-		plan tests => 12;
+
+	    #
+	    # Some people try to run these on private address space."
+	    use IO::Socket::INET;
+	    my $sock = IO::Socket::INET->new(PeerAddr => '193.0.14.129', # k.root-servers.net.
+					  PeerPort => '25',
+					  Proto    => 'udp');
+	    
+	    
+	    unless($sock){
+		plan skip_all => "Cannot bind to socket:\n\t".$!."\n";
+		diag "This is an indication you do not have network problems";
+		exit;
+	    }else{
+
+		use Net::IP;
+		my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
+	    
+		if ($ip->iptype() ne "PUBLIC"){
+		    plan skip_all => 'Cannot run these tests from this IP:' .$ip->ip() ;		
+		}else{
+		    plan tests => 12;
+		}
+	    }
+
 	} else {
-		plan skip_all => 'Online tests disabled.';
+
+		    plan skip_all => 'Online tests disabled.';		
+
+
+
 	}
 }
 
@@ -44,8 +72,13 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 }
 
 # test the callback
+
+
+
 {
 	my $res = Net::DNS::Resolver::Recurse->new ;
+	
+
 	
 	my $count;
 

@@ -2,7 +2,7 @@
 
 
 my $has_inet6;
-use Test::More tests=>6;
+use Test::More tests=>5;
 use strict;
 
 
@@ -32,9 +32,13 @@ SKIP: { skip "Socket6 and or IO::Socket::INET6 not loaded", 4 unless $has_inet6;
 						Proto => 'tcp',
 						LocalAddr => '::1'
 					       ) 
-	  or die "$! (maybe your does not have ::1)";
-	
-	ok ($tstsock, "IO::Socket::INET6 binds to ::1");
+
+	    or 	diag "\n\n$!\n\t(maybe your system does not have ::1)\n\n".
+	    "More tests will be skipped below. Please make sure your\n".
+	    "system is properly set up for IPv6 before contacting the\n".
+	    "maintainer\n\n";
+	    ;
+	    
 
     }
 
@@ -61,7 +65,7 @@ SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
 	    next if ($aaaa_answer->header->ancount == 0);
 	    is (($aaaa_answer->answer)[0]->type,"AAAA", "Preparing  for v6 transport, got AAAA records for ". $ns->nsdname);
 	    $AAAA_address=($aaaa_answer->answer)[0]->address;
-	    diag ("Using ". $ns->nsdname . " ($AAAA_address) to query for ripe.net SOA");
+	    diag ("\nUsing ". $ns->nsdname . " ($AAAA_address) to query for ripe.net SOA");
 	    last;
 	}
 	    
@@ -71,12 +75,12 @@ SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
 	$res->print;
 	$answer=$res->send("ripe.net","SOA","IN");
 
-	diag "The test below are skipped because of '" . $res->errorstring ."' while connecting\n"  if($res->errorstring =~ /Send error: /);
+	diag "\nThe test below are skipped because of\n\t '" . $res->errorstring ."' \n\n"  if($res->errorstring =~ /Send error: /);
 	diag "This could be a indication that you actually do not have IPv6 connectivity"  if($res->errorstring =~ /Send error: /);
-	diag "Please try if 'ping6 ".$AAAA_address."' works before contacting the author"   if($res->errorstring =~ /Send error: /);
+	diag "Please try if 'ping6 ".$AAAA_address."' works before contacting the maintainer\n\n"   if($res->errorstring =~ /Send error: /);
 	
     }
- SKIP: { skip "No answer available to analise", 2 unless $answer;
+ SKIP: { skip "No answer available to analyse", 2 unless $answer;
 	 
 	 $answer->print;
 	 is (($answer->answer)[0]->type, "SOA","Query over udp6 succeeded");

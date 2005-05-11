@@ -1,4 +1,4 @@
-# $Id$
+# $Id$ -*-perl-*-
 
 use strict;
 $^W = 1;
@@ -23,6 +23,22 @@ properly with older perls such as yours, but bugs may lurk.
 
 
 AMEN
+
+#
+# Test to see if V6 is available.
+#    
+unless(    eval {require Socket6;} &&
+	   # INET6 prior to 2.01 will not work; sorry.
+	   eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}	   ){
+print <<V6WARNING;
+
+
+The libraries needed to support IPv6 transport have not been found. 
+You will need recent versions of the IO::Socket::INET6 and Socket6 
+libraries (from CPAN). 
+
+V6WARNING
+}
 
 
 #
@@ -64,6 +80,8 @@ my %Makefile = (
 
 );
 
+
+
 if ($^O eq 'MSWin32') {
 	$Makefile{'PREREQ_PM'}->{'Win32::Registry'} = 0;
 }
@@ -96,6 +114,13 @@ You can force installation of the XS version with:
 END
 	}
 }
+
+
+
+
+
+
+
 
 if ($use_xs) {
 	# turn the XS bits on.
