@@ -5,13 +5,12 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.49_01    (Version 0.50 release candidate 1)
 
-Patch: Makefile.PL: Minor tweak to recognize Tiger.
-
+Patch: Makefile.PL: Minor tweak to recognize Mac OS X 10.4 
 
 Feature: Calling the Net::DNS::Resolver::dnssec method with a non-zero
-         argument will set the udppacketsize to 2048. The method will
-         also carp a warning if you pass a non-zero argument while
-         Net::DNS::SEC is not installed.
+    argument will set the udppacketsize to 2048. The method will
+    also carp a warning if you pass a non-zero argument when
+    Net::DNS::SEC is not installed.
 
 
 Feature: IPv6 transport support
@@ -21,6 +20,11 @@ Feature: IPv6 transport support
  
      To use IPv6 please make sure that you have IO::Socket::INET6 version
      2.01 or later installed.
+
+     If IPv6 transport is available Net::DNS::Resolver::Recurse will make
+     use of it (picking randomly between IPv4 and IPv6 transport) use
+     the force_v4() method to only force IPv4.
+
 
 
 Feature: Binary characters in labels

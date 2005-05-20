@@ -36,9 +36,8 @@ $VERSION = (qw$LastChangedRevision$)[1];
 #  issues with this; as a result we have to use sockets for both
 #  family types.  To be able to deal with persistent sockets and
 #  sockets of both family types we use an array that is indexed by the
-#  socketfamily type to store the socket handlers.  We know this could
-#  be done more efficient but programmers time is more expensive than
-#  memory.
+#  socketfamily type to store the socket handlers. I think this could
+#  be done more efficiently.
 
  
 #  inet_pton is not available on WIN32, so we only use the getaddrinfo
@@ -55,23 +54,17 @@ $VERSION = (qw$LastChangedRevision$)[1];
  
  
 BEGIN {
-    my $force_inet4_only=0;
-    
-    if ($force_inet4_only){
- 	$has_inet6=0;
-    }elsif ( 
-	     eval {require Socket6;} &&
- 	     # INET6 prior to 2.01 will not work; sorry.
- 	     eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}
-	     ) {
+    if ( 
+	 eval {require Socket6;} &&
+	 # INET6 prior to 2.01 will not work; sorry.
+	 eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}
+	 ) {
  	import Socket6;
  	$has_inet6=1;
     }else{
  	$has_inet6=0;
     }
-
-
-}
+ }
 	    
  
  
@@ -113,6 +106,8 @@ BEGIN {
 		dnssec         => 0,
 		udppacketsize  => 0,  # The actual default is lower bound by Net::DNS::PACKETSZ
 		cdflag         => 1,  # this is only used when {dnssec} == 1
+		force_v4       => 0,  # force_v4 is only relevant when we have
+                                      # v6 support available
 	);
 	
 	# If we're running under a SOCKSified Perl, use TCP instead of UDP
@@ -281,7 +276,7 @@ sub string {
 	my $self = shift;
 
 	my $timeout = defined $self->{'tcp_timeout'} ? $self->{'tcp_timeout'} : 'indefinite';
-	my $hasINET6line= $has_inet6?";; INET6 enabled ":"";
+	my $hasINET6line= $has_inet6 ?" (IPv6 Transport is available)":" (IPv6 Transport is not available)";
 	return <<END;
 ;; RESOLVER state:
 ;;  domain       = $self->{domain}
@@ -295,7 +290,7 @@ sub string {
 ;;  usevc    = $self->{usevc}  stayopen = $self->{stayopen}    igntc = $self->{igntc}
 ;;  defnames = $self->{defnames}  dnsrch   = $self->{dnsrch}
 ;;  recurse  = $self->{recurse}  debug    = $self->{debug}
-$hasINET6line
+;;  force_v4 = $self->{force_v4} $hasINET6line
 END
 
 }
@@ -348,8 +343,13 @@ sub nameservers {
 	
 	$self->{'nameservers'} = [ @a ];
     }
+    my @returnval;
+    foreach my $ns (@{$self->{'nameservers'}}){
+	next if ip_is_ipv6($ns) && (! $has_inet6 || $self->force_v4() );
+	push @returnval, $ns;
+    }
     
-    return @{$self->{'nameservers'}};
+    return @returnval;
 }
 
 sub nameserver { &nameservers }
@@ -537,7 +537,7 @@ sub send_tcp {
 
 	my $lastanswer;
 
-	unless (@{$self->{'nameservers'}}) {
+	unless ( $self->nameservers()) {
 		$self->errorstring('no nameservers');
 		print ";; ERROR: send_tcp: no nameservers\n" if $self->{'debug'};
 		return;
@@ -546,12 +546,12 @@ sub send_tcp {
 	$self->_reset_errorstring;
 	my $timeout = $self->{'tcp_timeout'};
 
-	NAMESERVER: foreach my $ns (@{$self->{'nameservers'}}) {
+	NAMESERVER: foreach my $ns ($self->nameservers()) {
 		my $srcport = $self->{'srcport'};
 		my $srcaddr = $self->{'srcaddr'};
 		my $dstport = $self->{'port'};
 
-		print ";; send_tcp($ns:$dstport) (src port = $srcport)\n"
+		print ";; attempt to send_tcp($ns:$dstport) (src port = $srcport)\n"
 			if $self->{'debug'};
 
 
@@ -564,8 +564,6 @@ sub send_tcp {
 			print ";; using persistent socket\n"
 				if $self->{'debug'};
 		} else {
-
-
 		    # IO::Socket carps on errors if Perl's -w flag is
 		    # turned on.  Uncomment the next two lines and the
 		    # line following the "new" call to turn off these
@@ -573,7 +571,7 @@ sub send_tcp {
 		    
 		    #my $old_wflag = $^W;
 		    #$^W = 0;
-		    if ($has_inet6){
+		    if ($has_inet6 && ! $self->force_v4()){
 			$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
 			
 			$sock = 
@@ -594,7 +592,7 @@ sub send_tcp {
 						      LocalPort => ($srcport || undef),
 						      Proto     => 'tcp',
 						      Timeout   => $timeout
-						      );
+						      )
 		    }
 		    
 		    #$^W = $old_wflag;
@@ -713,7 +711,7 @@ sub send_udp {
 	
 	
  	if ($self->persistent_udp){
- 	    if ($has_inet6){
+ 	    if ($has_inet6 && ! $self->force_v4()){
  		if ( $self->{'sockets'}[AF_INET6]{'UDP'}) {
  		    $sock[AF_INET6] = $self->{'sockets'}[AF_INET6]{'UDP'};
  		    print ";; using persistent AF_INET6 family type socket\n"
@@ -728,7 +726,7 @@ sub send_udp {
  	    
 	    
 	} else {
-	    if ($has_inet6){
+	    if ($has_inet6  && ! $self->force_v4()){
  		$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
 		
 		# IO::Socket carps on errors if Perl's -w flag is turned on.
@@ -773,7 +771,7 @@ sub send_udp {
  
  	    
  	    $self->{'sockets'}[AF_INET]{'UDP'} = $sock[AF_INET] if ($self->persistent_udp) && defined( $sock[AF_INET] );
- 	    $self->{'sockets'}[AF_INET6]{'UDP'} = $sock[AF_INET6] if $has_inet6 && ($self->persistent_udp) && defined( $sock[AF_INET6] );
+ 	    $self->{'sockets'}[AF_INET6]{'UDP'} = $sock[AF_INET6] if $has_inet6 && ($self->persistent_udp) && defined( $sock[AF_INET6] && ! $self->force_v4() );
  	    
 	    
 	}
@@ -783,12 +781,12 @@ sub send_udp {
  	# nameserver IP address, its sockaddr and the sockfamily for
  	# which the sockaddr structure is constructed.
 	
-      NSADDRESS: foreach my $ns_address (@{$self->{'nameservers'}}){
+      NSADDRESS: foreach my $ns_address ($self->nameservers()){
 	  # The logic below determines the $dst_sockaddr.
 	  # If getaddrinfo is available that is used for both INET4 and INET6
 	  # If getaddrinfo is not avialable (Socket6 failed to load) we revert
 	  # to the 'classic mechanism
-	  if ($has_inet6){ 
+	  if ($has_inet6  && ! $self->force_v4()){ 
 	      # we can use getaddrinfo
 	      no strict 'subs';   # Because of the eval statement in the BEGIN
 	      # AI_NUMERICHOST is not available at compile time.
@@ -830,7 +828,7 @@ sub send_udp {
 	}
 
  	my $sel = IO::Select->new($sock[AF_INET]) ;
- 	$sel->add($sock[AF_INET6]) if $has_inet6 &&  defined ($sock[AF_INET6]);
+ 	$sel->add($sock[AF_INET6]) if $has_inet6 &&  defined ($sock[AF_INET6]) && ! $self->force_v4();
 	
 
 	# Perform each round of retries.
@@ -955,7 +953,7 @@ sub send_udp {
 sub bgsend {
 	my $self = shift;
 
-	unless (@{$self->{'nameservers'}}) {
+	unless ($self->nameservers()) {
 		$self->errorstring('no nameservers');
 		return;
 	}
@@ -970,7 +968,7 @@ sub bgsend {
 
 
 	my (@res, $sockfamily, $dst_sockaddr);
-	my $ns_address = $self->{'nameservers'}->[0];
+	my $ns_address = ($self->nameservers())[0];
 	my $dstport = $self->{'port'};
 
 
@@ -978,7 +976,7 @@ sub bgsend {
 	# If getaddrinfo is available that is used for both INET4 and INET6
 	# If getaddrinfo is not avialable (Socket6 failed to load) we revert
 	# to the 'classic mechanism
-	if ($has_inet6){ 
+	if ($has_inet6  && ! $self->force_v4()){ 
 
 	    my ( $socktype_tmp, $proto_tmp, $canonname_tmp);
 
@@ -1195,7 +1193,7 @@ sub axfr_start {
 
 	print ";; axfr_start($dname, $class)\n" if $self->{'debug'};
 
-	unless (@{$self->{'nameservers'}}) {
+	unless ($self->nameservers()) {
 		$self->errorstring('no nameservers');
 		print ";; ERROR: no nameservers\n" if $self->{'debug'};
 		return;
@@ -1204,7 +1202,7 @@ sub axfr_start {
 	my $packet = $self->make_query_packet($dname, 'AXFR', $class);
 	my $packet_data = $packet->data;
 
-	my $ns = $self->{'nameservers'}->[0];
+	my $ns = ($self->nameservers())[0];
 
 	print ";; axfr_start nameserver = $ns\n" if $self->{'debug'};
 
@@ -1222,7 +1220,7 @@ sub axfr_start {
 	} else {
 	    
 	    
-	    if ($has_inet6){
+	    if ($has_inet6  && ! $self->force_v4()){
 		$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
 		
 		$sock = 
@@ -1471,6 +1469,10 @@ sub read_tcp {
 
 	return $buf;
 }
+
+
+
+
 
 sub AUTOLOAD {
 	my ($self) = @_;

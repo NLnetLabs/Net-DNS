@@ -65,7 +65,6 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 	
 	# Try a big hairy one
 	undef $packet;
-	
 	$packet = $res->query_dorecursion("www.rob.com.au.","A");
 	ok($packet, 'got a packet');
 	ok(scalar $packet->answer, 'anwer section had RRs');
@@ -77,9 +76,6 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 
 {
 	my $res = Net::DNS::Resolver::Recurse->new ;
-	
-
-	
 	my $count;
 
 	$res->recursion_callback(sub {

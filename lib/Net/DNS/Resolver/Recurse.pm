@@ -25,10 +25,9 @@ sub hints {
   # the (root) zone as a sanity check.
   # Nice idea.
   
-  $self->recurse(0); #play fair.. do not recurse.
-  
+  $self->recurse(1); 
   my $packet=$self->query(".", "NS", "IN");
-  
+
   my %hints = ();
   if ($packet) {
     if (my @ans = $packet->answer) {
@@ -113,7 +112,7 @@ sub query_dorecursion {
 
   # Make sure the hint servers are initialized.
   $self->hints unless $self->{'hints'};
-
+  $self->recurse(0);
   # Make sure the authority cache is clean.
   # It is only used to store A and AAAA records of
   # the suposedly authoritative name servers.
@@ -366,6 +365,16 @@ the recurse flag in the packet and explicitly performs the recursion.
 
   $packet = $res->query_dorecursion( "www.netscape.com.", "A");
 
+
+=head1 IPv6 transport
+
+If the appropriate IPv6 libraries are installed the recursive resolver
+will randomly choose between IPv6 and IPv4 addresses of the
+nameservers it encounters during recursion.
+
+If you want to force IPv4 transport use the force_v4() method. Also see
+the IPv6 transport notes in the Net::DNS::Resolver documentation.
+
 =head1 AUTHOR
 
 Rob Brown, bbb@cpan.org
@@ -377,6 +386,7 @@ L<Net::DNS::Resolver>,
 =head1 COPYRIGHT
 
 Copyright (c) 2002, Rob Brown.  All rights reserved.
+Portions Copyright (c) 2005, Olaf M Kolkman.
 
 This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.

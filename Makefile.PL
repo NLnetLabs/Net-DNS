@@ -84,9 +84,12 @@ my %Makefile = (
 if ($^O eq 'MSWin32') {
 	$Makefile{'PREREQ_PM'}->{'Win32::Registry'} = 0;
 }
-if ($^O eq 'darwin' and $Config{'osvers'} =~ m/^[78]\./) {
-	$Makefile{'DEFINE'} = '-DBIND_8_COMPAT';
-}
+
+
+# Not relevant with netdnslib.
+#if ($^O eq 'darwin' and $Config{'osvers'} =~ m/^[78]\./) {
+#	$Makefile{'DEFINE'} = '-DBIND_8_COMPAT';
+#}
 
 if ($] >= 5.005) {
 	$Makefile{'AUTHOR'}   = 'Olaf Kolkman <olaf@net-dns.org>';

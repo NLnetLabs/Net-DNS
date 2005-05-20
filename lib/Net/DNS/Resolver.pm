@@ -322,6 +322,8 @@ See also L</axfr>.
 
 Gets or sets the nameservers to be queried.
 
+Also see the IPv6 transport notes below    
+
 =head2 print
 
     $res->print;
@@ -647,8 +649,26 @@ For example, if we wanted to cache lookups:
 =head1 IPv6 transport
 
 The Net::DNS::Resolver library will use IPv6 transport if the
-appropriate libraries are available and the peer address is an IPv6
-address.
+appropriate libraries (Socket6 and IO::Socket::INET6) are available
+and the address the server tries to connect to is an IPv6 address.
+
+The print() will method will report if IPv6 transport is available.
+
+You can use the force_v4() method with a non-zero argument
+to force IPv4 transport.
+
+The nameserver() method has IPv6 dependend behavior. If IPv6 is not
+available or IPv4 transport has been forced the nameserver() method
+will only return IPv4 addresses.
+
+For example
+
+    $res->nameservers('192.168.1.1', '192.168.2.2', '2001:610:240:0:53:0:0:3');
+    $res->force_v4(1);
+    print join (" ",$res->nameserver());	    
+
+Will print: 192.168.1.1 192.168.2.2
+
 
 
 
@@ -714,6 +734,7 @@ No validation of server replies is performed.
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c) 2005 Olaf M. Kolkman
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
