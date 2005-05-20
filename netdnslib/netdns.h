@@ -1,3 +1,4 @@
+#include <sys/types.h>
 #define TESTVAL 4
 extern double foo(int, long, const char*);
 
@@ -18,7 +19,7 @@ extern double foo(int, long, const char*);
 
 #define MAXDNAME 1010
 
-int dn_expand( char *msg,  char *eomorig,
-	       char *comp_dn,  char *exp_dn,
-	      size_t length);
+int dn_expand( u_char *msg,  u_char *eomorig,
+	       u_char *comp_dn,  u_char *exp_dn,
+	       int length);
 

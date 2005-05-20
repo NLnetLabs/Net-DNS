@@ -51,22 +51,21 @@ PROTOTYPES: DISABLE
 void
 dn_expand_XS(sv_buf, offset) 
 	SV * sv_buf
-	int offset
+	unsigned int offset
 
   PPCODE:
-	size_t len;
-	 char * buf;
-	 char name[MAXDNAME];
-	int pos;
+	STRLEN len;
+	u_char * buf;
+	u_char name[MAXDNAME];
+	unsigned int pos;
 	
 	if (SvROK(sv_buf)) 
 		sv_buf = SvRV(sv_buf);
 	
-	
-	buf = SvPV(sv_buf,  len);
+	buf = (u_char *) SvPV(sv_buf, len);
 	
 	/* This is where we do the actual uncompressing magic. */
-	pos = dn_expand(buf, ( char *) (buf+len) , ( char *) ( buf+offset), &name[0], MAXDNAME);
+	pos = dn_expand(buf, buf+len , buf+offset, &name[0], MAXDNAME);
 	
 	EXTEND(SP, 2);
 	
@@ -74,7 +73,7 @@ dn_expand_XS(sv_buf, offset)
 		PUSHs(sv_2mortal(newSVsv(&PL_sv_undef)));
 		PUSHs(sv_2mortal(newSVsv(&PL_sv_undef)));
 	} else {
-		PUSHs(sv_2mortal(newSVpv(name, 0)));
+		PUSHs(sv_2mortal(newSVpv((const char *)name, 0)));
 		PUSHs(sv_2mortal(newSViv(pos + offset)));
 	}
 	

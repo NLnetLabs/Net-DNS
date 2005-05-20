@@ -76,7 +76,6 @@ my %Makefile = (
 	C             => [],
 	clean         => { FILES => 't/online.enabled compile.* DNS.o DNS.c DNS.bs' },
 
-         MYEXTLIB    => 'netdnslib/netdns$(LIB_EXT)',
 
 );
 
@@ -101,6 +100,9 @@ unless (defined $use_xs) {
 	if (test_cc()) {
 		print "You have a working compiler.\n";
 		$use_xs = 1;
+	        $Makefile{'MYEXTLIB'}    = 'netdnslib/netdns$(LIB_EXT)',
+
+
 	} else {
 		$use_xs = 0;
 		print <<END;
@@ -112,6 +114,8 @@ You can force installation of the XS version with:
 
 	perl Makefile.PL --xs
 END
+	$Makefile{'MYEXTLIB'}    = '',		
+
 	}
 }
 
@@ -203,7 +207,6 @@ sub metafile {
 }
 
 sub postamble {
-
     my $content;
     $content='$(MYEXTLIB): netdnslib/Makefile
 	cd netdnslib && $(MAKE) $(PASSTHRU)
@@ -217,6 +220,7 @@ test_cover : pure_all
 ';
     print "$content";
     return $content;
+
 }
 
 
