@@ -18,7 +18,7 @@ extern double foo(int, long, const char*);
 
 #define MAXDNAME 1010
 
-int dn_expand(unsigned char *msg, unsigned char *eomorig,
-	      unsigned char *comp_dn, unsigned char *exp_dn,
-	      int length);
+int dn_expand( char *msg,  char *eomorig,
+	       char *comp_dn,  char *exp_dn,
+	      size_t length);
 

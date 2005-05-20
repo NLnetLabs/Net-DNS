@@ -25,8 +25,9 @@
 
 
 /*
- * int dn_expand(const uchar_t *msg,  const	 uchar_t  *eomorig,
- *	 uchar_t *comp_dn, char exp_dn, int length); 
+ * int dn_expand( char *msg,  char *eomorig,
+ *	       char *comp_dn,  char *exp_dn,
+ *	      int length);
  *
  *	   
  * dn_expand
@@ -53,19 +54,19 @@ dn_expand_XS(sv_buf, offset)
 	int offset
 
   PPCODE:
-	STRLEN len;
-	char * buf;
-	char name[MAXDNAME];
+	size_t len;
+	 char * buf;
+	 char name[MAXDNAME];
 	int pos;
 	
 	if (SvROK(sv_buf)) 
 		sv_buf = SvRV(sv_buf);
 	
 	
-	buf = SvPV(sv_buf, len);
+	buf = SvPV(sv_buf,  len);
 	
 	/* This is where we do the actual uncompressing magic. */
-	pos = dn_expand(buf, buf+len, buf+offset, &name[0], MAXDNAME);
+	pos = dn_expand(buf, ( char *) (buf+len) , ( char *) ( buf+offset), &name[0], MAXDNAME);
 	
 	EXTEND(SP, 2);
 	
