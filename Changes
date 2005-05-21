@@ -79,7 +79,10 @@ Feature: Binary characters in labels
      
      For esotheric test cases see t/11-escapedchars.t.
  
-
+Fix: rt.cpan.org #11931 
+     Applied the patch suggested by "Sidney". It is a practical workaround
+     that may not be portable to all versions of the OS from Redmond. See
+     the ticket for details.
 
 
 
