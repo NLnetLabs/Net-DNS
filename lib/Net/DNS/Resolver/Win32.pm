@@ -1,6 +1,6 @@
 package Net::DNS::Resolver::Win32;
 #
-# $Id: Win32.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 
 use strict;
@@ -94,16 +94,19 @@ sub init {
 			my $regiface;
 			$interfaces->Open($iface, $regiface);
 			if ($regiface) {
-				my $ns;
-				my $type;
+			    my $ns;
+			    my $type;
+			    my $ip;
+			    $regiface->QueryValueEx("IPAddress", $type, $ip);
+			    if ($ip && !($ip =~ /0\.0\.0\.0/)) {
 				# NameServer overrides DhcpNameServer if both exist
 				$regiface->QueryValueEx("NameServer", $type, $ns);
 				$regiface->QueryValueEx("DhcpNameServer", $type, $ns) unless $ns;
 				$nameservers .= " $ns" if $ns;
+			    }
 			}
-		}
-	}
-
+			
+		    }
 	if (!$nameservers) {
 		$nameservers = $nt4nameservers;
 	}

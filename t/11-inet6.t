@@ -20,7 +20,7 @@ BEGIN { use_ok('Net::DNS');
       }
 
 
-SKIP: { skip "Socket6 and or IO::Socket::INET6 not loaded", 4 unless $has_inet6;
+SKIP: { skip "Socket6 and or IO::Socket::INET6 not loaded", 5 unless $has_inet6;
 	# First test is to bind a nameserver to the ::1 port.
 	# That beast should be available on every machine.
 

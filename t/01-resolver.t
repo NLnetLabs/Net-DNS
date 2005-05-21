@@ -1,6 +1,6 @@
 # $Id$
 
-use Test::More tests => 42;
+use Test::More tests => 44;
 use strict;
 use File::Spec;
 
@@ -35,7 +35,11 @@ my %good_input = (
 	udp_timeout    => 60,
 	persistent_tcp => 1,
 	dnssec         => 1,
+	force_v4       => 1,
 );
+
+diag "\n\nIf you do not have Net::DNS::SEC installed you will see a warning.\n";
+diag "It is safe to ignore this\n";
 
 while (my ($param, $value) = each %good_input) {
 	is_deeply($res->$param($value), $value, "setting $param returns correctly");
