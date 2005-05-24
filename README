@@ -34,12 +34,14 @@ out about known bugs and to see what's planned for future versions,
 see the TODO file.
 
 Net::DNS does not depend on any C libraries.  However, if possible
-Net::DNS tries to link to the libresolv library.  This provides a 
-notable speed increase.
+Net::DNS tries to link against a C-library that is supplied with the
+code.  This provides a notable speed increase.
 
 The author invites feedback on Net::DNS.  If there's something you'd
 like to have added, please let me know.  If you find a bug, please
 send me the information described in the BUGS section below.
+
+See http://www.net-dns.org/blog/ for announcments about Net::DNS
 
 
 2. AVAILABILITY
@@ -233,7 +235,7 @@ welcome.
 The extensions to make Net::DNS DNSSEC aware are distributed seperatly
 as Net::DNS::SEC. The package is available from CPAN.  Because of its
 dependency on Crypt::OpenSSL and other not so standard libraries, it
-is distributed as a seperate package.
+is distributed as a seperate package. 
 
 
 10. BUGS
@@ -289,7 +291,7 @@ it and/or modify it under the same terms as Perl itself.
 
 Net::DNS is currently maintained by:
         Olaf Kolkman
-	olaf@net-dns.org
+	olaf at net-dns.org
 
 Between 2002 and 2004 Net::DNS was maintained by:
        Chris Reinhardt
@@ -297,7 +299,7 @@ Between 2002 and 2004 Net::DNS was maintained by:
 
 Net::DNS was created by:
 	Michael Fuhr
-	mike@fuhr.org 
+	mike at fuhr.org 
 
 
 13. STAYING TUNED
@@ -355,7 +357,7 @@ difficult.
 
 Thanks to the thousands who participate in the open-source community.
 I've always developed Net::DNS using open-source systems and I'm
-proud to make Net::DNS freely available to the world.
+proud to make Net::DNS freely available to the world 
 
 ----
 $Id$

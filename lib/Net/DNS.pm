@@ -852,6 +852,9 @@ Net::DNS was created by:
 For more information see:
     http://www.net-dns.org/
 
+Stay tuned and syncicate:
+    http://www.net-dns.org/blog/
+
 =head1 SEE ALSO
  
 L<perl(1)>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>, L<Net::DNS::Update>,

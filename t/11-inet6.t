@@ -21,6 +21,11 @@ BEGIN { use_ok('Net::DNS');
 
 
 SKIP: { skip "Socket6 and or IO::Socket::INET6 not loaded", 5 unless $has_inet6;
+
+	diag "";
+	diag "The libraries needed for IPv6 support have been found\n";
+	diag "\t\tNow we establish if  we can bind to ::1";
+
 	# First test is to bind a nameserver to the ::1 port.
 	# That beast should be available on every machine.
 
@@ -33,10 +38,8 @@ SKIP: { skip "Socket6 and or IO::Socket::INET6 not loaded", 5 unless $has_inet6;
 						LocalAddr => '::1'
 					       ) 
 
-	    or 	diag "\n\n$!\n\t(maybe your system does not have ::1)\n\n".
-	    "More tests will be skipped below. Please make sure your\n".
-	    "system is properly set up for IPv6 before contacting the\n".
-	    "maintainer\n\n";
+	    or 	diag "\n\n\t\tFailed to bind to ::1\n\t\t$!\n\n".
+	    "\t\tWe assume there is no IPv6 connectivity and skip the tests\n\n";
 	    ;
 	    
 
@@ -56,7 +59,6 @@ SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
         # well known nameserver, than use v6 transport to get to that record.
 	diag "";
 	diag "";
-	diag "The libraries needed for IPv6 support have been found\n";
 	diag "\tTesting for global IPv6 connectivity...\n";
 	diag "\t\t preparing...";
 	$res=Net::DNS::Resolver->new;
