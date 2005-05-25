@@ -88,27 +88,28 @@ sub init {
 	my $interfaces;
 	$resobj->Open("Interfaces", $interfaces);
 	if ($interfaces) {
-		my @ifacelist;
-		$interfaces->GetKeys(\@ifacelist);
-		foreach my $iface (@ifacelist) {
-			my $regiface;
-			$interfaces->Open($iface, $regiface);
-			if ($regiface) {
-			    my $ns;
-			    my $type;
-			    my $ip;
-			    $regiface->QueryValueEx("IPAddress", $type, $ip);
-			    if ($ip && !($ip =~ /0\.0\.0\.0/)) {
-				# NameServer overrides DhcpNameServer if both exist
-				$regiface->QueryValueEx("NameServer", $type, $ns);
-				$regiface->QueryValueEx("DhcpNameServer", $type, $ns) unless $ns;
-				$nameservers .= " $ns" if $ns;
-			    }
-			}
-			
+	    my @ifacelist;
+	    $interfaces->GetKeys(\@ifacelist);
+	    foreach my $iface (@ifacelist) {
+		my $regiface;
+		$interfaces->Open($iface, $regiface);
+		if ($regiface) {
+		    my $ns;
+		    my $type;
+		    my $ip;
+		    $regiface->QueryValueEx("IPAddress", $type, $ip);
+		    if ($ip && !($ip =~ /0\.0\.0\.0/)) {
+			# NameServer overrides DhcpNameServer if both exist
+			$regiface->QueryValueEx("NameServer", $type, $ns);
+			$regiface->QueryValueEx("DhcpNameServer", $type, $ns) unless $ns;
+			$nameservers .= " $ns" if $ns;
 		    }
+		}
+		
+	    }
+	}
 	if (!$nameservers) {
-		$nameservers = $nt4nameservers;
+	    $nameservers = $nt4nameservers;
 	}
 
 	if ($domain) {
