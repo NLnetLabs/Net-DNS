@@ -2,10 +2,38 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 
 
+*** 0.49_02    (Version 0.50 release candidate 2)
+
+Fix: Smoking Gun tests for non-cygwin Win32.
+      Makefile.PL failed to produce a proper Makefile under win32.
+      (e.g. www,nntp.perl.org/group/perl.cpan.testers/210570)
+      I worked around that by moving the library into the base
+      directory of the distribution as the "subdir" section 
+      seemed to be all funny.
+
+Fix: rt.cpan.org#11931 (the off-topic part)
+
+      Sidney Markovitz spotted an ackward condition that rarely happens but is
+      significant enough to be dealth with.
+
+      In the send_udp method there are two loops: one over the nameservers
+      and one that waits for the sockets to come forward with data.
+
+      That second loop will sometimes timeout and then be entered with a 
+      repeated query to the same nameserver. It occassionally happens that the
+      old packet arrives on the socket. That packet is discardet but the 
+      loop does not return to the loop to wait for the remainder of the
+      timeout period for an answer on the second query, that may still arrive.
+      This has now been fixed.
+
+      Thanks to Sidney for the assesment of the problem and the fix.
+
+
 
 *** 0.49_01    (Version 0.50 release candidate 1)
 
-Patch: Makefile.PL: Minor tweak to recognize Mac OS X 10.4 
+Fix: Makefile.PL: Minor tweak to recognize Mac OS X 10.4 not so relevant
+    since netdnslib is distributed with the code.
 
 Feature: Calling the Net::DNS::Resolver::dnssec method with a non-zero
     argument will set the udppacketsize to 2048. The method will
