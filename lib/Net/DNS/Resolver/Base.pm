@@ -880,10 +880,10 @@ sub send_udp {
 				next;
 			}
 
-			my $now=time();
-			until ($stop_time && ($stop_time < $now)) {	
+			# See ticket 11931 but this works not quite yet
+			my $oldpacket_timeout=time+$timeout;
+			until ( $oldpacket_timeout && ($oldpacket_timeout < time())) {
 			    my @ready = $sel->can_read($timeout);
-			    
 			  SELECTOR: foreach my $ready (@ready) {
 			      my $buf = '';
 			      
