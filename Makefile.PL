@@ -212,7 +212,7 @@ sub metafile {
 sub postamble {
     my $content;
     $content='$(MYEXTLIB): netdnslib/Makefile
-	cd netdnslib && $(MAKE) $(PASSTHRU)
+	cd netdnslib && $(MAKE) $(PASTHRU)
 ' if $use_xs;
 
     $content.='
