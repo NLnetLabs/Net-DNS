@@ -103,7 +103,7 @@ unless (defined $use_xs) {
 	if (test_cc()) {
 		print "You have a working compiler.\n";
 		$use_xs = 1;
-	        $Makefile{'MYEXTLIB'}    = 'netdnslib/netdns$(LIB_EXT)',
+	        $Makefile{'MYEXTLIB'}    = 'netdns$(LIB_EXT)',
 
 
 	} else {
@@ -185,7 +185,7 @@ sub test_cc {
 	}
 
 	print F <<'EOF';
-#include "netdnslib/netdns.h"
+#include "netdns.h"
 int main() { return 0; }
 EOF
 	
@@ -209,17 +209,41 @@ sub metafile {
 	return "$meta\t$extra\n";
 }
 
+
+sub top_targets {
+
+my $content='
+all :: pure_all
+
+pure_all ::  pm_to_blib ';
+$content .= 'static 'if $use_xs;
+$content .='
+
+static ::   netdns$(LIB_EXT)
+
+
+';
+print $content;
+return $content;
+
+}
+
 sub postamble {
     my $content;
-    $content='$(MYEXTLIB): netdnslib/Makefile
-	cd netdnslib && $(MAKE) $(PASTHRU)
-' if $use_xs;
 
     $content.='
 test_cover : pure_all
 	cover -delete
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
 	cover
+
+
+
+netdns$(LIB_EXT): netdns.o
+	$(AR) cr netdns$(LIB_EXT) netdns.o
+	$(RANLIB) netdns$(LIB_EXT)
+
+
 ';
     print "$content";
     return $content;

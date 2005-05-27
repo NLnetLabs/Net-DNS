@@ -20,7 +20,7 @@
 #include "perl.h"
 #include "XSUB.h"
 
-#include "./netdnslib/netdns.h"
+#include "netdns.h"
 
 
 
