@@ -13,20 +13,20 @@ Fix: Smoking Gun tests for non-cygwin Win32.
 
 Fix: rt.cpan.org#11931 (the off-topic part)
 
-      Sidney Markovitz spotted an ackward condition that rarely happens but is
-      significant enough to be dealth with.
+      Sidney Markovitz spotted an awkward condition that rarely happens but is
+      significant enough to be dealt with.
 
       In the send_udp method there are two loops: one over the nameservers
       and one that waits for the sockets to come forward with data.
 
       That second loop will sometimes timeout and then be entered with a 
-      repeated query to the same nameserver. It occassionally happens that the
-      old packet arrives on the socket. That packet is discardet but the 
+      repeated query to the same nameserver. It occasionally happens that the
+      old packet arrives on the socket. That packet is discarded but the 
       loop does not return to the loop to wait for the remainder of the
       timeout period for an answer on the second query, that may still arrive.
       This has now been fixed.
 
-      Thanks to Sidney for the assesment of the problem and the fix.
+      Thanks to Sidney for the assessment of the problem and the fix.
 
 
 
