@@ -210,28 +210,6 @@ sub metafile {
 }
 
 
-sub top_targets {
-
-my $content='
-all :: pure_all manifypods
-	$(NOECHO) $(NOOP)
-
-pure_all ::  config pm_to_blib ';
-$content .= 'static linkext 'if $use_xs;
-$content .='
-
-static ::   netdns$(LIB_EXT)
-
-
-
-config :: $(FIRST_MAKEFILE) blibdirs
-	$(NOECHO) $(NOOP)
-
-';
-#print $content;
-return $content;
-
-}
 
 sub postamble {
     my $content;
