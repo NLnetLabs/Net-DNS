@@ -2,7 +2,7 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 
 
-*** 0.49_02    (Version 0.50 release candidate 2)
+*** 0.49_02  May 28, 2005  (Version 0.50 release candidate 2)
 
 Fix: Smoking Gun tests for non-cygwin Win32.
       Makefile.PL failed to produce a proper Makefile under win32.
