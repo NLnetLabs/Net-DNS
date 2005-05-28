@@ -223,7 +223,7 @@ static ::   netdns$(LIB_EXT)
 
 
 ';
-print $content;
+#print $content;
 return $content;
 
 }
@@ -245,7 +245,7 @@ netdns$(LIB_EXT): netdns.o
 
 
 ';
-    print "$content";
+#    print "$content";
     return $content;
 
 }
