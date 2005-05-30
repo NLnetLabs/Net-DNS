@@ -1,6 +1,6 @@
 package Net::DNS::Packet;
 #
-# $Id: Packet.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 use strict;
 use bytes; # Make sure characters are treated as bytes See perldoc perlunicode
@@ -252,6 +252,7 @@ a nameserver.
 sub data {
 	my $self = shift;
 
+
 	#----------------------------------------------------------------------
 	# Flush the cache of already-compressed names.  This should fix the bug
 	# that caused this method to work only the first time it was called.
@@ -278,7 +279,7 @@ sub data {
 	my $headerlength=length $self->{"header"}->data;
 
         my $data = $self->{"header"}->data;
-
+	
 	foreach my $question (@{$self->{"question"}}) {
 		$data .= $question->data($self, length $data);
 		$qdcount++;
@@ -289,15 +290,18 @@ sub data {
 		$ancount++;
 	}
 
+
 	foreach my $rr (@{$self->{"authority"}}) {
 		$data .= $rr->data($self, length $data);
 		$nscount++;
 	}
 
+
 	foreach my $rr (@{$self->{"additional"}}) {
 		$data .= $rr->data($self, length $data);
 		$arcount++;
 	}
+
 
 	# Fix up the header so the counts are correct.  This overwrites
 	# the user's settings, but the user should know what they aredoing.
@@ -685,12 +689,13 @@ future use.
 =cut
 
 sub dn_comp {
+        use bytes;
 	my ($self, $name, $offset) = @_;
 	$name="" unless defined($name);
 	my $compname="";
 	# The Exporter module does not seem to catch this baby...
 	my @names=Net::DNS::name2labels($name);
-	
+
 	while (@names) {
 		my $dname = join(".", @names);
 
@@ -703,6 +708,7 @@ sub dn_comp {
 		$self->{"compnames"}->{$dname} = $offset;
 		my $first  = shift @names;
 		my $length = length $first;
+		croak "length of $first is larger than 63 octets" if $length>63;
 		$compname .= pack("C a*", $length, $first);
 		$offset   += $length + 1;
 	}

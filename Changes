@@ -2,6 +2,14 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 
 
+*** 0.49_03   (Version 0.50 release candidate 3)
+
+Fix: 
+      Concatination of scalars caused modification of data because of 
+      Perl's habit to treat scalars as characters instead of bytes.
+      Inserted use bytes pragma where relevant.
+
+
 *** 0.49_02  May 28, 2005  (Version 0.50 release candidate 2)
 
 Fix: Smoking Gun tests for non-cygwin Win32.

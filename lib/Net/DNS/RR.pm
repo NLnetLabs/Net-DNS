@@ -593,6 +593,8 @@ sub rr_rdata {
 #------------------------------------------------------------------------------
 
 sub data {
+	use bytes;
+	
 	my ($self, $packet, $offset) = @_;
 	my $data;
 
@@ -607,6 +609,7 @@ sub data {
 	} else {
 		$data  = $packet->dn_comp($self->{'name'}, $offset);
 	}
+
 
 	my $qtype     = uc($self->{'type'});
 	my $qtype_val = ($qtype =~ m/^\d+$/) ? $qtype : Net::DNS::typesbyname($qtype);
@@ -631,9 +634,10 @@ sub data {
 
 	my $rdata = $self->rdata($packet, $offset);
 
-	$data .= pack('n', length $rdata);
-	$data .= $rdata;
 
+	$data .= pack('n', length $rdata);
+
+	$data.=$rdata;
 	return $data;
 }
 
@@ -649,6 +653,7 @@ sub data {
 #------------------------------------------------------------------------------
 
 sub _canonicaldata {
+        use bytes;
 	my $self = shift;
 	my $data='';
 	{   
@@ -692,6 +697,7 @@ sub _canonicalRdata {
 
 
 sub _name2wire   {   
+    use bytes;
     my ($self, $name) = @_;
 
     my $rdata="";
