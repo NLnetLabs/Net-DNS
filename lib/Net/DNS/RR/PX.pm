@@ -3,6 +3,7 @@ package Net::DNS::RR::PX;
 # $Id$
 #
 use strict;
+use strict;
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);

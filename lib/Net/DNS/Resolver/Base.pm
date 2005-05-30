@@ -4,6 +4,7 @@ package Net::DNS::Resolver::Base;
 #
 
 use strict;
+use bytes;
 
 use vars qw(
 	    $VERSION

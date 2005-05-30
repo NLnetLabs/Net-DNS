@@ -1,9 +1,10 @@
 package Net::DNS::Header;
 #
-# $Id: Header.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 
 use strict;
+use bytes;
 use vars qw($VERSION $AUTOLOAD);
 
 use Net::DNS;

@@ -689,7 +689,6 @@ future use.
 =cut
 
 sub dn_comp {
-        use bytes;
 	my ($self, $name, $offset) = @_;
 	$name="" unless defined($name);
 	my $compname="";

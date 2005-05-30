@@ -3,6 +3,7 @@ package Net::DNS::RR::NIMLOC;
 # $Id$
 #
 use strict;
+use bytes;
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);

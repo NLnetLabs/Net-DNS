@@ -3,6 +3,7 @@ package Net::DNS::RR::TXT;
 # $Id$
 #
 use strict;
+use bytes;
 use vars qw(@ISA $VERSION);
 
 use Text::ParseWords;

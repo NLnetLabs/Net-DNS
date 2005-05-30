@@ -5,6 +5,7 @@ package Net::DNS::RR::CERT;
 # Written by Mike Schiraldi <raldi@research.netsol.com> for VeriSign
 
 use strict;
+use bytes;
 use vars qw(@ISA $VERSION);
 
 use MIME::Base64;

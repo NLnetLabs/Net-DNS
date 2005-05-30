@@ -3,11 +3,12 @@ package Net::DNS::RR;
 # $Id$
 #
 use strict;
+use bytes;
 use vars qw($VERSION $AUTOLOAD);
-
 use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
+
 
 
 $VERSION = (qw$LastChangedRevision$)[1];
@@ -593,8 +594,6 @@ sub rr_rdata {
 #------------------------------------------------------------------------------
 
 sub data {
-	use bytes;
-	
 	my ($self, $packet, $offset) = @_;
 	my $data;
 
@@ -636,8 +635,8 @@ sub data {
 
 
 	$data .= pack('n', length $rdata);
-
 	$data.=$rdata;
+
 	return $data;
 }
 
@@ -653,7 +652,6 @@ sub data {
 #------------------------------------------------------------------------------
 
 sub _canonicaldata {
-        use bytes;
 	my $self = shift;
 	my $data='';
 	{   
@@ -697,7 +695,6 @@ sub _canonicalRdata {
 
 
 sub _name2wire   {   
-    use bytes;
     my ($self, $name) = @_;
 
     my $rdata="";

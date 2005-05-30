@@ -3,6 +3,7 @@ package Net::DNS::RR::HINFO;
 # $Id$
 #
 use strict;
+use bytes;
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);

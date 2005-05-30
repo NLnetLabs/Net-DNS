@@ -3,6 +3,7 @@ package Net::DNS::RR::LOC;
 # $Id$
 #
 use strict;
+use bytes;
 use vars qw(
         @ISA $VERSION @poweroften $reference_alt
         $reference_latlon $conv_sec $conv_min $conv_deg

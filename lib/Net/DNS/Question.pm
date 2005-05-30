@@ -1,8 +1,9 @@
 package Net::DNS::Question;
 #
-# $Id: Question.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 use strict;
+use bytes;
 use vars qw($VERSION $AUTOLOAD);
 
 use Carp;

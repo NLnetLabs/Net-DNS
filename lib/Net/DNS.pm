@@ -3,6 +3,7 @@ package Net::DNS;
 # $Id$
 #
 use strict;
+use bytes;
 use vars qw(
     $HAVE_XS
     $VERSION

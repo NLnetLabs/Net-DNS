@@ -218,7 +218,7 @@ foreach my $testinput (@testcombos){
 
  PERL_DN_EXPAND: { 
 	if  ($had_xs  && !$Net::DNS::DN_EXPAND_ESCAPES ){
-		diag ("disabling XS based dns_expand for a moment.");
+		diag ("\ndisabling XS based dns_expand for a moment.");
 		$Net::DNS::HAVE_XS=0 ;
 	}
 
@@ -313,7 +313,7 @@ d0
 
 	is( ($packet->answer)[0]->name,'\\\\\\032.eg.secret-wg.org',"Correctly dealt escaped backslash from wireformat \\e.eg.secret-wg.org");
 	if ( $had_xs && !$Net::DNS::HAVE_XS ){
-		diag("Continuing to use the XS based dn_expand()") ;
+		diag("\nContinuing to use the XS based dn_expand()\n") ;
 		$Net::DNS::HAVE_XS=1;
 		
 	}

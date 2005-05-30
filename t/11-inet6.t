@@ -20,7 +20,8 @@ BEGIN { use_ok('Net::DNS');
       }
 
 
-SKIP: { skip "Socket6 and or IO::Socket::INET6 not loaded", 5 unless $has_inet6;
+SKIP: { skip "Socket6 and or IO::Socket::INET6 not loaded\n".
+	    "You will need to install these modules for IPv6 transport support", 5 unless $has_inet6;
 
 	diag "";
 	diag "The libraries needed for IPv6 support have been found\n";
