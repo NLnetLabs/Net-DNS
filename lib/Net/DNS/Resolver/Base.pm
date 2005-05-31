@@ -109,9 +109,9 @@ BEGIN {
 		cdflag         => 1,  # this is only used when {dnssec} == 1
 		force_v4       => 0,  # force_v4 is only relevant when we have
                                       # v6 support available
-		slutmode       => 0,  # normally packets with non-matching ID 
+		ignqrid        => 0,  # normally packets with non-matching ID 
                                       # or with the qr bit of are thrown away
-			              # in 'slutmode' these packets are 
+			              # in 'ignqrid' these packets are 
 			              # are accepted.
 			              # USE WITH CARE, YOU ARE VULNARABLE TO
 			              # SPOOFING IF SET.
@@ -151,7 +151,7 @@ my %public_attr = map { $_ => 1 } qw(
 	persistent_tcp
 	persistent_udp
 	dnssec
-	slutmode
+	ignqrid
 );
 
 
@@ -286,7 +286,7 @@ sub string {
 
 	my $timeout = defined $self->{'tcp_timeout'} ? $self->{'tcp_timeout'} : 'indefinite';
 	my $hasINET6line= $has_inet6 ?" (IPv6 Transport is available)":" (IPv6 Transport is not available)";
-	my $slutmode=$self->{'slutmode'} ? "\n;; ACCEPTING ALL PACKETS (SLUTMODE)":"";
+	my $ignqrid=$self->{'ignqrid'} ? "\n;; ACCEPTING ALL PACKETS (IGNQRID)":"";
 	return <<END;
 ;; RESOLVER state:
 ;;  domain       = $self->{domain}
@@ -300,7 +300,7 @@ sub string {
 ;;  usevc    = $self->{usevc}  stayopen = $self->{stayopen}    igntc = $self->{igntc}
 ;;  defnames = $self->{defnames}  dnsrch   = $self->{dnsrch}
 ;;  recurse  = $self->{recurse}  debug    = $self->{debug}
-;;  force_v4 = $self->{force_v4} $hasINET6line $slutmode
+;;  force_v4 = $self->{force_v4} $hasINET6line $ignqrid
 END
 
 }
@@ -911,8 +911,8 @@ sub send_udp {
 				  my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
 				  
 				  if (defined $ans) {
-				      next SELECTOR unless ( $ans->header->qr || $self->{'slutmode'});
-				      next SELECTOR unless  ( ($ans->header->id == $packet->header->id) || $self->{'slutmode'} );
+				      next SELECTOR unless ( $ans->header->qr || $self->{'ignqrid'});
+				      next SELECTOR unless  ( ($ans->header->id == $packet->header->id) || $self->{'ignqrid'} );
 				      $self->errorstring($ans->header->rcode);
 				      $ans->answerfrom($self->answerfrom);
 				      $ans->answersize($self->answersize);

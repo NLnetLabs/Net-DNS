@@ -11,14 +11,14 @@ Fix:
       in octets.
 
 Feature:
-      Added "slutmode" as an attribute. 
+      Added "ignqrid" as an attribute to the Resolver.
 
       use as:
       ok (my $res=Net::DNS::Resolver->new(nameservers => ['127.0.0.1'],
 				    port => 5354,
 				    recurse => 0,
 				    igntc => 1,
-				    slutmode => 1,
+				    ignqrid => 1,
 				    ),
 				    
       When the attribute is set to a non-zero value replies with the
