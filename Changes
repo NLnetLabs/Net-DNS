@@ -6,8 +6,28 @@ Revision history for Net::DNS                                     -*-text-*-
 
 Fix: 
       Concatination of scalars caused modification of data because of 
-      Perl's habit to treat scalars as characters instead of bytes.
-      Inserted use bytes pragma where relevant.
+      Perl's habit to treat scalars as utf characters instead of bytes.
+      Inserted use bytes pragma throughout the code base. DNS is done
+      in octets.
+
+Feature:
+      Added "slutmode" as an attribute. 
+
+      use as:
+      ok (my $res=Net::DNS::Resolver->new(nameservers => ['127.0.0.1'],
+				    port => 5354,
+				    recurse => 0,
+				    igntc => 1,
+				    slutmode => 1,
+				    ),
+				    
+      When the attribute is set to a non-zero value replies with the
+      qr bit clear and replies with non-matching query ids are
+      happilly accepted. This opens the possibility to accept spoofed
+      answers. YOU CAN BURN YOURSELF WITH THIS FEATURE.
+
+      It is set to 0 per default and remains, except for this changes file
+      an undocumented feature.
 
 
 *** 0.49_02  May 28, 2005  (Version 0.50 release candidate 2)

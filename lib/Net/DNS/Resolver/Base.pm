@@ -109,6 +109,13 @@ BEGIN {
 		cdflag         => 1,  # this is only used when {dnssec} == 1
 		force_v4       => 0,  # force_v4 is only relevant when we have
                                       # v6 support available
+		slutmode       => 0,  # normally packets with non-matching ID 
+                                      # or with the qr bit of are thrown away
+			              # in 'slutmode' these packets are 
+			              # are accepted.
+			              # USE WITH CARE, YOU ARE VULNARABLE TO
+			              # SPOOFING IF SET.
+			              # This is may be a temporary feature
 	);
 	
 	# If we're running under a SOCKSified Perl, use TCP instead of UDP
@@ -144,6 +151,7 @@ my %public_attr = map { $_ => 1 } qw(
 	persistent_tcp
 	persistent_udp
 	dnssec
+	slutmode
 );
 
 
@@ -278,6 +286,7 @@ sub string {
 
 	my $timeout = defined $self->{'tcp_timeout'} ? $self->{'tcp_timeout'} : 'indefinite';
 	my $hasINET6line= $has_inet6 ?" (IPv6 Transport is available)":" (IPv6 Transport is not available)";
+	my $slutmode=$self->{'slutmode'} ? "\n;; ACCEPTING ALL PACKETS (SLUTMODE)":"";
 	return <<END;
 ;; RESOLVER state:
 ;;  domain       = $self->{domain}
@@ -291,7 +300,7 @@ sub string {
 ;;  usevc    = $self->{usevc}  stayopen = $self->{stayopen}    igntc = $self->{igntc}
 ;;  defnames = $self->{defnames}  dnsrch   = $self->{dnsrch}
 ;;  recurse  = $self->{recurse}  debug    = $self->{debug}
-;;  force_v4 = $self->{force_v4} $hasINET6line
+;;  force_v4 = $self->{force_v4} $hasINET6line $slutmode
 END
 
 }
@@ -902,8 +911,8 @@ sub send_udp {
 				  my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
 				  
 				  if (defined $ans) {
-				      next SELECTOR unless $ans->header->qr;
-				      next SELECTOR unless $ans->header->id == $packet->header->id;
+				      next SELECTOR unless ( $ans->header->qr || $self->{'slutmode'});
+				      next SELECTOR unless  ( ($ans->header->id == $packet->header->id) || $self->{'slutmode'} );
 				      $self->errorstring($ans->header->rcode);
 				      $ans->answerfrom($self->answerfrom);
 				      $ans->answersize($self->answersize);
