@@ -5,7 +5,7 @@ Revision history for Net::DNS                                     -*-text-*-
 *** 0.49_03   (Version 0.50 release candidate 3)
 
 Fix: 
-      Concatination of scalars caused modification of data because of 
+      Concatenation of scalars caused modification of data because of 
       Perl's habit to treat scalars as utf characters instead of bytes.
       Inserted use bytes pragma throughout the code base. DNS is done
       in octets.
@@ -23,7 +23,7 @@ Feature:
 				    
       When the attribute is set to a non-zero value replies with the
       qr bit clear and replies with non-matching query ids are
-      happilly accepted. This opens the possibility to accept spoofed
+      happily accepted. This opens the possibility to accept spoofed
       answers. YOU CAN BURN YOURSELF WITH THIS FEATURE.
 
       It is set to 0 per default and remains, except for this changes file
