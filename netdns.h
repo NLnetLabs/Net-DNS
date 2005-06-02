@@ -2,7 +2,9 @@
 #define TESTVAL 4
 extern double foo(int, long, const char*);
 
-
+/*
+ * See netdns.c for copyright notice.
+ */
 
 
 
@@ -22,4 +24,5 @@ extern double foo(int, long, const char*);
 int dn_expand( u_char *msg,  u_char *eomorig,
 	       u_char *comp_dn,  u_char *exp_dn,
 	       int length);
+
 

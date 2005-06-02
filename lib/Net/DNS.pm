@@ -34,7 +34,7 @@ BEGIN {
     @ISA     = qw(Exporter DynaLoader);
 
     
-    $VERSION = '0.49_03';
+    $VERSION = '0.50';
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 
