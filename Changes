@@ -1,8 +1,12 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.50 June 8, 2005
 
-*** 0.49_03   (Version 0.50 release candidate 3)
+No changes with respect to 0.49_03.
+
+
+*** 0.49_03  June 1, 2005  (Version 0.50 release candidate 3)
 
 Fix: 
       Concatenation of scalars caused modification of data because of 
