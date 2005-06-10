@@ -1057,9 +1057,10 @@ sub bgsend {
 
 
 
-
-	print ";; bgsend($ns_address : $dstport)\n" if $self->{'debug'};
-	print ";; remote addr struc: ".unpack("H*", $dst_sockaddr)."\n";
+	if ($self->{'debug'}) {
+	    print ";; bgsend($ns_address : $dstport)\n" if $self->{'debug'};
+	    print ";; remote addr struc: ".unpack("H*", $dst_sockaddr);
+	}
 
 	foreach my $socket (@socket){
 	    next if !defined $socket;

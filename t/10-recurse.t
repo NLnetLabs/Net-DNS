@@ -48,7 +48,7 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 
 	isa_ok($res, 'Net::DNS::Resolver::Recurse');
 
-	$res->debug(1);	
+	$res->debug(0);	
 	$res->udp_timeout(20);
 	
 	# Hard code A and K.ROOT-SERVERS.NET hint 
