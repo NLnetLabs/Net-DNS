@@ -1051,15 +1051,7 @@ sub bgsend {
 		return;
 	}
 
-
-
-
-
-
-
-
 	print ";; bgsend($ns_address : $dstport)\n" if $self->{'debug'}	;
-
 
 	foreach my $socket (@socket){
 	    next if !defined $socket;

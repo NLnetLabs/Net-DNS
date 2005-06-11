@@ -5,7 +5,7 @@ use strict;
 
 BEGIN {
 	if (-e 't/online.enabled') {
-		plan tests => 72;
+		plan tests => 77;
 	} else {
 		plan skip_all => 'Online tests disabled.';
 	}
@@ -140,11 +140,40 @@ $res = Net::DNS::Resolver->new(
 		
 		isa_ok($ans, 'Net::DNS::Packet');
 		
-		is($ans->header->ancount, 1);
+		is($ans->header->ancount, 1,"Correct answer count");
 		
 		my ($a) = $ans->answer;
 		
 		isa_ok($a, 'Net::DNS::RR::A');
-		is($a->name, 'a.t.net-dns.org');
+		is($a->name, 'a.t.net-dns.org',"Correct name");
+	}
+	
+	# $res->debug(1);
+	my $socket=$res->bgsend('a.t.net-dns.org','A');
+	ok(ref($socket)=~/$IO::Socket::INET(6?)^/,"Socket returned");
+	my $loop=0;
+	# burn a little CPU to get the socket ready.
+	# I could off course used microsleep or something.
+	while ($loop<200000){
+	    $loop++;
+	}
+	$loop=0;
+
+	while ($loop<6){
+	    last if $res->bgisready($socket);
+	    sleep(1); # If burning CPU above was not sufficient.
+	    $loop++;
+	}
+	ok ($res->bgisready($socket),"Socket is ready");
+      SKIP: {
+	  skip "No socket to read from",3 unless $res->bgisready($socket);
+	  
+	  my $ans= $res->bgread($socket);
+	  undef $socket;
+	  is($ans->header->ancount, 1,"Correct answer count");	
+	  my ($a) = $ans->answer;
+	  
+	  isa_ok($a, 'Net::DNS::RR::A');
+	  is($a->name, 'a.t.net-dns.org',"Correct name");
 	}
 }
