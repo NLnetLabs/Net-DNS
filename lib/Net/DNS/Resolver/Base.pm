@@ -722,15 +722,15 @@ sub send_udp {
 	
  	if ($self->persistent_udp){
  	    if ($has_inet6 && ! $self->force_v4()){
- 		if ( $self->{'sockets'}[AF_INET6]{'UDP'}) {
- 		    $sock[AF_INET6] = $self->{'sockets'}[AF_INET6]{'UDP'};
- 		    print ";; using persistent AF_INET6 family type socket\n"
+ 		if ( $self->{'sockets'}[AF_INET6()]{'UDP'}) {
+ 		    $sock[AF_INET6()] = $self->{'sockets'}[AF_INET6()]{'UDP'};
+ 		    print ";; using persistent AF_INET6() family type socket\n"
 			if $self->{'debug'};
  		}
  	    }
  	    if ( $self->{'sockets'}[AF_INET]{'UDP'}) {
  		$sock[AF_INET] = $self->{'sockets'}[AF_INET]{'UDP'};
- 		print ";; using persistent AF_INET6 family type socket\n"
+ 		print ";; using persistent AF_INET6() family type socket\n"
  		    if $self->{'debug'};
  	    }
  	    
@@ -746,7 +746,7 @@ sub send_udp {
 		#my $old_wflag = $^W;
 		#$^W = 0;
 		
- 		$sock[AF_INET6] = IO::Socket::INET6->new(
+ 		$sock[AF_INET6()] = IO::Socket::INET6->new(
  							 LocalAddr => $srcaddr,
  							 LocalPort => ($srcport || undef),
  							 Proto     => 'udp',
@@ -774,14 +774,14 @@ sub send_udp {
 
   
  
- 	    unless (defined $sock[AF_INET] || defined $sock[AF_INET6]) {
+ 	    unless (defined $sock[AF_INET] || defined $sock[AF_INET6()]) {
  		$self->errorstring("could not get socket");   #'
  		return;
  	    }
  
  	    
  	    $self->{'sockets'}[AF_INET]{'UDP'} = $sock[AF_INET] if ($self->persistent_udp) && defined( $sock[AF_INET] );
- 	    $self->{'sockets'}[AF_INET6]{'UDP'} = $sock[AF_INET6] if $has_inet6 && ($self->persistent_udp) && defined( $sock[AF_INET6] && ! $self->force_v4() );
+ 	    $self->{'sockets'}[AF_INET6()]{'UDP'} = $sock[AF_INET6()] if $has_inet6 && ($self->persistent_udp) && defined( $sock[AF_INET6()] && ! $self->force_v4() );
  	    
 	    
 	}
@@ -841,7 +841,7 @@ sub send_udp {
 	# We allready tested that one of the two socket exists
 
  	$sel->add($sock[AF_INET]) if defined ($sock[AF_INET]);
- 	$sel->add($sock[AF_INET6]) if $has_inet6 &&  defined ($sock[AF_INET6]) && ! $self->force_v4();
+ 	$sel->add($sock[AF_INET6()]) if $has_inet6 &&  defined ($sock[AF_INET6()]) && ! $self->force_v4();
 	
 
 	# Perform each round of retries.
@@ -872,7 +872,7 @@ sub send_udp {
 			# should skip it.
 			unless (defined ($sock[ $nssockfamily ])){
 			    $self->errorstring("Send error: cannot reach $nsname (" .
-					       ( ($nssockfamily == AF_INET6) ? "IPv6" : "" ).
+					       ( ($nssockfamily == AF_INET6()) ? "IPv6" : "" ).
 					       ( ($nssockfamily == AF_INET) ? "IPv4" : "" ).
 					       ") not available"
 
@@ -1034,7 +1034,7 @@ sub bgsend {
 							 LocalAddr => $srcaddr,
 							 LocalPort => $srcport,
 					    );
-	} elsif ($sockfamily == AF_INET6 ) {
+	} elsif ($sockfamily == AF_INET6() ) {
 	    $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
 	    $socket[$sockfamily] = IO::Socket::INET6->new(
 							  Proto => 'udp',

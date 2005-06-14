@@ -1,6 +1,17 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.51_01 June 14, 2005
+
+Fix rt.cpan.org 13232:
+
+    Replaced IF_INET6 by IF_INET6() so that use strict subs does not
+    complain in the absence of a definition of IF_INET6 in earlier
+    versions perl that did not have IF_INET6 defined in Socket.pm
+    The problem is similar to the problem described in:
+      http://lists.ee.ethz.ch/mrtg-developers/msg00198.html
+    
+
 
 *** 0.51 June 10, 2005
 
