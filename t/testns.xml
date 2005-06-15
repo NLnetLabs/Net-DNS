@@ -1,0 +1,69 @@
+<?xml version="1.0" standalone="no"?>
+
+
+<testns version="1.0">
+  <server ip="127.53.53.1" port="53452">
+    <qname name="bla.foo">
+      <qtype type="TXT" delay="0">
+        <header>
+          <rcode value="REFUSED"/>
+          <aa value="1"/>
+          <ra value="0"/>
+          <ad value="0"/>
+        </header>
+      </qtype>
+    </qname>
+  </server>
+
+
+  <server ip="127.53.53.2" port="53452">
+    <qname name="bla.foo">
+      <qtype type="TXT" delay="0">
+        <header>
+          <rcode value="REFUSED"/>
+          <aa value="1"/>
+          <ra value="0"/>
+          <ad value="0"/>
+        </header>
+      </qtype>
+    </qname>
+  </server>
+
+
+
+  <server ip="127.53.53.3" port="53452">
+    <qname name="bla.foo">
+      <qtype type="TXT" delay="0">
+        <header>
+          <rcode value="NOERROR"/>
+          <aa value="1"/>
+          <ra value="0"/>
+          <ad value="0"/>
+        </header>
+	<ans>
+	bla.foo   300 IN TXT "Got it"
+
+	</ans>
+
+      </qtype>
+    </qname>
+   </server>
+
+
+
+
+  <server ip="127.53.53.4" port="53452">
+    <qname name="bla.foo">
+      <qtype type="TXT" delay="0">
+        <header>
+          <rcode value="REFUSED"/>
+          <aa value="1"/>
+          <ra value="0"/>
+          <ad value="0"/>
+        </header>
+      </qtype>
+    </qname>
+   </server>
+
+</testns>
+
