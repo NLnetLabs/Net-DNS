@@ -1,12 +1,23 @@
 # $Id$		 -*-perl-*-
 
-use Test::More tests => 141;
+use Test::More; 
 use strict;
 
 use Net::DNS qw(name2labels) ;
 use Net::DNS::Packet qw(dn_expand);
 
-
+# Perl 5.005 actually produces a warning during the run of the script
+if ( $] < 5.006 ){
+    diag ("\n\n\nWith this version of perl Net::DNS may give unpredictable results when dealing with\n".
+	  "labels with non ascii or escaped data in them.\n".
+	  "For instance domain names such as olaf\\.kolkman.net-dns.org\n".
+	  "or \\255\\255.example.com\n\n\n");
+    plan skip_all => "Escaping does not work with perl version $]" ;
+}
+else
+{ 
+    plan tests => 141;
+}
 #
 # We test al sorts of escaped non-ascii characters. 
 # This is all to be protocol conform... so to speak.
@@ -20,9 +31,9 @@ use Net::DNS::Packet qw(dn_expand);
 # the more ackward tests as they have to pass anyway ...
 
 my $message="Using the ";
-$message.= $Net::DNS::HAVE_XS? " system library ":" perl implemented ";
+$message.= $Net::DNS::HAVE_XS? " XS compiled ":" perl implemented ";
 $message.="dn_expand function ";
-
+diag ($message);
 
 
 my $had_xs=$Net::DNS::HAVE_XS; 

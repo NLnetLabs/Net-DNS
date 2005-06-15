@@ -150,7 +150,10 @@ $res = Net::DNS::Resolver->new(
 	
 	# $res->debug(1);
 	my $socket=$res->bgsend('a.t.net-dns.org','A');
-	ok(ref($socket)=~/$IO::Socket::INET(6?)^/,"Socket returned");
+
+	
+	ok(ref($socket)=~/^IO::Socket::INET(6?)$/,"Socket returned");
+
 	my $loop=0;
 	# burn a little CPU to get the socket ready.
 	# I could off course used microsleep or something.

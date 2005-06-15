@@ -4,7 +4,12 @@ package Net::DNS::Resolver::Base;
 #
 
 use strict;
-use bytes;
+
+BEGIN { 
+    $INC{'bytes.pm'} = 'foo' if $] < 5.006 
+    } # fake loading of bytes.pm in perl < 5.6.0
+
+use bytes; 
 
 use vars qw(
 	    $VERSION
@@ -177,10 +182,12 @@ sub _process_args {
 	
 	foreach my $attr (keys %args) {
 		next unless $public_attr{$attr};
-	
+
 		if ($attr eq 'nameservers' || $attr eq 'searchlist') {
+
 			die "Net::DNS::Resolver->new(): $attr must be an arrayref\n" unless
-				UNIVERSAL::isa($args{$attr}, 'ARRAY');
+			  defined($args{$attr}) &&  UNIVERSAL::isa($args{$attr}, 'ARRAY');
+
 		}
 		
 		if ($attr eq 'nameservers') {
@@ -671,7 +678,7 @@ sub send_tcp {
 				if ($ans->header->rcode ne "NOERROR" &&
 				    $ans->header->rcode ne "NXDOMAIN"){
 					# Remove this one from the stack
-					print "RCODE: ".$ans->header->rcode ."; tying next nameserver\n" if $self->{'debug'};
+					print "RCODE: ".$ans->header->rcode ."; trying next nameserver\n" if $self->{'debug'};
 					$lastanswer=$ans;
 					next NAMESERVER ;
 					
@@ -691,7 +698,7 @@ sub send_tcp {
 	}
 
 	if ($lastanswer){
-		$self->errorstring('RCODE: '.$lastanswer->header->rcode );
+		$self->errorstring($lastanswer->header->rcode );
 		return $lastanswer;
 
 	}
@@ -791,6 +798,7 @@ sub send_udp {
  	# nameserver IP address, its sockaddr and the sockfamily for
  	# which the sockaddr structure is constructed.
 	
+	my $nmbrnsfailed=0;
       NSADDRESS: foreach my $ns_address ($self->nameservers()){
 	  # The logic below determines the $dst_sockaddr.
 	  # If getaddrinfo is available that is used for both INET4 and INET6
@@ -808,7 +816,7 @@ sub send_udp {
 	      $^W = 0;
 	      
 	      my @res = getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 
-				    'udp', AI_NUMERICHOST);
+				    0, AI_NUMERICHOST);
 	      
 	      $^W=$old_wflag ;
 	      
@@ -853,6 +861,7 @@ sub send_udp {
 		
 		# Try each nameserver.
 	      NAMESERVER: foreach my $ns (@ns) {
+		  next if defined $ns->[3];
 			if ($stop_time) {
 				my $now = time;
 				if ($stop_time < $now) {
@@ -886,7 +895,8 @@ sub send_udp {
 			unless ($sock[$nssockfamily]->send($packet_data, 0, $nsaddr)) {
 				print ";; send error: $!\n" if $self->{'debug'};
 				$self->errorstring("Send error: $!");
-				@ns = grep { $_->[0] ne $nsname } @ns;
+				$nmbrnsfailed++;
+				$ns->[3]="Send error".$self->errorstring();
 				next;
 			}
 
@@ -919,8 +929,10 @@ sub send_udp {
 				      if ($ans->header->rcode ne "NOERROR" &&
 					  $ans->header->rcode ne "NXDOMAIN"){
 					  # Remove this one from the stack
-					  @ns = grep { $_->[0] ne $ready->peerhost } @ns;
-					  print "RCODE: ".$ans->header->rcode ."; tying next nameserver\n" if $self->{'debug'};
+
+					  print "RCODE: ".$ans->header->rcode ."; trying next nameserver\n" if $self->{'debug'};
+					  $nmbrnsfailed++;
+					  $ns->[3]="RCODE: ".$ans->header->rcode();
 					  $lastanswer=$ans;
 					  next NAMESERVER ;
 					  
@@ -932,16 +944,18 @@ sub send_udp {
 				  return $ans;
 			      } else {
 				  $self->errorstring($!);
-				  
-				  print ';; recv ERROR(',
+      				  print ';; recv ERROR(',
 				  $ready->peerhost, ':',
 				  $ready->peerport, '): ',
 				  $self->errorstring, "\n"
 				      if $self->{'debug'};
-				  
-				  @ns = grep { $_->[0] ne $ready->peerhost } @ns;
-				  
-				  return unless @ns;
+				  $ns->[3]="Recv error ".$self->errorstring();
+				  $nmbrnsfailed++;
+				  # We want to remain in the SELECTOR LOOP...
+				  # unless there are no more nameservers
+				  return unless ($nmbrnsfailed < @ns);
+				  print ';; Number of failed nameservers: $nmbrnsfailed out of '.scalar @ns."\n" if $self->{'debug'};
+
 			      }
 			  } #SELECTOR LOOP
 			} # until stop_time loop
@@ -950,7 +964,7 @@ sub send_udp {
 	}
 	
 	if ($lastanswer){
-		$self->errorstring('RCODE: '.$lastanswer->header->rcode );
+		$self->errorstring($lastanswer->header->rcode );
 		return $lastanswer;
 
 	}
@@ -960,7 +974,11 @@ sub send_udp {
 	    $self->errorstring('query timed out') unless ($self->errorstring =~ /Send error:/);
 	}
 	else {
+	    if ($nmbrnsfailed < @ns){
+		$self->errorstring('Unexpected Error') ;
+	    }else{
 		$self->errorstring('all nameservers failed');
+	    }
 	}
 	return;
 }
@@ -1000,8 +1018,8 @@ sub bgsend {
 	                      # AI_NUMERICHOST is not available at compile time.
 
 	    # The AI_NUMERICHOST surpresses lookups.
-	    my @res = getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 
-				  'udp', AI_NUMERICHOST);
+	    my @res = getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM,
+				  0 , AI_NUMERICHOST);
 
 	    use strict 'subs';
 
@@ -1009,7 +1027,7 @@ sub bgsend {
 	     $proto_tmp, $dst_sockaddr, $canonname_tmp) = @res;
 
 	    if (scalar(@res) < 5) {
-		die ("can't resolve \"$ns_address\" to address (it have been an IP address)");
+		die ("can't resolve \"$ns_address\" to address (it could have been an IP address)");
 	    }
 
 	}else{

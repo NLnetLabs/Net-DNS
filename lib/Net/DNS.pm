@@ -3,7 +3,15 @@ package Net::DNS;
 # $Id$
 #
 use strict;
+
+
+BEGIN { 
+    $INC{'bytes.pm'} = 'foo' if $] < 5.006 
+    } # fake loading of bytes.pm in perl < 5.6.0
+
+
 use bytes;
+
 use vars qw(
     $HAVE_XS
     $VERSION
@@ -34,11 +42,12 @@ BEGIN {
     @ISA     = qw(Exporter DynaLoader);
 
     
-    $VERSION = '0.51_01';
+    $VERSION = '0.51_02';
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 
 	} ? 1 : 0;
+
 }
 
 

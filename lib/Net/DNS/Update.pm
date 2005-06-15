@@ -1,8 +1,14 @@
 package Net::DNS::Update;
 #
-# $Id: Update.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
 use strict;
+
+BEGIN { 
+    $INC{'bytes.pm'} = 'foo' if $] < 5.006 
+} # fake loading of bytes.pm in perl < 5.6.0
+use bytes;
+
 use vars qw($VERSION @ISA);
 
 use Net::DNS;

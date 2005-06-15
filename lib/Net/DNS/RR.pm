@@ -3,6 +3,12 @@ package Net::DNS::RR;
 # $Id$
 #
 use strict;
+
+
+BEGIN { 
+    $INC{'bytes.pm'} = 'foo' if $] < 5.006 
+    } # fake loading of bytes.pm in perl < 5.6.0
+
 use bytes;
 use vars qw($VERSION $AUTOLOAD);
 use Carp;
