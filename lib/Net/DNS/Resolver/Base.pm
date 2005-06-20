@@ -767,7 +767,7 @@ sub send_udp {
 
 
 
-	    print (defined($sock[AF_INET6])?"done\n":"failed\n") if $self->debug();
+	    print (defined($sock[AF_INET6()])?"done\n":"failed\n") if $has_inet6 && $self->debug();
 
 	}
 	
