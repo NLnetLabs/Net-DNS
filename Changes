@@ -1,7 +1,18 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+
 *** 0.51_02
+
+
+Fix rt.cpan.org 13297 
+
+    Persistent_udp option broken starting in version 0.50.
+    This was fixed, based on a patch by Sidney Markowitz.
+    
+Fix rt.cpan.org 13289 	
+ 
+    Was caused by a typo. 
 
 Fix rt.cpan.org 13243 and 13191 
 
@@ -9,11 +20,9 @@ Fix rt.cpan.org 13243 and 13191
     the systems dn_expand instead of the supplied dn_expand 
     was used after the makemaker magic linked DNS.xs.
 
-    This was fixed by renaming the dn_expand that comes with the library
-    to netdns_dn_expand.
+    This was fixed by renaming the dn_expand that comes with the
+    library to netdns_dn_expand.
 
-
-*** 0.51_02
 
 Fix rt.cpan.org 13239:
 

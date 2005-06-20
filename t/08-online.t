@@ -2,10 +2,12 @@
 
 use Test::More;
 use strict;
+use Socket;
+use Data::Dumper;
 
 BEGIN {
 	if (-e 't/online.enabled') {
-		plan tests => 77;
+		plan tests => 93;
 	} else {
 		plan skip_all => 'Online tests disabled.';
 	}
@@ -14,7 +16,7 @@ BEGIN {
 BEGIN { use_ok('Net::DNS'); }
 
 my $res = Net::DNS::Resolver->new;
-
+#$res->debug(1);
 my @rrs = (
 	{
 		type   		=> 'A',
@@ -43,6 +45,7 @@ my @rrs = (
 		
 
 foreach my $data (@rrs) {
+
 	my $packet = $res->send($data->{'name'}, $data->{'type'}, 'IN');
 	
 	ok($packet, "Got an answer for $data->{name} IN $data->{type}");
@@ -117,6 +120,7 @@ $res = Net::DNS::Resolver->new(
 #
 {
 	$res->defnames(1); $res->dnsrch(1);
+	$res->persistent_udp(0);
 	
 	my @tests = (
 		{
@@ -132,6 +136,8 @@ $res = Net::DNS::Resolver->new(
 			name   => 'a',
 		},
 	);
+
+
 	
 	foreach my $test (@tests) {
 		my $method = $test->{'method'};
@@ -140,20 +146,16 @@ $res = Net::DNS::Resolver->new(
 		
 		isa_ok($ans, 'Net::DNS::Packet');
 		
-		is($ans->header->ancount, 1,"Correct answer count");
-		
+		is($ans->header->ancount, 1,"Correct answer count (with $method)");
 		my ($a) = $ans->answer;
 		
 		isa_ok($a, 'Net::DNS::RR::A');
-		is($a->name, 'a.t.net-dns.org',"Correct name");
+		is($a->name, 'a.t.net-dns.org',"Correct name (with $method)");
 	}
 	
 	# $res->debug(1);
 	my $socket=$res->bgsend('a.t.net-dns.org','A');
-
-	
 	ok(ref($socket)=~/^IO::Socket::INET(6?)$/,"Socket returned");
-
 	my $loop=0;
 	# burn a little CPU to get the socket ready.
 	# I could off course used microsleep or something.
@@ -179,4 +181,55 @@ $res = Net::DNS::Resolver->new(
 	  isa_ok($a, 'Net::DNS::RR::A');
 	  is($a->name, 'a.t.net-dns.org',"Correct name");
 	}
+}
+
+
+
+
+#
+# test the search() and query() append the default domain and 
+# searchlist correctly.
+#
+{
+
+	$res->defnames(1); $res->dnsrch(1);
+	$res->persistent_udp(1);
+#	$res->debug(1);
+	my @tests = (
+		{
+			method => 'search',
+			name   => 'a',
+		},
+		{
+			method => 'search',
+			name   => 'a.t',
+		},
+		{
+			method => 'query',
+			name   => 'a',
+		},
+	);
+
+	$res->send("a.t.net-dns.org A");
+	
+	my $sock_id= $res->{'sockets'}[AF_INET]{"UDP"};
+	ok($sock_id,"Persistend UDP socket identified");
+
+	foreach my $test (@tests) {
+		my $method = $test->{'method'};
+
+		my $ans = $res->$method($test->{'name'});
+		is(  $res->{'sockets'}[AF_INET]{"UDP"},$sock_id,"Persistent socket matches");
+		
+		isa_ok($ans, 'Net::DNS::Packet');
+
+		is($ans->header->ancount, 1,"Correct answer count (with persistent socket and $method)");
+		
+		my ($a) = $ans->answer;
+		
+		isa_ok($a, 'Net::DNS::RR::A');
+		is($a->name, 'a.t.net-dns.org',"Correct name (with persistent socket and $method)");
+	}
+	
+
 }
