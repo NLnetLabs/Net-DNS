@@ -21,7 +21,7 @@ extern double foo(int, long, const char*);
 
 #define MAXDNAME 1010
 
-int dn_expand( u_char *msg,  u_char *eomorig,
+int netdns_dn_expand( u_char *msg,  u_char *eomorig,
 	       u_char *comp_dn,  u_char *exp_dn,
 	       int length);
 

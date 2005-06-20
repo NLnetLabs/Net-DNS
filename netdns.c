@@ -82,7 +82,7 @@ static const char	digits[] = "0123456789";
  * Return size of compressed name or -1 if there was an error.
  */
 
-dn_expand(msg, eomorig, comp_dn, exp_dn, length)
+netdns_dn_expand(msg, eomorig, comp_dn, exp_dn, length)
      u_char *msg, *eomorig, *comp_dn, *exp_dn;
      int length;
 {

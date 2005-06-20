@@ -25,13 +25,13 @@
 
 
 /*
- * int dn_expand( char *msg,  char *eomorig,
+ * int netdns_dn_expand( char *msg,  char *eomorig,
  *	       char *comp_dn,  char *exp_dn,
  *	      int length);
  *
  *	   
- * dn_expand
- *	 dn_expand() expands the compressed domain name	 given by the
+ * netdns_dn_expand
+ *	 netdns_dn_expand() expands the compressed domain name	 given by the
  *	 pointer comp _dn into a full domain name.
  * 
  *       The compressed name is contained in
@@ -40,7 +40,7 @@
  *	 referenced by the exp_dn buffer of size length , which should
  *	 be large enough to hold the expanded result.
  *
- *	 dn_expand() returns the size of the compressed name,  or  -1
+ *	 netdns_dn_expand() returns the size of the compressed name,  or  -1
  *	 if there was an error. 
  */
 
@@ -65,7 +65,7 @@ dn_expand_XS(sv_buf, offset)
 	buf = (u_char *) SvPV(sv_buf, len);
 	
 	/* This is where we do the actual uncompressing magic. */
-	pos = dn_expand(buf, buf+len , buf+offset, &name[0], MAXDNAME);
+	pos = netdns_dn_expand(buf, buf+len , buf+offset, &name[0], MAXDNAME);
 	
 	EXTEND(SP, 2);
 	
