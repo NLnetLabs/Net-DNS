@@ -9,6 +9,7 @@ Fix rt.cpan.org 13297
 
     Persistent_udp option broken starting in version 0.50.
     This was fixed, based on a patch by Sidney Markowitz.
+    Guido van Rooij independently submitted a similar patch.
     
 Fix rt.cpan.org 13289 	
  
