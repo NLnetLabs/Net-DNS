@@ -1,7 +1,13 @@
 package Net::DNS::Nameserver;
 #
-# $Id: Nameserver.pm 208 2005-03-02 14:59:43Z olaf $
+# $Id$
 #
+
+
+BEGIN { 
+    eval { require bytes; }
+} 
+
 
 use Net::DNS;
 use IO::Socket;

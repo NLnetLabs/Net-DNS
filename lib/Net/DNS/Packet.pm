@@ -5,12 +5,9 @@ package Net::DNS::Packet;
 use strict;
 
 BEGIN { 
-    $INC{'bytes.pm'} = 'foo' if $] < 5.006 
-    } # fake loading of bytes.pm in perl < 5.6.0
+    eval { require bytes; }
+}
 
-
-
-use bytes; # Make sure characters are treated as bytes See perldoc perlunicode
 use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
 
 use Carp;

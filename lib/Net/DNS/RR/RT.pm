@@ -3,7 +3,9 @@ package Net::DNS::RR::RT;
 # $Id$
 #
 use strict;
-use bytes;
+BEGIN { 
+    eval { require bytes; }
+} 
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);

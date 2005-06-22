@@ -32,21 +32,19 @@ Fix rt.cpan.org 13239:
     I was also made aware that the "use byte" pragma is incompatible
     with pre 5.06 perl. 
 
-    This has been fixed in the libraries that are expected to be called
-    independently by using the following: 
-
     BEGIN { 
-	  $INC{'bytes.pm'} = 'foo' if $] < 5.006 
-    } # fake loading of bytes.pm in perl < 5.6.0
+          eval { require bytes; }
+    }
 
 
     It should be noted that for perl versions < 5.006 I had to disable
     the escaped character test. Don't expect domain names with labels
-    that contain anything else than host names to work for versions 
-    earlier than perl 5.6.0. 
+    that contain anything else than host names to work for versions
+    earlier than perl 5.6.0.
 
-    Thanks to Vladimir Kotal for the assistance in testing the code 
-    on his system.
+    Thanks to Vladimir Kotal for the assistance in testing the code on
+    his system and the members of the NL-PM list for suggestions and
+    education.
 
 
 *** 0.51_01 June 14, 2005

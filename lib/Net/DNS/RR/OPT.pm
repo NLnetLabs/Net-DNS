@@ -4,7 +4,9 @@ package Net::DNS::RR::OPT;
 #
 
 use strict;
-use bytes;
+BEGIN { 
+    eval { require bytes; }
+} 
 use vars qw(@ISA $VERSION %extendedrcodesbyname %extendedrcodesbyval $EDNSVERSION);
 
 use Carp;

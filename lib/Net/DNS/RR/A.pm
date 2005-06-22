@@ -3,6 +3,11 @@ package Net::DNS::RR::A;
 # $Id$
 #
 use strict;
+BEGIN { 
+    eval { require bytes; }
+} 
+
+
 use vars qw(@ISA $VERSION);
 
 use Socket;

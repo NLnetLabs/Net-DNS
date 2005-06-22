@@ -3,12 +3,10 @@ package Net::DNS::Question;
 # $Id$
 #
 use strict;
-
 BEGIN { 
-    $INC{'bytes.pm'} = 'foo' if $] < 5.006 
-} # fake loading of bytes.pm in perl < 5.6.0
+    eval { require bytes; }
+} 
 
-use bytes;
 use vars qw($VERSION $AUTOLOAD);
 
 use Carp;

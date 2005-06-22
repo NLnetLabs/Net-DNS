@@ -3,12 +3,9 @@ package Net::DNS::Update;
 # $Id$
 #
 use strict;
-
 BEGIN { 
-    $INC{'bytes.pm'} = 'foo' if $] < 5.006 
-} # fake loading of bytes.pm in perl < 5.6.0
-use bytes;
-
+    eval { require bytes; }
+} 
 use vars qw($VERSION @ISA);
 
 use Net::DNS;

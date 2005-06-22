@@ -3,6 +3,11 @@ package Net::DNS::RR::AFSDB;
 # $Id$
 #
 use strict;
+
+BEGIN { 
+    eval { require bytes; }
+} 
+
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);

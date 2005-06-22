@@ -3,7 +3,9 @@ package Net::DNS::RR::NULL;
 # $Id$
 #
 use strict;
-use bytes; # not really needed for NULL 
+BEGIN { 
+    eval { require bytes; }
+} 
 use vars qw(@ISA $VERSION);
 
 use Net::DNS::Packet;

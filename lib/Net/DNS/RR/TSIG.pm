@@ -3,7 +3,9 @@ package Net::DNS::RR::TSIG;
 # $Id$
 #
 use strict;
-use bytes;
+BEGIN { 
+    eval { require bytes; }
+} 
 use vars qw(@ISA $VERSION);
 
 use Digest::HMAC_MD5;
