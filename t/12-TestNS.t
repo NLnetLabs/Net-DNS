@@ -59,7 +59,7 @@ BEGIN {
 
 
 	}
-	plan tests => 1;
+	plan tests => 2;
     }else{
 
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
