@@ -1,6 +1,14 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.52 July 1, 2005
+
+Feature
+    Net::DNS::RR::OPT
+
+    added the the size(), do(),set_do() and clear_do() methods.
+
+
 
 *** 0.51_02 June 22, 2005
 

@@ -64,6 +64,7 @@ sub new {
 
 
 
+
 sub new_from_string {
     my ($class, $self ) = @_;
     
@@ -107,6 +108,7 @@ sub new_from_hash {
 
 
 
+
 sub string {
    my $self = shift;
    return
@@ -138,6 +140,44 @@ sub rr_rdata {
 	
 	return $rdata;
 }
+
+
+
+
+
+
+
+sub do{
+    my $self=shift;
+    return ( 0x8000 & $self->{"ednsflags"} );
+}
+
+
+
+sub set_do{
+    my $self=shift;
+    return $self->{"ednsflags"} = ( 0x8000 | $self->{"ednsflags"} );
+
+}
+
+
+
+sub clear_do{
+    my $self=shift;
+    return $self->{"ednsflags"} = ( ~0x8000 & $self->{"ednsflags"} );
+
+}
+
+
+
+sub size {
+    my $self=shift;
+    my $size=shift;
+    $self->{"class"}=$size if defined($size);
+    return $self->{"class"};
+}
+
+
 
 
 1;
@@ -186,6 +226,21 @@ see section 4.4 of RFC 2671
 If optioncode is left undefined then we do not expect any RDATA.
 
 The defaults are no rdata.   
+
+
+=head2 do, set_do, clear_do
+
+    $opt->set_do;
+
+Reads, sets and clears the do flag. (first bit in the ednssflags);
+
+
+=head2 size
+
+    $opt->size(1498);
+    print "Packet size:". $opt->size() ;
+ 
+Sets or gets the packet size.
 
 
 =head1 TODO
