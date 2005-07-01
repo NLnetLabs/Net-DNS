@@ -79,6 +79,7 @@ t/02-header.t
 t/03-question.t
 t/04-packet-unique-push.t
 t/04-packet.t
+t/05-rr-opt.t
 t/05-rr-sshfp.t
 t/05-rr-txt.t
 t/05-rr-unknown.t
