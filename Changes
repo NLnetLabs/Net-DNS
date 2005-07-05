@@ -1,6 +1,12 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.53_01
+
+
+Fix rt.cpan.org 13232
+    One uncought AF_INET6.
+
 *** 0.52 July 1, 2005
 
 Feature

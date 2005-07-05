@@ -756,7 +756,7 @@ sub send_udp {
 	    #my $old_wflag = $^W;
 	    #$^W = 0;
 	    
-	    $sock[AF_INET6] = IO::Socket::INET6->new(
+	    $sock[AF_INET6()] = IO::Socket::INET6->new(
 						       LocalAddr => $srcaddr,
 						       LocalPort => ($srcport || undef),
 						       Proto     => 'udp',
