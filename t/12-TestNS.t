@@ -8,7 +8,8 @@
 #  sudo ifconfig lo0 inet 127.53.53.1 netmask 255.255.255.255 alias
 #  sudo ifconfig lo0 inet 127.53.53.2 netmask 255.255.255.255 alias
 #  sudo ifconfig lo0 inet 127.53.53.3 netmask 255.255.255.255 alias
-#  sudo ifconfig lo0 inet 127.53.53.4 netmask 255.255.255.255 alias
+# ...
+#  sudo ifconfig lo0 inet 127.53.53.11 netmask 255.255.255.255 alias
 
 
 
@@ -33,6 +34,13 @@ BEGIN {
 		     127.53.53.2
 		     127.53.53.3
 		     127.53.53.4
+		     127.53.53.5
+		     127.53.53.6
+		     127.53.53.7
+		     127.53.53.8
+		     127.53.53.9
+		     127.53.53.10
+		     127.53.53.11
 		     );
     
     if(
@@ -59,7 +67,7 @@ BEGIN {
 
 
 	}
-	plan tests => 2;
+	plan tests => 12;
     }else{
 
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
@@ -73,7 +81,6 @@ BEGIN {
 }	
 
 my $configfile="t/testns.xml";
-
 
 my $server=Net::DNS::TestNS->new($configfile, {
 #    Verbose => 1,
@@ -93,8 +100,28 @@ my $resolver=Net::DNS::Resolver->new(
 $server->run();
 
 print join(" ", $resolver->nameservers());
-
 $resolver->query("bla.foo", 'TXT');
+
+use Net::DNS::Resolver::Recurse;
+
+my $res = Net::DNS::Resolver::Recurse->new(
+					   port  => $TestPort,
+					   debug => 1,
+					   );
+$res->hints( "127.53.53.1" );
+
+
+my $packet;
+
+my $i=0;
+while ($i<10){
+    $packet = $res->query_dorecursion("lame.test.zone","A");
+
+    ok($packet,"Packet received");
+    $i++;
+}
+
+
 
 
 $server->medea();

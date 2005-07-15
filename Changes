@@ -3,7 +3,12 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_01
 
-Doc rt.cpam.org 13387
+Fix rt.cpan.org 13534 
+
+    Net::DNS::Resolver::Recurse would bail out when it happened to run
+    into lame servers.
+
+Doc rt.cpan.org 13387
 
     Documented the BUG caught by Robert Martin-Legène;
     Net::DNS::Nameserver running with multiple IP interfaces might

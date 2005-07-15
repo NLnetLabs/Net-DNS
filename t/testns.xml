@@ -13,10 +13,58 @@
         </header>
       </qtype>
     </qname>
+    
+    <qname name=".">
+      <qtype type="NS" delay="0">
+	<header>
+	  <rcode value="NOERROR"/>
+          <aa value="1"/>
+          <ra value="0"/>
+	</header>	    
+	<ans>
+	  .   30 IN NS ns.root
+	</ans>
+	<add>
+	  ns.root   30 IN A 127.53.53.1
+	</add>
+      </qtype>
+
+    </qname>
+
+    <qname name="lame.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  zone   30 IN NS ns2.registry.zone
+	</aut>
+	<aut>
+	  zone   30 IN NS ns3.registry.zone
+	</aut>
+	<aut>
+	  zone   30 IN NS ns4.registry.zone
+	</aut>
+
+	<add>	
+	  ns2.registry.zone 30 IN A 127.53.53.2
+	</add>
+	<add>
+	  ns3.registry.zone 30 IN A 127.53.53.3
+	</add>
+	<add>
+	  ns4.registry.zone 30 IN A 127.53.53.4
+	</add>
+    </qtype>
+    </qname>
   </server>
+  
+  
 
-
-  <server ip="127.53.53.2" port="53452">
+  
+  <server ip="127.53.53.2 " port="53452">
     <qname name="bla.foo">
       <qtype type="TXT" delay="0">
         <header>
@@ -27,8 +75,40 @@
         </header>
       </qtype>
     </qname>
-  </server>
 
+    <qname name="lame.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  zone   30 IN NS ns2.registry.zone
+	</aut>
+	<aut>
+	  zone   30 IN NS ns3.registry.zone
+	</aut>
+	<aut>
+	  zone   30 IN NS ns4.registry.zone
+	</aut>
+
+	<add>	
+	  ns2.registry.zone 30 IN A 127.53.53.2
+	</add>
+	<add>
+	  ns3.registry.zone 30 IN A 127.53.53.3
+	</add>
+	<add>
+	  ns4.registry.zone 30 IN A 127.53.53.4
+	</add>
+    </qtype>
+    </qname>
+
+
+
+
+  </server>
 
 
   <server ip="127.53.53.3" port="53452">
@@ -47,6 +127,38 @@
 
       </qtype>
     </qname>
+
+
+    <qname name="lame.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+    </qtype>
+    </qname>
+
+
    </server>
 
 
@@ -63,7 +175,91 @@
         </header>
       </qtype>
     </qname>
+
+    <qname name="lame.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+    </qtype>
+    </qname>
+
    </server>
+
+
+   <server ip="127.53.53.5" port="53452">
+    <qname name="lame.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<ans>
+	  lame.test.zone  30 IN A 127.0.0.1
+	</ans>
+      </qtype>
+    </qname>
+
+   </server>
+
+
+
+   <server ip="127.53.53.6" port="53452">
+    <qname name="lame.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<ans>
+	  lame.test.zone 30 IN A 127.0.0.1
+	</ans>
+      </qtype>
+    </qname>
+   </server>
+
+
+   <server ip="127.53.53.7" port="53452">
+    <qname name="lame.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<ans>
+	  lame.test.zone 30  IN  A 127.0.0.1
+	</ans>
+      </qtype>
+    </qname>
+   </server>
+
+
+
+
 
 </testns>
 

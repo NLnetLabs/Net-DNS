@@ -136,6 +136,7 @@ sub _dorecursion {
   print ";; _dorecursion() depth=[$depth] known_zone=[$known_zone]\n" if $self->{'debug'};
   die "Recursion too deep, aborting..." if $depth > 255;
 
+  
   $known_zone =~ s/\.*$/./;
 
   # Get IPs from authorities
@@ -223,87 +224,92 @@ sub _dorecursion {
     print ";; _dorecursion() No authority information could be obtained.\n" if $self->{'debug'};
     return undef;
   }
-
+  
   # Cut the deck of IPs in a random place.
   print ";; _dorecursion() cutting deck of (".scalar(@ns).") authorities...\n" if $self->{'debug'};
   splice(@ns, 0, 0, splice(@ns, int(rand @ns)));
-
-  print ";; _dorecursion() First nameserver [$ns[0]]\n" if $self->{'debug'};
-  $self->nameservers(@ns);
-
-  if (my $packet = $self->send( $query_packet )) {
- 	
-  	if ($self->{'callback'}) {
-  		$self->{'callback'}->($packet);
-  	}
   
-    my $of = undef;
-    print ";; _dorecursion() Response received from [",$self->answerfrom,"]\n" if $self->{'debug'};
-    if (my $status = $packet->header->rcode) {
-      if ($status eq "NXDOMAIN") {
-        # I guess NXDOMAIN is the best we'll ever get
-        print ";; _dorecursion() returning NXDOMAIN\n" if $self->{'debug'};
-        return $packet;
-      } elsif (my @ans = $packet->answer) {
-        print ";; _dorecursion() Answers were found.\n" if $self->{'debug'};
-        return $packet;
-      } elsif (my @authority = $packet->authority) {
-        my %auth = ();
-        foreach my $rr (@authority) {
-          if ($rr->type =~ /^(NS|SOA)$/) {
-            my $server = lc ($1 eq "NS" ? $rr->nsdname : $rr->mname);
-            $server =~ s/\.*$/./;
-            $of = lc $rr->name;
-            $of =~ s/\.*$/./;
-            print ";; _dorecursion() Received authority [$of] [",$rr->type(),"] [$server]\n" if $self->{'debug'};
-            if (length $of <= length $known_zone) {
-              print ";; _dorecursion() Deadbeat name server did not provide new information.\n" if $self->{'debug'};
-            } elsif ($of =~ /$known_zone$/) {
-              print ";; _dorecursion() FOUND closer authority for [$of] at [$server].\n" if $self->{'debug'};
-              $auth{$server} ||= [];
-            } else {
-              print ";; _dorecursion() Confused name server [",$self->answerfrom,"] thinks [$of] is closer than [$known_zone]?\n" if $self->{'debug'};
-              last;
-            }
-          } else {
-            print ";; _dorecursion() Ignoring NON NS entry found in authority section: ",$rr->string,"\n" if $self->{'debug'};
-          }
-        }
-        foreach my $rr ($packet->additional) {
-          if ($rr->type eq "CNAME") {
-            # Store this CNAME into %auth too
-            if (my $server = lc $rr->name) {
-              $server =~ s/\.*$/./;
-              if ($auth{$server}) {
-                my $cname = lc $rr->rdatastr;
-                $cname =~ s/\.*$/./;
-                print ";; _dorecursion() FOUND CNAME authority: ",$rr->string,"\n" if $self->{'debug'};
-                $auth{$cname} ||= [];
-                $auth{$server} = $auth{$cname};
-                next;
-              }
-            }
-          } elsif ($rr->type eq "A" || $rr->type eq "AAAA") {
-            if (my $server = lc $rr->name) {
-              $server =~ s/\.*$/./;
-              if ($auth{$server}) {
-                print ";; _dorecursion() STORING: $server IN A    ",$rr->rdatastr,"\n" if $self->{'debug'} &&  $rr->type eq "A";
-                print ";; _dorecursion() STORING: $server IN AAAA ",$rr->rdatastr,"\n" if $self->{'debug'}&&  $rr->type eq "AAAA";
-                push @{ $auth{$server} }, $rr->rdatastr;
-                next;
-              }
-            }
-          }
-          print ";; _dorecursion() Ignoring useless: ",$rr->string,"\n" if $self->{'debug'};
-        }
-        if ($of =~ /$known_zone$/) {
-          return $self->_dorecursion( $query_packet, $of, \%auth, $depth+1 );
-        } else {
-          return $self->_dorecursion( $query_packet, $known_zone, $known_authorities, $depth+1 );
-        }
+  
+ LEVEL:  foreach my $levelns (@ns){
+   print ";; _dorecursion() Trying nameserver [$levelns]\n" if $self->{'debug'};
+   $self->nameservers($levelns);
+   
+   if (my $packet = $self->send( $query_packet )) {
+     
+     if ($self->{'callback'}) {
+       $self->{'callback'}->($packet);
+     }
+     
+     my $of = undef;
+     print ";; _dorecursion() Response received from [",$self->answerfrom,"]\n" if $self->{'debug'};
+     if (my $status = $packet->header->rcode) {
+       if ($status eq "NXDOMAIN") {
+	 # I guess NXDOMAIN is the best we'll ever get
+	 print ";; _dorecursion() returning NXDOMAIN\n" if $self->{'debug'};
+	 return $packet;
+       } elsif (my @ans = $packet->answer) {
+	 print ";; _dorecursion() Answers were found.\n" if $self->{'debug'};
+	 return $packet;
+       } elsif (my @authority = $packet->authority) {
+	 my %auth = ();
+	 foreach my $rr (@authority) {
+	   if ($rr->type =~ /^(NS|SOA)$/) {
+	     my $server = lc ($1 eq "NS" ? $rr->nsdname : $rr->mname);
+	     $server =~ s/\.*$/./;
+	     $of = lc $rr->name;
+	     $of =~ s/\.*$/./;
+	     print ";; _dorecursion() Received authority [$of] [",$rr->type(),"] [$server]\n" if $self->{'debug'};
+	     if (length $of <= length $known_zone) {
+	       print ";; _dorecursion() Deadbeat name server did not provide new information.\n" if $self->{'debug'};
+	       next LEVEL;
+	     } elsif ($of =~ /$known_zone$/) {
+	       print ";; _dorecursion() FOUND closer authority for [$of] at [$server].\n" if $self->{'debug'};
+	       $auth{$server} ||= [];
+	     } else {
+	       print ";; _dorecursion() Confused name server [",$self->answerfrom,"] thinks [$of] is closer than [$known_zone]?\n" if $self->{'debug'};
+	       last;
+	     }
+	   } else {
+	     print ";; _dorecursion() Ignoring NON NS entry found in authority section: ",$rr->string,"\n" if $self->{'debug'};
+	   }
+	 }
+	 foreach my $rr ($packet->additional) {
+	   if ($rr->type eq "CNAME") {
+	     # Store this CNAME into %auth too
+	     if (my $server = lc $rr->name) {
+	       $server =~ s/\.*$/./;
+	       if ($auth{$server}) {
+		 my $cname = lc $rr->rdatastr;
+		 $cname =~ s/\.*$/./;
+		 print ";; _dorecursion() FOUND CNAME authority: ",$rr->string,"\n" if $self->{'debug'};
+		 $auth{$cname} ||= [];
+		 $auth{$server} = $auth{$cname};
+		 next;
+	       }
+	     }
+	   } elsif ($rr->type eq "A" || $rr->type eq "AAAA") {
+	     if (my $server = lc $rr->name) {
+	       $server =~ s/\.*$/./;
+	       if ($auth{$server}) {
+		 print ";; _dorecursion() STORING: $server IN A    ",$rr->rdatastr,"\n" if $self->{'debug'} &&  $rr->type eq "A";
+		 print ";; _dorecursion() STORING: $server IN AAAA ",$rr->rdatastr,"\n" if $self->{'debug'}&&  $rr->type eq "AAAA";
+		 push @{ $auth{$server} }, $rr->rdatastr;
+		 next;
+	       }
+	     }
+	   }
+	   print ";; _dorecursion() Ignoring useless: ",$rr->string,"\n" if $self->{'debug'};
+	 }
+	 if ($of =~ /$known_zone$/) {
+	   return $self->_dorecursion( $query_packet, $of, \%auth, $depth+1 );
+	 } else {
+	   return $self->_dorecursion( $query_packet, $known_zone, $known_authorities, $depth+1 );
+	 }
       }
-    }
-  }
+     }
+   }
+ }
+  
   return undef;
 }
 
