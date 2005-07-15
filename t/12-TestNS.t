@@ -67,6 +67,15 @@ BEGIN {
 
 
 	}
+
+	if ( $Net::DNS::TestNS::VERSION < 368){
+	  diag ("You will need a more recent version of Net::DNS::TestNS");
+	  diag ("which might not be available from CPAN");
+	  diag ("Use subversion to fetch it from");
+	  diag (" http://www.net-dns/svn/net-dns-testns/trunk ");
+	  plan skip_all => "old Net::DNS::TestNS ($Net::DNS::TestNS::VERSION)";
+	  exit;
+	}
 	plan tests => 12;
     }else{
 
@@ -112,6 +121,15 @@ $res->hints( "127.53.53.1" );
 
 
 my $packet;
+
+
+# This is a test for which in the delegation path there is one
+# lame server.
+
+# We need to run this test a couple of times
+# The chances that the lame server is 1 in 3 so we run the experiment
+# 10 times to be reasonably certain of the event having occured at least once.
+
 
 my $i=0;
 while ($i<10){

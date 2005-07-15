@@ -181,10 +181,9 @@ sub typesbyval {
     my $val = shift;
     
     die "Net::DNS::typesbyval() argument ($val) is not numeric" unless 
-        $val =~ m/^\s*\d+\s*$/;  
+	$val =~ m/^\s*0*(\d+)\s*$/;
+    $val = $1;
     
-    $val =~ s/\s*//g; 
-    $val =~ s/^0*([0-9]+)/$1/;    #remove leading zeros 
     
     return $typesbyval{$val} if $typesbyval{$val};
     

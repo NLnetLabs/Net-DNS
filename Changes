@@ -3,6 +3,11 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_01
 
+Fix rt.cpan.org 13669
+
+    Danny Thomas provided a somewhat more elegant line of code for the 
+    typesbyval regexp.
+
 Fix rt.cpan.org 13534 
 
     Net::DNS::Resolver::Recurse would bail out when it happened to run
