@@ -587,13 +587,17 @@ sub send_tcp {
 		    #my $old_wflag = $^W;
 		    #$^W = 0;
 		    if ($has_inet6 && ! $self->force_v4()){
-			$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
-			
+                        # XXX IO::Socket::INET6 fails in a cryptic way upon send()
+                        # on AIX5L if "0" is passed in as LocalAddr
+			# $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
+
+                        my $srcaddr6 = $srcaddr eq '0.0.0.0' ? '::' : $srcaddr;
+
 			$sock = 
 			    IO::Socket::INET6->new(
 						   PeerPort =>    53,
 						   PeerAddr =>    $ns,
-						   LocalAddr => 0,
+						   LocalAddr => $srcaddr6,
 						   LocalPort => ($srcport || undef),
 						   Proto     => 'tcp',
 						   Timeout   => $timeout,
@@ -742,9 +746,11 @@ sub send_udp {
 	
 	if ($has_inet6  && ! $self->force_v4() && !defined( $sock[AF_INET6()] )){
 
-	    
-	    $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
 
+	    # '::' Otherwise the INET6 socket will fail.
+	    
+            my $srcaddr6 = $srcaddr eq '0.0.0.0' ? '::' : $srcaddr;
+	    
 	    print ";; Trying to set up a AF_INET6() family type UDP socket with srcaddr: $srcaddr ... "
 		if $self->{'debug'};
 
@@ -757,7 +763,7 @@ sub send_udp {
 	    #$^W = 0;
 	    
 	    $sock[AF_INET6()] = IO::Socket::INET6->new(
-						       LocalAddr => $srcaddr,
+						       LocalAddr => $srcaddr6,
 						       LocalPort => ($srcport || undef),
 						       Proto     => 'udp',
 						       );

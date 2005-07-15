@@ -4,6 +4,14 @@ Revision history for Net::DNS                                     -*-text-*-
 *** 0.53_01
 
 
+Fix IPv6 on AIX
+
+    Binding to the local interface did not work when local address was
+    specified as "0" instead of "::". The problem was identified,
+    reported and fixed by Achim Adam.
+
+
+
 Fix rt.cpan.org 13232
     One uncought AF_INET6.
 
