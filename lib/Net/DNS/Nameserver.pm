@@ -518,6 +518,12 @@ additional filtering on its basis may be applied.
 
 Net::DNS::Nameserver objects can handle only one query at a time.
 
+Limitations in perl 5.8.6 makes it impossible to guarantee that
+replies to UDP queries from Net::DNS::Nameserver are sent from the
+IP-address they were received on. This is a problem for machines with
+multiple IP-addresses and causes violation of RFC2181 section 4.
+
+
 =head1 COPYRIGHT
 
 Copyright (c) 1997-2002 Michael Fuhr. 

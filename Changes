@@ -3,6 +3,12 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_01
 
+Doc rt.cpam.org 13387
+
+    Documented the BUG caught by Robert Martin-Legène;
+    Net::DNS::Nameserver running with multiple IP interfaces might
+    violate section 4 of RFC2181.
+
 
 Fix IPv6 on AIX
 
