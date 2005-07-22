@@ -98,5 +98,9 @@ To Do list for Net::DNS
 * Consider rewriting the packet-parsing code in C for increased speed,
   or possibly going back to using Dave Shield's resparse library.
 
+
+* And a number of things listed on the request tracker rt.cpan.org.
+
+
 ---
 $Id$
