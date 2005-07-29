@@ -574,8 +574,8 @@ sub send_tcp {
 		my $sock;
 		my $sock_key = "$ns:$dstport";
 		my ($host,$port);
-		if ($self->persistent_tcp && $self->{'sockets'}{$sock_key}) {
-			$sock = $self->{'sockets'}{$sock_key};
+		if ($self->persistent_tcp && $self->{'sockets'}[AF_UNSPEC]{$sock_key}) {
+			$sock = $self->{'sockets'}[AF_UNSPEC]{$sock_key};
 			print ";; using persistent socket\n"
 				if $self->{'debug'};
 		} else {
@@ -623,7 +623,7 @@ sub send_tcp {
 			next;
 		    }
 
-			$self->{'sockets'}{$sock_key} = $sock;
+			$self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock;
 		}
 
 		my $lenmsg = pack('n', length($packet_data));
@@ -1261,8 +1261,8 @@ sub axfr_start {
 	my $sock;
 	my $sock_key = "$ns:$self->{'port'}";
 
-	if ($self->{'persistent_tcp'} && $self->{'sockets'}->{$sock_key}) {
-	    $sock = $self->{'sockets'}->{$sock_key};
+	if ($self->{'persistent_tcp'} && $self->{'sockets'}[AF_UNSPEC]{$sock_key}) {
+	    $sock = $self->{'sockets'}[AF_UNSPEC]{$sock_key};
 	    print ";; using persistent socket\n" if $self->{'debug'};
 	    
 	} else {
@@ -1297,7 +1297,7 @@ sub axfr_start {
 		next;
 	    }
 	    
-	    $self->{'sockets'}{$sock_key} = $sock;
+	    $self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock;
 	}
 
 

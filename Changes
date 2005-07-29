@@ -9,6 +9,15 @@ Fix rt.cpan.org 13809
      "Phar" noted that the peerhost is never passed to the make_reply function
      in nameserver.pm and provided the trivial patch. 
 
+Fix rt.cpan.org 13922
+
+    Fixed a problem with persistent TCP sockets which was introdcuced
+    because of using the address family as an index to the array of
+    persistent sockets. 
+
+    Used AF_UNSPEC for the array index for the TCP socket; just to choose
+    a number. The key to the persistent sockets is the remote nameserver:port 
+    combination.
 
 *** 0.53 July 22, 2005
 
