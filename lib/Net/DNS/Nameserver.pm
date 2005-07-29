@@ -330,7 +330,7 @@ sub udp_connection {
 
 	my $buf = "";
 
- 	my ($peerhost,$peerport);
+ 	my ($peerhost,$peerport)=($sock->peerhost,$sock->peerport);
  
  	$sock->recv($buf, &Net::DNS::PACKETSZ);
  

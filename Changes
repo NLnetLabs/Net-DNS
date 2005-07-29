@@ -1,6 +1,15 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+
+*** 0.53_01 Unreleased
+
+Fix rt.cpan.org 13809
+
+     "Phar" noted that the peerhost is never passed to the make_reply function
+     in nameserver.pm and provided the trivial patch. 
+
+
 *** 0.53 July 22, 2005
 
 Fix rt.cpan.org 13669
