@@ -2,7 +2,7 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 
 
-*** 0.53_01 Unreleased
+*** 0.54 Unreleased
 
 Fix rt.cpan.org 13809
 
@@ -18,6 +18,13 @@ Fix rt.cpan.org 13922
     Used AF_UNSPEC for the array index for the TCP socket; just to choose
     a number. The key to the persistent sockets is the remote nameserver:port 
     combination.
+
+    Acknowledgements to Mike Mitchell for reporting the bug and testing
+    the solution.
+
+Feat t/01-resolve will not try to do tests from private IP space; hopefully
+    that cuts down on the number of false positives.
+
 
 *** 0.53 July 22, 2005
 

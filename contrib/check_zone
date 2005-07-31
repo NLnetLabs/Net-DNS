@@ -166,12 +166,12 @@ sub check_domain {
         $res->nameservers( $ns );
         
         my @local_zone = $res->axfr( $domain, $class );
-        unless( defined( @local_zone ) && @local_zone ) {
+        unless( @local_zone ) {
     
             warn "Zone transfer from '", $ns, "' failed: ", 
                     $res->errorstring, "\n";
         }
-        @zone = @local_zone if( ! defined( @zone ) && ! @zone );
+        @zone = @local_zone if( ! @zone );
     }
 
     # Query each name server for the zone
@@ -691,7 +691,7 @@ sub types4name {
     # return the RR types of ???
     #
     
-    push @rr_types, ( '???' ) if( ! defined( @rr_types ) || ! @rr_types );
+    push @rr_types, ( '???' ) if( ! @rr_types );
 
     return @rr_types;
 }

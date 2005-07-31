@@ -70,9 +70,25 @@ my %bad_input = (
 	cdflag         => 'set',
 );	
 
+# Some people try to run these on private address space."
+
+use Net::IP;
+
+use IO::Socket::INET;
+my $sock = IO::Socket::INET->new(PeerAddr => '193.0.14.129', # k.root-servers.net.
+				 PeerPort => '25',
+				 Proto    => 'udp');
+
+
+my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
+	    
+
 SKIP: {
 	skip 'Online tests disabled.', 2
 		unless -e 't/online.enabled';
+
+	skip 'Tests may not run succesful from private IP('.$ip->ip() .')', 2
+	    if ($ip->iptype() ne "PUBLIC");
 
 	my $res = Net::DNS::Resolver->new;
 	

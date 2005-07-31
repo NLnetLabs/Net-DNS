@@ -1294,7 +1294,7 @@ sub axfr_start {
 		$self->errorstring('connection failed');
 		print ';; ERROR: send_tcp: connection ',
 		"failed: $!\n" if $self->{'debug'};
-		next;
+		return;
 	    }
 	    
 	    $self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock;
