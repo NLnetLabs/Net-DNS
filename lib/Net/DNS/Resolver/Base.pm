@@ -1072,7 +1072,7 @@ sub bgsend {
 							 Proto => 'udp',
 							 Type => SOCK_DGRAM,
 							 LocalAddr => $srcaddr,
-							 LocalPort => $srcport,
+							 LocalPort => ($srcport || undef),
 					    );
 	} elsif ($has_inet6 && $sockfamily == AF_INET6() ) {
 	    $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
@@ -1080,7 +1080,7 @@ sub bgsend {
 							  Proto => 'udp',
 							  Type => SOCK_DGRAM,
 							  LocalAddr => $srcaddr,
-							  LocalPort => $srcport,
+							  LocalPort => ($srcport || undef),
 					     );
 	} else {
 	    die ref($self)." bgsend:Unsoported Socket Family: $sockfamily";

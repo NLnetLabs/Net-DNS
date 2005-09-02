@@ -1,13 +1,20 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.53_02 Not released yet
+
+Fix srcport for socket creation in bgsend method
+
+   Lionel Cons noted and patched a small bug in bgsocket creation code for
+   lib/Net/DNS/Resolver/Base.pm
+
 
 *** 0.53_01 July 31, 2005
 
 Fix rt.cpan.org 13809
 
-     "Phar" noted that the peerhost is never passed to the make_reply function
-     in nameserver.pm and provided the trivial patch. 
+   "Phar" noted that the peerhost is never passed to the make_reply function
+   in nameserver.pm and provided the trivial patch. 
 
 Fix rt.cpan.org 13922
 
