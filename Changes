@@ -3,11 +3,17 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_02 Not released yet
 
+Fix rt.cpan.org 14700
+
+  mistyped _name2wire helper function name. Noticed and patched by Simon 
+  Josefsson.
+
 Fix rt.cpan.org 13944
 
   Terminating dot not printed when printing SRV record
-  Acknowledgements Jakob Schlyter
-
+  Acknowledgements Jakob Schlyter. There might be theoretical corner
+  cases where rdata elements are not properly read. The code needs an
+  audit for this.
 
 Fix srcport for socket creation in bgsend method
 

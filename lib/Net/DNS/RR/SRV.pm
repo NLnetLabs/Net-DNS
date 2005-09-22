@@ -69,7 +69,7 @@ sub _canonicalRdata {
 	
 	if (exists $self->{'priority'}) {
 		$rdata .= pack('n3', @{$self}{qw(priority weight port)});
-		$rdata .= $self->name_2wire($self->{'target'});
+		$rdata .= $self->_name2wire($self->{'target'});
 	}
 
 	return $rdata;
