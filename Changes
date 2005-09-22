@@ -3,6 +3,12 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_02 Not released yet
 
+Fix rt.cpan.org 13944
+
+  Terminating dot not printed when printing SRV record
+  Acknowledgements Jakob Schlyter
+
+
 Fix srcport for socket creation in bgsend method
 
    Lionel Cons noted and patched a small bug in bgsocket creation code for

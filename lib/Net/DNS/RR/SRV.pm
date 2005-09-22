@@ -42,6 +42,7 @@ sub rdatastr {
 
 	if (exists $self->{'priority'}) {
 		$rdatastr = join(' ', @{$self}{qw(priority weight port target)});
+		$rdatastr =~ s/(.*[^\.])$/$1./;
 	} else {
 		$rdatastr = '';
 	}
