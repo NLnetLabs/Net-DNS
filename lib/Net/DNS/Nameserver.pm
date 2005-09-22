@@ -435,10 +435,12 @@ If IO::Socket::INET6 and Socket6 are available on the system you can
 also list IPv6 addresses and the default is '0' (listen on all interfaces on
 IPv6 and IPv4);
 
-
 The ReplyHandler subroutine is passed the query name, query class,
-query type and optionally an argument containing header bit settings
-(see below).  It must return the response code and references to the
+query type, the peerhost and a Net::DNS::Packet object containing the
+incomming query.  The latter can be used to determine if the query had
+EDNS extentions or to study the exact header bits setting.
+
+It must return the response code and references to the
 answer, authority, and additional sections of the response.  Common
 response codes are:
 
@@ -449,10 +451,10 @@ response codes are:
   NOTIMP	Not implemented
   REFUSED	Query refused
 
-For advanced usage there is an optional argument containing an
-hashref with the settings for the C<aa>, C<ra>, and C<ad> 
-header bits. The argument is of the form 
-C<< { ad => 1, aa => 0, ra => 1 } >>. 
+For advanced usage there on can return an optional argument containing
+an hashref with the settings for the C<aa>, C<ra>, and C<ad> header
+bits. The argument is of the form C<< { ad => 1, aa => 0, ra => 1 }
+>>.
 
 
 See RFC 1035 and the IANA dns-parameters file for more information:
@@ -490,10 +492,12 @@ additional filtering on its basis may be applied.
  use strict;
  use warnings;
  
+ open(LOG,"> perl_nserver.log")| die "Could not open logfile";
+
  sub reply_handler {
-	 my ($qname, $qclass, $qtype, $peerhost) = @_;
+	 my ($qname, $qclass, $qtype, $peerhost,$query) = @_;
 	 my ($rcode, @ans, @auth, @add);
-	 
+	 print LOG $query->string;
 	 if ($qtype eq "A") {
 		 my ($ttl, $rdata) = (3600, "10.1.2.3");
 		 push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
