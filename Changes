@@ -3,6 +3,10 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_02 Not released yet
 
+Fix rt.cpan.org 14624 
+
+  Documentation of Nameserver.pm Replyhandler fixed.
+
 Fix rt.cpan.org 14700
 
   mistyped _name2wire helper function name. Noticed and patched by Simon 
