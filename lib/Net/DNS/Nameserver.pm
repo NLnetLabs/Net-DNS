@@ -207,7 +207,6 @@ sub new {
 
 sub make_reply {
 	my ($self, $query, $peerhost) = @_;
-	
 	my $reply;
 	my $headermask;
 	
@@ -330,17 +329,13 @@ sub udp_connection {
 
 	my $buf = "";
 
- 	my ($peerhost,$peerport)=($sock->peerhost,$sock->peerport);
- 
  	$sock->recv($buf, &Net::DNS::PACKETSZ);
- 
- 	print "UDP connection from ", $sock->peerhost, ":", $sock->peerport, "\n"
- 	  if $self->{"Verbose"};
+ 	my ($peerhost,$peerport)=($sock->peerhost,$sock->peerport);
 
+ 
 	print "UDP connection from $peerhost:$peerport\n" if $self->{"Verbose"};
 
 	my $query = Net::DNS::Packet->new(\$buf);
-
 	my $reply = $self->make_reply($query, $peerhost) || return;
 	my $reply_data = $reply->data;
 
@@ -361,7 +356,7 @@ sub main_loop {
 	while (1) {
 		print "waiting for connections..." if $self->{"Verbose"};
 		my @ready = $self->{"select"}->can_read;
-	
+
 		foreach my $sock (@ready) {
 			my $proto = getprotobynumber($sock->protocol);
 	
