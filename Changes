@@ -3,10 +3,15 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_02 Not released yet
 
+Fix bgsend srcaddr for IPv6 Achim Adam previously noticed that the
+  source address wildard "::" works provides better portability than
+  "0". We forgot to fix the bgsend() part earlier.
+    
+
 Fix rt.cpan.org 14624 
 
-  Fixed documentation of Nameserver.pm Replyhandler and fixed a bug that prevented the
-  peerhost to be set.
+  Fixed documentation of Nameserver.pm Replyhandler and fixed a bug
+  that prevented the peerhost to be set.
 
 Fix rt.cpan.org 14700
 
@@ -15,10 +20,13 @@ Fix rt.cpan.org 14700
 
 Fix rt.cpan.org 13944
 
-  Terminating dot not printed when printing SRV record
-  Acknowledgements Jakob Schlyter. There might be theoretical corner
-  cases where rdata elements are not properly read. The code needs an
-  audit for this.
+  Terminating dot not printed when printing SRV record. The SRV dname should
+  be printed as FQDN, that is, including the dot at the end.
+  Acknowledgements Jakob Schlyter. 
+
+  While adding the "dot" I noticed that in the fileformat parsing code
+  there might be theoretical corner cases where rdata elements are not
+  properly read. The code needs an audit for this.
 
 Fix srcport for socket creation in bgsend method
 

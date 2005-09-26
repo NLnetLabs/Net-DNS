@@ -62,8 +62,8 @@ is($warning, 0, 'No evil warning');
 {
 	my $srv = Net::DNS::RR->new('srv.t.net-dns.org 60 IN SRV 0 2 3 target.net-dns.org');
 	
-	like($srv->string, '/0 2 3 target.net-dns.org/');
-	is($srv->rdatastr, '0 2 3 target.net-dns.org');
+	like($srv->string, '/0 2 3 target.net-dns.org\./');
+	is($srv->rdatastr, '0 2 3 target.net-dns.org.');
 }
 
 

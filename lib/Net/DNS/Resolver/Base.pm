@@ -1075,11 +1075,12 @@ sub bgsend {
 							 LocalPort => ($srcport || undef),
 					    );
 	} elsif ($has_inet6 && $sockfamily == AF_INET6() ) {
-	    $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
+	    # Otherwise the INET6 socket will just fail
+	    my $srcaddr6 = $srcaddr eq "0.0.0.0" ? '::' : $srcaddr;
 	    $socket[$sockfamily] = IO::Socket::INET6->new(
 							  Proto => 'udp',
 							  Type => SOCK_DGRAM,
-							  LocalAddr => $srcaddr,
+							  LocalAddr => $srcaddr6,
 							  LocalPort => ($srcport || undef),
 					     );
 	} else {
@@ -1267,13 +1268,13 @@ sub axfr_start {
 	    
 	} else {
 	    if ($has_inet6  && ! $self->force_v4()){
-		$srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
-		
+		# Otherwise the INET6 socket will just fail
+		my $srcaddr6 = $srcaddr eq "0.0.0.0" ? '::' : $srcaddr;
 		$sock = 
 		    IO::Socket::INET6->new(
 					   PeerPort =>    53,
 					   PeerAddr =>    $ns,
-					   LocalAddr => 0,
+					   LocalAddr => $srcaddr6,
 					   LocalPort => ($srcport || undef),
 					   Proto     => 'tcp',
 					   );
