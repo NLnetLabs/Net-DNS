@@ -180,19 +180,11 @@ sub new {
  	}
  	
   	#--------------------------------------------------------------------------
-  	# Create the Select object.
+  	# Record the socket handles.
   	#--------------------------------------------------------------------------
-  
-  	$self{"select"} = IO::Select->new;
- 
- 	foreach my $sock_tcp  (@sock_tcp){
- 	    $self{"select"}->add($sock_tcp);
- 	}
- 
- 	foreach my $sock_udp  (@sock_udp){
- 	    $self{"select"}->add($sock_udp);
- 	}
-  
+
+	$self{"handles"} = [ @sock_tcp, @sock_udp ];
+
 	#--------------------------------------------------------------------------
 	# Return the object.
 	#--------------------------------------------------------------------------
@@ -344,6 +336,42 @@ sub udp_connection {
 	print "done\n" if $self->{"Verbose"};
 }
 
+
+#------------------------------------------------------------------------------
+# get_handles - Accessor to the list of socket handles for this service.
+#------------------------------------------------------------------------------
+
+sub get_handles {
+	my $self = shift;
+	return @{$self->{"handles"}};
+}
+
+
+#------------------------------------------------------------------------------
+# process_client_request - Handle a single request on a socket.
+#------------------------------------------------------------------------------
+
+sub process_client_request {
+	my($self, $sock) = @_;
+	my $proto = getprotobynumber($sock->protocol);
+	
+	if (!$proto) {
+		print "ERROR: connection with unknown protocol\n"
+			if $self->{"Verbose"};
+	} elsif (lc($proto) eq "tcp") {
+		my $client = $sock->accept;
+		$self->tcp_connection($client);
+	} elsif (lc($proto) eq "udp") {
+		$self->udp_connection($sock);
+	} else {
+		print "ERROR: connection with unsupported protocol $proto\n"
+			if $self->{"Verbose"};
+	}
+}
+
+
+
+
 #------------------------------------------------------------------------------
 # main_loop - Main nameserver loop.
 #------------------------------------------------------------------------------
@@ -351,27 +379,25 @@ sub udp_connection {
 sub main_loop {
 	my $self = shift;
 
+  	#--------------------------------------------------------------------------
+  	# Create the Select object.
+  	#--------------------------------------------------------------------------
+  
+  	my $select = IO::Select->new($self->get_handles);
+ 
+  	#--------------------------------------------------------------------------
+  	# Process connections as they come in.
+  	#--------------------------------------------------------------------------
+
+
 	local $| = 1;
 
 	while (1) {
 		print "waiting for connections..." if $self->{"Verbose"};
-		my @ready = $self->{"select"}->can_read;
-
+		my @ready = $select->can_read;
 		foreach my $sock (@ready) {
-			my $proto = getprotobynumber($sock->protocol);
-	
-			if (!$proto) {
-				print "ERROR: connection with unknown protocol\n"
-					if $self->{"Verbose"};
-			} elsif (lc($proto) eq "tcp") {
-				my $client = $sock->accept;
-				$self->tcp_connection($client);
-			} elsif (lc($proto) eq "udp") {
-				$self->udp_connection($sock);
-			} else {
-				print "ERROR: connection with unsupported protocol $proto\n"
-					if $self->{"Verbose"};
-			}
+		    
+			$self->process_client_request($sock);
 		}
 	}
 }
@@ -473,6 +499,37 @@ See L</EXAMPLE> for an example.
 
 Start accepting queries.
 
+
+=head2 get_handles
+
+     my $select = IO::Select->new($ns->get_handles);
+
+=head2 process_client_request
+
+     $ns->process_client_request($sock)
+
+
+Process the client request that is waiting on the socket. 
+
+If you want your script to perform other tasks instead of waiting
+around in the main_loop() then this function in combination with the
+get_handles() method provides an alternative.
+
+The core of your code should contain something like:
+
+    my $select = IO::Select->new($self->get_handles);
+
+
+    my @ready = $select->can_read;
+    foreach my $sock (@ready){
+        $ns->process_client_request($sock)
+     }
+
+Of course you have to take care of blocking and such. See the
+Nameserver.pm module itself for an example how these methods are used
+to construct the main_loop();
+
+
 =head1 EXAMPLE
 
 The following example will listen on port 5353 and respond to all queries
@@ -528,8 +585,8 @@ multiple IP-addresses and causes violation of RFC2181 section 4.
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
-
 Portions Copyright (c) 2005 O.M, Kolkman, RIPE NCC.
+Portions Copyright (c) 2005 O.M, Kolkman, NLnet Labs.
  
 
 
