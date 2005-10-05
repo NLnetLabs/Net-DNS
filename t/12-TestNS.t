@@ -76,7 +76,7 @@ BEGIN {
 	  plan skip_all => "old Net::DNS::TestNS ($Net::DNS::TestNS::VERSION)";
 	  exit;
 	}
-	plan tests => 12;
+	plan tests => 52;
     }else{
 
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
@@ -91,31 +91,32 @@ BEGIN {
 
 my $configfile="t/testns.xml";
 
-my $server=Net::DNS::TestNS->new($configfile, {
+my $test_infra=Net::DNS::TestNS->new($configfile, {
 #    Verbose => 1,
     Validate => 1,
 });
 
-is(ref($server),"Net::DNS::TestNS", "Sever instance created");
+is(ref($test_infra),"Net::DNS::TestNS", "Sever instance created");
 
 use_ok("Net::DNS::Resolver");
 
 my $resolver=Net::DNS::Resolver->new(
 				     nameservers => \@Addresses,
 				     port        => $TestPort,
-				     debug => 1,
+				     debug => 0,
 				     );
 
-$server->run();
+$test_infra->run();
 
-print join(" ", $resolver->nameservers());
+
+#print join(" ", $resolver->nameservers());
 $resolver->query("bla.foo", 'TXT');
 
 use Net::DNS::Resolver::Recurse;
 
 my $res = Net::DNS::Resolver::Recurse->new(
 					   port  => $TestPort,
-					   debug => 1,
+					   debug => 0,
 					   );
 $res->hints( "127.53.53.1" );
 
@@ -128,18 +129,17 @@ my $packet;
 
 # We need to run this test a couple of times
 # The chances that the lame server is 1 in 3 so we run the experiment
-# 10 times to be reasonably certain of the event having occured at least once.
+# 50 times to be reasonably certain of the event having occured at least once.
 
 
 my $i=0;
-while ($i<10){
+while ($i<50){
     $packet = $res->query_dorecursion("lame.test.zone","A");
-
-    ok($packet,"Packet received");
+    ok($packet,"Lame recursion test: Packet received");
     $i++;
 }
 
 
 
 
-$server->medea();
+$test_infra->medea();

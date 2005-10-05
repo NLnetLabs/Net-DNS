@@ -64,8 +64,9 @@
   
 
   
-  <server ip="127.53.53.2 " port="53452">
-    <qname name="bla.foo">
+  <server ip="127.53.53.2" port="53452">
+
+  <qname name="bla.foo">
       <qtype type="TXT" delay="0">
         <header>
           <rcode value="REFUSED"/>
@@ -105,11 +106,7 @@
     </qtype>
     </qname>
 
-
-
-
   </server>
-
 
   <server ip="127.53.53.3" port="53452">
     <qname name="bla.foo">

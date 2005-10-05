@@ -152,11 +152,11 @@ $res = Net::DNS::Resolver->new(
 		isa_ok($a, 'Net::DNS::RR::A');
 		is($a->name, 'a.t.net-dns.org',"Correct name (with $method)");
 	}
-	
-	# $res->debug(1);
+#	$res->debug(1);
 	my $socket=$res->bgsend('a.t.net-dns.org','A');
 	ok(ref($socket)=~/^IO::Socket::INET(6?)$/,"Socket returned");
-	diag("Error condition: ".$res->errorstring) unless ref($socket);
+	diag("Error condition: ".$res->errorstring ."Socket ref:".ref($socket)) unless ref($socket)=~/^IO::Socket::INET(6?)$/;
+
 
 	my $loop=0;
 	# burn a little CPU to get the socket ready.
@@ -165,12 +165,13 @@ $res = Net::DNS::Resolver->new(
 	    $loop++;
 	}
 	$loop=0;
-
 	while ($loop<6){
 	    last if $res->bgisready($socket);
 	    sleep(1); # If burning CPU above was not sufficient.
 	    $loop++;
 	}
+	$res->debug(0);
+
 	ok ($res->bgisready($socket),"Socket is ready");
       SKIP: {
 	  skip "No socket to read from",3 unless $res->bgisready($socket);
