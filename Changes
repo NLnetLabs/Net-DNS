@@ -6,7 +6,7 @@ Revision history for Net::DNS                                     -*-text-*-
 
 Feature rt.cpan.org 14622
   
-   'Talby' suggested:
+   Robert Stone suggested:
 
    The fact that it needs to take over the main runnning thread limits
    its audience.  Since many daemon programs are already driven by a
@@ -29,7 +29,8 @@ Feature rt.cpan.org 14622
 Fix bgsend srcaddr for IPv6 Achim Adam previously noticed that the
   source address wildard "::" works provides better portability than
   "0". We forgot to fix the bgsend() part earlier.
-    
+
+
 
 Fix rt.cpan.org 14624 
 

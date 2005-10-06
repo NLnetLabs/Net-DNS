@@ -14,6 +14,21 @@
       </qtype>
     </qname>
     
+
+
+
+    <qname name="example.com">
+      <qtype type="AXFR" delay="1000">
+        <header>
+          <rcode value="REFUSED"/>
+          <aa value="1"/>
+          <ra value="0"/>
+          <ad value="0"/>
+        </header>
+      </qtype>
+    </qname>
+
+
     <qname name=".">
       <qtype type="NS" delay="0">
 	<header>
@@ -77,6 +92,18 @@
       </qtype>
     </qname>
 
+    <qname name="example.com">
+      <qtype type="AXFR" delay="0">
+        <header>
+          <rcode value="REFUSED"/>
+          <aa value="1"/>
+          <ra value="0"/>
+          <ad value="0"/>
+        </header>
+      </qtype>
+    </qname>
+
+
     <qname name="lame.test.zone">
       <qtype type="A" delay="0">
 	<header> 
@@ -119,7 +146,6 @@
         </header>
 	<ans>
 	bla.foo   300 IN TXT "Got it"
-
 	</ans>
 
       </qtype>

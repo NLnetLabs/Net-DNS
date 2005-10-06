@@ -76,7 +76,7 @@ BEGIN {
 	  plan skip_all => "old Net::DNS::TestNS ($Net::DNS::TestNS::VERSION)";
 	  exit;
 	}
-	plan tests => 52;
+	plan tests => 56;
     }else{
 
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
@@ -91,12 +91,12 @@ BEGIN {
 
 my $configfile="t/testns.xml";
 
-my $test_infra=Net::DNS::TestNS->new($configfile, {
+my $test_nameservers=Net::DNS::TestNS->new($configfile, {
 #    Verbose => 1,
     Validate => 1,
 });
 
-is(ref($test_infra),"Net::DNS::TestNS", "Sever instance created");
+is(ref($test_nameservers),"Net::DNS::TestNS", "Sever instance created");
 
 use_ok("Net::DNS::Resolver");
 
@@ -106,7 +106,7 @@ my $resolver=Net::DNS::Resolver->new(
 				     debug => 0,
 				     );
 
-$test_infra->run();
+$test_nameservers->run();
 
 
 #print join(" ", $resolver->nameservers());
@@ -141,5 +141,28 @@ while ($i<50){
 
 
 
+$resolver->nameserver( qw( 127.53.53.1 ) );
+$resolver->tcp_timeout(3);
+$resolver->axfr('example.com');
+is( $resolver->errorstring,"timeout", "AXFR timed out");
 
-$test_infra->medea();
+
+$resolver->nameserver( qw( 127.53.53.2 ) );
+$resolver->tcp_timeout(3);
+$resolver->axfr('example.com');
+is( $resolver->errorstring,"Response code from server: REFUSED", "Got Refused");
+
+
+#
+#  Try to see if TCP connections work.
+#
+$resolver->nameserver( qw( 127.53.53.3 ) );
+$resolver->usevc(1);
+$resolver->tcp_timeout(3);
+my $ans=$resolver->query("bla.foo", 'TXT');
+is( $resolver->errorstring,"NOERROR","TCP request returned without Errors");
+is(($ans->answer)[0]->type,"TXT","TXT type returned");
+
+
+
+$test_nameservers->medea();

@@ -153,7 +153,7 @@ An array reference of domains.
 
 =item retry
 
-=item usecv
+=item usevc
 
 =item stayopen
 

@@ -586,7 +586,7 @@ sub send_tcp {
 		    
 		    #my $old_wflag = $^W;
 		    #$^W = 0;
-		    if ($has_inet6 && ! $self->force_v4()){
+		    if ($has_inet6 && ! $self->force_v4() && ip_is_ipv6($ns) ){
                         # XXX IO::Socket::INET6 fails in a cryptic way upon send()
                         # on AIX5L if "0" is passed in as LocalAddr
 			# $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
@@ -595,7 +595,7 @@ sub send_tcp {
 
 			$sock = 
 			    IO::Socket::INET6->new(
-						   PeerPort =>    53,
+						   PeerPort =>    $dstport,
 						   PeerAddr =>    $ns,
 						   LocalAddr => $srcaddr6,
 						   LocalPort => ($srcport || undef),
@@ -817,7 +817,7 @@ sub send_udp {
 	  # If getaddrinfo is available that is used for both INET4 and INET6
 	  # If getaddrinfo is not avialable (Socket6 failed to load) we revert
 	  # to the 'classic mechanism
-	  if ($has_inet6  && ! $self->force_v4()){ 
+	  if ($has_inet6  && ! $self->force_v4() ){ 
 	      # we can use getaddrinfo
 	      no strict 'subs';   # Because of the eval statement in the BEGIN
 	      # AI_NUMERICHOST is not available at compile time.
@@ -1253,11 +1253,14 @@ sub axfr_start {
 
 	my $ns = ($self->nameservers())[0];
 
-	print ";; axfr_start nameserver = $ns\n" if $self->{'debug'};
 
 	my $srcport = $self->{'srcport'};
 	my $srcaddr = $self->{'srcaddr'};
 	my $dstport = $self->{'port'};
+
+	print ";; axfr_start nameserver = $ns\n" if $self->{'debug'};
+	print ";; axfr_start srcport: $srcport, srcaddr: $srcaddr, dstport: $dstport\n" if $self->{'debug'};
+
 
 	my $sock;
 	my $sock_key = "$ns:$self->{'port'}";
@@ -1267,12 +1270,11 @@ sub axfr_start {
 	    print ";; using persistent socket\n" if $self->{'debug'};
 	    
 	} else {
-	    if ($has_inet6  && ! $self->force_v4()){
+	    if ($has_inet6  && ! $self->force_v4() && ip_is_ipv6($ns)){
 		# Otherwise the INET6 socket will just fail
 		my $srcaddr6 = $srcaddr eq "0.0.0.0" ? '::' : $srcaddr;
-		$sock = 
-		    IO::Socket::INET6->new(
-					   PeerPort =>    53,
+		$sock = IO::Socket::INET6->new(
+					   PeerPort =>    $dstport,
 					   PeerAddr =>    $ns,
 					   LocalAddr => $srcaddr6,
 					   LocalPort => ($srcport || undef),
