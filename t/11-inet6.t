@@ -2,7 +2,7 @@
 
 
 my $has_inet6;
-use Test::More tests=>6;
+use Test::More tests=>10;
 use strict;
 
 

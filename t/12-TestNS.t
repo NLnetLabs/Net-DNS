@@ -21,6 +21,8 @@ use strict;
 use vars qw(
 	    @Addresses
 	    $TestPort
+            $lameloop
+            $tcptimeout
 	    );
 
 
@@ -28,6 +30,8 @@ use vars qw(
 
 
 BEGIN {
+    $lameloop=0;
+    $tcptimeout=6;
     $TestPort  = 53452;
     @Addresses = qw (
 		     127.53.53.1
@@ -76,7 +80,7 @@ BEGIN {
 	  plan skip_all => "old Net::DNS::TestNS ($Net::DNS::TestNS::VERSION)";
 	  exit;
 	}
-	plan tests => 56;
+	plan tests => $lameloop+6;
     }else{
 
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
@@ -92,7 +96,7 @@ BEGIN {
 my $configfile="t/testns.xml";
 
 my $test_nameservers=Net::DNS::TestNS->new($configfile, {
-#    Verbose => 1,
+    Verbose => 3,
     Validate => 1,
 });
 
@@ -127,13 +131,14 @@ my $packet;
 # This is a test for which in the delegation path there is one
 # lame server.
 
-# We need to run this test a couple of times
-# The chances that the lame server is 1 in 3 so we run the experiment
-# 50 times to be reasonably certain of the event having occured at least once.
+# We need to run this test a couple of times The chances that the lame
+# server is 1 in 3 so we run the experiment $lameloop (see BEGIN block
+# above) times to be reasonably certain of the event having occured at
+# least once.
 
 
 my $i=0;
-while ($i<50){
+while ($i<$lameloop){
     $packet = $res->query_dorecursion("lame.test.zone","A");
     ok($packet,"Lame recursion test: Packet received");
     $i++;
@@ -142,13 +147,13 @@ while ($i<50){
 
 
 $resolver->nameserver( qw( 127.53.53.1 ) );
-$resolver->tcp_timeout(3);
+$resolver->tcp_timeout($tcptimeout);
 $resolver->axfr('example.com');
 is( $resolver->errorstring,"timeout", "AXFR timed out");
 
 
 $resolver->nameserver( qw( 127.53.53.2 ) );
-$resolver->tcp_timeout(3);
+$resolver->tcp_timeout($tcptimeout);
 $resolver->axfr('example.com');
 is( $resolver->errorstring,"Response code from server: REFUSED", "Got Refused");
 
@@ -158,11 +163,11 @@ is( $resolver->errorstring,"Response code from server: REFUSED", "Got Refused");
 #
 $resolver->nameserver( qw( 127.53.53.3 ) );
 $resolver->usevc(1);
-$resolver->tcp_timeout(3);
+$resolver->tcp_timeout($tcptimeout);
 my $ans=$resolver->query("bla.foo", 'TXT');
 is( $resolver->errorstring,"NOERROR","TCP request returned without Errors");
 is(($ans->answer)[0]->type,"TXT","TXT type returned");
 
-
-
 $test_nameservers->medea();
+
+
