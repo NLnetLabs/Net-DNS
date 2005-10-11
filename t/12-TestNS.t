@@ -96,7 +96,7 @@ BEGIN {
 my $configfile="t/testns.xml";
 
 my $test_nameservers=Net::DNS::TestNS->new($configfile, {
-    Verbose => 3,
+    Verbose => 1,
     Validate => 1,
 });
 

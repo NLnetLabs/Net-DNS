@@ -4,26 +4,25 @@ Revision history for Net::DNS                                     -*-text-*-
 *** 0.53_02 Not released yet
 
 
-Feature rt.cpan.org 14622
+Feature async nameserver behaviour.
   
-   Robert Stone suggested:
+   In rt.cpan.org 14622 Robert Stone suggested:
 
-   The fact that it needs to take over the main runnning thread limits
-   its audience.  Since many daemon programs are already driven by a
-   top level select loop, it seems useful to provide an API for the
-   user to integrate Net::DNS::Nameserver processing to their own
-   select loop.  To show a possible implementation, the patch I have
-   included delays the creation of the IO::Select object until
-   main_loop() is entered using two new methods $obj- >handles and
-   $obj->process_client.  With these, a user could integrate these
-   handles into their own select loop. Their only obligation is to
-   call process_client() each time one of the sockets is ready for
-   reading.
+      The fact that it needs to take over the main runnning thread
+      limits its audience.  Since many daemon programs are already
+      driven by a top level select loop, it seems useful to provide an
+      API for the user to integrate Net::DNS::Nameserver processing to
+      their own select loop.
 
-   This of course is not full asynchronous processing, but is a step
-   in that direction.
+   He also supplied example code for which he is hereby acknowledged.
+   The patch was not used because simultaneously Robert Martin-Legene
+   supplied a patch to Nameservers.pm that allowed the same async
+   functionality through the use of loop_once method. Robert M-L's 
+   code also carefully manages the TCP sockets, so that they can 
+   deal with AXFRs.
 
-   His patch has been applied.
+   Robert S. has been so kind to review Robert M-L's code and is hereby
+   kindly acknowledged.
 
 
 Fix bgsend srcaddr for IPv6 Achim Adam previously noticed that the
@@ -96,7 +95,7 @@ Fix rt.cpan.org 13534
 
 Doc rt.cpan.org 13387
 
-    Documented the BUG caught by Robert Martin-LegÃ¨ne;
+    Documented the BUG caught by Robert Martin-Legène
     Net::DNS::Nameserver running with multiple IP interfaces might
     violate section 4 of RFC2181.
 

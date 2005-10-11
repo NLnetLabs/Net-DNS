@@ -302,6 +302,9 @@ sub tcp_connection {
 		$self->{"_tcp"}{$client}{"socket"} = $client;
 		$self->{"_tcp"}{$client}{"timeout"} = time()+120;
  		$self->{"select"}->add($client);
+		# After we accepted we will look at the socket again 
+		# to see if there is any data there. ---Olaf
+		$self->loop_once(0);
 	} else {
 		# We go here if we are called with a client socket
 		my $peer = $self->{"_tcp"}{$sock}{"peer"};
