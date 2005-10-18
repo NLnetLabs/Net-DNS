@@ -1,7 +1,62 @@
-# $Id$
+# $Id$   -*-perl-*-
 
-use Test::More tests => 219;
+use Test::More;
 use strict;
+
+use vars qw( $HAS_DNSSEC );
+
+my $keypathrsa="Kexample.com.+001+11567.private";
+my $rsakeyrr;
+
+BEGIN {
+    if(
+	eval {require Net::DNS::SEC;}
+	){
+	$HAS_DNSSEC=1;
+	plan tests => 245;
+
+    }else{
+	$HAS_DNSSEC=0;
+	plan tests => 219;
+    }
+};
+
+
+
+
+if ($HAS_DNSSEC){  # Create key material    
+    diag "The suite will run additonal DNSSEC tests";
+    my $privrsakey= << 'ENDRSA' ;
+Private-key-format: v1.2
+Algorithm: 1 (RSA)
+Modulus: 6ASwF3rSBFnBBQ7PmdWJnNkT2XkbZP5Be28SyTohsnuT1Rw7OlbNVNiT+4S04JUS0itVbvgtYmDZGMU3nfZP+er20uJRo/mu6hSkJW3MX5ES8o/GnOST1zSCH1+aA1Y6AlhfLebC+ysVKftLYnEco6oHNioYOmYHozYr5d0tL/s=
+PublicExponent: Aw==
+PrivateExponent: mq3KulHhWDvWA181ETkGaJC35lC87f7WUkoMhibBIae342gnfDneOJBip63N6w4MjBzjn1AeQZXmEIN6aU7f+q0Fwsyl4FzrSa8ehjfTS4u4YZE/Zk9rv0VIZuYwyccgLEBLYNBYRLbkbuSqDspw+Th8dCGy7XZ06eRkGZSNMjs=
+Prime1: 9Fssra0OAl4kNX105Xdrnb7kS+/6QgWeJeBJCuajjWQ0uRiEClDzjVVVr6BW2DixP+6RCbSDioSIqsNc546UtQ==
+Prime2: 8xMCAavFa+/XWHjnNJgCob976feJK2yaJrU7+2oxHiWLPtWYo+2gi2kt9Kv1aTp8lV327ddSqdO7tNJilsrP7w==
+Exponent1: oudzHnNerD7CzlOjQ6TyaSnth/VRgVkUGUAwse8Xs5gjJhBYBuCiXjjjymrkkCXLf/RgsSMCXFhbHII977RjIw==
+Exponent2: ogysAR0uR/U6OvtEzbqsa9T9RqUGHPMRbyN9UkbLaW5c1I5lwp5rB5tz+HKjm3xTDj6kno+McTfSeIxBudyKnw==
+Coefficient: Cxwv14w+KY7rmiO4U0giXqOij9gON7TiByj5dQjHGUQdaQEJ0zK2SlxouEfgi3hcxTGI753pFmW0cF/MDjFURw==
+ENDRSA
+
+
+open (RSA,">$keypathrsa") or die "Could not open $keypathrsa";
+    print RSA $privrsakey;
+    close(RSA);
+        
+ $rsakeyrr=new Net::DNS::RR ("example.com. IN KEY 256 3 1 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w==
+");
+    
+    
+    
+
+    ok( $rsakeyrr, 'RSA public key created');     # test 5
+    
+    
+}
+
+
+
 
 
 BEGIN { use_ok('Net::DNS'); }
@@ -157,21 +212,37 @@ my @rrs = (
 	
 );
 
+
+
+
+
 #------------------------------------------------------------------------------
-# Create the packet.
+# Create the packet and signatures (if DNSSEC is available.)
 #------------------------------------------------------------------------------
 
+my @rrsigs;
 my $packet = Net::DNS::Packet->new($name);
 ok($packet,         'Packet created');
 
 foreach my $data (@rrs) {
-	$packet->push('answer', 
-		Net::DNS::RR->new(
-			name => $name,
-			ttl  => $ttl,
-			%{$data},
-		)
-	);
+    my $RR=Net::DNS::RR->new(
+	   name => $name,
+	   ttl  => $ttl,
+	   %{$data});
+       
+       if ($HAS_DNSSEC){
+	   my $sigrr= create Net::DNS::RR::RRSIG( [ $RR ],
+						  $keypathrsa,
+						  (
+						   ttl => 360, 
+						   sigval => 100,
+						  ));
+	   $sigrr->print;
+	   push  @rrsigs, $sigrr;
+       }
+       
+
+       $packet->push('answer', $RR );
 }
 
 
@@ -192,6 +263,9 @@ my @answer = $packet->answer;
 ok(@answer && @answer == @rrs, 'Packet returned correct answer section');
 
 
+
+
+
 while (@answer and @rrs) {
 	my $data = shift @rrs;
 	my $rr   = shift @answer;
@@ -209,6 +283,16 @@ while (@answer and @rrs) {
 	
 	my $rr2 = Net::DNS::RR->new($rr->string);
 	is($rr2->string, $rr->string,   "$type - Parsing from string works");
+	if ($HAS_DNSSEC){
+	    my $rrsig=shift @rrsigs;
+	    ok($rrsig->verify([ $rr ], $rsakeyrr), "RR of type ".$type." signature creation/validation cycle");
+	}
+	
 }
 
 
+
+
+
+
+unlink($keypathrsa);
