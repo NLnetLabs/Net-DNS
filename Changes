@@ -37,6 +37,9 @@ Feature async nameserver behaviour.
    Robert S. has been so kind to review Robert M-L's code and is hereby
    kindly acknowledged.
 
+   NB. Since the code may be subject to change the documentation of the
+   loop_once method has been commented out.
+
 
 Fix bgsend srcaddr for IPv6 Achim Adam previously noticed that the
   source address wildard "::" works provides better portability than

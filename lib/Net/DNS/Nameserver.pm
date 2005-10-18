@@ -383,6 +383,11 @@ sub udp_connection {
 # This function might not actually return immediately. If an AXFR request is
 # coming in which will generate a huge reply, we will not relinquish control
 # until our outbuffers are empty.
+
+#
+#  NB  this method may be subject to change and is therefore left 'undocumented'
+#
+
 sub loop_once {
   my ($self, $timeout) = @_;
   $timeout=0 unless defined($timeout);
@@ -571,23 +576,31 @@ See L</EXAMPLE> for an example.
 
 Start accepting queries. Calling main_loop never returns.
 
-=head2 loop_once
+=cut
 
-	$ns->loop_once( [TIMEOUT_IN_SECONDS] );
+#####
+#
+#  The functionality might change. Left "undocumented" for now.
+#
+#=head2 loop_once
+#
+#	$ns->loop_once( [TIMEOUT_IN_SECONDS] );
+#
+# Start accepting queries, but returns. If called without a parameter,
+# the call will not return until a request has been received (and
+# replied to). If called with a number, that number specifies how many
+# seconds (even fractional) to maximum wait before returning. If called
+# with 0 it will return immediately unless there's something to do.
+# 
+# Handling a request and replying obviously depends on the speed of
+# ReplyHandler. Assuming ReplyHandler is super fast, loop_once should spend
+# just a fraction of a second, if called with a timeout value of 0 seconds.
+# One exception is when an AXFR has requested a huge amount of data that
+# the OS is not ready to receive in full. In that case, it will keep
+# running through a loop (while servicing new requests) until the reply
+# has been sent.
+# 
 
-Start accepting queries, but returns. If called without a parameter,
-the call will not return until a request has been received (and
-replied to). If called with a number, that number specifies how many
-seconds (even fractional) to maximum wait before returning. If called
-with 0 it will return immediately unless there's something to do.
-
-Handling a request and replying obviously depends on the speed of
-ReplyHandler. Assuming ReplyHandler is super fast, loop_once should spend
-just a fraction of a second, if called with a timeout value of 0 seconds.
-One exception is when an AXFR has requested a huge amount of data that
-the OS is not ready to receive in full. In that case, it will keep
-running through a loop (while servicing new requests) until the reply
-has been sent.
 
 =head1 EXAMPLE
 
