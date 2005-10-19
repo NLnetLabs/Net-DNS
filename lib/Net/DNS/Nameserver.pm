@@ -391,80 +391,79 @@ sub udp_connection {
 sub loop_once {
   my ($self, $timeout) = @_;
   $timeout=0 unless defined($timeout);
-  while (1) {
-    foreach my $sock (keys %{$self->{"_tcp"}}) {
+  print ";loop_once called with $timeout \n" if $self->{"Verbose"} >4;
+  foreach my $sock (keys %{$self->{"_tcp"}}) {
       $timeout = 0.1 if $self->{"_tcp"}{$sock}{"outbuffer"};
-    }
-    my @ready = $self->{"select"}->can_read($timeout);
-
-    foreach my $sock (@ready) {
+  }
+  my @ready = $self->{"select"}->can_read($timeout);
+  
+  foreach my $sock (@ready) {
       my $protonum = $sock->protocol;
       # This is a weird and nasty hack. Although not incorrect,
       # I just don't know why ->protocol won't tell me the protocol
       # on a connected socket. --robert
       $protonum = getprotobyname('tcp') if not defined $protonum and $self->{"_tcp"}{$sock};
-  
+      
       my $proto = getprotobynumber($protonum);
       if (!$proto) {
-      	print "ERROR: connection with unknown protocol\n"
-      	  if $self->{"Verbose"};
+	  print "ERROR: connection with unknown protocol\n"
+	      if $self->{"Verbose"};
       } elsif (lc($proto) eq "tcp") {
-
-	$self->readfromtcp($sock) &&
-      	  $self->tcp_connection($sock);
+	  
+	  $self->readfromtcp($sock) &&
+	      $self->tcp_connection($sock);
       } elsif (lc($proto) eq "udp") {
-      	$self->udp_connection($sock);
+	  $self->udp_connection($sock);
       } else {
-      	print "ERROR: connection with unsupported protocol $proto\n"
-      	  if $self->{"Verbose"};
+	  print "ERROR: connection with unsupported protocol $proto\n"
+	      if $self->{"Verbose"};
       }
-    }
-    my $now = time();
-    # Lets check if any of our TCP clients has pending actions.
-    # (outbuffer, timeout)
-    foreach my $s (keys %{$self->{"_tcp"}}) {
+  }
+  my $now = time();
+  # Lets check if any of our TCP clients has pending actions.
+  # (outbuffer, timeout)
+  foreach my $s (keys %{$self->{"_tcp"}}) {
       my $sock = $self->{"_tcp"}{$s}{"socket"};
       if ($self->{"_tcp"}{$s}{"outbuffer"}) {
-        # If we have buffered output, then send as much as the OS will accept
-	# and wait with the rest
-  	my $len = length $self->{"_tcp"}{$s}{"outbuffer"};
-  	my $charssent = $sock->syswrite($self->{"_tcp"}{$s}{"outbuffer"});
-  	print "Sent $charssent of $len octets to ",$self->{"_tcp"}{$s}{"peer"},".\n"
-  	  if $self->{"Verbose"};
-  	substr($self->{"_tcp"}{$s}{"outbuffer"}, 0, $charssent) = "";
-  	if (length $self->{"_tcp"}{$s}{"outbuffer"} == 0) {
-  	  delete $self->{"_tcp"}{$s}{"outbuffer"};
-  	  $self->{"_tcp"}{$s}{"state"} = STATE_ACCEPTED;
-	  if (length $self->{"_tcp"}{$s}{"inbuffer"} >= 2) {
-	    # See if the client has send us enough data to process the
-	    # next query.
-	    # We do this here, because we only want to process (and buffer!!)
-	    # a single query at a time, per client. If we allowed a STATE_SENDING
-	    # client to have new requests processed. We could be easilier
-	    # victims of DoS (client sending lots of queries and never reading
-	    # from it's socket).
-	    # Note that this does not disable serialisation on part of the
-	    # client. The split second it should take for us to lookip the
-	    # next query, is likely faster than the time it takes to
-	    # send the response... well, unless it's a lot of tiny queries,
-	    # in which case we will be generating an entire TCP packet per
-	    # reply. --robert
-	    $self->tcp_connection($self->{"_tcp"}{"socket"});
+	  # If we have buffered output, then send as much as the OS will accept
+	  # and wait with the rest
+	  my $len = length $self->{"_tcp"}{$s}{"outbuffer"};
+	  my $charssent = $sock->syswrite($self->{"_tcp"}{$s}{"outbuffer"});
+	  print "Sent $charssent of $len octets to ",$self->{"_tcp"}{$s}{"peer"},".\n"
+	      if $self->{"Verbose"};
+	  substr($self->{"_tcp"}{$s}{"outbuffer"}, 0, $charssent) = "";
+	  if (length $self->{"_tcp"}{$s}{"outbuffer"} == 0) {
+	      delete $self->{"_tcp"}{$s}{"outbuffer"};
+	      $self->{"_tcp"}{$s}{"state"} = STATE_ACCEPTED;
+	      if (length $self->{"_tcp"}{$s}{"inbuffer"} >= 2) {
+		  # See if the client has send us enough data to process the
+		  # next query.
+		  # We do this here, because we only want to process (and buffer!!)
+		  # a single query at a time, per client. If we allowed a STATE_SENDING
+		  # client to have new requests processed. We could be easilier
+		  # victims of DoS (client sending lots of queries and never reading
+		  # from it's socket).
+		  # Note that this does not disable serialisation on part of the
+		  # client. The split second it should take for us to lookip the
+		  # next query, is likely faster than the time it takes to
+		  # send the response... well, unless it's a lot of tiny queries,
+		  # in which case we will be generating an entire TCP packet per
+		  # reply. --robert
+		  $self->tcp_connection($self->{"_tcp"}{"socket"});
+	      }
 	  }
-  	}
-  	$self->{"_tcp"}{$s}{"timeout"} = time()+120;
+	  $self->{"_tcp"}{$s}{"timeout"} = time()+120;
       } else {
-        # Get rid of idle clients.
-    	my $timeout = $self->{"_tcp"}{$s}{"timeout"};
-    	if ($timeout - $now < 0) {
-  	  print $self->{"_tcp"}{$s}{"peer"}," has been idle for too long and will be disconnected.\n"
-  	    if $self->{"Verbose"};
-  	  $self->{"select"}->remove($sock);
-  	  $sock->close();
-  	  delete $self->{"_tcp"}{$s};
-  	}
+	  # Get rid of idle clients.
+	  my $timeout = $self->{"_tcp"}{$s}{"timeout"};
+	  if ($timeout - $now < 0) {
+	      print $self->{"_tcp"}{$s}{"peer"}," has been idle for too long and will be disconnected.\n"
+		  if $self->{"Verbose"};
+	      $self->{"select"}->remove($sock);
+	      $sock->close();
+	      delete $self->{"_tcp"}{$s};
+	  }
       }
-    }
   }
 }
 
@@ -473,12 +472,14 @@ sub loop_once {
 #------------------------------------------------------------------------------
 
 sub main_loop {
-	my $self = shift;
-
-	while (1) {
-		print "Waiting for connections...\n" if $self->{"Verbose"};
-		$self->loop_once();
-	}
+    my $self = shift;
+    
+    while (1) {
+	print "Waiting for connections...\n" if $self->{"Verbose"};
+	# You really need an argument otherwise you'll be burning
+	# CPU.
+	$self->loop_once(10);
+    }
 }
 
 1;
