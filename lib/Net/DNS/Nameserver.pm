@@ -15,11 +15,11 @@ use vars qw($VERSION
  	    @DEFAULT_ADDR       
  	    $DEFAULT_PORT
  	    );
-use constant {
-	STATE_ACCEPTED	=> 1,
-	STATE_GOT_LENGTH=> 2,
-	STATE_SENDING	=> 3
-    };
+
+use constant	STATE_ACCEPTED => 1;
+use constant	STATE_GOT_LENGTH => 2;
+use constant	STATE_SENDING => 3;
+
 
 $VERSION = (qw$LastChangedRevision$)[1];
 

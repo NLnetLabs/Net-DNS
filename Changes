@@ -1,8 +1,19 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+
+
 *** 0.53_03 Not Released yet.
 
+Fix rt.cpan.org 15119
+
+  main_loop() consumed 100% of memory, because of a bug that
+  couced loop_once() to loop ad infinitum.
+
+Fix rt.cpan.org 15299
+
+  Defining multiple constants with 'use constant { BLA => 1, FOO =>2 };
+  is a backwards incompatible feature. Thanks to "iwhite".
 
 *** 0.53_02 Oct 18, 2005
 
