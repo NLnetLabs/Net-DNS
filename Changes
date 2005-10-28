@@ -13,7 +13,8 @@ Fix rt.cpan.org 15119
 Fix rt.cpan.org 15299
 
   Defining multiple constants with 'use constant { BLA => 1, FOO =>2 };
-  is a backwards incompatible feature. Thanks to "iwhite".
+  is a backwards incompatible feature. Thanks to Ian White for spotting and
+  fixing this.
 
 *** 0.53_02 Oct 18, 2005
 
