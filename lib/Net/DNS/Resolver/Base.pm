@@ -1451,7 +1451,6 @@ sub dnssec {
     }
     
     Carp::carp ("You called the Net::DNS::Resolver::dnssec() method but do not have Net::DNS::SEC installed") if $self->{"dnssec"} && ! $Net::DNS::DNSSEC;
-    
     return $self->{"dnssec"};
 };
 

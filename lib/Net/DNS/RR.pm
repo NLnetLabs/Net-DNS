@@ -663,7 +663,7 @@ sub _canonicaldata {
 	    my @dname=Net::DNS::name2labels($name);
 	    for (my $i=0;$i<@dname;$i++){
 		$data .= pack ('C',length $dname[$i] );
-		$data .= $dname[$i] ;
+		$data .= lc($dname[$i] );
 	    }
 	    $data .= pack ('C','0');
 	}

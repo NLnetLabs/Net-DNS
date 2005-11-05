@@ -16,7 +16,7 @@
 
 use Test::More;
 use strict;
-
+use Net::DNS::Nameserver;
 
 use vars qw(
 	    @Addresses
@@ -86,10 +86,6 @@ BEGIN {
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
        exit;
    }
-
-
-
-
 
 }	
 
@@ -169,7 +165,5 @@ is( $resolver->errorstring,"NOERROR","TCP request returned without Errors");
 is(($ans->answer)[0]->type,"TXT","TXT type returned");
 
 $test_nameservers->medea();
-
-
 
 
