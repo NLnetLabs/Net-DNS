@@ -601,7 +601,10 @@ Start accepting queries. Calling main_loop never returns.
 # running through a loop (while servicing new requests) until the reply
 # has been sent.
 # 
-
+# In case loop_once accepted a TCP connection it will immediatly check
+# if there is data to read from the socket. If not it will return and
+# you will have to call loop_once() again to check if there is any
+# data waiting on the socket to be processed.
 
 =head1 EXAMPLE
 
@@ -621,12 +624,15 @@ additional filtering on its basis may be applied.
 	 my ($qname, $qclass, $qtype, $peerhost) = @_;
 	 my ($rcode, @ans, @auth, @add);
 	 
-	 if ($qtype eq "A") {
+	 if ($qtype eq "A" && qname eq "foo.example.com" ) {
 		 my ($ttl, $rdata) = (3600, "10.1.2.3");
 		 push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
 		 $rcode = "NOERROR";
-	 } else {
-         $rcode = "NXDOMAIN";
+	 }elsif( qname eq "foo.example.com" ) {
+		 $rcode = "NOERROR";
+
+	 }else{
+  	          $rcode = "NXDOMAIN";
 	 }
 	 
 	 # mark the answer as authoritive (by setting the 'aa' flag
@@ -638,7 +644,7 @@ additional filtering on its basis may be applied.
      ReplyHandler => \&reply_handler,
      Verbose      => 1,
  ) || die "couldn't create nameserver object\n";
- 
+
  $ns->main_loop;
 
 =head1 BUGS
