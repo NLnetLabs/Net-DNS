@@ -1033,7 +1033,6 @@ sub bgsend {
 	# If getaddrinfo is not avialable (Socket6 failed to load) we revert
 	# to the 'classic mechanism
 	if ($has_inet6  && ! $self->force_v4()){ 
-
 	    my ( $socktype_tmp, $proto_tmp, $canonname_tmp);
 
 	    no strict 'subs';   # Because of the eval statement in the BEGIN
