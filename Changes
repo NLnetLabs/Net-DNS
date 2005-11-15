@@ -5,6 +5,16 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.53_03 Not Released yet.
 
+
+Fix rt.cpan.org 11931
+
+  Using Net-DNS 0.53 on Win XP, it is unable to retrieve the
+  nameservers when the IP address of the interface is assigned by
+  DHCP.  This is due to the DHCP assigned IP address being stored in
+  DhcpIPAddress rather than IPAddress (which is then 0.0.0.0).  Adding
+  a check of DhcpIPAddress existance and not being 0.0.0.0 fixes the
+  problem.  Applied the patch submitted by "orjan". 
+
 Fix rt.cpan.org 15119
 
   main_loop() consumed 100% of memory, because of a bug that

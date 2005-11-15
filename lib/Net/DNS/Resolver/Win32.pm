@@ -93,19 +93,22 @@ sub init {
 	    foreach my $iface (@ifacelist) {
 		my $regiface;
 		$interfaces->Open($iface, $regiface);
+		
 		if ($regiface) {
 		    my $ns;
 		    my $type;
 		    my $ip;
+		    my $ipdhcp;
 		    $regiface->QueryValueEx("IPAddress", $type, $ip);
-		    if ($ip && !($ip =~ /0\.0\.0\.0/)) {
+		    $regiface->QueryValueEx("DhcpIPAddress", $type, $ipdhcp);
+		    if (($ip && !($ip =~ /0\.0\.0\.0/)) || ($ipdhcp && !($ipdhcp =~ /0\.0
+\.0\.0/))) {
 			# NameServer overrides DhcpNameServer if both exist
 			$regiface->QueryValueEx("NameServer", $type, $ns);
 			$regiface->QueryValueEx("DhcpNameServer", $type, $ns) unless $ns;
 			$nameservers .= " $ns" if $ns;
 		    }
 		}
-		
 	    }
 	}
 	if (!$nameservers) {
