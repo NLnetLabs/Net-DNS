@@ -74,6 +74,42 @@
 	</add>
     </qtype>
     </qname>
+
+
+
+    <qname name="deeprecursion.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  zone   30 IN NS ns2.registry.zone
+	</aut>
+	<aut>
+	  zone   30 IN NS ns3.registry.zone
+	</aut>
+	<aut>
+	  zone   30 IN NS ns4.registry.zone
+	</aut>
+
+	<add>	
+	  ns2.registry.zone 30 IN A 127.53.53.2
+	</add>
+	<add>
+	  ns3.registry.zone 30 IN A 127.53.53.3
+	</add>
+	<add>
+	  ns4.registry.zone 30 IN A 127.53.53.4
+	</add>
+    </qtype>
+    </qname>
+
+
+
+
+
   </server>
   
   
@@ -133,6 +169,34 @@
     </qtype>
     </qname>
 
+
+
+    <qname name="deeprecursion.test.zone">
+      <qtype type="A" delay="0">
+	<header> <rcode value="NOERROR"/> <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+    </qtype>
+    </qname>
   </server>
 
   <server ip="127.53.53.3" port="53452">
@@ -181,6 +245,36 @@
     </qtype>
     </qname>
 
+    <qname name="deeprecursion.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+    </qtype>
+    </qname>
+
+
 
    </server>
 
@@ -228,6 +322,37 @@
     </qtype>
     </qname>
 
+    <qname name="deeprecursion.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+    </qtype>
+    </qname>
+
+
+
    </server>
 
 
@@ -245,7 +370,41 @@
       </qtype>
     </qname>
 
+
+
+    <qname name="deeprecursion.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+	</qtype>
+    </qname>
+
    </server>
+
+
+
 
 
 
@@ -257,11 +416,47 @@
 	  <aa value="0"/>
 	  <ra value="0"/>
 	</header>
+
+
 	<ans>
 	  lame.test.zone 30 IN A 127.0.0.1
 	</ans>
       </qtype>
     </qname>
+
+    <qname name="deeprecursion.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+
+
+      </qtype>
+    </qname>
+
+
    </server>
 
 
@@ -278,6 +473,39 @@
 	</ans>
       </qtype>
     </qname>
+
+    <qname name="deeprecursion.test.zone">
+      <qtype type="A" delay="0">
+	<header> 
+	  <rcode value="NOERROR"/> 
+	  <aa value="0"/>
+	  <ra value="0"/>
+	</header>
+
+	<aut>
+	  test.zone   30 IN NS ns5.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns6.test.zone
+	</aut>
+	<aut>
+	  test.zone   30 IN NS ns7.test.zone
+	</aut>
+
+	<add>	
+	  ns5.test.zone 30 IN A 127.53.53.5
+	</add>
+	<add>
+	  ns6.test.zone 30 IN A 127.53.53.6
+	</add>
+	<add>
+	  ns7.test.zone 30 IN A 127.53.53.7
+	</add>
+
+      </qtype>
+    </qname>
+
+
    </server>
 
 

@@ -142,13 +142,16 @@ while ($i<$lameloop){
 
 
 
+$packet = $res->query_dorecursion("deeprecursion.test.zone","A");
+exit;
+
 $resolver->nameserver( qw( 127.53.53.1 ) );
 $resolver->tcp_timeout($tcptimeout);
 $resolver->axfr('example.com');
 is( $resolver->errorstring,"timeout", "AXFR timed out");
 
 
-$resolver->nameserver( qw( 127.53.53.2 ) );
+$Resolver->nameserver( qw( 127.53.53.2 ) );
 $resolver->tcp_timeout($tcptimeout);
 $resolver->axfr('example.com');
 is( $resolver->errorstring,"Response code from server: REFUSED", "Got Refused");

@@ -6,6 +6,8 @@ Revision history for Net::DNS                                     -*-text-*-
 *** 0.53_03 Not Released yet.
 
 
+
+
 Fix rt.cpan.org 11931
 
   Using Net-DNS 0.53 on Win XP, it is unable to retrieve the

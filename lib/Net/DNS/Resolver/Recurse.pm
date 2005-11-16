@@ -133,9 +133,13 @@ sub _dorecursion {
   my $depth = shift;
   my $cache = $self->{'authority_cache'};
 
-  print ";; _dorecursion() depth=[$depth] known_zone=[$known_zone]\n" if $self->{'debug'};
-  die "Recursion too deep, aborting..." if $depth > 255;
-
+  # die "Recursion too deep, aborting..." if $depth > 255;
+  if ( $depth > 255 ) {
+      print ";; _dorecursion() Recursion too deep, aborting...\n" if
+	  $self->{'debug'};
+      $self->errorstring="Recursion to deep, abborted";
+      return undef;
+  }
   
   $known_zone =~ s/\.*$/./;
 
