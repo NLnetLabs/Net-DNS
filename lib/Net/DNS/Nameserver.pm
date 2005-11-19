@@ -19,7 +19,7 @@ use vars qw($VERSION
 use constant	STATE_ACCEPTED => 1;
 use constant	STATE_GOT_LENGTH => 2;
 use constant	STATE_SENDING => 3;
-
+use Net::IP qw(ip_is_ipv4 ip_is_ipv6 ip_normalize); 
 
 $VERSION = (qw$LastChangedRevision$)[1];
 
@@ -90,11 +90,12 @@ sub new {
 
 	    # If not, it will do DNS lookups trying to resolve it as a hostname
 	    # We could also just set it to undef?
-	    $addr = inet_ntoa($addr) unless $addr =~ /^[\w\.\-]+$/;
+
+	    $addr = inet_ntoa($addr) unless (ip_is_ipv4($addr) || ip_is_ipv6($addr));
 
 	    # Pretty IP-addresses, if they are otherwise binary.
 	    my $addrname = $addr;
-	    $addrname = inet_ntoa($addrname) unless $addrname =~ /^[\w\.\-]+$/;
+	    $addrname = inet_ntoa($addrname) unless $addrname =~ /^[\w\.:\-]+$/;
 
  	    print "Setting up listening sockets for $addrname...\n" if $self{"Verbose"};
 

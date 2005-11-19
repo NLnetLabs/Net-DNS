@@ -6,7 +6,9 @@ Revision history for Net::DNS                                     -*-text-*-
 *** 0.53_03 Not Released yet.
 
 
+Fix rt.cpan.org 15947
 
+  Failure to bind a nameserver when specifying an IPv6 address.
 
 Fix rt.cpan.org 11931
 
