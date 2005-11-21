@@ -128,7 +128,7 @@ show only the creation of the update packet.
 
     my $update = Net::DNS::Update->new('example.com');
     $update->push(pre    => nxdomain('info.example.com'));
-    $update->push(update => rr_add('info.example.com TXT 'yabba dabba doo''));
+    $update->push(update => rr_add('info.example.com TXT "yabba dabba doo"'));
 
 =head2 Delete all A records for a name
 

@@ -186,7 +186,7 @@ sub build_regex {
  $a     = Net::DNS::RR->new("foo.example.com. 86400 A 10.1.2.3");
  $mx    = Net::DNS::RR->new("example.com. 7200 MX 10 mailhost.example.com.");
  $cname = Net::DNS::RR->new("www.example.com 300 IN CNAME www1.example.com");
- $txt   = Net::DNS::RR->new("baz.example.com 3600 HS TXT 'text record'");
+ $txt   = Net::DNS::RR->new('baz.example.com 3600 HS TXT "text record"');
 
 Returns a C<Net::DNS::RR> object of the appropriate type and
 initialized from the string passed by the user.  The format of the
