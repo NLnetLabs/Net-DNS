@@ -89,23 +89,6 @@ For IPv6 support you will need Socket6 and IO::Socket::INET6. The availability
 of these is tested at runtime.
 
 
-Net::DNS has been tested with the following:
-
-    Perl 5.8.2
-
-    Version of Socket distributed with Perl 5.8.2
-    Version of IO::Socket distributed with Perl 5.8.2
-    Version of IO::Select distributed with Perl 5.8.2
-    Version of FileHandle distributed with Perl 5.8.2
-
-	Perl 5.6.1
-	
-    Version of Socket distributed with Perl 5.6.1
-    Version of IO::Socket distributed with Perl 5.6.1
-    Version of IO::Select distributed with Perl 5.6.1
-    Version of FileHandle distributed with Perl 5.6.1
-
-
 You can obtain the latest version of Perl from:
 
     http://www.cpan.org/src/
@@ -183,12 +166,13 @@ for more information and examples, please see the Net::DNS::Update
 manual page.
 
 Please note that there are some bugs in the BIND 8.1-REL nameserver
-that can cause it to dump core when receiving certain dynamic
-updates, so if you have problems using Net::DNS that might be the
-cause.  If you're running BIND 9, you should be using the latest
-version available from the Internet Software Consortium (ISC,
-www.isc.org) or from your OS vendor.  As of this writing, the latest
-production version of BIND 9 available from the ISC is 9.2.3.
+that can cause it to dump core when receiving certain dynamic updates,
+so if you have problems using Net::DNS that might be the cause.  If
+you're running BIND 9, you should be using the latest version
+available from the Internet Software Consortium (ISC, www.isc.org) or
+from your OS vendor.  As of this writing, the latest production
+version of BIND 9 available from the ISC is 9.3.1. (with 9.3.2 at the
+horizon)
 
 Here's a summary of the update semantics for those interested (see
 RFC 2136 for details):
@@ -291,8 +275,8 @@ it and/or modify it under the same terms as Perl itself.
 12. AUTHOR INFORMATION
 ----------------------
 
-Net::DNS is currently maintained by:
-        Olaf Kolkman
+Net::DNS is currently maintained at NLnet Labs (www.nlnetlabs.nl) by:
+        Olaf Kolkman and his team.
 	olaf at net-dns.org
 
 Between 2002 and 2004 Net::DNS was maintained by:
@@ -342,10 +326,11 @@ and not a conscious act of omission.
 
 Thanks to Larry Wall and all who have made Perl possible.
 
-Thanks to Paul Albitz and Cricket Liu for allowing me to write the
-Net::DNS section in the programming chapter of _DNS and BIND_, 3rd
-Edition.  This chapter in earlier editions was very helpful while
-I was developing Net::DNS, and I was proud to contribute to it.
+Thanks to Paul Albitz and Cricket Liu for allowing me [OK: that's
+Mike] to write the Net::DNS section in the programming chapter of _DNS
+and BIND_, 3rd Edition.  This chapter in earlier editions was very
+helpful while I was developing Net::DNS, and I was proud to contribute
+to it.
 
 Thanks to Paul Vixie and all who have worked on the BIND nameserver,
 which I've used exclusively while developing Net::DNS.
@@ -353,7 +338,8 @@ which I've used exclusively while developing Net::DNS.
 Thanks to Andreas Gustafsson for DNAME support, and for all the work
 he has done on BIND 9.
 
-Olaf thanks the RIPE NCC for their support for maintaining Net::DNS.
+Olaf acknowledges the RIPE NCC for allowing Net::DNS maintenance to
+take place as part of 'the job'.
 
 Thanks to the team that maintains ethereal, without its marvelous
 interface debuging of bugs in wireformat would be so much more

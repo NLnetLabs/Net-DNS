@@ -2,8 +2,7 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 
 
-
-*** 0.53_03 Not Released yet.
+*** 0.54 December 7, 2005
 
 
 Fix rt.cpan.org 15947

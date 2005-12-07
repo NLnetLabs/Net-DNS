@@ -1,7 +1,10 @@
 To Do list for Net::DNS
 =======================
 
-( While taking over Net::DNS maintenance I've also inhereted this TODO list.
+
+
+(
+  While taking over Net::DNS maintenance I've also inhereted this TODO list.
   I have not yet "updated" the TODO list to reflect my feeling of priority 
   with these items. 
 
@@ -97,7 +100,6 @@ To Do list for Net::DNS
 
 * Consider rewriting the packet-parsing code in C for increased speed,
   or possibly going back to using Dave Shield's resparse library.
-
 
 * And a number of things listed on the request tracker rt.cpan.org.
 

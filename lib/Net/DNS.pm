@@ -41,7 +41,7 @@ BEGIN {
     @ISA     = qw(Exporter DynaLoader);
 
     
-    $VERSION = '0.53_03';
+    $VERSION = '0.54';
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 
@@ -833,17 +833,16 @@ the source distribution.
 =head1 COPYRIGHT
 
 Copyright (c) 1997-2002 Michael Fuhr. 
-
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
-
 Portions Copyright (c) 2005 Olaf Kolkman (RIPE NCC)
+Portions Copyright (c) 2006 Olaf Kolkman (NLnet Labs)
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
 
 =head1 AUTHOR INFORMATION
 
-Net::DNS is currently maintained by:
+Net::DNS is currently maintained at NLnet Labs (www.nlnetlabs.nl) by:
         Olaf Kolkman
 	olaf@net-dns.org
 
