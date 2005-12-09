@@ -2,6 +2,13 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 
 
+**** Unreleased
+
+Fix rt.cpan.org 16392
+
+   TCP Sockets stayed open even if not requested
+
+
 *** 0.54 December 7, 2005
 
 

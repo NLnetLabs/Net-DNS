@@ -622,8 +622,9 @@ sub send_tcp {
 			"failed: $!\n" if $self->{'debug'};
 			next;
 		    }
-
-			$self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock;
+		    
+		    $self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock if 
+			$self->persistent_tcp;
 		}
 
 		my $lenmsg = pack('n', length($packet_data));
@@ -1300,7 +1301,8 @@ sub axfr_start {
 		return;
 	    }
 	    
-	    $self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock;
+	    $self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock 
+		if $self->persistent_tcp;
 	}
 
 
