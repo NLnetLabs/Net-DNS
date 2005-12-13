@@ -1,4 +1,4 @@
-# $Id: 11-escapedchars.t 319 2005-05-30 17:12:09Z olaf $		 -*-perl-*-
+# $Id$		 -*-perl-*-
 
 #
 #  These tests are called only if Net::DNS::TestNS is available

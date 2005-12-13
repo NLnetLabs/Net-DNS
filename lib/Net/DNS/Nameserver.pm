@@ -377,6 +377,13 @@ sub udp_connection {
 	print "done\n" if $self->{"Verbose"};
 }
 
+
+sub get_open_tcp {
+    my $self=shift;
+    return keys %{$self->{"_tcp"}};
+}
+
+
 #------------------------------------------------------------------------------
 # loop_once - Just check "once" on sockets already set up
 #------------------------------------------------------------------------------
@@ -584,28 +591,44 @@ Start accepting queries. Calling main_loop never returns.
 #
 #  The functionality might change. Left "undocumented" for now.
 #
-#=head2 loop_once
-#
-#	$ns->loop_once( [TIMEOUT_IN_SECONDS] );
-#
-# Start accepting queries, but returns. If called without a parameter,
-# the call will not return until a request has been received (and
-# replied to). If called with a number, that number specifies how many
-# seconds (even fractional) to maximum wait before returning. If called
-# with 0 it will return immediately unless there's something to do.
-# 
-# Handling a request and replying obviously depends on the speed of
-# ReplyHandler. Assuming ReplyHandler is super fast, loop_once should spend
-# just a fraction of a second, if called with a timeout value of 0 seconds.
-# One exception is when an AXFR has requested a huge amount of data that
-# the OS is not ready to receive in full. In that case, it will keep
-# running through a loop (while servicing new requests) until the reply
-# has been sent.
-# 
-# In case loop_once accepted a TCP connection it will immediatly check
-# if there is data to read from the socket. If not it will return and
-# you will have to call loop_once() again to check if there is any
-# data waiting on the socket to be processed.
+=head2 loop_once
+
+	$ns->loop_once( [TIMEOUT_IN_SECONDS] );
+
+Start accepting queries, but returns. If called without a parameter,
+the call will not return until a request has been received (and
+replied to). If called with a number, that number specifies how many
+seconds (even fractional) to maximum wait before returning. If called
+with 0 it will return immediately unless there's something to do.
+
+Handling a request and replying obviously depends on the speed of
+ReplyHandler. Assuming ReplyHandler is super fast, loop_once should spend
+just a fraction of a second, if called with a timeout value of 0 seconds.
+One exception is when an AXFR has requested a huge amount of data that
+the OS is not ready to receive in full. In that case, it will keep
+running through a loop (while servicing new requests) until the reply
+has been sent.
+
+In case loop_once accepted a TCP connection it will immediatly check
+if there is data to be read from the socket. If not it will return and
+you will have to call loop_once() again to check if there is any data
+waiting on the socket to be processed. In most cases you will have to
+count on calling "loop_once" twice.
+
+A code fragment like:
+	$ns->loop_once(10);
+        while( $ns->get_open_tcp() ){
+	      $ns->loop_once(0);
+	}
+
+Would wait for 10 seconds for the initial connection and would then
+process all TCP sockets until none is left. 
+
+=head2 get_open_tcp
+
+In scalar context returns the number of TCP connections for which state
+is maintained. In array context it returns IO::Socket objects, these could
+be useful for troubleshooting but be careful using them.
 
 =head1 EXAMPLE
 

@@ -1,5 +1,5 @@
 
-# $Id: 11-escapedchars.t 319 2005-05-30 17:12:09Z olaf $		 -*-perl-*-
+# $Id$		 -*-perl-*-
 
 
 
@@ -12,13 +12,16 @@
 
 
 
+# Tests bgquery and TCP socket states...
+# This code is not supposed to be included into the distribution.
+
 
 use Test::More;
 use Net::DNS::Nameserver;
 use Net::DNS::Resolver;
 use strict;
-
-plan tests => 1;
+use Data::Dumper;
+plan tests => 15;
 
 use vars qw(
 	    @Addresses
@@ -45,6 +48,7 @@ BEGIN {
 		     127.53.53.9
 		     127.53.53.10
 		     127.53.53.11
+		     127.53.53.12
 		     );
     
     if(
@@ -78,15 +82,23 @@ BEGIN {
     
 }
 
-my $nameserver=Net::DNS::Nameserver->new(
-    LocalAddr        => "127.53.53.11",
-    LocalPort        => $TestPort,
-    ReplyHandler => \&reply_handler,
-    Verbose          => 0,
-    );
+my @nameserver;
+my $i=0;
+
+foreach my $address (@Addresses){    
+    $nameserver[$i]=Net::DNS::Nameserver->new(
+	LocalAddr        => $address,
+	LocalPort        => $TestPort,
+	ReplyHandler => \&reply_handler,
+	Verbose          => 0,
+	);
+    $i++;
+}
+
+
 
 my $resolver=Net::DNS::Resolver->new(
-    nameservers => ["127.53.53.11"],
+    nameservers => ["127.53.53.1"],
     port       => $TestPort,
     debug    => 0,
     );
@@ -95,53 +107,80 @@ my $resolver=Net::DNS::Resolver->new(
 
 sub reply_handler {
     my ($qname, $qclass, $qtype, $peerhost) = @_;
-    print "QNAME: $qname QTYPE: $qtype\n";
+#    print "QNAME: $qname QTYPE: $qtype\n";
     # mark the answer as authoritive (by setting the 'aa' flag
     return ("SERVFAIL");
 }
 
 
-	
-my $pid;
 
- FORK: {
-     no strict 'subs';  # EAGAIN
-     if ($pid=fork) {# assign result of fork to $pid,
-	 # see if it is non-zero.
-	 # Parent process here
-	 # Child pid is in $pid
-	 my $socket=$resolver->bgsend("example.com") || die " $resolver->errorstring";
-	 until ($resolver->bgisready($socket)) {
-	     # do some other processing
-	 }
-	 my $packet = $resolver->bgread($socket);	 
-	 $socket = undef;
-	 is($packet->header->rcode,"SERVFAIL","Servail returned");
-     } elsif (defined($pid)) {
-	 # Child process here
-	 #parent process pid is available with getppid
-	 # exec will transfer control to the child process,
-	 #Verbose level is set during construction.. The verbose method
-	 # may have been called afterward.
-	 $nameserver->loop_once(10);
-     } elsif ($! == EAGAIN) {
-	 # EAGAIN is the supposedly recoverable fork error
-	 sleep 5;
-	 redo FORK;
-     }else {
-	 #weird fork error
-	 die "Can't fork: $!\n";
-     }
+#
+# For each nameserver fork-off seperate process
+#
+#
+	
+my @pid;
+my $j=0;
+while ($j<@Addresses){
+  FORK: {
+      no strict 'subs';  # EAGAIN
+      if ($pid[$j]=fork) {# assign result of fork to $pid,
+	  # Parent process here
+	  
+      } elsif (defined($pid[$j])) {
+	  # Child process here
+	  #parent process pid is available with getppid
+	  # exec will transfer control to the child process,
+	  #Verbose level is set during construction.. The verbose method
+	  # may have been called afterward.
+	  $nameserver[$j]->loop_once(60);
+	  while( $nameserver[$j]->get_open_tcp() ){
+	      $nameserver[$j]->loop_once(1);
+	  }
+	  exit();
+      } elsif ($! == EAGAIN) {
+	  # EAGAIN is the supposedly recoverable fork error
+	  sleep 5;
+	  redo FORK;
+      }else {
+	  #weird fork error
+	  die "Can't fork: $!\n";
+      }
+    }
+    $j++;
 }
 
-kill $pid;
+is( @pid, @Addresses,"Sufficient forks");
 
 
+$j=0;
+foreach my $address (@Addresses){
+    $resolver->nameservers($address);
+    $resolver->usevc(1) if ($j>6);
+    $resolver->persistent_tcp(1) if ($j>7);
+    $resolver->persistent_udp(1) if ($j>3);
+    $j++;
+
+    if ($j%2){
+	my $socket=$resolver->bgsend("example.com") || die $resolver->errorstring;
+	until ($resolver->bgisready($socket)) {
+	    sleep(1);
+	    # do some other processing
+	}
+	my $packet = $resolver->bgread($socket);	 
+	$socket = undef;
+	is($packet->header->rcode,"SERVFAIL","Servail returned from $address");
+    }else{
+	my $packet = $resolver->send("example.com") || die  $resolver->errorstring;
+	is($packet->header->rcode,"SERVFAIL","Servail returned from $address");
+
+    }
+}
 
 
+use IO::Socket;
 
-
-
-
+is(keys %{$resolver->{'sockets'}[AF_UNSPEC]},2,"propper amount of persistent TCP");
+is(keys %{$resolver->{'sockets'}[AF_INET]},1,"propper amount of persistent UDP");
 
 
