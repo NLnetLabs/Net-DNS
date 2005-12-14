@@ -5,7 +5,7 @@ use strict;
 
 use vars qw( $HAS_DNSSEC );
 
-my $keypathrsa="Kexample.com.+001+11567.private";
+my $keypathrsa="Kexample.com.+005+24866.private";
 my $rsakeyrr;
 
 BEGIN {
@@ -28,15 +28,15 @@ if ($HAS_DNSSEC){  # Create key material
     diag "The suite will run additonal DNSSEC tests";
     my $privrsakey= << 'ENDRSA' ;
 Private-key-format: v1.2
-Algorithm: 1 (RSA)
-Modulus: 6ASwF3rSBFnBBQ7PmdWJnNkT2XkbZP5Be28SyTohsnuT1Rw7OlbNVNiT+4S04JUS0itVbvgtYmDZGMU3nfZP+er20uJRo/mu6hSkJW3MX5ES8o/GnOST1zSCH1+aA1Y6AlhfLebC+ysVKftLYnEco6oHNioYOmYHozYr5d0tL/s=
+Algorithm: 5 (RSASHA1)
+Modulus: osG7zULAQoU3HxVnQl0dj8pLCcxA4ZQk9lgSzd+Q5GvhQYPS4vtnBRvwQDPTckfINqHYbxLQBZGYyl3n0ZQ0W5GDUlnDkeKk+2fe0UIbArY+xkODYGBmv6VGDk1K0kc7mH6cYHUciEtPMdyzYa9hIPfPDp2IE0+BRpr3hPkRnLE=
 PublicExponent: Aw==
-PrivateExponent: mq3KulHhWDvWA181ETkGaJC35lC87f7WUkoMhibBIae342gnfDneOJBip63N6w4MjBzjn1AeQZXmEIN6aU7f+q0Fwsyl4FzrSa8ehjfTS4u4YZE/Zk9rv0VIZuYwyccgLEBLYNBYRLbkbuSqDspw+Th8dCGy7XZ06eRkGZSNMjs=
-Prime1: 9Fssra0OAl4kNX105Xdrnb7kS+/6QgWeJeBJCuajjWQ0uRiEClDzjVVVr6BW2DixP+6RCbSDioSIqsNc546UtQ==
-Prime2: 8xMCAavFa+/XWHjnNJgCob976feJK2yaJrU7+2oxHiWLPtWYo+2gi2kt9Kv1aTp8lV327ddSqdO7tNJilsrP7w==
-Exponent1: oudzHnNerD7CzlOjQ6TyaSnth/VRgVkUGUAwse8Xs5gjJhBYBuCiXjjjymrkkCXLf/RgsSMCXFhbHII977RjIw==
-Exponent2: ogysAR0uR/U6OvtEzbqsa9T9RqUGHPMRbyN9UkbLaW5c1I5lwp5rB5tz+HKjm3xTDj6kno+McTfSeIxBudyKnw==
-Coefficient: Cxwv14w+KY7rmiO4U0giXqOij9gON7TiByj5dQjHGUQdaQEJ0zK2SlxouEfgi3hcxTGI753pFmW0cF/MDjFURw==
+PrivateExponent: bIEn3iyALFjPag5E1ui+X9wyBogrQQ1t+ZAMiT+17Z1A1lfh7KeaA2f1gCKM9tqFecE69Lc1WQu7MZPv4Q14O/uDO/th5aF6oUL6kYYiSkbmxZ138w6g/PRh+Y/F135Hz8nVyTLrbmo+l5tjiaN5LOgUjvYYwSR3k1FFhgW3zks=
+Prime1: zF8a/5xhYpBZH7uVB0xxuo7FbepslQnCSudXRd+1KFmpJ6z4XSDEJVl/XngaVw4j4IvHL9FpjF8JkH1PUn2c7Q==
+Prime2: y99dYRRYDdywY6th8ZshkVXYaWUHNWuB68vAr8JZ4XY3qC66S5qehpfPFSX44x05uyRw/JGIDG7gEJHsngBKVQ==
+Exponent1: iD9nVRLrlwrmFSe4r4hL0bSDnpxIY1vW3Jo6LpUjcDvGGnNQPhXYGOZU6aVm5LQX6wfaH+DxCD9btajfjFO98w==
+Exponent2: h+o+QLg6s+h1l8eWoRIWYOPlm5ivePJWnTKAdSw766QlGsnRh7xprw/fY26l7L4mfML1/bZasvSVYGFIaVWG4w==
+Coefficient: BV4xfdcDiyLKBr6647EUocgAziN3qfVsfJc0DdJjYW3VnuECVvNo8Q2ehAYTAwdzNRjBhwB7ZV3Mi6+S8OXFTQ==
 ENDRSA
 
 
@@ -44,7 +44,8 @@ open (RSA,">$keypathrsa") or die "Could not open $keypathrsa";
     print RSA $privrsakey;
     close(RSA);
         
- $rsakeyrr=new Net::DNS::RR ("example.com. IN KEY 256 3 1 AQPoBLAXetIEWcEFDs+Z1Ymc2RPZeRtk/kF7bxLJOiGye5PVHDs6Vs1U 2JP7hLTglRLSK1Vu+C1iYNkYxTed9k/56vbS4lGj+a7qFKQlbcxfkRLy j8ac5JPXNIIfX5oDVjoCWF8t5sL7KxUp+0ticRyjqgc2Khg6ZgejNivl 3S0v+w==
+ $rsakeyrr=new Net::DNS::RR ("example.com. IN DNSKEY 256 3 5 AQOiwbvNQsBChTcfFWdCXR2PyksJzEDhlCT2WBLN35Dka+FBg9Li+2cF G/BAM9NyR8g2odhvEtAFkZjKXefRlDRbkYNSWcOR4qT7Z97RQhsCtj7G Q4NgYGa/pUYOTUrSRzuYfpxgdRyIS08x3LNhr2Eg988OnYgTT4FGmveE +RGcsQ==
+
 ");
     
     
