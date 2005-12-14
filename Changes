@@ -9,11 +9,32 @@ Fix TCP fallback after V6 socket failure
    Reworked Net::DNS::Base::Nameserver::send_tcp() to fallback to IPv4 when 
    possible. (change applied to SVN Revision 538).
 
+
+Feature Cleanup duplicated code
+
+   axfr_send() and send_tcp() contained some duplicated code. I merged
+   this in one "helper" method _create_tcp_socket()
+
+
+
 Fix AXFR persistent sockets coliding with query sockets.
 
-   I think that using the same persistent sockets for AXFR and 'ordinary' queries
-   could lead to race conditions. Better safe than sorry. For axfrs we create
-   a different set of persitent sockets.
+   I think that using the same persistent sockets for AXFR and
+   'ordinary' queries could lead to race conditions. Better safe than
+   sorry. For axfrs we create a different set of persitent sockets.
+
+   Note that this prevents performing a SOA query first and then using
+   the same socket for the zone transfer itself(in Net::DNS these are
+   different code paths). This behavior 00 SOA and transfer on the
+   same socket-- seems to be suggested by 1035 section 4.2.2:
+
+     "In particular, the server should allow the SOA and AXFR request
+     sequence (which begins a refresh operation) to be made on a
+     single connection."
+
+   Obviously, on the client side this behavior is not mandatory.
+
+
 
 
 

@@ -551,6 +551,10 @@ sub send_tcp {
 	my ($self, $packet, $packet_data) = @_;
 	my $lastanswer;
 	
+	my $srcport = $self->{'srcport'};
+	my $srcaddr = $self->{'srcaddr'};
+	my $dstport = $self->{'port'};
+
 	unless ( $self->nameservers()) {
 		$self->errorstring('no nameservers');
 		print ";; ERROR: send_tcp: no nameservers\n" if $self->{'debug'};
@@ -558,12 +562,9 @@ sub send_tcp {
 	}
 	
 	$self->_reset_errorstring;
-	my $timeout = $self->{'tcp_timeout'};
+
 	
       NAMESERVER: foreach my $ns ($self->nameservers()) {
-	      my $srcport = $self->{'srcport'};
-	      my $srcaddr = $self->{'srcaddr'};
-	      my $dstport = $self->{'port'};
 	      
 	      print ";; attempt to send_tcp($ns:$dstport) (src port = $srcport)\n"
 		  if $self->{'debug'};
@@ -578,74 +579,8 @@ sub send_tcp {
 		      print ";; using persistent socket\n"
 			  if $self->{'debug'};
 	      } else {
-		      # IO::Socket carps on errors if Perl's -w flag is
-		      # turned on.  Uncomment the next two lines and the
-		      # line following the "new" call to turn off these
-		      # messages.
-		      
-		      #my $old_wflag = $^W;
-		      #$^W = 0;
-		      
-		      if ($has_inet6 && ! $self->force_v4() && ip_is_ipv6($ns) ){
-			      # XXX IO::Socket::INET6 fails in a cryptic way upon send()
-			      # on AIX5L if "0" is passed in as LocalAddr
-			      # $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
-			      
-			      my $srcaddr6 = $srcaddr eq '0.0.0.0' ? '::' : $srcaddr;
-			      
-			      $sock = 
-				  IO::Socket::INET6->new(
-					  PeerPort =>    $dstport,
-					  PeerAddr =>    $ns,
-					  LocalAddr => $srcaddr6,
-					  LocalPort => ($srcport || undef),
-					  Proto     => 'tcp',
-					  Timeout   => $timeout,
-				  );
-			      
-			      unless($sock){
-				      $self->errorstring('connection failed(IPv6 socket failure)');
-				      print ";; ERROR: send_tcp: IPv6 connection to $ns".
-					  "failed: $!\n" if $self->{'debug'};
-				      next NAMESERVER;
-			      }
-		      }
-		      
-		      # At this point we have sucessfully obtained an
-		      # INET6 socket to an IPv6 nameserver, or we are
-		      # running forced v4, or we do not have v6 at all.
-		      # Try v4.
-		      
-		      unless($sock){
-			      if (ip_is_ipv6($ns)){
-				      $self->errorstring(
-	  'connection failed (trying IPv6 nameserver without having IPv6)');
-				      print 
-           ';; ERROR: send_tcp: You are trying to connect to '.
-	   $ns . " but you do not have IPv6 available\n"
-	   if $self->{'debug'};
-				      next NAMESERVER;
-			      }		    
-			      
-
-			      $sock = IO::Socket::INET->new(
-				      PeerAddr  => $ns,
-				      PeerPort  => $dstport,
-				      LocalAddr => $srcaddr,
-				      LocalPort => ($srcport || undef),
-				      Proto     => 'tcp',
-				      Timeout   => $timeout
-				  )
-		      }
-		    
-		      #$^W = $old_wflag;
-		      
-		      unless ($sock) {
-			      $self->errorstring('connection failed');
-			      print ';; ERROR: send_tcp: connection ',
-			      "failed: $!\n" if $self->{'debug'};
-			      next NAMESERVER;
-		      }
+		      $sock= $self->_create_tcp_socket($ns);
+		      next NAMESERVER unless $sock;
 		      
 		      $self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock if 
 			  $self->persistent_tcp;
@@ -666,16 +601,16 @@ sub send_tcp {
 		      $self->errorstring($!);
 		      print ";; ERROR: send_tcp: data send failed: $!\n"
 			  if $self->{'debug'};
-		      next;
+		      next NAMESERVER;
 	      }
 	      
 	      my $sel = IO::Select->new($sock);
-
+	      my $timeout=$self->{'tcp_timeout'};
 	      if ($sel->can_read($timeout)) {
 		      my $buf = read_tcp($sock, Net::DNS::INT16SZ(), $self->{'debug'});
-		      next unless length($buf);
+		      next NAMESERVER unless length($buf); # Failure to get anything
 		      my ($len) = unpack('n', $buf);
-		      next unless $len;
+		      next NAMESERVER unless $len;         # Cannot determine size
 		      
 		      unless ($sel->can_read($timeout)) {
 			      $self->errorstring('timeout');
@@ -1254,6 +1189,7 @@ sub axfr_old {
 	croak "Use of Net::DNS::Resolver::axfr_old() is deprecated, use axfr() or axfr_start().";
 }
 
+
 sub axfr_start {
 	my $self = shift;
 	my ($dname, $class) = @_;
@@ -1299,74 +1235,12 @@ sub axfr_start {
 		print ";; using persistent socket\n"
 		    if $self->{'debug'};
 	} else {
-		# IO::Socket carps on errors if Perl's -w flag is
-		# turned on.  Uncomment the next two lines and the
-		# line following the "new" call to turn off these
-		# messages.
-		
-		#my $old_wflag = $^W;
-		#$^W = 0;
-		
-		if ($has_inet6 && ! $self->force_v4() && ip_is_ipv6($ns) ){
-			# XXX IO::Socket::INET6 fails in a cryptic way upon send()
-			# on AIX5L if "0" is passed in as LocalAddr
-			# $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
-			
-			my $srcaddr6 = $srcaddr eq '0.0.0.0' ? '::' : $srcaddr;
-			
-			$sock = 
-			    IO::Socket::INET6->new(
-				    PeerPort =>    $dstport,
-				    PeerAddr =>    $ns,
-				    LocalAddr => $srcaddr6,
-				    LocalPort => ($srcport || undef),
-				    Proto     => 'tcp',
-				    Timeout   => $timeout,
-			    );
-			
-			unless($sock){
-				$self->errorstring('axfr connection failed(IPv6 socket failure)');
-				print ";; ERROR: axfr_start: IPv6 connection to $ns".
-				    "failed: $!\n" if $self->{'debug'};
-				return;
-			}
-		}
-		
-		# At this point we have sucessfully obtained an
-		# INET6 socket to an IPv6 nameserver, or we are
-		# running forced v4, or we do not have v6 at all.
-		# Try v4.
-		
-		unless($sock){
-			if (ip_is_ipv6($ns)){
-				$self->errorstring(
-					'axfr connection failed (trying IPv6 nameserver without having IPv6)');
-				print 
-				    ';; ERROR: axfr_tcp: You are trying to connect to '.
-				    $ns . " but you do not have IPv6 available\n"
-				    if $self->{'debug'};
-				return;
-			}		    
-			
-			$sock = IO::Socket::INET->new(
-				PeerAddr  => $ns,
-				PeerPort  => $dstport,
-				LocalAddr => $srcaddr,
-				LocalPort => ($srcport || undef),
-				Proto     => 'tcp',
-				Timeout   => $timeout
-			    )
-		}
-		
-		#$^W = $old_wflag;
-		
-		unless ($sock) {
-			$self->errorstring('axfr connection failed');
-			print ';; ERROR: axfr_tcp: connection ',
-			"failed: $!\n" if $self->{'debug'};
-			return;
-		}
-		
+		$sock=$self->_create_tcp_socket($ns);
+
+		return unless ($sock);  # all error messages 
+		                        # are set by _create_tcp_socket
+
+
 		$self->{'axfr_sockets'}[AF_UNSPEC]{$sock_key} = $sock if 
 		    $self->persistent_tcp;
 	}
@@ -1585,6 +1459,89 @@ sub read_tcp {
 	return $buf;
 }
 
+
+
+sub _create_tcp_socket {
+	my $self=shift;
+	my $ns=shift;
+	my $sock;
+
+	my $srcport = $self->{'srcport'};
+	my $srcaddr = $self->{'srcaddr'};
+	my $dstport = $self->{'port'};
+
+	my $timeout = $self->{'tcp_timeout'};
+	# IO::Socket carps on errors if Perl's -w flag is
+	# turned on.  Uncomment the next two lines and the
+	# line following the "new" call to turn off these
+	# messages.
+	
+	#my $old_wflag = $^W;
+	#$^W = 0;
+	
+	if ($has_inet6 && ! $self->force_v4() && ip_is_ipv6($ns) ){
+		# XXX IO::Socket::INET6 fails in a cryptic way upon send()
+		# on AIX5L if "0" is passed in as LocalAddr
+		# $srcaddr="0" if $srcaddr eq "0.0.0.0";  # Otherwise the INET6 socket will just fail
+		
+		my $srcaddr6 = $srcaddr eq '0.0.0.0' ? '::' : $srcaddr;
+		
+		$sock = 
+		    IO::Socket::INET6->new(
+					   PeerPort =>    $dstport,
+					   PeerAddr =>    $ns,
+					   LocalAddr => $srcaddr6,
+					   LocalPort => ($srcport || undef),
+					   Proto     => 'tcp',
+					   Timeout   => $timeout,
+					   );
+		
+		unless($sock){
+			$self->errorstring('connection failed(IPv6 socket failure)');
+			print ";; ERROR: send_tcp: IPv6 connection to $ns".
+			    "failed: $!\n" if $self->{'debug'};
+			return();
+		}
+	}
+	
+	# At this point we have sucessfully obtained an
+	# INET6 socket to an IPv6 nameserver, or we are
+	# running forced v4, or we do not have v6 at all.
+	# Try v4.
+	
+	unless($sock){
+		if (ip_is_ipv6($ns)){
+			$self->errorstring(
+					   'connection failed (trying IPv6 nameserver without having IPv6)');
+			print 
+			    ';; ERROR: send_tcp: You are trying to connect to '.
+			    $ns . " but you do not have IPv6 available\n"
+			    if $self->{'debug'};
+			return();
+		}		    
+		
+		
+		$sock = IO::Socket::INET->new(
+					      PeerAddr  => $ns,
+					      PeerPort  => $dstport,
+					      LocalAddr => $srcaddr,
+					      LocalPort => ($srcport || undef),
+					      Proto     => 'tcp',
+					      Timeout   => $timeout
+					      )
+	    }
+	
+	#$^W = $old_wflag;
+	
+	unless ($sock) {
+		$self->errorstring('connection failed');
+		print ';; ERROR: send_tcp: connection ',
+		"failed: $!\n" if $self->{'debug'};
+		return();
+	}
+
+	return $sock;
+}
 
 
 
