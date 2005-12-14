@@ -1294,8 +1294,8 @@ sub axfr_start {
 	my $sock_key = "$ns:$self->{'port'}";
 
 	
-	if ($self->persistent_tcp && $self->{'sockets'}[AF_UNSPEC]{$sock_key}) {
-		$sock = $self->{'sockets'}[AF_UNSPEC]{$sock_key};
+	if ($self->persistent_tcp && $self->{'axfr_sockets'}[AF_UNSPEC]{$sock_key}) {
+		$sock = $self->{'axfr_sockets'}[AF_UNSPEC]{$sock_key};
 		print ";; using persistent socket\n"
 		    if $self->{'debug'};
 	} else {
@@ -1367,7 +1367,7 @@ sub axfr_start {
 			return;
 		}
 		
-		$self->{'sockets'}[AF_UNSPEC]{$sock_key} = $sock if 
+		$self->{'axfr_sockets'}[AF_UNSPEC]{$sock_key} = $sock if 
 		    $self->persistent_tcp;
 	}
 	

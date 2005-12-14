@@ -3,8 +3,17 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.55_01 Unreleased
 
+
+Fix TCP fallback after V6 socket failure
+
    Reworked Net::DNS::Base::Nameserver::send_tcp() to fallback to IPv4 when 
    possible. (change applied to SVN Revision 538).
+
+Fix AXFR persistent sockets coliding with query sockets.
+
+   I think that using the same persistent sockets for AXFR and 'ordinary' queries
+   could lead to race conditions. Better safe than sorry. For axfrs we create
+   a different set of persitent sockets.
 
 
 
