@@ -2,7 +2,7 @@
 
 
 my $has_inet6;
-use Test::More tests=>10;
+use Test::More tests=>11;
 use strict;
 
 
@@ -55,6 +55,10 @@ my $answer;
 my $res;
 my $res2;
 
+my $AAAA_address;
+my $A_address;
+
+
 SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
 
 	# First use the local resolver to query for the AAAA record of a 
@@ -64,19 +68,33 @@ SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
 	diag "\tTesting for global IPv6 connectivity...\n";
 	diag "\t\t preparing...";
 	$res=Net::DNS::Resolver->new;
-	# $res->debug(1);
+#	$res->debug(1);
 	my $nsanswer=$res->send("ripe.net","NS","IN");
 	is (($nsanswer->answer)[0]->type, "NS","Preparing  for v6 transport, got NS records for ripe.net");
-	my $AAAA_address;
+
 	foreach my $ns ($nsanswer->answer){
-	    next if $ns->nsdname !~ /ripe\.net/; # User rupe.net only
+	    next if $ns->nsdname !~ /ripe\.net/; # User ripe.net only
+	    my $a_answer=$res->send($ns->nsdname,"A","IN");
+	    next if ($a_answer->header->ancount == 0);
+	    is (($a_answer->answer)[0]->type,"A", "Preparing  for v4 transport, got A records for ". $ns->nsdname);
+	    $A_address=($a_answer->answer)[0]->address;
+
+
+	    diag ("\n\t\t Will try to connect to  ". $ns->nsdname . " ($A_address)");
+	    last;
+	}
+
+
+
+	foreach my $ns ($nsanswer->answer){
+	    next if $ns->nsdname !~ /ripe\.net/; # User ripe.net only
 	    my $aaaa_answer=$res->send($ns->nsdname,"AAAA","IN");
 	    next if ($aaaa_answer->header->ancount == 0);
 	    is (($aaaa_answer->answer)[0]->type,"AAAA", "Preparing  for v6 transport, got AAAA records for ". $ns->nsdname);
 	    $AAAA_address=($aaaa_answer->answer)[0]->address;
 
 
-	    diag ("\n\t\t Trying to connect to  ". $ns->nsdname . " ($AAAA_address)");
+	    diag ("\n\t\t Will try to connect to  ". $ns->nsdname . " ($AAAA_address)");
 	    last;
 	}
 
@@ -93,20 +111,38 @@ SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
 	
 }
 
- SKIP: { skip "No answer available to analyse (". $res->errorstring.")", 3 unless $answer;
+
+ SKIP: { skip "No answer available to analyse (". $res->errorstring.")", 1 unless $answer;
 	 
 	 # $answer->print;
 	 is (($answer->answer)[0]->type, "SOA","Query over udp6 succeeded");
-	 $res->usevc(1);
-	 $answer=$res->send("ripe.net","NS","IN");
-	 is (($answer->answer)[0]->type, "NS","Query over tcp6  succeeded");
-	 $res->force_v4(1);
-	 # $res->print;
-	 # $res->debug(1);
-	 $answer=$res->send("ripe.net","SOA","IN");
-	 is ($res->errorstring,"no nameservers","Correct errorstring when forcing v4");
+}
+
+$res->usevc(1);
+$res->force_v4(1);
+# $res->print;
+# $res->debug(1);
+$answer=$res->send("ripe.net","SOA","IN");
+is ($res->errorstring,"no nameservers","Correct errorstring when forcing v4");
+
+
+$res->force_v4(0);
+$answer=$res->send("ripe.net","NS","IN");
+if ($answer){
+	is (($answer->answer)[0]->type, "NS","Query over tcp6  succeeded");
+}else{
+	diag "You can safely ignore the following message:";
+	diag ($res->errorstring) if ($res->errorstring ne "connection failed(IPv6 socket failure)");
+        diag ("configuring ".$AAAA_address." ". $A_address." as nameservers");
+	$res->nameservers($AAAA_address,$A_address);
+	undef $answer;
+#	$res->print;
+	$answer=$res->send("ripe.net","NS","IN");
+	is (($answer->answer)[0]->type, "NS","Fallback to V4 succeeded");
+
+
+}
 	 
-     }
 
 
 

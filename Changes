@@ -1,6 +1,12 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.55_01 Unreleased
+
+   Reworked Net::DNS::Base::Nameserver::send_tcp() to fallback to IPv4 when 
+   possible. (change applied to SVN Revision 538).
+
+
 
 **** 0.55 December 14, 2005
 
