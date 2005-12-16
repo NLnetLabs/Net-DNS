@@ -74,6 +74,7 @@ use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
 @EXPORT_OK= qw(name2labels wire2presentation );
 
+
 #
 # If you implement an RR record make sure you also add it to 
 # %Net::DNS::RR::RR hash otherwise it will be treated as unknown type.
@@ -166,7 +167,7 @@ sub typesbyname {
     return $typesbyname{$name} if $typesbyname{$name};
 
     die "Net::DNS::typesbyname() argument ($name) is not TYPE###" unless 
-        $name =~ m/^\s*TYPE(\d+)\s*$/;  
+        $name =~ m/^\s*TYPE(\d+)\s*$/o;  
     
     my $val = $1;
     
@@ -181,8 +182,8 @@ sub typesbyval {
     my $val = shift;
     
     die "Net::DNS::typesbyval() argument ($val) is not numeric" unless 
-	$val =~ m/^\s*0*(\d+)\s*$/;
-    $val = $1;
+	$val =~ s/^\s*0*(\d+)\s*$/$1/o;
+
     
     
     return $typesbyval{$val} if $typesbyval{$val};
@@ -221,7 +222,7 @@ sub classesbyname {
     return $classesbyname{$name} if $classesbyname{$name};
     
     die "Net::DNS::classesbyval() argument is not CLASS### ($name)" unless 
-        $name =~ m/^\s*CLASS(\d+)\s*$/;
+        $name =~ m/^\s*CLASS(\d+)\s*$/o;
     
     my $val = $1;
     
@@ -236,10 +237,7 @@ sub classesbyval {
     my $val = shift;
     
     die "Net::DNS::classesbyname() argument is not numeric ($val)" unless 
-        $val=~/^\s*\d+\s*$/;
-    
-    $val =~ s/\s*//g;
-    $val =~ s/^0*([0-9]+)/$1/;    #remove leading zeros 
+	$val =~ s/^\s*0*([0-9]+)\s*$/$1/o;
     
     return $classesbyval{$val} if $classesbyval{$val};
     

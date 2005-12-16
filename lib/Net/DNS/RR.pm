@@ -278,7 +278,7 @@ sub new_from_string {
 	# strip out comments
 	# Test for non escaped ";" by means of the look-behind assertion
 	# (the backslash is escaped)
-	$rrstring   =~ s/(?<!\\);.*//g;
+	$rrstring   =~ s/(?<!\\);.*//og;
 	
 	($rrstring =~ m/$RR_REGEX/xso) || 
 		confess qq|qInternal Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
@@ -291,8 +291,8 @@ sub new_from_string {
 	my $rrtype  = $4 || '';
 	my $rdata   = $5 || '';
 
-	$rdata =~ s/\s+$// if $rdata;
-	$name  =~ s/\.$//  if $name;
+	$rdata =~ s/\s+$//o if $rdata;
+	$name  =~ s/\.$//o  if $name;
 
 	
 
@@ -300,8 +300,8 @@ sub new_from_string {
 
 	# RFC3597 tweaks
 	# This converts to known class and type if specified as TYPE###
-	$rrtype  = Net::DNS::typesbyval(Net::DNS::typesbyname($rrtype))      if $rrtype  =~ m/^TYPE\d+/;
-	$rrclass = Net::DNS::classesbyval(Net::DNS::classesbyname($rrclass)) if $rrclass =~ m/^CLASS\d+/;
+	$rrtype  = Net::DNS::typesbyval(Net::DNS::typesbyname($rrtype))      if $rrtype  =~ m/^TYPE\d+/o;
+	$rrclass = Net::DNS::classesbyval(Net::DNS::classesbyname($rrclass)) if $rrclass =~ m/^CLASS\d+/o;
 
 
 	if (!$rrtype && $rrclass && $rrclass eq 'ANY') {
@@ -334,9 +334,9 @@ sub new_from_string {
 			$rrclass = 'NONE';
 			$rrtype  = 'ANY';
 			$rdata   = '';
-		} elsif ($update_type =~ /^(rr_)?add$/) {
+		} elsif ($update_type =~ /^(rr_)?add$/o) {
 			$ttl = 86400 unless $ttl;
-		} elsif ($update_type =~ /^(rr_)?del(ete)?$/) {
+		} elsif ($update_type =~ /^(rr_)?del(ete)?$/o) {
 			$ttl     = 0;
 			$rrclass = $rdata ? 'NONE' : 'ANY';
 		}
@@ -355,16 +355,16 @@ sub new_from_string {
 	};
 
 
-	if ($RR{$rrtype} && $rdata !~ m/^\s*\\#/ ) {
+	if ($RR{$rrtype} && $rdata !~ m/^\s*\\#/o ) {
 		my $subclass = $class->_get_subclass($rrtype);
 		
 		return $subclass->new_from_string($self, $rdata);
 	} elsif ($RR{$rrtype}) {   # A RR type known to Net::DNS starting with \#
-		$rdata =~ m/\\\#\s+(\d+)\s+(.*)$/;
+		$rdata =~ m/\\\#\s+(\d+)\s+(.*)$/o;
 
 		my $rdlength = $1;
 		my $hexdump  = $2;		
-		$hexdump =~ s/\s*//g;
+		$hexdump =~ s/\s*//og;
 
 		die "$rdata is inconsistent; length does not match content" 
 			if length($hexdump) != $rdlength*2;
@@ -380,14 +380,14 @@ sub new_from_string {
 			\$rdata, 
 			length($rdata) - $rdlength
 		);
-	} elsif ($rdata=~/\s*\\\#\s+\d+\s+/) {   
+	} elsif ($rdata=~/\s*\\\#\s+\d+\s+/o) {   
 		#We are now dealing with the truly unknown.
 		die 'Expected RFC3597 representation of RDATA' 
-			unless $rdata =~ m/\\\#\s+(\d+)\s+(.*)$/;
+			unless $rdata =~ m/\\\#\s+(\d+)\s+(.*)$/o;
 
 		my $rdlength = $1;
 		my $hexdump  = $2;		
-		$hexdump =~ s/\s*//g;
+		$hexdump =~ s/\s*//og;
 
 		die "$rdata is inconsistent; length does not match content" 
 			if length($hexdump) != $rdlength*2;
@@ -446,7 +446,7 @@ sub new_from_hash {
 			# documentation
 			return $subclass->new_from_hash($self);
 	    }
-	} elsif ($self->{'type'} =~ /TYPE\d+/) {
+	} elsif ($self->{'type'} =~ /TYPE\d+/o) {
 		bless $self, 'Net::DNS::RR::Unknown';
 		return $self;
 	} else {
@@ -615,11 +615,11 @@ sub data {
 
 
 	my $qtype     = uc($self->{'type'});
-	my $qtype_val = ($qtype =~ m/^\d+$/) ? $qtype : Net::DNS::typesbyname($qtype);
+	my $qtype_val = ($qtype =~ m/^\d+$/o) ? $qtype : Net::DNS::typesbyname($qtype);
 	$qtype_val    = 0 if !defined($qtype_val);
 
 	my $qclass     = uc($self->{'class'});
-	my $qclass_val = ($qclass =~ m/^\d+$/) ? $qclass : Net::DNS::classesbyname($qclass);
+	my $qclass_val = ($qclass =~ m/^\d+$/o) ? $qclass : Net::DNS::classesbyname($qclass);
 	$qclass_val    = 0 if !defined($qclass_val);
 	$data .= pack('n', $qtype_val);
 	
@@ -720,7 +720,7 @@ sub _name2wire   {
 sub AUTOLOAD {
 	my ($self) = @_;  # If we do shift here, it will mess up the goto below.
 	
-	my ($name) = $AUTOLOAD =~ m/^.*::(.*)$/;
+	my ($name) = $AUTOLOAD =~ m/^.*::(.*)$/o;
 	
 	# XXX -- We should test that we do in fact carp on unknown methods.	
 	unless (exists $self->{$name}) {

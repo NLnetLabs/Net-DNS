@@ -49,6 +49,8 @@ the data is incomplete).
 
 =cut
 
+
+
 {
 	my $id = int rand(MAX_ID);
 	
@@ -64,7 +66,7 @@ sub new {
 	if (@_) {
 		my $data = shift;
 
-		if (length($$data) < Net::DNS::HFIXEDSZ()) {
+		if (length($$data) < Net::DNS::HFIXEDSZ() ) {
 			return undef;
 		}
 
@@ -294,7 +296,7 @@ sub AUTOLOAD {
 	my ($self) = @_;
 
 	my $name = $AUTOLOAD;
-	$name =~ s/.*://;
+	$name =~ s/.*://o;
 
 	Carp::croak "$name: no such method" unless exists $self->{$name};
 	

@@ -28,7 +28,7 @@ sub new {
 sub new_from_string {
 	my ($class, $self, $string) = @_;
 
-	if ($string && ($string =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)\s*$/)
+	if ($string && ($string =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)\s*$/o)
 	    && ($1 >= 0) && ($1 <= 255)
 	    && ($2 >= 0) && ($2 <= 255)
 	    && ($3 >= 0) && ($3 <= 255)

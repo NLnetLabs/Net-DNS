@@ -812,7 +812,7 @@ sub dn_expand_PP {
 
 	
 
-	$name =~ s/\.$//;
+	$name =~ s/\.$//o;
 	return ($name, $offset);
 }
 

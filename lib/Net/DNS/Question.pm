@@ -63,8 +63,8 @@ sub new {
 		($qtype, $qclass) = ($qclass, $qtype);
 	}
 
-	$qname =~ s/^\.+//;
-	$qname =~ s/\.+$//;
+	$qname =~ s/^\.+//o;
+	$qname =~ s/\.+$//o;
 
 	$self{"qname"}  = $qname;
 	$self{"qtype"}  = $qtype;
@@ -112,7 +112,7 @@ sub AUTOLOAD {
 	my ($self) = @_;
 	
 	my $name = $AUTOLOAD;
-	$name =~ s/.*://;
+	$name =~ s/.*://o;
 
 	Carp::croak "$name: no such method" unless exists $self->{$name};
 

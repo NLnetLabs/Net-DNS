@@ -160,12 +160,9 @@ my %public_attr = map { $_ => 1 } qw(
 
 sub new {
 	my $class = shift;
-
 	my $self = bless({ %{$class->defaults} }, $class);
 
-	
 	$self->_process_args(@_) if @_ and @_ % 2 == 0;
-			
 	return $self;
 }
 
@@ -319,7 +316,6 @@ sub searchlist {
 
 sub nameservers {
     my $self   = shift;
-    my $defres = Net::DNS::Resolver->new;
 
     if (@_) {
 	my @a;
@@ -334,6 +330,7 @@ sub nameservers {
 		push @a, ($ns eq '0') ? '::0' : $ns;
 		
 	    } else  {
+		my $defres = Net::DNS::Resolver->new;
 		my @names;
 		
 		if ($ns !~ /\./) {
@@ -1022,9 +1019,6 @@ sub bgsend {
 	    }
 
 	    $dst_sockaddr = sockaddr_in($dstport, inet_aton($ns_address));
-
-
-
 	}
 	my @socket;  
 
@@ -1121,7 +1115,7 @@ sub make_query_packet {
 
 		# If the name looks like an IP address then do an appropriate
 		# PTR query.
-		if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
+		if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/o) {
 			$name = "$4.$3.$2.$1.in-addr.arpa.";
 			$type = 'PTR';
 		}

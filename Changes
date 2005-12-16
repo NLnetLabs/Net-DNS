@@ -35,7 +35,12 @@ Fix AXFR persistent sockets coliding with query sockets.
    Obviously, on the client side this behavior is not mandatory.
 
 
+ Profiling
 
+    It turned out that each time we were calling
+    Net::DNS::Resolver::Base::nameserver(); We were creating a
+    resolver object. Now a resolver object is only called when a
+    domain name is given as argument.
 
 
 **** 0.55 December 14, 2005
