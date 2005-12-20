@@ -79,6 +79,7 @@ BEGIN {
 		X25
 		OPT
 		SSHFP
+		SPF
 	);
 
 	#  Only load DNSSEC if available

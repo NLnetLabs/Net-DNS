@@ -2,7 +2,7 @@
 
 use Test::More;
 use strict;
-plan tests => 245;
+plan tests => 20;
 BEGIN{
     use_ok('Net::DNS', qw(rrsort));
 };

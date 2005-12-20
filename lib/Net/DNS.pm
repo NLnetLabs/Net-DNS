@@ -132,6 +132,7 @@ use Carp;
     'RRSIG'     => 46,      # RFC 4034
     'NSEC'      => 47,      # RFC 4034
     'DNSKEY'    => 48,      # RFC 4034
+    'SPF'       => 99,      # rfc-schlitt-spf-classic-o2 (No RFC # yet at time of coding)
     'UINFO'     => 100,     # non-standard
     'UID'       => 101,     # non-standard
     'GID'       => 102,     # non-standard

@@ -1,7 +1,7 @@
-# $Id$
+# $Id$ -*-perl-*-
 
 
-use Test::More tests => 75;
+use Test::More tests => 77;
 use strict;
 
 BEGIN { 

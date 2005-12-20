@@ -3,6 +3,24 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.55_01 Unreleased
 
+Feature Implemented SPF (typecode 99).
+
+   The class completely inherits from Net::DNS::RR::TXT (the easiest 
+   RR to implement ever).
+
+Feature added rrsort() function.
+   Feature was requested by Eric Hall in rt.cpan.org 13392
+
+   This was a little tricky as I think that the sort functions are in
+   fact RR specific class attributes that should be accessed through
+   class methods. This is difficult to implement. I do think I found a
+   fairly clean manner. It does require a global variable in Net::DNS
+   to store the functions and some trickery when the sorting functions
+   are defined.
+
+   See Net::DNS and Net::DNS::RR documentation for details.
+
+   Defaults sorting functions are currently implemented in SRV, ..
 
 Fix rt.cpan.org 14653 and 14049 
    TCP fallback after V6 socket failure 
