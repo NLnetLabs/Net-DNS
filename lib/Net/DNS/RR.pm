@@ -8,11 +8,10 @@ BEGIN {
     eval { require bytes; }
 } 
 
-use vars qw($VERSION $AUTOLOAD);
+use vars qw($VERSION $AUTOLOAD     %rrsortfunct );
 use Carp;
 use Net::DNS;
 use Net::DNS::RR::Unknown;
-
 
 
 $VERSION = (qw$LastChangedRevision$)[1];
@@ -637,7 +636,6 @@ sub data {
 
 	my $rdata = $self->rdata($packet, $offset);
 
-
 	$data .= pack('n', length $rdata);
 	$data.=$rdata;
 
@@ -717,16 +715,24 @@ sub _name2wire   {
     return $rdata;
 }
 
+
+
+
+
 sub AUTOLOAD {
 	my ($self) = @_;  # If we do shift here, it will mess up the goto below.
-	
 	my ($name) = $AUTOLOAD =~ m/^.*::(.*)$/o;
-	
+	if ($name =~ /set_rrsort_func/){
+	    return Net::DNS::RR::set_rrsort_func(@_);
+	}
+	if ($name =~ /get_rrsort_func/){
+	    return Net::DNS::RR::get_rrsort_func(@_);
+	}
 	# XXX -- We should test that we do in fact carp on unknown methods.	
 	unless (exists $self->{$name}) {
-		my $rr_string = $self->string;
-		Carp::carp(<<"AMEN");
-
+	    my $rr_string = $self->string;
+	    Carp::carp(<<"AMEN");
+	    
 ***
 ***  WARNING!!!  The program has attempted to call the method
 ***  "$name" for the following RR object:
@@ -743,25 +749,26 @@ sub AUTOLOAD {
 *** 
 
 AMEN
-		return;
+return;
 	}
 	
 	no strict q/refs/;
 	
 	# Build a method in the class.
 	*{$AUTOLOAD} = sub {
-		my ($self, $new_val) = @_;
-				
-		if (defined $new_val) {
-			$self->{$name} = $new_val;
-		}
-		
-		return $self->{$name};
+	    my ($self, $new_val) = @_;
+	    
+	    if (defined $new_val) {
+		$self->{$name} = $new_val;
+	    }
+	    
+	    return $self->{$name};
 	};
 	
 	# And jump over to it.
 	goto &{$AUTOLOAD};
 }
+
 
 
 #
@@ -784,7 +791,112 @@ sub _get_subclass {
 	
 	return $subclass;
 }	
+
+
+
+
+=head1 Sorting of RR arrays
+
+As of version 0.55 there is functionality to help you sort RR
+arrays. The sorting is done by Net::DNS::rrsort(), see the
+L<Net::DNS> documentation. This package provides class methods to set
+the sorting functions used for a particular RR based on a particular
+attribute.
+
+
+=head2 set_rrsort_func
+
+Net::DNS::RR::SRV->set_rrsort_func("priority",
+			       sub {
+				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+				   $a->priority <=> $b->priority
+				   ||
+				   $b->weight <=> $a->weight
+                     }
+
+Net::DNS::RR::SRV->set_rrsort_func("default_sort",
+			       sub {
+				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+				   $a->priority <=> $b->priority
+				   ||
+				   $b->weight <=> $a->weight
+                     }
+
+set_rrsort_func needs to be called as a class method. The first
+argument is the attribute name on which the sorting will need to take
+place. If you specify "default_sort" than that is the sort algorithm
+that will be used in the case that rrsort() is called without an RR
+attribute as argument.
+
+The second argument is a reference to a function that uses the
+variables $a and $b global to the C<from Net::DNS>(!!)package for the
+sorting. During the sorting $a and $b will contain references to
+objects from the class you called the set_prop_sort from. In other
+words, you can rest assured that the above sorting function will only
+get Net::DNS::RR::SRV objects.
+
+
+
+
+The above example is the sorting function that actually is implemented in 
+SRV.
+
+=cut
+
+
+
+
+sub set_rrsort_func{
+    my $class=shift;
+    my $attribute=shift;
+    my $funct=shift;
+#    print "Using ".__PACKAGE__."set_rrsort: $class\n";
+    my ($type) = $class =~ m/^.*::(.*)$/o;
+    $Net::DNS::RR::rrsortfunct{$type}{$attribute}=$funct;
+}
 		
+sub get_rrsort_func {
+    my $class=shift;    
+    my $attribute=shift;  #can be undefined.
+    my $sortsub;
+    my ($type) = $class =~ m/^.*::(.*)$/o;
+
+
+#    print "Using ".__PACKAGE__." get_rrsort: $class ($type,$attribute)\n";
+#    use Data::Dumper;
+#    print Dumper %Net::DNS::rrsortfunct;
+
+    if (defined($attribute) &&
+	exists($Net::DNS::RR::rrsortfunct{$type}) &&
+	exists($Net::DNS::RR::rrsortfunct{$type}{$attribute})
+	){
+	#  The default overwritten by the class variable in Net::DNS
+	return $Net::DNS::RR::rrsortfunct{$type}{$attribute};
+    }elsif(
+	! defined($attribute) &&
+	exists($Net::DNS::RR::rrsortfunct{$type}) &&
+	exists($Net::DNS::RR::rrsortfunct{$type}{'default_sort'})
+	){
+	#  The default overwritten by the class variable in Net::DNS
+	return $Net::DNS::RR::rrsortfunct{$type}{'default_sort'};
+    }
+    else{
+	return sub{
+	    my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+	   ( exists $a->{$attribute} &&   $a->{$attribute} <=> $b->{$attribute})
+	       ||
+	       $a->{'rdata'} cmp $a->{'rdata'}
+	};
+	
+    }
+    return $sortsub;
+}
+
+
+
+
+
+
 	
 sub STORABLE_freeze {
 	my ($self, $cloning) = @_;

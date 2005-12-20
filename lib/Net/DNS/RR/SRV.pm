@@ -11,6 +11,34 @@ use vars qw(@ISA $VERSION);
 @ISA     = qw(Net::DNS::RR);
 $VERSION = (qw$LastChangedRevision$)[1];
 
+
+
+__PACKAGE__->set_rrsort_func("priority",
+			       sub {
+				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+				   $a->{'priority'} <=> $b->{'priority'}
+				   ||
+				       $b->{'weight'} <=> $a->{'weight'}
+}
+);
+
+
+__PACKAGE__->set_rrsort_func("default_sort",
+			       __PACKAGE__->get_rrsort_func("priority")
+
+    );
+
+__PACKAGE__->set_rrsort_func("weight",
+			       sub {
+				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+				   $b->{"weight"} <=> $a->{"weight"}
+				   ||
+				       $a->{"priority"} <=> $b->{"priority"}
+}
+);
+
+
+
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 

@@ -69,10 +69,10 @@ use Net::DNS::Update;
 use Net::DNS::Header;
 use Net::DNS::Question;
 use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
-
+use Carp;
 
 @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
-@EXPORT_OK= qw(name2labels wire2presentation );
+@EXPORT_OK= qw(name2labels wire2presentation rrsort);
 
 
 #
@@ -483,6 +483,47 @@ sub presentation2wire {
 
 
 
+
+
+sub rrsort {
+    my ($rrtype,$attribute,@rr_array)=@_;
+    unless (exists($Net::DNS::typesbyname{uc($rrtype)})){
+	# unvalid error type
+	return();
+    }
+    unless (defined($attribute)){
+	# no second argument... hence no array.
+	return();
+    }
+
+    # attribute is empty or not specified.
+    
+    if( ref($attribute)=~/^Net::DNS::RR::.*/){
+	# push the attribute back on the array.
+	push @rr_array,$attribute;
+	undef($attribute);
+
+    }
+
+    my @extracted_rr;
+    foreach my $rr (@rr_array){
+	push( @extracted_rr, $rr )if (uc($rr->type) eq uc($rrtype));
+    }
+    return () unless  @extracted_rr;
+    my $func=("Net::DNS::RR::".$rrtype)->get_rrsort_func($attribute);
+    my @sorted=sort $func  @extracted_rr;
+    return @sorted; 
+    
+}
+
+
+
+
+
+
+
+
+
 1;
 __END__
 
@@ -696,6 +737,56 @@ section of a dynamic update packet.
 
 Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
 be created.
+
+
+=head2 Sorting of RR arrays
+
+As of version 0.55 there is functionality to help you sort RR
+arrays. 'rrsort()' is the function that is available to do the
+sorting. In most cases rrsort will give you the answer that you
+want but you can specify your own sorting method by using the 
+Net::DNS::RR::FOO->set_rrsort_func() class method. See L<Net::DNS::RR>
+for details.
+
+=head3 rrsort()
+
+   use Net::DNS qw(rrsort);
+
+   my @prioritysorted=rrsort("SRV","priority",@rr_array);
+
+
+rrsort() selects all RRs from the input array that are of the type
+that are defined in the first argument. Those RRs are sorted based on
+the attribute that is specified as second argument.
+
+There are a number of RRs for which the sorting function is
+specifically defined for certain attributes.  If such sorting function
+is defined in the code (it can be set or overwritten using the
+set_rrsort_func() class method) that function is used. 
+
+For instance:
+   my @prioritysorted=rrsort("SRV","priority",@rr_array);
+returns the SRV records sorted from lowest to heighest priority and
+for equal priorities from heighes to lowes weight.
+
+If the function does not exist then a numerical sort on the attribute
+value is performed. 
+   my @portsorted=rrsort("SRV","port",@rr_array);
+
+If the attribute does not exist for a certain RR than the RRs are
+sorted on string comparrisson of the rdata.
+
+If the attribute is not defined than either the default_sort function
+will be defined or sorting will be performed on string comparisson of
+the rdata.
+
+
+rrsort() returns a sorted array with only elements of the specified
+RR type or undef.
+
+rrsort() returns undef and "carps" an error message when arguments
+are specified incorrect.
+
 
 
 =head1 EXAMPLES
