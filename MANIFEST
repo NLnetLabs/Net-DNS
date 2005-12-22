@@ -53,6 +53,7 @@ lib/Net/DNS/RR/PX.pm
 lib/Net/DNS/RR/RP.pm
 lib/Net/DNS/RR/RT.pm
 lib/Net/DNS/RR/SOA.pm
+lib/Net/DNS/RR/SPF.pm
 lib/Net/DNS/RR/SRV.pm
 lib/Net/DNS/RR/SSHFP.pm
 lib/Net/DNS/RR/TKEY.pm
@@ -80,6 +81,7 @@ t/03-question.t
 t/04-packet-unique-push.t
 t/04-packet.t
 t/05-rr-opt.t
+t/05-rr-rrsort.t
 t/05-rr-sshfp.t
 t/05-rr-txt.t
 t/05-rr-unknown.t

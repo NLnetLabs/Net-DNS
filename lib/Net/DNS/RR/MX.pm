@@ -11,6 +11,23 @@ use vars qw(@ISA $VERSION);
 @ISA     = qw(Net::DNS::RR);
 $VERSION = (qw$LastChangedRevision$)[1];
 
+
+# Highest preference sorted first.
+__PACKAGE__->set_rrsort_func("preference",
+			       sub {
+				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+				   $a->{'preference'} <=> $b->{'preference'}
+}
+);
+
+
+__PACKAGE__->set_rrsort_func("default_sort",
+			       __PACKAGE__->get_rrsort_func("preference")
+
+    );
+
+
+
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 
@@ -105,6 +122,7 @@ Returns name of this mail exchange.
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c) 2005 Olaf Kolkman NLnet Labs.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

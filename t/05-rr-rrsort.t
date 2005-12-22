@@ -2,7 +2,7 @@
 
 use Test::More;
 use strict;
-plan tests => 20;
+plan tests => 21;
 BEGIN{
     use_ok('Net::DNS', qw(rrsort));
 };
@@ -66,6 +66,19 @@ is (rrsort("A","priority",@rrarray),1,"rrsort correctly maintains RRs test 1");
 is (rrsort("MX","priority",@rrarray),undef,"rrsort correctly maintains RRs test 3");
 
 
+#
+# Test with MX RRs.
+#
+
+my $mxrr1=Net::DNS::RR->new("example.com.  600     IN      MX 10 mx1.example.com");
+my $mxrr2=Net::DNS::RR->new("example.com.  600     IN      MX 6 mx2.example.com");
+
+my $mxrr3=Net::DNS::RR->new("example.com.  600     IN      MX 66 mx3.example.com");
+my $mxrr4=Net::DNS::RR->new("example.com.  600     IN      RT 6 rt1.example.com");
 
 
+my @mxrrarray=($mxrr1, $mxrr2, $mxrr3, $mxrr4);
+my @expectedmxarray=($mxrr2,$mxrr1,$mxrr3);
+my @sortedmxarray=rrsort("MX",@mxrrarray);
 
+ok (eq_array(\@expectedmxarray,\@sortedmxarray),"MX sorting");

@@ -20,7 +20,23 @@ Feature added rrsort() function.
 
    See Net::DNS and Net::DNS::RR documentation for details.
 
-   Defaults sorting functions are currently implemented in SRV, ..
+   Defaults sorting functions are currently implemented in 
+      SRV: default sort: low prioirity to high priority and for
+           same preference highest weight first.
+	   weight: sort all RRs based on weight, highest first
+	   priority: see default sort
+
+      MX:  default sort: lowest preference first.
+           preference: see default sort    
+           
+    NAPTR: default sort: lowest to highest order, for same order lowest
+           preference first
+	   order: see default sort
+	   preference: order on preference, lowest first
+
+      PX:  See MX
+      RT:  See MX
+
 
 Fix rt.cpan.org 14653 and 14049 
    TCP fallback after V6 socket failure 
