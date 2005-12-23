@@ -778,9 +778,8 @@ If the attribute does not exist for a certain RR than the RRs are
 sorted on string comparrisson of the rdata.
 
 If the attribute is not defined than either the default_sort function
-will be defined or sorting will be performed on string comparisson of
-the rdata.
-
+will be defined or "Canonical sorting" (as defined by DNSSEC) will be
+used.
 
 rrsort() returns a sorted array with only elements of the specified
 RR type or undef.

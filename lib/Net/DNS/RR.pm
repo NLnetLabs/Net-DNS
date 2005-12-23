@@ -836,9 +836,6 @@ objects from the class you called the set_prop_sort from. In other
 words, you can rest assured that the above sorting function will only
 get Net::DNS::RR::SRV objects.
 
-
-
-
 The above example is the sorting function that actually is implemented in 
 SRV.
 
@@ -881,15 +878,22 @@ sub get_rrsort_func {
 	#  The default overwritten by the class variable in Net::DNS
 	return $Net::DNS::RR::rrsortfunct{$type}{'default_sort'};
     }
-    else{
+    elsif( defined($attribute) ){
+	
 	return sub{
 	    my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
-	   ( exists $a->{$attribute} &&   $a->{$attribute} <=> $b->{$attribute})
-	       ||
-	       $a->{'rdata'} cmp $a->{'rdata'}
+	    ( exists($a->{$attribute}) &&   
+	      $a->{$attribute} <=> $b->{$attribute})
+		||
+		$a->_canonicaldata() cmp $b->_canonicaldata()
 	};
-	
-    }
+    }else{
+	return sub{
+	    my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+	    $a->_canonicaldata() cmp $b->_canonicaldata()
+	};
+    }    
+
     return $sortsub;
 }
 

@@ -2,7 +2,7 @@
 
 use Test::More;
 use strict;
-plan tests => 21;
+plan tests => 22;
 BEGIN{
     use_ok('Net::DNS', qw(rrsort));
 };
@@ -53,10 +53,6 @@ is (@foosorted,8,"rrsort returns properly whith undefined attribute (3)");
 is ( @prioritysorted,8,"rrsort correctly maintains RRs test 2");
 
 
-#foreach my $rr (@foosorted){
-#    $rr->print;
-#}
-
 ok (eq_array(\@expectedpriority, \@prioritysorted), "Sorting on SRV priority works");
 ok (eq_array(\@expectedpriority, \@defaultsorted), "Default SRV sort works");
 ok (eq_array(\@expectedweight, \@weightsorted), "Weight sorted SRV sort works");
@@ -82,3 +78,20 @@ my @expectedmxarray=($mxrr2,$mxrr1,$mxrr3);
 my @sortedmxarray=rrsort("MX",@mxrrarray);
 
 ok (eq_array(\@expectedmxarray,\@sortedmxarray),"MX sorting");
+
+
+
+
+my $nsrr1=Net::DNS::RR->new("example.com.  600     IN      NS ns2.example.com");
+my $nsrr2=Net::DNS::RR->new("example.com.  600     IN      NS ns4.example.com");
+my $nsrr3=Net::DNS::RR->new("example.com.  600     IN      NS ns1.example.com");
+my $nsrr4=Net::DNS::RR->new("example.com.  600     IN      RT 6 rt1.example.com");
+
+my @nsrrarray=($nsrr1, $nsrr2, $nsrr3, $nsrr4);
+my @expectednsarray=($nsrr3,$nsrr1,$nsrr2);
+my @sortednsarray=rrsort("NS",@nsrrarray);
+
+
+
+
+ok (eq_array(\@expectednsarray,\@sortednsarray),"NS sorting");

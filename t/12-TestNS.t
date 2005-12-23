@@ -30,7 +30,7 @@ use vars qw(
 
 
 BEGIN {
-    $lameloop=20;
+    $lameloop=0;
     $tcptimeout=6;
     $TestPort  = 53452;
     @Addresses = qw (
@@ -103,7 +103,7 @@ use_ok("Net::DNS::Resolver");
 my $resolver=Net::DNS::Resolver->new(
 				     nameservers => \@Addresses,
 				     port        => $TestPort,
-				     debug => 0,
+				     debug => 1,
 				     );
 
 $test_nameservers->run();
@@ -116,11 +116,12 @@ use Net::DNS::Resolver::Recurse;
 
 my $res = Net::DNS::Resolver::Recurse->new(
 					   port  => $TestPort,
-					   debug => 0,
+					   debug => 1,
 					   );
+
+
+
 $res->hints( "127.53.53.1" );
-
-
 my $packet;
 
 
@@ -133,15 +134,13 @@ my $packet;
 # least once.
 
 
+
 my $i=0;
 while ($i<$lameloop){
     $packet = $res->query_dorecursion("lame.test.zone","A");
     ok($packet,"Lame recursion test: Packet received");
     $i++;
 }
-
-
-
 $packet = $res->query_dorecursion("deeprecursion.test.zone","A");
 
 $resolver->nameserver( qw( 127.53.53.1 ) );
