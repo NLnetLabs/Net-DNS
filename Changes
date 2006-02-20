@@ -1,7 +1,7 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
-*** 0.55_01 Unreleased
+*** 0.56 February 20, 2006
 
 Fix rt.cpan.org 17694
  
