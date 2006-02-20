@@ -33,7 +33,6 @@ sub new {
 
 	if ($self->{"rdlength"} > 0) {
 		($self->{"preference"}) = unpack("\@$offset n", $$data);
-		
 		$offset += Net::DNS::INT16SZ();
 		
 		($self->{"exchange"}) = Net::DNS::Packet::dn_expand($data, $offset);

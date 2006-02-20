@@ -3,6 +3,11 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.55_01 Unreleased
 
+Fix rt.cpan.org 17694
+ 
+   Net::DNS::typesbyval() now confesses on undefined
+   args. Acknowledgements to Dean Serenevy.
+
 Feature Implemented SPF (typecode 99).
 
    The class completely inherits from Net::DNS::RR::TXT (the easiest 
@@ -69,6 +74,12 @@ Fix AXFR persistent sockets coliding with query sockets.
 
    Obviously, on the client side this behavior is not mandatory.
 
+
+Fix rt.cpan.org 17596
+    
+    The fixes and features above also fixed the timeout problem reported by
+    Paul Hofman
+   
 
  Profiling
 

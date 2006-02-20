@@ -41,7 +41,7 @@ BEGIN {
     @ISA     = qw(Exporter DynaLoader);
 
     
-    $VERSION = '0.55_01';
+    $VERSION = '0.56';
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 
@@ -167,12 +167,12 @@ sub typesbyname {
 
     return $typesbyname{$name} if $typesbyname{$name};
 
-    die "Net::DNS::typesbyname() argument ($name) is not TYPE###" unless 
+    confess "Net::DNS::typesbyname() argument ($name) is not TYPE###" unless 
         $name =~ m/^\s*TYPE(\d+)\s*$/o;  
     
     my $val = $1;
     
-    die 'Net::DNS::typesbyname() argument larger than ' . 0xffff if $val > 0xffff;
+    confess 'Net::DNS::typesbyname() argument larger than ' . 0xffff if $val > 0xffff;
     
     return $val;
 }
@@ -181,15 +181,15 @@ sub typesbyname {
 
 sub typesbyval {
     my $val = shift;
-    
-    die "Net::DNS::typesbyval() argument ($val) is not numeric" unless 
+    confess "Net::DNS::typesbyval() argument is not defined" unless defined $val;
+    confess "Net::DNS::typesbyval() argument ($val) is not numeric" unless 
 	$val =~ s/^\s*0*(\d+)\s*$/$1/o;
 
     
     
     return $typesbyval{$val} if $typesbyval{$val};
     
-    die 'Net::DNS::typesbyval() argument larger than '. 0xffff if 
+    confess 'Net::DNS::typesbyval() argument larger than '. 0xffff if 
         $val > 0xffff;
     
     return "TYPE$val";
@@ -222,12 +222,12 @@ sub classesbyname {
     my $name = uc shift;
     return $classesbyname{$name} if $classesbyname{$name};
     
-    die "Net::DNS::classesbyval() argument is not CLASS### ($name)" unless 
+    confess "Net::DNS::classesbyval() argument is not CLASS### ($name)" unless 
         $name =~ m/^\s*CLASS(\d+)\s*$/o;
     
     my $val = $1;
     
-    die 'Net::DNS::classesbyval() argument larger than '. 0xffff if $val > 0xffff;
+    confess 'Net::DNS::classesbyval() argument larger than '. 0xffff if $val > 0xffff;
     
     return $val;
 }
@@ -237,12 +237,12 @@ sub classesbyname {
 sub classesbyval {
     my $val = shift;
     
-    die "Net::DNS::classesbyname() argument is not numeric ($val)" unless 
+    confess "Net::DNS::classesbyname() argument is not numeric ($val)" unless 
 	$val =~ s/^\s*0*([0-9]+)\s*$/$1/o;
     
     return $classesbyval{$val} if $classesbyval{$val};
     
-    die 'Net::DNS::classesbyname() argument larger than ' . 0xffff if $val > 0xffff;
+    confess 'Net::DNS::classesbyname() argument larger than ' . 0xffff if $val > 0xffff;
     
     return "CLASS$val";
 }
@@ -784,8 +784,7 @@ used.
 rrsort() returns a sorted array with only elements of the specified
 RR type or undef.
 
-rrsort() returns undef and "carps" an error message when arguments
-are specified incorrect.
+rrsort() returns undef when arguments are incorrect.
 
 
 
