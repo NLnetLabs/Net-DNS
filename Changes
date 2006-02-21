@@ -1,6 +1,15 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.57 
+
+Fix rt.cpan.org 17783
+
+    The inet6 tests do not skip enough tests when ipv6 is not available.
+    I did not catch this in my setup since IPv6 is available on all my
+    machines. 
+
+
 *** 0.56 February 20, 2006
 
 Fix rt.cpan.org 17694
