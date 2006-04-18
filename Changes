@@ -2,6 +2,18 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.57 NOT RELEASE YET
+
+Fix rt.cpan.org 18268
+
+     Added reference to RFC in croak message for label length > 63 in
+     dn_comp().
+
+Fix rt.cpan.org  18113
+
+    The inet6 tests contained another bug when online-tests were disabled.
+    Klaus Heinz discovered and provided a patch.
+
 *** 0.57 February 24, 2006
 
 Fix rt.cpan.org 17783

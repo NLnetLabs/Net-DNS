@@ -711,7 +711,7 @@ sub dn_comp {
 		$self->{"compnames"}->{$dname} = $offset;
 		my $first  = shift @names;
 		my $length = length $first;
-		croak "length of $first is larger than 63 octets" if $length>63;
+		croak "length of $first is larger than 63 octets; see RFC1035 section 2.3.1" if $length>63;
 		$compname .= pack("C a*", $length, $first);
 		$offset   += $length + 1;
 	}
