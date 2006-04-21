@@ -4,6 +4,21 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.57 NOT RELEASE YET
 
+Fix rt.cpan.org 18785
+
+   SPF would not work unless the TXT RR was not loaded first. No
+   wonder, SPF fully inherits TXT and loading of TXT.pm is therefore a
+   prerequisit.
+
+
+Fix rt.cpan.org 18713
+
+    Net::DNS::Resolver now deals gracefully with persistent sockets
+    that got disconnected. It will first try to connect again to the
+    socket and if that fails it will try to connect to the next
+    available nameserver. tcp_timeout() is the parameter that
+    determines how long to wait during a reconnect.
+
 Fix rt.cpan.org 18268
 
      Added reference to RFC in croak message for label length > 63 in

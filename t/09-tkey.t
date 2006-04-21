@@ -1,3 +1,5 @@
+#  $Id:$    -*-perl-*-
+
 use Test::More tests => 7;
 use strict;
 use Digest::HMAC_MD5;
