@@ -64,7 +64,9 @@ sub rdatastr {
 sub _build_char_str_list {
 	my ($self, $rdata_string) = @_;
 	
-	my @words = shellwords($rdata_string);
+	my @words;
+
+	@words= shellwords($rdata_string) if $rdata_string;
 
 	$self->{'char_str_list'} = [];
 

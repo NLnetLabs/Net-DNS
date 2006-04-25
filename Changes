@@ -4,6 +4,11 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.57 NOT RELEASE YET
 
+
+Fix rt.cpan.org 18897
+
+   Zero-length rdata in TXT fixed (Acknowledgements to Roy Arends)
+
 Fix rt.cpan.org 18785
 
    SPF would not work unless the TXT RR was not loaded first. No
