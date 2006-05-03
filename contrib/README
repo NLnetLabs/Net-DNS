@@ -5,10 +5,12 @@ problems or questions, please contact the contributor.
 
 File			Contributor
 ------			-----------
+check_soa		Dick Franks <rwfranks@gmail.com>
+                                A  'parallel implementation' of the check_soa script in the examples directory
 check_zone		Dennis Glatting <dennis.glatting@software-munitions.com>
 dnswalk			Dave Barr <barr@cis.ohio-state.edu>
 loc2earth.fcgi		Christopher Davis <ckd@kei.com>
-loclist.pl		Christopher Davis <ckd@kei.com>
+loclist.pl		        Christopher Davis <ckd@kei.com>
 
 ---
 $Id$
