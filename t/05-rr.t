@@ -131,7 +131,7 @@ my @rrs = (
 		flags        => 'naptr-flags',
 		service      => 'naptr-service',
 		regexp       => 'naptr-regexp',
-		replacement  => 'naptr-replacement.example.com',
+		replacement  => 'naptr-rEplacement.example.com',
 	},
 	{	#[13]
 		type         => 'NS',

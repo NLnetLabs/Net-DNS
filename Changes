@@ -4,6 +4,12 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.57 NOT RELEASE YET
 
+Fix compressed dnames in NAPTR/SRV
+
+    Clayton O'Neill noted that the the domain names in in the NAPTR
+    and SRV RRs rdata were subject to name compression which is not
+    conform the specs. Also see RFC 2782 and 2915.
+
 
 Fix rt.cpan.org 18897
 

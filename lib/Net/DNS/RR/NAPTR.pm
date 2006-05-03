@@ -129,9 +129,9 @@ sub rr_rdata {
 		$rdata .= pack("C", length $self->{"regexp"});
 		$rdata .= $self->{"regexp"};
 
-		$rdata .= $packet->dn_comp($self->{"replacement"},
-					   $offset + length $rdata);
-	}
+		$rdata .= $self->_name2wire ($self->{"replacement"});
+
+	      }
 
 	return $rdata;
 }
