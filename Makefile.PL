@@ -191,7 +191,7 @@ EOF
 	
 	close(F) or return;
 
-	my $ret = system("$Config{'make'} compile$Config{obj_ext}");
+	my $ret = system("$Config{'cc'}  -c compile.c -o compile$Config{obj_ext}");
 	
 	foreach my $file (glob('compile*')) {
 		unlink($file) || warn "Could not delete $file: $!\n";

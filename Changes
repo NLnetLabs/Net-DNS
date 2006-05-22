@@ -4,6 +4,12 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.57 NOT RELEASE YET
 
+Fix dependency on "CC"
+
+   The Makefile.PL depended on availabliltity of "cc" and would bail
+   out on systems where gcc is exclusivly available. Thanks to Rob
+   Windsor for noticing and patching.
+
 Fix compressed dnames in NAPTR/SRV
 
     Clayton O'Neill noted that the the domain names in in the NAPTR
