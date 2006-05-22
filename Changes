@@ -4,7 +4,13 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.57 NOT RELEASE YET
 
-Fix dependency on "CC"
+Optimize rt.cpan.org 11931
+
+   Hanno Stock optimized the method to get the list of available
+   interfaces in Win32.  I have only done very rudimentary tests on
+   my Windows XP system.
+
+Fix dependency on "CC" rt.cpan.org 19352
 
    The Makefile.PL depended on availabliltity of "cc" and would bail
    out on systems where gcc is exclusivly available. Thanks to Rob
