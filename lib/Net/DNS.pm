@@ -166,7 +166,7 @@ use Carp;
 sub typesbyname {
     my $name = uc shift;
 
-    return $typesbyname{$name} if $typesbyname{$name};
+    return $typesbyname{$name} if defined $typesbyname{$name};
 
     confess "Net::DNS::typesbyname() argument ($name) is not TYPE###" unless 
         $name =~ m/^\s*TYPE(\d+)\s*$/o;  

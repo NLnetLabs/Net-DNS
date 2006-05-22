@@ -4,6 +4,11 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.57 NOT RELEASE YET
 
+Fix rt.cpan.org 18958
+
+   Fixed typebyname croak for SIGZERO. Acknowledgements to djhale.
+
+
 Optimize rt.cpan.org 11931
 
    Hanno Stock optimized the method to get the list of available
