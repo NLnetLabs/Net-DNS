@@ -372,10 +372,14 @@ sub udp_connection {
 
 	local $| = 1 if $self->{"Verbose"};
 	print "Writing response - " if $self->{"Verbose"};
-	# die() ?!??  I think we need something better. --robert
-	$sock->send($reply_data) or die "send: $!";
-	print "done\n" if $self->{"Verbose"};
-}
+
+	if ($sock->send($reply_data)) { # 
+	  print "done\n" if $self->{"Verbose"};
+	}
+	else {
+	  print "failed to send reply: $!\n" if $self->{"Verbose"};
+	}
+      }
 
 
 sub get_open_tcp {

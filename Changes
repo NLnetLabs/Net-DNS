@@ -4,6 +4,12 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.57 NOT RELEASE YET
 
+Partly Fixed rt.cpan.org 18940
+
+   djhale noticed a number of error conditions under which de
+   udp_connection in Nameserver dies. We now print a warning.
+
+
 Fix rt.cpan.org 18958
 
    Fixed typebyname croak for SIGZERO. Acknowledgements to djhale.
