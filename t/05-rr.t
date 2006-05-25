@@ -3,7 +3,7 @@
 use Test::More;
 use strict;
 
-use vars qw( $HAS_DNSSEC );
+use vars qw( $HAS_DNSSEC $HAS_DLV );
 
 my $keypathrsa="Kexample.com.+005+24866.private";
 my $rsakeyrr;
@@ -13,8 +13,14 @@ BEGIN {
 	eval {require Net::DNS::SEC;}
 	){
 	$HAS_DNSSEC=1;
-	plan tests => 253;
-
+	if (defined ($Net::DNS::SEC::SVNVERSION) && 
+	    ( $Net::DNS::SEC::SVNVERSION > 591 )
+	    ){
+	    $HAS_DLV =1;
+	    plan tests => 254;
+	}else{
+	    plan tests => 253;
+	}
     }else{
 	$HAS_DNSSEC=0;
 	plan tests => 226;
@@ -48,12 +54,16 @@ open (RSA,">$keypathrsa") or die "Could not open $keypathrsa";
 
 ");
     
-    
-    
-
     ok( $rsakeyrr, 'RSA public key created');     # test 5
-    
-    
+
+    if ($HAS_DLV){
+	diag("DLV Supported in this version of Net::DNS::SEC");
+	my $dlv=new Net::DNS::RR ("dskey.example.com. 86400 IN DS 60485 5 2 ( 
+                                                D4B7D520E7BB5F0F67674A0C
+                                                CEB1E3E0614B93C4F9E99B83
+                                                83F6A1E4469DA50A )");    
+	ok( $dlv, "DLV RR created");
+    }
 }
 
 

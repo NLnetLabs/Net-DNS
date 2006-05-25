@@ -153,6 +153,22 @@ BEGIN {
 		    }
 		} 
 
+	 	eval { 
+		  local $SIG{'__DIE__'} = 'DEFAULT';
+		  require Net::DNS::RR::DLV; 
+		};
+
+		unless ($@) {
+		  $RR{'DLV'} =1;
+		} else {
+		  # Die only if we are dealing with a version for which DLV is 
+		  # available 
+		  die $@ if (
+			     defined ($Net::DNS::SEC::SVNVERSION) && 
+			     ( $Net::DNS::SEC::SVNVERSION > 591 )
+			    );
+		}
+
     }
 }
 

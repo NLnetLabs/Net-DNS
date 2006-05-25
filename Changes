@@ -2,7 +2,14 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
-*** 0.57 NOT RELEASE YET
+*** 0.57_01 NOT RELEASE YET
+
+Feature: DLV support.
+
+   added hooks for DLV support which is/will be available in
+   Net::DNS::SEC as of subversion version 592 (Tests are done agains
+   the subversion number, not against the perl release version)
+   Net::DNS::SEC version 0.15 will have DLV support.
 
 Partly Fixed rt.cpan.org 18940
 
