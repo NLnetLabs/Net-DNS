@@ -2,9 +2,9 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
-*** 0.57_01 NOT RELEASE YET
+*** 0.58 July 4, 2006
 
-Feature: DLV support.
+Feature: hooks for DLV support in Net::DNS::SEC
 
    added hooks for DLV support which is/will be available in
    Net::DNS::SEC as of subversion version 592 (Tests are done agains
@@ -14,7 +14,8 @@ Feature: DLV support.
 Partly Fixed rt.cpan.org 18940
 
    djhale noticed a number of error conditions under which de
-   udp_connection in Nameserver dies. We now print a warning.
+   udp_connection in Nameserver dies. We now print a warning instead
+   of dying.
 
 
 Fix rt.cpan.org 18958
