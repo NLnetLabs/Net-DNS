@@ -60,7 +60,7 @@ my $AAAA_address;
 my $A_address;
 
 
-SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
+SKIP: { skip "online tests are not enabled", 3 unless -e 't/online.enabled';
 
 	# First use the local resolver to query for the AAAA record of a 
         # well known nameserver, than use v6 transport to get to that record.

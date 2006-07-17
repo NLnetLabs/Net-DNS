@@ -2,6 +2,12 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 
+*** 0.58_01 UNRELEASED
+
+Fix rt.cpan.org 18113
+
+   Minor error due to unapplied part of patch fixed.
+
 *** 0.58 July 4, 2006
 
 Feature: hooks for DLV support in Net::DNS::SEC
