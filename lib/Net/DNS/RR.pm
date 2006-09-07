@@ -169,6 +169,23 @@ BEGIN {
 			    );
 		}
 
+	 	eval { 
+		  local $SIG{'__DIE__'} = 'DEFAULT';
+		  require Net::DNS::RR::NSEC3; 
+		};
+
+		unless ($@) {
+		  $RR{'NSEC3'} =1;
+		} else {
+		  # Die only if we are dealing with a version for which NSEC3 is 
+		  # available 
+		  die $@ if (
+			     defined ($Net::DNS::SEC::SVNVERSION) && 
+			     ( $Net::DNS::SEC::SVNVERSION > 600 )
+			    );
+		}
+
+
     }
 }
 

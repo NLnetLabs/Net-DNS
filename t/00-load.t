@@ -19,7 +19,7 @@ sub is_rr_loaded {
 	return $INC{"Net/DNS/RR/$rr.pm"} ? 1 : 0;
 }
 
-my %skip = map { $_ => 1 } qw(SIG NXT KEY DS NSEC RRSIG DNSKEY DLV);
+my %skip = map { $_ => 1 } qw(SIG NXT KEY DS NSEC RRSIG DNSKEY DLV NSEC3);
 
 my @rrs = grep { !$skip{$_} } keys %Net::DNS::RR::RR;
 
