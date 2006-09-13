@@ -113,7 +113,7 @@ $res = Net::DNS::Resolver->new(
 	searchlist => ['t.net-dns.org', 'net-dns.org'],
 );
 
-
+#$res->debug(1);
 #
 # test the search() and query() append the default domain and 
 # searchlist correctly.
@@ -135,6 +135,7 @@ $res = Net::DNS::Resolver->new(
 			method => 'query',
 			name   => 'a',
 		},
+
 	);
 
 

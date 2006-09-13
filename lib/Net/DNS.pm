@@ -1,3 +1,4 @@
+
 package Net::DNS;
 #
 # $Id$
@@ -41,7 +42,7 @@ BEGIN {
     @ISA     = qw(Exporter DynaLoader);
 
     
-    $VERSION = '0.58';
+    $VERSION = '0.58_1';
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 

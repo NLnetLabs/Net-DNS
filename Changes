@@ -4,9 +4,39 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.58_01 UNRELEASED
 
+
+Fix rt.cpan.org 20836, 20857, 20994, and 21402
+
+    These tickets all revolved around proper reverse mapping of IPv6
+    addresses.
+
+    Acknowledgements to Dick Franks who has provided elegant solutions and
+    cleaned a bit of code.
+
+    Note that directly calling Question->new() withouth arguments will
+    cause the qclass,qtype to be IN, A instead of ANY, ANY.
+
+    Besides, the Question->new() method will not automatically correct
+    misordered class and type fields anylonger. 
+
+    If you use the Question->new() method you should be aware of this.
+
+
+
+
+
 Fix rt.cpan.org 18113
 
    Minor error due to unapplied part of patch fixed.
+
+Feature: NSEC3 hooks.
+
+   Added hook for future support of (experimental) NSEC3 suppport
+   (NSEC3 having an experimental type code).
+
+
+
+
 
 *** 0.58 July 4, 2006
 

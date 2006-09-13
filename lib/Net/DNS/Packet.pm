@@ -223,16 +223,9 @@ sub new {
 			$rrobj->print if $debug;
 		}
 	} else {
-		my ($qname, $qtype, $qclass) = @_;
-
-		$qtype  = "A"  unless defined $qtype;
-		$qclass = "IN" unless defined $qclass;
-
 		$self{"header"} = Net::DNS::Header->new;
 		$self{"header"}->qdcount(1);
-		$self{"question"} = [ Net::DNS::Question->new($qname,
-							      $qtype,
-							      $qclass) ];
+		$self{"question"} = [ Net::DNS::Question->new(@_) ];
 		$self{"answer"}     = [];
 		$self{"authority"}  = [];
 		$self{"additional"} = [];

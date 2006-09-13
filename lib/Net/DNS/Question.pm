@@ -40,37 +40,42 @@ as arguments.
 
 sub new {
 	my $class = shift;
-	my %self = (
-		"qname"		=> undef,
-		"qtype"		=> undef,
-		"qclass"	=> undef,
-	);
 
-	my ($qname, $qtype, $qclass) = @_;
+	my $qname = shift || '';
+	my $qtype = uc shift || 'A';
+	my $qclass = uc shift || 'IN';
 
-	$qname  = "" if !defined($qname);
+	$qname =~ s/\.+$//o;	# strip gratuitous trailing dot
 
-	$qtype  = defined($qtype)  ? uc($qtype)  : "ANY";
-	$qclass = defined($qclass) ? uc($qclass) : "ANY";
-
-	# Check if the caller has the type and class reversed.
-	# We are not that kind for unknown types.... :-)
-	if ((!exists $Net::DNS::typesbyname{$qtype} ||
-	     !exists $Net::DNS::classesbyname{$qclass})
-	    && exists $Net::DNS::classesbyname{$qtype}
-	    && exists $Net::DNS::typesbyname{$qclass}) {
-
-		($qtype, $qclass) = ($qclass, $qtype);
+	# if name is an IP address do appropriate PTR query
+	if ( $qname =~ m/:|\d$/ ) {
+		($qname, $qtype) = ($_, 'PTR') if $_ = dns_addr($qname);
 	}
 
-	$qname =~ s/^\.+//o;
-	$qname =~ s/\.+$//o;
-
-	$self{"qname"}  = $qname;
-	$self{"qtype"}  = $qtype;
-	$self{"qclass"} = $qclass;
+	my %self = (	qname	=> $qname,
+			qtype	=> $qtype,
+			qclass	=> $qclass
+			);
 
 	bless \%self, $class;
+}
+
+
+sub dns_addr {
+	my $arg = shift;	# name or IP6/IP4 address
+
+	# If arg looks like IP4 address then map to in-addr.arpa space
+	if ( $arg =~ /(\d+)\.(\d+)\.(\d+)\.(\d+)$/o ) {
+		return "$4.$3.$2.$1.in-addr.arpa"
+	}
+
+	# If arg looks like IP6 address then map to ip6.arpa space
+	if ( $arg =~ /^((\w*:)+)(\w*)$/o ) {
+		my @parse = split /:/, (reverse "${1}0${3}"), 8;
+		my $hex = pack 'A4'x8, map{/^$/ ? ('0000')x(9-@parse) : $_.'000'} @parse;
+		return join '.', split(//, $hex), 'ip6.arpa';
+	}
+	return undef;
 }
 
 
@@ -189,6 +194,8 @@ sub data {
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
+
+Portions Copyright (c) 2003,2006 Dick Franks.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

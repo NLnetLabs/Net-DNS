@@ -411,111 +411,52 @@ sub _reset_errorstring {
 
 sub search {
 	my $self = shift;
-	my ($name, $type, $class) = @_;
-	my $ans;
+	my $name = shift || '.';
 
-	$type  ||= 'A';
-	$class ||= 'IN';
+	my $defdomain = $self->{domain} if $self->{defnames};
+	my @searchlist = @{$self->{searchlist}} if $self->{dnsrch};
 
-	# If the name looks like an IP address then do an appropriate
-	# PTR query.
-	if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
-		$name = "$4.$3.$2.$1.in-addr.arpa.";
-		$type = 'PTR';
-	}
-	
-	# pass IPv6 addresses right to query()
-	if (index($name, ':') > 0 and index($name, '.') < 0) {
-		return $self->query($name);
+	# resolve name by trying as absolute name, then applying searchlist
+	my @list = (undef, @searchlist);
+	for ($name) {
+		# resolve name with no dots or colons by applying searchlist (or domain)
+		@list = @searchlist ? @searchlist : ($defdomain) unless $name =~ m/[:.]/;
+		# resolve name with trailing dot as absolute name
+		@list = (undef) if m/\.$/;
 	}
 
-	# If the name contains at least one dot then try it as is first.
-	if (index($name, '.') >= 0) {
-		print ";; search($name, $type, $class)\n" if $self->{'debug'};
-		$ans = $self->query($name, $type, $class);
-		return $ans if $ans and $ans->header->ancount;
-	}
+	foreach my $suffix ( @list ) {
+		my $fqname = join '.', $name, $suffix ? ($suffix) : ();
 
-	# If the name doesn't end in a dot then apply the search list.
-	if (($name !~ /\.$/) && $self->{'dnsrch'}) {
-		foreach my $domain (@{$self->{'searchlist'}}) {
-			my $newname = "$name.$domain";
-			print ";; search($newname, $type, $class)\n"
-				if $self->{'debug'};
-			$ans = $self->query($newname, $type, $class);
-			return $ans if $ans and $ans->header->ancount;
-		}
-	}
+		print ';; search(', join(', ', $fqname, @_), ")\n" if $self->{debug};
 
-	# Finally, if the name has no dots then try it as is.
-	if (index($name, '.') < 0) {
-		print ";; search($name, $type, $class)\n" if $self->{'debug'};
-		$ans = $self->query("$name.", $type, $class);
-		return $ans if $ans and $ans->header->ancount;
-	}
+		my $packet = $self->send($fqname, @_) || return undef;
 
-	# No answer was found.
+		return $packet if $packet->header->ancount;	# answer found
+
+		last if ($packet->question)[0]->qtype eq 'PTR';	# abort search if IP
+	}
 	return undef;
 }
 
 
 sub query {
-	my ($self, $name, $type, $class) = @_;
+	my $self = shift;
+	my $name = shift || '.';
 
-	$type  ||= 'A';
-	$class ||= 'IN';
 
-	# If the name doesn't contain any dots then append the default domain.
-	if ((index($name, '.') < 0) && (index($name, ':') < 0) && $self->{'defnames'}) {
-		$name .= ".$self->{domain}";
-	}
 
-	# If the name looks like an IP address then do an appropriate
-	# PTR query.
-	if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
-		$name = "$4.$3.$2.$1.in-addr.arpa";
-		$type = 'PTR';
-	}
+	# resolve name containing no dots or colons by appending domain
+	my @suffix = ($self->{domain} || ()) if $name !~ m/[:.]/ and $self->{defnames};
 
-	# IPv4 address in IPv6 format (very lax regex)
-	if ($name =~ /^[0:]*:ffff:(\d+)\.(\d+)\.(\d+)\.(\d+)$/i) {
-		$name = "$4.$3.$2.$1.in-addr.arpa";
-		$type = 'PTR';
-	}
-	
-	# if the name looks like an IPv6 0-compressed IP address then expand
-	# PTR query. (eg 2001:5c0:0:1::2)
-	if ($name =~ /::/) {
-		# avoid stupid "Use of implicit split to @_ is deprecated" warning
-		while (scalar(my @parts = split (/:/, $name)) < 8) {
-			$name =~ s/::/:0::/;
-		}
-		$name =~ s/::/:0:/;
-	}	
-	
-	# if the name looks like an IPv6 address then do appropriate
-	# PTR query. (eg 2001:5c0:0:1:0:0:0:2)
-	if ($name =~ /:/) {
-		my (@stuff) = split (/:/, $name);
-		if (@stuff == 8) {
-			$name = 'ip6.arpa.';
-			$type = 'PTR';
-			foreach my $segment (@stuff) {
-				$segment = sprintf ("%04s", $segment);
-				$segment =~ m/(.)(.)(.)(.)/;
-				$name = "$4.$3.$2.$1.$name";
-			}
-		} else {
-			# no idea what this is
-		}
-	}
+	my $fqname = join '.', $name, @suffix;
 
-	print ";; query($name, $type, $class)\n" if $self->{'debug'};
-	my $packet = Net::DNS::Packet->new($name, $type, $class);
+	print ';; query(', join(', ', $fqname, @_), ")\n" if $self->{debug};
 
-	my $ans = $self->send($packet);
+	my $packet = $self->send($fqname, @_) || return undef;
 
-	return $ans && $ans->header->ancount   ? $ans : undef;
+	return $packet if $packet->header->ancount;	# answer found
+	return undef;
 }
 
 
@@ -1116,20 +1057,7 @@ sub make_query_packet {
 	if (ref($_[0]) and $_[0]->isa('Net::DNS::Packet')) {
 		$packet = shift;
 	} else {
-		my ($name, $type, $class) = @_;
-
-		$name  ||= '';
-		$type  ||= 'A';
-		$class ||= 'IN';
-
-		# If the name looks like an IP address then do an appropriate
-		# PTR query.
-		if ($name =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)$/o) {
-			$name = "$4.$3.$2.$1.in-addr.arpa.";
-			$type = 'PTR';
-		}
-
-		$packet = Net::DNS::Packet->new($name, $type, $class);
+		$packet = Net::DNS::Packet->new(@_);
 	}
 
 	if ($packet->header->opcode eq 'QUERY') {
@@ -1601,6 +1529,8 @@ Copyright (c) 1997-2002 Michael Fuhr.
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 Portions Copyright (c) 2005 Olaf Kolkman  <olaf@net-dns.org>
+
+Portions Copyright (c) 2006 Dick Franks.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
