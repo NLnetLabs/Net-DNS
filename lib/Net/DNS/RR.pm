@@ -180,8 +180,7 @@ BEGIN {
 		  # Die only if we are dealing with a version for which NSEC3 is 
 		  # available 
 		  die $@ if (
-			     defined ($Net::DNS::SEC::SVNVERSION) && 
-			     ( $Net::DNS::SEC::SVNVERSION > 600 )
+			     defined ($Net::DNS::SEC::HAS_NSEC3)
 			    );
 		}
 
