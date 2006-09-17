@@ -426,7 +426,7 @@ sub search {
 	}
 
 	foreach my $suffix ( @list ) {
-		my $fqname = join '.', $name, $suffix ? ($suffix) : ();
+	        my $fqname = join '.', $name, ($suffix || ());
 
 		print ';; search(', join(', ', $fqname, @_), ")\n" if $self->{debug};
 
@@ -1527,9 +1527,7 @@ for all your resolving needs.
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
-
 Portions Copyright (c) 2005 Olaf Kolkman  <olaf@net-dns.org>
-
 Portions Copyright (c) 2006 Dick Franks.
 
 All rights reserved.  This program is free software; you may redistribute

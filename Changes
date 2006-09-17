@@ -16,10 +16,9 @@ Fix rt.cpan.org 20836, 20857, 20994, and 21402
     Note that directly calling Question->new() withouth arguments will
     cause the qclass,qtype to be IN, A instead of ANY, ANY.
 
-    Besides, the Question->new() method will not automatically correct
-    misordered class and type fields anylonger. 
-
-    If you use the Question->new() method you should be aware of this.
+    The Resolvers search() now impllements the default behaviour of BIND
+    9.3.2 resolver i.e.  it will now properly parse IPv6 addresses and
+    resolve them in the ipv6.arpa domain
 
 
 
@@ -27,11 +26,10 @@ Fix rt.cpan.org 18113
 
    Minor error due to unapplied part of patch fixed.
 
-Feature: Experimental NSEC3 hooks.
+Feature: Experimental NSEC3 hooks. 
 
    Added hook for future support of (experimental) NSEC3 suppport
-   (NSEC3 having an experimental type code). 
-
+   (NSEC3 having an experimental type code).
 
 
 

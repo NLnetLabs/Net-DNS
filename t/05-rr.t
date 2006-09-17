@@ -3,7 +3,7 @@
 use Test::More;
 use strict;
 
-use vars qw( $HAS_DNSSEC $HAS_DLV );
+use vars qw( $HAS_DNSSEC $HAS_DLV $HAS_NSEC3);
 
 my $keypathrsa="Kexample.com.+005+24866.private";
 my $rsakeyrr;
@@ -13,11 +13,10 @@ BEGIN {
 	eval {require Net::DNS::SEC;}
 	){
 	$HAS_DNSSEC=1;
-	if (defined ($Net::DNS::SEC::SVNVERSION) && 
-	    ( $Net::DNS::SEC::SVNVERSION > 591 )
-	    ){
-	    $HAS_DLV =1;
+	if (defined ($HAS_DLV=$Net::DNS::SEC::HAS_DLV))
+	{
 	    plan tests => 254;
+	    $HAS_NSEC3=$Net::DNS::SEC::HAS_NSEC3;
 	}else{
 	    plan tests => 253;
 	}
@@ -64,6 +63,11 @@ open (RSA,">$keypathrsa") or die "Could not open $keypathrsa";
                                                 83F6A1E4469DA50A )");    
 	ok( $dlv, "DLV RR created");
     }
+
+    if ($HAS_NSEC3){
+	diag("NSEC3 Supported in this version of Net::DNS::SEC (no tests yet)");
+    }
+
 }
 
 

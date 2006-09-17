@@ -6,9 +6,6 @@ problems or questions, please contact the contributor.
 File			Contributor
 ------			-----------
 check_soa		Dick Franks <rwfranks@acm.org>
-                                A 'parallel implementation' of the
-                                check_soa script in the examples
-                                directory
 
 check_zone              Dennis Glatting <dennis.glatting@software-munitions.com>
 

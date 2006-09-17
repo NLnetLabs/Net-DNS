@@ -52,6 +52,18 @@ sub new {
 		($qname, $qtype) = ($_, 'PTR') if $_ = dns_addr($qname);
 	}
 
+
+
+ 	# Check if the caller has the type and class reversed.
+ 	# We are not that kind for unknown types.... :-)
+ 	if ((!exists $Net::DNS::typesbyname{$qtype} ||
+ 	     !exists $Net::DNS::classesbyname{$qclass})
+ 	    && exists $Net::DNS::classesbyname{$qtype}
+ 	    && exists $Net::DNS::typesbyname{$qclass}) {
+	  ($qtype, $qclass) = ($qclass, $qtype);
+  	}
+	
+
 	my %self = (	qname	=> $qname,
 			qtype	=> $qtype,
 			qclass	=> $qclass

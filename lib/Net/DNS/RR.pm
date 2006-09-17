@@ -163,10 +163,8 @@ BEGIN {
 		} else {
 		  # Die only if we are dealing with a version for which DLV is 
 		  # available 
-		  die $@ if (
-			     defined ($Net::DNS::SEC::SVNVERSION) && 
-			     ( $Net::DNS::SEC::SVNVERSION > 591 )
-			    );
+		  die $@ if defined ($Net::DNS::SEC::HAS_DLV) ;
+
 		}
 
 	 	eval { 
@@ -179,9 +177,7 @@ BEGIN {
 		} else {
 		  # Die only if we are dealing with a version for which NSEC3 is 
 		  # available 
-		  die $@ if (
-			     defined ($Net::DNS::SEC::HAS_NSEC3)
-			    );
+		  die $@ if defined ($Net::DNS::SEC::HAS_NSEC3);
 		}
 
 
