@@ -47,11 +47,6 @@ sub new {
 
 	$qname =~ s/\.+$//o;	# strip gratuitous trailing dot
 
-	# if name is an IP address do appropriate PTR query
-	if ( $qname =~ m/:|\d$/ ) {
-		($qname, $qtype) = ($_, 'PTR') if $_ = dns_addr($qname);
-	}
-
 
 
  	# Check if the caller has the type and class reversed.
@@ -62,6 +57,14 @@ sub new {
  	    && exists $Net::DNS::typesbyname{$qclass}) {
 	  ($qtype, $qclass) = ($qclass, $qtype);
   	}
+
+
+	# if name is an IP address do appropriate PTR query
+	if ( $qname =~ m/:|\d$/ ) {
+		($qname, $qtype) = ($_, 'PTR') if $_ = dns_addr($qname);
+	}
+
+
 	
 
 	my %self = (	qname	=> $qname,

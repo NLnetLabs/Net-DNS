@@ -420,7 +420,7 @@ sub search {
 	my @list = (undef, @searchlist);
 	for ($name) {
 		# resolve name with no dots or colons by applying searchlist (or domain)
-		@list = @searchlist ? @searchlist : ($defdomain) unless $name =~ m/[:.]/;
+		@list = @searchlist ? @searchlist : ($defdomain) unless  m/[:.]/;
 		# resolve name with trailing dot as absolute name
 		@list = (undef) if m/\.$/;
 	}
