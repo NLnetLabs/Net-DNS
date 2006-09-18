@@ -1,5 +1,5 @@
 #!/usr/local/bin/perl -w
-$main::VERSION = '0.15';
+$main::VERSION = '0.16';
 #
 =head1 NAME
 
@@ -89,6 +89,7 @@ use strict;
 use Getopt::Std;
 
 my $self = $0;						# script
+my $version = $main::VERSION;
 my %option;
 my $options = 'dtv';					# options
 getopts("$options", \%option);				# also  --help  --version
@@ -157,16 +158,17 @@ sub catnap {				# short duration sleep
 }
 
 
-sub checkNS {				# check servers (in parallel) and report status
+sub checkNS {				# check nameservers (in parallel) and report status
 	my $zone = shift;
 	my $index = @_ || return (0,0);			# server list empty
 	my ($ns, $if) = split / /, pop @_||return(0,0);	# name/interface at end of list
 
 	my $res = Net::DNS::Resolver->new(@conf);	# use clean resolver for each test
-	my ($ip, @xip) = $res->nameservers($if || $ns);	# point at nameserver
-
-	my $parallel = $ip unless @server;		# avoid parallel queries to same server
-	my ($socket, $sent) = ($res->bgsend($zone,'SOA'), time) if $parallel;
+	my @xip = sort $res->nameservers($if || $ns);	# point at nameserver
+	my $ip = pop @xip;				# last (or only) interface
+	$res->nameservers($ip) if @xip;
+							# send query packet to nameserver
+	my ($socket, $sent) = ($res->bgsend($zone,'SOA'), time) if $ip and not @server;
 
 	my @pass = checkNS($zone, @_);			# recurse to query others in parallel
 							# pick up response as recursion unwinds
@@ -174,7 +176,13 @@ sub checkNS {				# check servers (in parallel) and report status
 	my ($fail, $latest, %soa) = @pass;		# use prebuilt return values
 	my @fail = @pass;	$fail[0]++;
 
-	foreach (sort @xip) {				# iterate over remaining interfaces
+	if ( @xip and $socket ) {			# special handling for multihomed server
+		until ($res->bgisready($socket)) {	# wait for outstanding query to complete
+			last if time > ($sent + $udp_timeout);
+			catnap($udp_wait);
+		}
+	}
+	foreach (@xip) {				# iterate over remaining interfaces
 		my ($f, @etc) = checkNS($zone, (undef)x@_, "$ns $_");	# pass name/IP pair
 		@pass = @fail if $f;			# propagate failure to caller
 	}
@@ -222,15 +230,15 @@ sub checkNS {				# check servers (in parallel) and report status
 		return @fail;					# RFC2308, 2.1
 	}
 
-	my @aa = $packet->header->aa ? qw(aa) : ();	# authoritative answer
-	my @tc = $packet->header->tc ? qw(tc) : ();	# truncated response
+	my $aa = $packet->header->aa;			# authoritative answer
+	my $tc = $packet->header->tc ? 'tc' : '';	# truncated  response
 	my @answer = $packet->answer;			# answer section
 	my @soa = grep{$_->type eq 'SOA'} @answer;	# SOA records (plural!)
 
 	my @result = @fail;				# analyse response
 	if ( @soa ) {
-		@result = @pass if @aa;				# RFC2181, 6.1
-		report('non-authoritative answer') unless @aa;	# RFC1034, 6.2.1 (2)
+		@result = @pass if $aa;				# RFC2181, 6.1
+		report('non-authoritative answer') unless $aa;	# RFC1034, 6.2.1 (2)
 	} elsif ( @soa = grep{$_->type eq 'SOA'} $packet->authority ) {
 		my $ttl = $soa[0]->ttl;				# RFC2308, 2.2 (1)(2)
 		report("NCACHE response (ttl $ttl seconds)");
@@ -244,7 +252,7 @@ sub checkNS {				# check servers (in parallel) and report status
 
 	my $serial;					# zone serial number
 	foreach ( @soa ) {
-		print @tc, "\t\t\tzone serial\t", ($serial = $_->serial), "\n";
+		print "$tc\t\t\tzone serial\t", ($serial = $_->serial), "\n";
 		$_->serial(0);				# key on constant fields only
 		$_->ttl(0);
 		next if $soa{lc $_->string}++;		# skip repeated occurrences
@@ -255,7 +263,7 @@ sub checkNS {				# check servers (in parallel) and report status
 
 	return @result if $serial == $latest;		# server has latest data
 
-	unless ( @aa and ($serial > $latest) ) {	# unexpected serial number
+	unless ( $aa and ($serial > $latest) ) {	# unexpected serial number
 		report('serial number not current') if $latest;
 		return (@fail, %soa);
 	}

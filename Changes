@@ -16,10 +16,15 @@ Fix rt.cpan.org 20836, 20857, 20994, and 21402
     Note that directly calling Question->new() withouth arguments will
     cause the qclass,qtype to be IN, A instead of ANY, ANY.
 
-    The Resolvers search() now impllements the default behaviour of BIND
-    9.3.2 resolver i.e.  it will now properly parse IPv6 addresses and
-    resolve them in the ipv6.arpa domain
+    Net::DNS::Resolver's search() method would always gracefully
+    interpret a qname in the form of an IPv4 address. It would go out
+    and do a PTR query in the reverse address tree. This behavior has
+    also been applied to IPv6 addresses in their many shapes and
+    forms. 
 
+    This change did two things, 1) root zone not implicitly added to
+    search list when looking up short name, 2) default domain appended
+    to short name if DEFNAMES and not DNSRCH.
 
 
 Fix rt.cpan.org 18113
