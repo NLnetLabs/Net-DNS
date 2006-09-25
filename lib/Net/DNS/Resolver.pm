@@ -295,8 +295,8 @@ search list.  If the class is omitted, it defaults to IN.
 B<IMPORTANT>:
 
 This method currently returns the C<IO::Socket::INET> object that will
-be used for reading, or C<undef> on error.  DO NOT DEPEND ON C<axfr_next()>
-returning a socket object.  THIS WILL CHANGE in future releases.
+be used for reading, or C<undef> on error.  DO NOT DEPEND ON C<axfr_start()>
+returning a socket object.  THIS MIGHT CHANGE in future releases.
 
 Use C<axfr_next> to read the zone records one at a time.
 
