@@ -210,7 +210,7 @@ sub metafile {
 }
 
 
-
+use Config qw(%Config);
 sub postamble {
     my $content;
 
@@ -222,9 +222,10 @@ test_cover : pure_all
 
 
 
-netdns$(LIB_EXT): netdns.o
-	$(AR) cr netdns$(LIB_EXT) netdns.o
-	$(RANLIB) netdns$(LIB_EXT)
+
+netdns$(LIB_EXT): netdns$(OBJ_EXT)
+	$(AR) '.($^O eq 'MSWin32' && $Config{'cc'} eq 'cl'?'/OUT:':'cr ').
+	  'netdns$(LIB_EXT) netdns$(OBJ_EXT)
 
 
 ';

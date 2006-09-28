@@ -1,4 +1,7 @@
 #include <sys/types.h>
+#if defined(_MSC_VER) || defined(__MINGW32_VERSION)
+#include <windows.h>
+#endif
 #define TESTVAL 4
 extern double foo(int, long, const char*);
 

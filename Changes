@@ -1,6 +1,17 @@
 
 Revision history for Net::DNS                                     -*-text-*-
 =============================
+*** 0.59_1 UNRELEASED
+
+Fix rt 21752
+    Applied the patch supplied by Alexandr Ciornii to be able
+    to compile on ActiveState perl .
+
+Fix 
+    Minor compile time warnings for netdns.c on Fedora Core.
+
+
+
 
 *** 0.59 September 18, 2006
 
