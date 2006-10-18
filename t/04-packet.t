@@ -1,11 +1,12 @@
 # $Id$    -*-perl-*-
 
 
-use Test::More tests => 39;
+use Test::More tests => 41;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }     #1
 
+my $had_xs=$Net::DNS::HAVE_XS; 
 
 my $domain = "example.com";
 my $type   = "MX";
@@ -179,3 +180,24 @@ $packet2=Net::DNS::Packet->new(\$data);
 
 is($packet->string,$packet2->string,"Packet to data and back (failure indicates broken dn_comp)");  #39
 
+
+
+
+
+$data = pack("H*", '102500000000000100000000076578616d706c6503636f6dc00c000100010000001000047f000001');
+my ($pkt, $err);
+
+ SKIP: {
+     skip "No dn_expand_xs available", 1 unless $had_xs;
+     ($pkt, $err) = Net::DNS::Packet->new(\$data);
+     is ($err,"answer section incomplete", "loopdetection in dn_expand_PP");
+     
+}
+
+
+# Force use of the pure-perl parser
+$Net::DNS::HAVE_XS=0;
+($pkt, $err) = Net::DNS::Packet->new(\$data);
+is ($err,"answer section incomplete", "loopdetection in dn_expand_PP");
+
+$Net::DNS::HAVE_XS=$had_xs;

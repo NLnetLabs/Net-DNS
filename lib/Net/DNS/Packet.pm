@@ -744,7 +744,8 @@ sub dn_expand
 	if ($Net::DNS::HAVE_XS) {
 	    ($name, $roffset)=dn_expand_XS($packet, $offset);
 	} else {
-	    ($name, $roffset)=dn_expand_PP($packet, $offset);
+	    my %seen;
+	    ($name, $roffset)=dn_expand_PP($packet, $offset, \%seen);
 	}
     
 	return ($name, $roffset);
@@ -752,24 +753,26 @@ sub dn_expand
 }
 
 sub dn_expand_PP {
-	my ($packet, $offset) = @_; # $seen from $_[2] for debugging
+	my ($packet, $offset,$seen) = @_; # $seen from $_[2] for debugging
 	my $name = "";
 	my $len;
 	my $packetlen = length $$packet;
 	my $int16sz = Net::DNS::INT16SZ();
 
-	# Debugging
-	# warn "USING PURE PERL dn_expand()\n";
-	#if ($seen->{$offset}) {
-	#	die "dn_expand: loop: offset=$offset (seen = ",
-	#	     join(",", keys %$seen), ")\n";
-	#}
-	#$seen->{$offset} = 1;
-
 	while (1) {
 		return (undef, undef) if $packetlen < ($offset + 1);
 
 		$len = unpack("\@$offset C", $$packet);
+
+
+		# Debugging
+		#warn "USING PURE PERL dn_expand()\n";
+		if ($seen->{$offset}) {
+		  # warn "dn_expand: loop: offset=$offset (seen = ",
+		  # join(",", keys %$seen), ")\n";
+		  return ();
+		}
+		$seen->{$offset} = 1;
 
 		if ($len == 0) {
 			$offset++;
@@ -781,7 +784,7 @@ sub dn_expand_PP {
 
 			my $ptr = unpack("\@$offset n", $$packet);
 			$ptr &= 0x3fff;
-			my($name2) = dn_expand_PP($packet, $ptr); # pass $seen for debugging
+			my($name2) = dn_expand_PP($packet, $ptr,$seen); # pass $seen for debugging
 
 			return (undef, undef) unless defined $name2;
 
