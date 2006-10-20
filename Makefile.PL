@@ -103,9 +103,6 @@ unless (defined $use_xs) {
 	if (test_cc()) {
 		print "You have a working compiler.\n";
 		$use_xs = 1;
-	        $Makefile{'MYEXTLIB'}    = 'netdns$(LIB_EXT)',
-
-
 	} else {
 		$use_xs = 0;
 		print <<END;
@@ -131,7 +128,8 @@ END
 
 if ($use_xs) {
 	# turn the XS bits on.
-	print "Activating XS Magic...\n" if DEBUG; 
+        print "Activating XS Magic...\n" if DEBUG; 
+	$Makefile{'MYEXTLIB'}    = 'netdns$(LIB_EXT)';
 	delete $Makefile{'XS'};
 	delete $Makefile{'C'};
 }
