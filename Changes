@@ -12,6 +12,17 @@ Fix rt 21752 and 24042
     Slight modifications based on comments by nimnul
 
 
+Fix rt 23961
+    Randomized the ID on the queries. Thanks to "hjp" for reporting and
+    sugesting a fix.
+
+    The randomization of the src port is supposed to be handled by the
+    setting the source port to "0" (default). Overriding the default
+    or using persistent sockets may be problematic.
+
+    Also see:
+    http://www.potaroo.net/ietf/idref/draft-hubert-dns-anti-spoofing/
+
 Fix 
     Minor compile time warnings for netdns.c on Fedora Core.
 

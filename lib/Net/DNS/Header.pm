@@ -52,10 +52,9 @@ the data is incomplete).
 
 
 {
-	my $id = int rand(MAX_ID);
 	
 	sub nextid {
-		return $id++ % (MAX_ID + 1);
+		int rand(MAX_ID);
 	}
 }
 
