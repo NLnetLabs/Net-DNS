@@ -6,9 +6,11 @@ Revision history for Net::DNS                                     -*-text-*-
 Fix rt 22334
     Fixed "perl Makefile.PL --xs" behavior, patch by Tamas Palfalvi
 
-Fix rt 21752
+Fix rt 21752 and 24042
     Applied the patch supplied by Alexandr Ciornii to be able
     to compile on ActiveState perl .
+    Slight modifications based on comments by nimnul
+
 
 Fix 
     Minor compile time warnings for netdns.c on Fedora Core.
