@@ -170,10 +170,12 @@ BEGIN {
 	 	eval { 
 		  local $SIG{'__DIE__'} = 'DEFAULT';
 		  require Net::DNS::RR::NSEC3; 
+		  require Net::DNS::RR::NSEC3PARAM; 
 		};
 
 		unless ($@) {
 		  $RR{'NSEC3'} =1;
+		  $RR{'NSEC3PARAM'} =1;
 		} else {
 		  # Die only if we are dealing with a version for which NSEC3 is 
 		  # available 

@@ -145,7 +145,8 @@ use Carp;
     'MAILB'     => 253,     # RFC 1035 (MB, MG, MR)
     'MAILA'     => 254,     # RFC 1035 (obsolete - see MX)
     'ANY'       => 255,     # RFC 1035
-    'NSEC3'     => 65324,    # draft-ietf-dnsext-nsec3-07 (experimental typecode, not permanent)
+    'NSEC3'     => 65324,   # draft-ietf-dnsext-nsec3-09 (experimental typecode, not permanent)
+    'NSEC3PARAM' => 65325,  # draft-ietf-dnsext-nsec3-09 (experimental typecode, not permanent)
     'DLV'       => 32769    # RFC 4431  in Net::DNS::SEC		
 );
 %typesbyval = reverse %typesbyname;
