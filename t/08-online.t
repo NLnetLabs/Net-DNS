@@ -65,7 +65,13 @@ foreach my $data (@rrs) {
 
 	
 	foreach my $meth (keys %{$data}) {
+	    if ($meth eq "name"){
+		#names should be case insensitive
+		is(lc($answer->$meth()),lc($data->{$meth}), "$meth correct ($data->{name})");
+	    }else{
 		is($answer->$meth(), $data->{$meth}, "$meth correct ($data->{name})");
+	    }
+
 	}
 }
 
@@ -74,6 +80,7 @@ my @mx = mx('mx2.t.net-dns.org');
 
 my $wanted_names = [qw(a.t.net-dns.org a2.t.net-dns.org)];
 my $names        = [ map { $_->exchange } @mx ];
+
 
 is_deeply($names, $wanted_names, "mx() seems to be working");
 		
@@ -103,7 +110,7 @@ is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
 			
 			next unless $packet;
 			
-			is(($packet->answer)[0]->ptrdname, $test->{'host'}, "$method($test->{'ip'}) works");
+			is(lc(($packet->answer)[0]->ptrdname),lc($test->{'host'}), "$method($test->{'ip'}) works");
 		}
 	}
 }
@@ -151,7 +158,7 @@ $res = Net::DNS::Resolver->new(
 		my ($a) = $ans->answer;
 		
 		isa_ok($a, 'Net::DNS::RR::A');
-		is($a->name, 'a.t.net-dns.org',"Correct name (with $method)");
+		is(lc($a->name), 'a.t.net-dns.org',"Correct name (with $method)");
 	}
 #	$res->debug(1);
 	my $socket=$res->bgsend('a.t.net-dns.org','A');
@@ -183,7 +190,7 @@ $res = Net::DNS::Resolver->new(
 	  my ($a) = $ans->answer;
 	  
 	  isa_ok($a, 'Net::DNS::RR::A');
-	  is($a->name, 'a.t.net-dns.org',"Correct name");
+	  is(lc($a->name), 'a.t.net-dns.org',"Correct name");
 	}
 }
 
@@ -232,7 +239,7 @@ $res = Net::DNS::Resolver->new(
 		my ($a) = $ans->answer;
 		
 		isa_ok($a, 'Net::DNS::RR::A');
-		is($a->name, 'a.t.net-dns.org',"Correct name (with persistent socket and $method)");
+		is(lc($a->name), 'a.t.net-dns.org',"Correct name (with persistent socket and $method)");
 	}
 	
 
