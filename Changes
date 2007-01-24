@@ -3,6 +3,13 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 *** 0.59_1 UNRELEASED
 
+Feature rt r24525 
+
+    Net::DNS::Resolver depended on Net::IP (2268 Kb) which depends on
+    heavy module Math::BigInt (1780 Kb). Valery Studennikov suggested to
+    ship Net::DNS::Resolver::Base with its own copies of ip_is_ipv[4|6] and
+    supplied a patch with those functions stripped from Net::IP.
+
 Fix rt 22334
     Fixed "perl Makefile.PL --xs" behavior, patch by Tamas Palfalvi
 

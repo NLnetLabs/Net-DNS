@@ -1,6 +1,6 @@
 # $Id$ -*-perl-*-
 
-use Test::More tests => 22;
+use Test::More tests => 37;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); 
@@ -136,4 +136,34 @@ my $TXTrr3   = Net::DNS::RR->new("baz.example.com 3600 HS TXT '\"' 'Char Str2'")
 is( ($TXTrr3->char_str_list())[0],'"',"Escaped \" between the  single quotes");
 
 
+
+
+
+
+ok(Net::DNS::Resolver::Base::_ip_is_ipv4("10.0.0.9"),"_ip_is_ipv4, test 1");
+
+ok(Net::DNS::Resolver::Base::_ip_is_ipv4("1"),"_ip_is_ipv4, test 2");
+
+# remember 1.1 expands to 1.0.0.1 and is legal.
+ok( Net::DNS::Resolver::Base::_ip_is_ipv4("1.1"),"_ip_is_ipv4, test 3");
+
+ok( ! Net::DNS::Resolver::Base::_ip_is_ipv4("256.1.0.9"),"_ip_is_ipv4, test 4");
+
+ok( ! Net::DNS::Resolver::Base::_ip_is_ipv4("10.11.12.13.14"),"_ip_is_ipv4, test 5");
+
+ok(Net::DNS::Resolver::Base::_ip_is_ipv6("::1"),"_ip_is_ipv6, test 1");
+ok(Net::DNS::Resolver::Base::_ip_is_ipv6("1::1"),"_ip_is_ipv6, test 2");
+ok(Net::DNS::Resolver::Base::_ip_is_ipv6("1::1:1"),"_ip_is_ipv6, test 3");
+ok(! Net::DNS::Resolver::Base::_ip_is_ipv6("1::1:1::1"),"_ip_is_ipv6, test 4");
+ok(Net::DNS::Resolver::Base::_ip_is_ipv6("1:2:3:4:4:6:7:8"),"_ip_is_ipv6, test 5");
+ok(! Net::DNS::Resolver::Base::_ip_is_ipv6("1:2:3:4:4:6:7:8:9"),"_ip_is_ipv6, test 6");
+
+
+ok( Net::DNS::Resolver::Base::_ip_is_ipv6("0001:0002:0003:0004:0004:0006:0007:0008"),"_ip_is_ipv6, test 7");
+
+ok( Net::DNS::Resolver::Base::_ip_is_ipv6("abcd:ef01:2345:6789::"),"_ip_is_ipv6, test 8");
+
+ok(! Net::DNS::Resolver::Base::_ip_is_ipv6("abcd:efgh:2345:6789::"),"_ip_is_ipv6, test 9");
+
+ok( Net::DNS::Resolver::Base::_ip_is_ipv6("0001:0002:0003:0004:0004:0006:0007:10.0.0.1"),"_ip_is_ipv6, test 10");
 
