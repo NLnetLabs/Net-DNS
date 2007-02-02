@@ -49,9 +49,11 @@ sub new {
 		$self->{'algorithm'} = unpack('C', substr($$data, $offsettoalg, 1));
 		$self->{'fptype'}    = unpack('C', substr($$data, $offsettofptype, 1));
 	
-		die "This fingerprint type $self->{'fptype'} has not yet been implemented\n." . 
-			"Contact developer of Net::DNS::RR::SSHFP.\n" 
-				unless defined $fingerprinttypebyval{$self->{'fptype'}};
+		unless (defined $fingerprinttypebyval{$self->{'fptype'}}){
+		  warn "This fingerprint type $self->{'fptype'} has not yet been implemented, creation of SSHFP failed\n." ;
+		  return undef;
+		}
+
 							   
 		# All this is SHA-1 dependend
 		$self->{'fpbin'} = substr($$data,$offsettofp, $fplength); # SHA1 digest 20 bytes long
