@@ -95,12 +95,12 @@ SKIP: {
 	$res->nameservers('a.t.net-dns.org');
 	my $ip = ($res->nameservers)[0];
 	is($ip, '10.0.1.128', 'Nameservers() looks up IP.') or
-	    diag ($res->errorstring) ;
+	    diag ($res->errorstring ."\n". $res->print) ;
 	
 	$res->nameservers('cname.t.net-dns.org');
 	$ip = ($res->nameservers)[0];
 	is($ip, '10.0.1.128', 'Nameservers() looks up cname.') or
-	    diag ($res->errorstring) ;
+	    diag ($res->errorstring ."\n". $res->print) ;
 }	
 
 
