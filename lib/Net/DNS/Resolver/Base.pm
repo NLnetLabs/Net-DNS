@@ -473,6 +473,7 @@ sub send {
 	    
 	} else {
 	    $ans = $self->send_udp($packet, $packet_data);
+
 	    if ($ans && $ans->header->tc && !$self->{'igntc'}) {
 			print ";;\n;; packet truncated: retrying using TCP\n" if $self->{'debug'};
 			$ans = $self->send_tcp($packet, $packet_data);
@@ -869,7 +870,6 @@ sub send_udp {
 				  } elsif (defined $err) {
 				      $self->errorstring($err);
 				  }
-				  
 				  return $ans;
 			      } else {
 				  $self->errorstring($!);

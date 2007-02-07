@@ -106,7 +106,9 @@ is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
 		foreach my $method (qw(search query)) {
 			my $packet = $res->$method($test->{'ip'});
 			
-			isa_ok($packet, 'Net::DNS::Packet');
+			isa_ok($packet, 
+			       'Net::DNS::Packet') or
+			    diag ($res->errorstring);
 			
 			next unless $packet;
 			
