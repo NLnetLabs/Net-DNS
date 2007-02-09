@@ -68,7 +68,7 @@ my %Makefile = (
 		'IO::Socket'       => 0,
 		'MIME::Base64'     => 2.11,
 		'Digest::MD5'      => 2.12,
-		'Net::IP'          => 0,
+		'Net::IP'          => 1.2,
 		'Digest::HMAC_MD5' => 1.00,
 	},
 	XS            => {},

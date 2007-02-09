@@ -1074,9 +1074,10 @@ sub make_query_packet {
 						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload
 						ednsflags    => 0x8000, # first bit set see RFC 3225 
 				   );
-				 
-	    $packet->push('additional', $optrr);
-	    
+
+	
+	    $packet->push('additional', $optrr) unless defined  $packet->{'optadded'} ;
+	    $packet->{'optadded'}=1;
 	} elsif ($self->{'udppacketsize'} > Net::DNS::PACKETSZ()) {
 	    print ";; Adding EDNS extention with UDP packetsize  $self->{'udppacketsize'}.\n" if $self->{'debug'};
 	    # RFC 3225
@@ -1087,7 +1088,8 @@ sub make_query_packet {
 						TTL          => 0x0000 # RCODE 32bit Hex
 				    );
 				    
-	    $packet->push('additional', $optrr);
+	    $packet->push('additional', $optrr) unless defined  $packet->{'optadded'} ;
+	    $packet->{'optadded'}=1;
 	}
 	
 

@@ -4,6 +4,12 @@ Revision history for Net::DNS                                     -*-text-*-
 *** 0.59_1 UNRELEASED
 
 
+Bug Recursing and EDNS OPT record
+
+    The Recursive resolver process would add an OPT-RR with each recursion
+    which causes FORMERRs with a number of authoritative servers.
+
+
 Feature SSHFP warn instead of die
 
     We do not die if a not implemented fingerprint type value is read
