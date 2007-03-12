@@ -55,7 +55,7 @@ sub _canonicalRdata {
     # rdata contains a compressed domainname... we should not have that.
 	my ($self) = @_;
 	my $rdata;
-	$rdata=$self->_name2wire($self->{"nsdname"});
+	$rdata= $self->_name2wire(lc($self->{"nsdname"}));
 	return $rdata;
 }
 

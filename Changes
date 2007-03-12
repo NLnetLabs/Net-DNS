@@ -2,7 +2,10 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 *** 0.59_1 UNRELEASED
+Bug Canonical RDATA 
 
+    The method used to create canonical data needed for DNSSEC did not 'lowercase'
+    the data. This results in interoperability problems with other implementations
 
 Bug Recursing and EDNS OPT record
 

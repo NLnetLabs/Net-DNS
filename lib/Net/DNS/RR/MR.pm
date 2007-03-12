@@ -53,7 +53,7 @@ sub _canonicalRdata {
     my $self=shift;
     my $rdata = "";
     if (exists $self->{"newname"}) {
-		$rdata .= $self->_name2wire($self->{"newname"});
+		$rdata .= $self->_name2wire(lc($self->{"newname"}));
 	}
 	return $rdata;
 }

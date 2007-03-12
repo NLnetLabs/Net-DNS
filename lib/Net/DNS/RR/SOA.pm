@@ -87,8 +87,8 @@ sub _canonicalRdata {
     # print a warning otherwise.
     
     if (exists $self->{"mname"}) {
-		$rdata .= $self->_name2wire($self->{"mname"});		
-		$rdata .= $self->_name2wire($self->{"rname"});
+		$rdata .= $self->_name2wire(lc($self->{"mname"}));		
+		$rdata .= $self->_name2wire(lc($self->{"rname"}));
 		$rdata .= pack("N5", @{$self}{qw(serial refresh retry expire minimum)});
 	}
 

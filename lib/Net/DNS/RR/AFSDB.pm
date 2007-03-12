@@ -68,7 +68,7 @@ sub _canonicalRdata {
 	my $rdata;
 	if (exists $self->{"subtype"}) {
 	    $rdata .= pack("n", $self->{"subtype"});
-	    $rdata .=  $self->_name2wire($self->{"hostname"});
+	    $rdata .=  $self->_name2wire(lc($self->{"hostname"}));
 	}
 	return $rdata;
 }

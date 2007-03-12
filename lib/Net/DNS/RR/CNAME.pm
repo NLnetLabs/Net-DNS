@@ -53,7 +53,7 @@ sub rr_rdata {
 # rdata contains a compressed domainname... we should not have that.
 sub _canonicalRdata {	
 	my ($self) = @_;
-	return $self->_name2wire($self->{"cname"});
+	return $self->_name2wire(lc($self->{"cname"}));
 }
 
 1;

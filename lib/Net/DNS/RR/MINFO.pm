@@ -63,8 +63,8 @@ sub _canonicalRdata {
 	my $rdata = "";
 
 	if (exists $self->{"rmailbx"}) {
-		$rdata .= $self->_name2wire($self->{"rmailbx"});
-		$rdata .=  $self->_name2wire($self->{"emailbx"});
+		$rdata .= $self->_name2wire(lc($self->{"rmailbx"}));
+		$rdata .=  $self->_name2wire(lc($self->{"emailbx"}));
 	}
 
 	return $rdata;

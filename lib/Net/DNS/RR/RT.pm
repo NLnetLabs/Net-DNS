@@ -78,7 +78,7 @@ sub _canonicalRdata {
 
 	if (exists $self->{"preference"}) {
 		$rdata .= pack("n", $self->{"preference"});
-		$rdata .= $self->_name2wire($self->{"intermediate"});
+		$rdata .= $self->_name2wire(lc($self->{"intermediate"}));
 	}
 
 	return $rdata;

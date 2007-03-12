@@ -43,7 +43,7 @@ sub rr_rdata {
 	my $rdata = "";
 
 	if (exists $self->{"ptrdname"}) {
-		$rdata .= $packet->dn_comp($self->{"ptrdname"}, $offset);
+		$rdata .= $packet->dn_comp(lc($self->{"ptrdname"}), $offset);
 	}
 
 	return $rdata;

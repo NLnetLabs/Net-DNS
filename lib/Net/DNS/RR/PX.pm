@@ -91,8 +91,8 @@ sub _canonicalRdata {
 
 	if (exists $self->{"preference"}) {
 		$rdata .= pack("n", $self->{"preference"});
-		$rdata .= $self->_name2wire($self->{"map822"});					   
-		$rdata .= $self->_name2wire($self->{"mapx400"});
+		$rdata .= $self->_name2wire(lc($self->{"map822"}));
+		$rdata .= $self->_name2wire(lc($self->{"mapx400"}));
 	}
 
 	return $rdata;

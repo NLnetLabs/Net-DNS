@@ -59,8 +59,8 @@ sub _canonicalRdata {
     my $self  = shift;
     my $rdata = "";
 	if (exists $self->{"mbox"}) {
-		$rdata .= $self->_name2wire($self->{"mbox"});
-		$rdata .= $self->_name2wire($self->{"txtdname"});
+		$rdata .= $self->_name2wire(lc($self->{"mbox"}));
+		$rdata .= $self->_name2wire(lc($self->{"txtdname"}));
 
 
 	}

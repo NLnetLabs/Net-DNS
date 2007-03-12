@@ -80,7 +80,7 @@ sub _canonicalRdata {
     
     if (exists $self->{"preference"}) {
 	$rdata .= pack("n", $self->{"preference"});
-	$rdata .= $self->_name2wire($self->{"exchange"})
+	$rdata .= $self->_name2wire(lc($self->{"exchange"}))
 	}
     
     return $rdata;
