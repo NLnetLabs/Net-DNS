@@ -56,9 +56,23 @@ Perform a recursive check on subdomains.
 
 Verbose.
 
+=item C<-a alternate_domain>
+
+Treat <alternate_domain> as equal to <domain>. This is useful when supporting a change of domain names (eg from myolddomain.example.net to mynewdomain.example.net) where the PTR records can point to only one of the two supported domains (which are otherwise identical).
+
+=item C<-e exception_file>
+
+Ignore exceptions in file <exception_file>. File format can be space-separated domain pairs, one pair per line, or it can be straight output from this program itself (for simple cut-and-paste functionality). 
+This allows for skipping entries that are odd or unusual, but not causing problems. Note: this only works with A - PTR checks.
+
 =head1 AUTHORS
 
-Originally developed by Michael Fuhr (mfuhr@dimensional.com) and hacked--with furor--by Dennis Glatting (dennis.glatting@software-munitions.com).
+Originally developed by Michael Fuhr (mfuhr@dimensional.com) and
+hacked--with furor--by Dennis Glatting
+(dennis.glatting@software-munitions.com).
+
+"-a" and "-e" options added by Paul Archer
+
 
 =head1 COPYRIGHT
 
@@ -82,22 +96,63 @@ require 'assert.pl';
 use strict;
 use vars qw($opt_r);
 use vars qw($opt_v);
+use vars qw($opt_a);
+use vars qw($opt_e);
 
 use Getopt::Std;
 use File::Basename;
 use IO::Socket;
 use Net::DNS;
 
-getopts("rv");
+getopts("rva:e:");
 
-die "Usage: ", basename($0), " [ -r -v ] domain [ class ]\n"
+die "Usage: ", basename($0), " [ -r -v ] [ -a alternate_domain] [ -e eqivalent_domains_file ] domain [ class ]\n"
     unless (@ARGV >= 1) && (@ARGV <= 2);
+
+
+our $exit_status = 0;
+$SIG{__WARN__} = sub {$exit_status=1 ; print STDERR @_ };
+
 
 
 $opt_r = 1;
 
+our $main_domain=$ARGV[0];
+our %exceptions = parse_exceptions_file();
+foreach my $key (sort keys %exceptions) {
+	print "$key:\t";
+	foreach my $val (@{$exceptions{$key}}) {
+		print "$val ";
+	}
+	print "\n";
+}
+
 check_domain(@ARGV);
-exit;
+exit $exit_status;
+
+
+sub parse_exceptions_file {
+	my %exceptions;
+	my $file = $opt_e || "";
+	return %exceptions unless ( -r $file);
+	open FH, $file or warn "Couldn't read $file: $!";
+	my $line;
+	while ( defined ($line = <FH>) ) {
+		chomp $line;
+		#print "      raw line: $line\n";
+		next if $line =~ /^\s*#/;
+		$line =~ s/#.*$//;
+		$line =~ s/^\s*//;
+		$line =~ s/\s*$//;
+		$line =~ s/'//g;
+		my ($left, $right) = (split /[\s:]+/, $line)[0, -1];
+		push @{$exceptions{$left}}, $right;
+		#print "processed line: $line\n";
+		
+	}
+	return %exceptions;
+}
+
 
 
 sub check_domain {
@@ -520,6 +575,23 @@ sub check_cname {
     print "$rr_count CNAME RRs checked.\n";
 }
 
+sub check_w_equivs_and_exceptions {
+	my ($left, $comp, $right) = @_;
+
+	if (defined $exceptions{$left}) {
+		foreach my $rval (@{$exceptions{$left}}) {
+			$left = $right if ($rval eq $right);
+		}
+	}
+
+	if ($opt_a){
+		$left =~ s/\.?$opt_a$//;
+		$left =~ s/\.?$main_domain$//;
+		$right =~ s/\.?$opt_a$//;
+		$right =~ s/\.?$main_domain$//;
+	}
+	return (eval ("\"$left\" $comp \"$right\"") );
+}
 
 sub xcheck_a2ptr {
 
@@ -552,7 +624,7 @@ sub xcheck_a2ptr {
             warn( "\t'", $a_rr->name, "' has address '", 
                     $a_rr->address, "' but PTR is '",  
                     $ptr_rr->ptrdname, "'\n" )
-                if( $a_rr->name ne $ptr_rr->ptrdname );
+		if( check_w_equivs_and_exceptions($a_rr->name, "ne", $ptr_rr->ptrdname) );
 
             warn( "\t'", $a_rr->name, "' has address '", 
                     $a_rr->address, "' but PTR is '", 
@@ -598,7 +670,7 @@ sub xcheck_ptr2a {
             warn( "\tPTR RR '", $ptr_rr->name, "' has name '", 
                     $ptr_rr->ptrdname, "' but A query returned '", 
                     $a_rr->name, "'\n" )
-                if( $ptr_rr->ptrdname ne $a_rr->name );
+                if( check_w_equivs_and_exceptions($ptr_rr->ptrdname, "ne", $a_rr->name) );
 
             warn( "\tPTR RR '", $ptr_rr->name, "' has address '", 
                     ip_ptr2a_str( $ptr_rr->name ), 
@@ -644,7 +716,7 @@ sub xcheck_name {
 
             warn( "\tQuery for '$name' returned A RR name '", 
                     $a_rr->name, "'\n" ) 
-                if( $name ne $a_rr->name );
+                if( check_w_equivs_and_exceptions($name, "ne", $a_rr->name) );
 
             xcheck_a2ptr( $a_rr, $domain, $class, $nsl );
         }
