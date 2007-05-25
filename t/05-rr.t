@@ -2,7 +2,7 @@
 
 use Test::More;
 use strict;
-
+use Net::DNS;
 use vars qw( $HAS_DNSSEC $HAS_DLV $HAS_NSEC3 $HAS_NSEC3PARAM);
 
 my $keypathrsa="Kexample.com.+005+24866.private";

@@ -192,7 +192,7 @@ BEGIN {
 		  # Die only if we are dealing with a version for which NSEC3 is 
 		  # available 
 
-		  die $@ unless defined($Net::DNS::SEC::SVNVERSION) &&  $Net::DNS::SEC::SVNVERSION < 620;   # In the code since. (for users of the SVN trunk)
+		  die $@ if defined($Net::DNS::SEC::SVNVERSION) &&  $Net::DNS::SEC::SVNVERSION > 619;   # In the code since. (for users of the SVN trunk)
 		}
 
 
