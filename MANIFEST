@@ -36,6 +36,7 @@ lib/Net/DNS/RR/CNAME.pm
 lib/Net/DNS/RR/DNAME.pm
 lib/Net/DNS/RR/EID.pm
 lib/Net/DNS/RR/HINFO.pm
+lib/Net/DNS/RR/IPSECKEY.pm
 lib/Net/DNS/RR/ISDN.pm
 lib/Net/DNS/RR/LOC.pm
 lib/Net/DNS/RR/MB.pm

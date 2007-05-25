@@ -3,9 +3,23 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 *** 0.59_1 UNRELEASED
 
+Fix/Feature check_soa and Packet.pm
+
+    More work by Dick Franks, cleaning up the Packet Code and
+    improving the check_soa script to report large NCACHE TTL only
+    when it is likely to have any practical consequences for the user.
+    
+    Detail: The script now performs direct test of TTL by looking up a
+       non-existent name and reporting value if it exceeds 86400. Test
+       is skipped unless minimumTTL above same threshold.
+
+
+Fix rt.cpan.org #27285
+    Break out of malformed packets with compression loops.
+    Steffen Ullrich is acknowledged for patch and test code.
+
 Feature check_zone "alternate domain" and "exception file" flags
     Paul Archer supplied a patch for check_zone adding two new features.
-
 
 Feature Support for IPSECKEY RR
 
@@ -36,6 +50,12 @@ Bug rt.cpan.org #24631 / Feature Question.pm cleanup
     Note that this involves a minor change in the API (_not_ changing the 
     qtype to PTR when the qname is recognized as IP address or prefix and
     the qtype is NS or SOA).
+
+
+Bug rt.cpan.org #22019
+
+    RR->new_frlom_hash would add an extra dot to a FQDN
+    Patch by Dick Franks.
 
 Bug Recursing and EDNS OPT record
 
