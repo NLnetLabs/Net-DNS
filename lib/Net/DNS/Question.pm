@@ -12,7 +12,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$LastChangedRevision 0$)[1];
+$VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
@@ -38,7 +38,6 @@ as arguments.
 
 RFC4291 and RFC4632 IP address/prefix notation is supported for
 queries in in-addr.arpa and ip6.arpa subdomains.
-
 
 =cut
 
@@ -78,15 +77,16 @@ sub dns_addr {
 	# If arg looks like IP4 address then map to in-addr.arpa space
 	if ( $arg =~ /((^|\d+\.)+\d+)($|\/(\d*))/o ) {
 		my @parse = split /\./, $1;
-		my $len = ($_ = ($4 || @parse<<3)) > 24 ? 3 : ($_-1)>>3;
-		return join '.', reverse( (@parse,(0)x3)[0 .. $len] ), 'in-addr.arpa';
+		my $last = ($_ = ($4 || @parse<<3)) > 24 ? 3 : ($_-1)>>3;
+		return join '.', reverse( (@parse,(0)x3)[0 .. $last] ), 'in-addr.arpa';
 	}
 
 	# If arg looks like IP6 address then map to ip6.arpa space
 	if ( $arg =~ /^((\w*:)+)(\w*)($|\/(\d*))/o ) {
 		my @parse = split /:/, (reverse "0${1}0${3}"), 9;
-		my $hex = pack '(A4)*', map{/^$/ ? ('0000')x(9-@parse) : $_.'000'} @parse;
-		my $len = (($5 || 128) + 3) >> 2;
+		my @xpand = map{/^$/ ? ('0')x(9-@parse) : $_} @parse;
+		my $hex = pack 'A4'x8, map{$_.'000'} ('0')x(8-@xpand), @xpand;
+		my $len = ($_ = ($5 || @xpand<<4)) > 124 ? 32 : ($_+3)>>2;
 		return join '.', split(//, substr($hex,-$len) ), 'ip6.arpa';
 	}
 
@@ -189,8 +189,6 @@ that packet's data where the C<Net::DNS::Question> record is to
 be stored.  This information is necessary for using compressed
 domain names.
 
-
-
 =cut
 
 sub data {
@@ -198,8 +196,8 @@ sub data {
 
 	my $data = $packet->dn_comp($self->{qname}, $offset);
 
-	$data .= pack "n", Net::DNS::typesbyname(uc $self->{qtype});
-	$data .= pack "n", Net::DNS::classesbyname(uc $self->{qclass});
+	$data .= pack 'n', Net::DNS::typesbyname(uc $self->{qtype});
+	$data .= pack 'n', Net::DNS::classesbyname(uc $self->{qclass});
 	
 	return $data;
 }
@@ -210,7 +208,7 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2003,2006 Dick Franks.
+Portions Copyright (c) 2003,2006-2007 Dick Franks.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
