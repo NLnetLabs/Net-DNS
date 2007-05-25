@@ -341,7 +341,7 @@ he has done on BIND 9.
 Olaf acknowledges the RIPE NCC for allowing Net::DNS maintenance to
 take place as part of 'the job'.
 
-Thanks to the team that maintains ethereal, without its marvelous
+Thanks to the team that maintains wireshark, without its marvelous
 interface debuging of bugs in wireformat would be so much more
 difficult.
 

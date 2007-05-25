@@ -1,4 +1,4 @@
-# $Id$
+# $Id$   -*-perl-*-
 #
 # RFC 3597 Unknown typecode implemntation test code.
 # O.M. Kolkman RIPE NCC.

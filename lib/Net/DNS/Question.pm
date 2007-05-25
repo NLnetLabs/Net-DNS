@@ -12,7 +12,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision 0$)[1];
 
 =head1 NAME
 
@@ -36,6 +36,10 @@ question section of a DNS packet.
 Creates a question object from the domain, type, and class passed
 as arguments.
 
+RFC4291 and RFC4632 IP address/prefix notation is supported for
+queries in in-addr.arpa and ip6.arpa subdomains.
+
+
 =cut
 
 sub new {
@@ -47,25 +51,17 @@ sub new {
 
 	$qname =~ s/\.+$//o;	# strip gratuitous trailing dot
 
-
-
  	# Check if the caller has the type and class reversed.
  	# We are not that kind for unknown types.... :-)
- 	if ((!exists $Net::DNS::typesbyname{$qtype} ||
- 	     !exists $Net::DNS::classesbyname{$qclass})
- 	    && exists $Net::DNS::classesbyname{$qtype}
- 	    && exists $Net::DNS::typesbyname{$qclass}) {
-	  ($qtype, $qclass) = ($qclass, $qtype);
-  	}
+	($qtype, $qclass) = ($qclass, $qtype)
+		if exists $Net::DNS::classesbyname{$qtype}
+		and exists $Net::DNS::typesbyname{$qclass};
 
-
-	# if name is an IP address do appropriate PTR query
-	if ( $qname =~ m/:|\d$/ ) {
-		($qname, $qtype) = ($_, 'PTR') if $_ = dns_addr($qname);
+	# if argument is an IP address, do appropriate reverse lookup
+	if ( $qname =~ m/\d$|[:\/]/o ) {
+		my $type = $qtype =~ m/^(NS|SOA)$/o ? $qtype : 'PTR';
+		($qname, $qtype) = ($_, $type) if $_ = dns_addr($qname);
 	}
-
-
-	
 
 	my %self = (	qname	=> $qname,
 			qtype	=> $qtype,
@@ -77,19 +73,23 @@ sub new {
 
 
 sub dns_addr {
-	my $arg = shift;	# name or IP6/IP4 address
+	my $arg = shift;	# name or IP address
 
 	# If arg looks like IP4 address then map to in-addr.arpa space
-	if ( $arg =~ /(\d+)\.(\d+)\.(\d+)\.(\d+)$/o ) {
-		return "$4.$3.$2.$1.in-addr.arpa"
+	if ( $arg =~ /((^|\d+\.)+\d+)($|\/(\d*))/o ) {
+		my @parse = split /\./, $1;
+		my $len = ($_ = ($4 || @parse<<3)) > 24 ? 3 : ($_-1)>>3;
+		return join '.', reverse( (@parse,(0)x3)[0 .. $len] ), 'in-addr.arpa';
 	}
 
 	# If arg looks like IP6 address then map to ip6.arpa space
-	if ( $arg =~ /^((\w*:)+)(\w*)$/o ) {
-		my @parse = split /:/, (reverse "${1}0${3}"), 8;
-		my $hex = pack 'A4'x8, map{/^$/ ? ('0000')x(9-@parse) : $_.'000'} @parse;
-		return join '.', split(//, $hex), 'ip6.arpa';
+	if ( $arg =~ /^((\w*:)+)(\w*)($|\/(\d*))/o ) {
+		my @parse = split /:/, (reverse "0${1}0${3}"), 9;
+		my $hex = pack '(A4)*', map{/^$/ ? ('0000')x(9-@parse) : $_.'000'} @parse;
+		my $len = (($5 || 128) + 3) >> 2;
+		return join '.', split(//, substr($hex,-$len) ), 'ip6.arpa';
 	}
+
 	return undef;
 }
 
@@ -141,11 +141,9 @@ sub AUTOLOAD {
 	*{$AUTOLOAD} = sub {
 		my ($self, $new_val) = @_;
 		
-		if (defined $new_val) {
-			$self->{"$name"} = $new_val;
-		}
+		$self->{$name} = $new_val if defined $new_val;
 		
-		return $self->{"$name"};
+		return $self->{$name};
 	};
 	
 	goto &{$AUTOLOAD};	
@@ -164,7 +162,7 @@ Prints the question record on the standard output.
 
 =cut
 
-sub print {	print $_[0]->string, "\n"; }
+sub print {	print shift->string, "\n"; }
 
 =head2 string
 
@@ -191,15 +189,17 @@ that packet's data where the C<Net::DNS::Question> record is to
 be stored.  This information is necessary for using compressed
 domain names.
 
+
+
 =cut
 
 sub data {
 	my ($self, $packet, $offset) = @_;
 
-	my $data = $packet->dn_comp($self->{"qname"}, $offset);
+	my $data = $packet->dn_comp($self->{qname}, $offset);
 
-	$data .= pack("n", Net::DNS::typesbyname(uc($self->{"qtype"})));
-	$data .= pack("n", Net::DNS::classesbyname(uc($self->{"qclass"})));
+	$data .= pack "n", Net::DNS::typesbyname(uc $self->{qtype});
+	$data .= pack "n", Net::DNS::classesbyname(uc $self->{qclass});
 	
 	return $data;
 }

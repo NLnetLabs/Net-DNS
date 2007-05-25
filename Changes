@@ -2,10 +2,40 @@
 Revision history for Net::DNS                                     -*-text-*-
 =============================
 *** 0.59_1 UNRELEASED
-Bug Canonical RDATA 
 
-    The method used to create canonical data needed for DNSSEC did not 'lowercase'
-    the data. This results in interoperability problems with other implementations
+Feature check_zone "alternate domain" and "exception file" flags
+    Paul Archer supplied a patch for check_zone adding two new features.
+
+
+Feature Support for IPSECKEY RR
+
+    Rudimentary IPSECKEY RR support added.
+
+
+Bug rt.cpan.org  #25342
+    HINFO would only accept its data fields within quotes. That has now
+    been fixed to adhere to <character-string> by inhereting parsing functions
+    from TXT.
+
+Bug rt.cpan.org #24631 / Feature Question.pm cleanup
+    Dick Franks supplied a cleaned up version of Question.pm.
+
+    In his own words:
+       Reworked Question.pm to deal with incomplete IP address bug and
+       address prefix notation. IPv4/prefix notation is supported for
+       completeness, although it is simpler to omit the fields.
+
+       Changing qtype to PTR now not performed for SOA and NS query
+
+       Cleaned up TYPE/CLASS reversal code, exploiting fact that the
+       intersection of the sets of class and type names contains only
+       one member (ANY).
+
+       Minor cleanup of remaining code.
+
+    Note that this involves a minor change in the API (_not_ changing the 
+    qtype to PTR when the qname is recognized as IP address or prefix and
+    the qtype is NS or SOA).
 
 Bug Recursing and EDNS OPT record
 

@@ -704,7 +704,7 @@ sub dn_comp {
 		$self->{"compnames"}->{$dname} = $offset;
 		my $first  = shift @names;
 		my $length = length $first;
-		croak "length of $first is larger than 63 octets; see RFC1035 section 2.3.1" if $length>63;
+		carp "length of $first is larger than 63 octets; see RFC1035 section 2.3.1" if $length>63;
 		$compname .= pack("C a*", $length, $first);
 		$offset   += $length + 1;
 	}
@@ -753,15 +753,21 @@ sub dn_expand
 }
 
 sub dn_expand_PP {
-	my ($packet, $offset,$seen) = @_; # $seen from $_[2] for debugging
+	my ($packet, $pkt_offset,$seen) = @_; # $seen from $_[2] for debugging
 	my $name = "";
 	my $len;
 	my $packetlen = length $$packet;
 	my $int16sz = Net::DNS::INT16SZ();
 
-	while (1) {
-		return (undef, undef) if $packetlen < ($offset + 1);
 
+ 	my $checked = 0;
+ 	my $hasPtr = 0;
+ 	my $offset = $pkt_offset;
+ 
+
+	while (1) {
+ 		return (undef, undef) if $checked > $packetlen; # fix endless Loop
+ 
 		$len = unpack("\@$offset C", $$packet);
 
 
@@ -776,25 +782,27 @@ sub dn_expand_PP {
 
 		if ($len == 0) {
 			$offset++;
-			last;
+ 			$pkt_offset++ if !$hasPtr;
+ 			last;
 		}
 		elsif (($len & 0xc0) == 0xc0) {
-			return (undef, undef)
+ 			# pointer into message for compressed strings
+ 			return (undef, undef)
 				if $packetlen < ($offset + $int16sz);
+
+ 			$pkt_offset+=$int16sz if !$hasPtr;
+ 			$checked += $int16sz;
+ 
 
 			my $ptr = unpack("\@$offset n", $$packet);
 			$ptr &= 0x3fff;
-			my($name2) = dn_expand_PP($packet, $ptr,$seen); # pass $seen for debugging
-
-			return (undef, undef) unless defined $name2;
-
-			$name .= $name2;
-			$offset += $int16sz;
-			last;
+ 			$offset = $ptr;
+ 			$hasPtr = 1;
+ 			next; # restart with offset from pointer
 		}
 		else {
 			$offset++;
-
+ 			$pkt_offset+=1 if !$hasPtr;
 			return (undef, undef)
 				if $packetlen < ($offset + $len);
 
@@ -803,13 +811,15 @@ sub dn_expand_PP {
 			$name .= Net::DNS::wire2presentation($elem).".";
 
 			$offset += $len;
+			$pkt_offset+= $len if !$hasPtr;
+			$checked += $len;
 		}
 	}
 
 	
 
 	$name =~ s/\.$//o;
-	return ($name, $offset);
+	return ($name, $pkt_offset);
 }
 
 =head2 sign_tsig

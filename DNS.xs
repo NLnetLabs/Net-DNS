@@ -51,13 +51,13 @@ PROTOTYPES: DISABLE
 void
 dn_expand_XS(sv_buf, offset) 
 	SV * sv_buf
-	unsigned int offset
+	int offset
 
   PPCODE:
 	STRLEN len;
 	u_char * buf;
 	u_char name[MAXDNAME];
-	unsigned int pos;
+	int pos;
 	
 	if (SvROK(sv_buf)) 
 		sv_buf = SvRV(sv_buf);

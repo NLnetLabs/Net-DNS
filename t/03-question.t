@@ -1,6 +1,6 @@
-# $Id$
+# $Id$    -*-perl-*-
 
-use Test::More tests => 17;
+use Test::More tests => 30;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -52,7 +52,35 @@ is($q3->qclass, 'IN',          'v4: qclass()' );
 
 
 
-use Data::Dumper;
 
-my $q4= Net::DNS::Question->new("8a");
-print Dumper $q4;
+# All these tests are based on the example in RFC4291
+# 20010DB80000CD3/60
+
+my @prefixes=qw (
+      2001:0DB8::CD30:0:0:0:0/60
+      2001:0DB8:0000:CD30:0000:0000:0000:0000/60
+      2001:0DB8::CD30:0:0:0:0/60
+      2001:0DB8:0:CD30::/60
+      2001:0DB8:0:CD30:123:4567:89AB:CDEF/60
+);
+
+foreach my $prefix  (@prefixes ){
+    my $q5= Net::DNS::Question->new($prefix,"IN","A");
+    is($q5->qname, '3.D.C.0.0.0.0.8.B.D.0.1.0.0.2.ip6.arpa','v6: prefix notation for '. $prefix);
+    is($q5->qtype,  'PTR',         'v6: PTR for ' . $prefix );
+    
+}
+
+
+my $q6= Net::DNS::Question->new($prefixes[1],"IN","NS");
+is($q6->qtype,  'NS',         'v6: NS done correctly'  );
+
+my $q7= Net::DNS::Question->new($prefixes[1],"IN","SOA");
+is($q7->qtype,  'SOA',         'v6: SOA done correctly'  );
+
+
+
+my $q8= Net::DNS::Question->new("::1.de","IN","A");
+is ($q8->qname, '::1.de',"No expantion under TLD ");
+
+

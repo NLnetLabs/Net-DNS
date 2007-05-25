@@ -129,7 +129,7 @@ use Carp;
     'OPT'       => 41,      # RFC 2671
     'DS'        => 43,      # RFC 4034   # in Net::DNS::SEC
     'SSHFP'     => 44,      # draft-ietf-secsh-dns (No RFC # yet at time of coding)
-#    'IPSECKEY'  => 45,      # RFC 4025
+    'IPSECKEY'  => 45,      # RFC 4025
     'RRSIG'     => 46,      # RFC 4034 in Net::DNS::SEC
     'NSEC'      => 47,      # RFC 4034 in Net::DNS::SEC
     'DNSKEY'    => 48,      # RFC 4034 in Net::DNS::SEC

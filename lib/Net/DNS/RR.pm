@@ -80,6 +80,7 @@ BEGIN {
 		OPT
 		SSHFP
 		SPF
+		IPSECKEY
 	);
 
 	#  Only load DNSSEC if available
@@ -335,8 +336,6 @@ sub new_from_string {
 
 	$rdata =~ s/\s+$//o if $rdata;
 	$name  =~ s/\.$//o  if $name;
-
-	
 
 
 
@@ -648,13 +647,14 @@ sub data {
 	if (uc($self->{'type'}) eq 'TSIG' || uc($self->{'type'}) eq 'TKEY') {
 		my $tmp_packet = Net::DNS::Packet->new('');
 		$data = $tmp_packet->dn_comp($self->{'name'}, 0);
+		return undef unless defined $data;
 	} elsif (uc($self->{'type'}) eq 'OPT') {
 		my $tmp_packet = Net::DNS::Packet->new('');
 		$data = $tmp_packet->dn_comp('', 0);
 	} else {
 		$data  = $packet->dn_comp($self->{'name'}, $offset);
+		return undef unless defined $data;	
 	}
-
 
 	my $qtype     = uc($self->{'type'});
 	my $qtype_val = ($qtype =~ m/^\d+$/o) ? $qtype : Net::DNS::typesbyname($qtype);

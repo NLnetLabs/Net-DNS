@@ -94,5 +94,6 @@ t/09-tkey.t
 t/10-recurse.t
 t/11-escapedchars.t
 t/11-inet6.t
+t/12-compression.t
 t/custom.txt
 TODO
