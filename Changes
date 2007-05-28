@@ -54,7 +54,7 @@ Bug rt.cpan.org #24631 / Feature Question.pm cleanup
 
 Bug rt.cpan.org #22019
 
-    RR->new_frlom_hash would add an extra dot to a FQDN
+    RR->new_from_hash would add an extra dot to a FQDN
     Patch by Dick Franks.
 
 Bug Recursing and EDNS OPT record

@@ -455,19 +455,15 @@ sub new_from_string {
 
 sub new_from_hash {
 	my $class    = shift;
-	my %tempself = @_;
+	my %keyval   = @_;
 	my $self     = {};
 	
-	my ($key, $val);
+	Carp::croak('RR name not specified') unless defined $keyval{name};
+	Carp::croak('RR type not specified') unless $keyval{type};
 
-	while (($key, $val) = each %tempself) {
-		$self->{lc($key)} = $val;
+	while ( my ($key, $val) = each %keyval ) {
+		( $self->{lc($key)} = $val ) =~ s/\.+$//;
 	}
-
-	Carp::croak('RR name not specified')
-		unless exists $self->{'name'};
-	Carp::croak('RR type not specified')
-		unless exists $self->{'type'};
 
 	$self->{'ttl'}   ||= 0;
 	$self->{'class'} ||= 'IN';

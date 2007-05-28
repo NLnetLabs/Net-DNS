@@ -12,6 +12,10 @@ BEGIN {
     # can't test windows, has registry stuff
 }
 
+diag("\nThese tests were ran with:\n");
+diag("Net::DNS::VERSION:               ".
+     $Net::DNS::VERSION);
+
 
 sub is_rr_loaded {
 	my ($rr) = @_;
@@ -27,8 +31,7 @@ my @rrs = grep { !$skip{$_} } keys %Net::DNS::RR::RR;
 
 
 #
-# Make sure that we haven't loaded any of the RR classes yet.
-#
+# Make sure that we haven't loaded any of the RR classes
 foreach my $rr (@rrs) {
 	ok(!is_rr_loaded($rr), "Net::DNS::RR::$rr is not loaded");
 }
@@ -44,15 +47,15 @@ foreach my $rr (@rrs) {
 	diag($@) if $@;
 
 	ok(is_rr_loaded($rr), "$class loaded");
-	next unless $?;
-	
+
+	next unless is_rr_loaded($rr);
 	# Print version of the loaded module
 	{
 	    no strict 'refs';
 	    $version = ${"${class}::VERSION"};
 	    use strict;
 	}
-	diag $class.": ". $version; # e.g. 3.05 on my machine
+	diag $class." version: ". $version; 
 
 
 
