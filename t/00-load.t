@@ -38,11 +38,26 @@ foreach my $rr (@rrs) {
 #
 foreach my $rr (@rrs) {
 	my $class;
+	my $version;
 	eval { $class = Net::DNS::RR->_get_subclass($rr); };
 
 	diag($@) if $@;
 
 	ok(is_rr_loaded($rr), "$class loaded");
+	next unless $?;
+	
+	# Print version of the loaded module
+	{
+	    no strict 'refs';
+	    $version = ${"${class}::VERSION"};
+	    use strict;
+	}
+	diag $class.": ". $version; # e.g. 3.05 on my machine
+
+
+
+
+
 }
 
 #
