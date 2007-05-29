@@ -458,9 +458,10 @@ sub new_from_hash {
 	my %keyval   = @_;
 	my $self     = {};
 
+	
 
 	while ( my ($key, $val) = each %keyval ) {
-		( $self->{lc($key)} = $val ) =~ s/\.+$//;
+		( $self->{lc($key)} = $val ) =~ s/\.+$// if defined $val;
 	}
 
 	Carp::croak('RR name not specified') unless defined $self->{name};
