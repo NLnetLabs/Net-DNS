@@ -1,8 +1,10 @@
-# $Id$ -*-perl-*-
+# -*-perl-*-
+# $Id$ 
 
 
 use Test::More tests => 79;
 use strict;
+
 
 BEGIN { 
     use_ok('Net::DNS'); 
@@ -15,6 +17,7 @@ BEGIN {
 diag("\nThese tests were ran with:\n");
 diag("Net::DNS::VERSION:               ".
      $Net::DNS::VERSION);
+
 
 
 sub is_rr_loaded {
@@ -56,10 +59,6 @@ foreach my $rr (@rrs) {
 	    use strict;
 	}
 	diag $class." version: ". $version; 
-
-
-
-
 
 }
 

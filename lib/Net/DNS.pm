@@ -15,6 +15,7 @@ BEGIN {
 use vars qw(
     $HAVE_XS
     $VERSION
+    $SVNVERSION
     $DNSSEC
     $DN_EXPAND_ESCAPES
     @ISA
@@ -43,6 +44,8 @@ BEGIN {
 
     
     $VERSION = '0.59_1';
+    $SVNVERSION = (qw$LastChangedRevision$)[1];
+
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
 	__PACKAGE__->bootstrap(); 1 
