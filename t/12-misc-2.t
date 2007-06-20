@@ -28,14 +28,15 @@ use vars qw(
 
 BEGIN {
     $lameloop=0;
-    $TestPort  = 53452;
+    $TestPort  = 53000 + int(rand(1000));
     $address = "127.53.53.12";
+
     
     if(
 	eval {require IO::Socket;}
 	){
 	#Try binding to the test addresses .. 
-	diag ("Testing availability of $address");
+	diag ("Testing availability of $address:$TestPort");
 	my $s = IO::Socket::INET->new(Proto => 'udp',
 				      LocalAddr => $address,
 				      LocalPort => $TestPort
