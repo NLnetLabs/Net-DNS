@@ -1,7 +1,7 @@
 
 Revision history for Net::DNS                                     -*-text-*-
 =============================
-*** 0.59_1 UNRELEASED
+*** 0.60 20 June 2007
 
 Fix spelling mistakes in change log using interactive spell checker (aspell).
 

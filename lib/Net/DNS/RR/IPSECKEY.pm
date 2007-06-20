@@ -1,11 +1,5 @@
 package Net::DNS::RR::IPSECKEY;
 
-#
-#
-#  NOT DONE QUITE YET
-#
-#
-#
 
 #
 # $Id$
@@ -24,25 +18,25 @@ $VERSION = (qw$LastChangedRevision$)[1];
 @ISA = qw(Net::DNS::RR);
 
     
-my %gatetype = (
-    0 => "No gateway is present.",
-    1 => "A 4-byte IPv4 address is present.",
-    2 => "A 16-byte IPv6 address is present.",
-    3 => "A wire-encoded domain name is present.",
-    );
+#my %gatetype = (
+#    0 => "No gateway is present.",
+#    1 => "A 4-byte IPv4 address is present.",
+#    2 => "A 16-byte IPv6 address is present.",
+#    3 => "A wire-encoded domain name is present.",
+#    );
 
-my %algtype = (
-	RSA => 1,
-	DSA => 2,
-);
+#my %algtype = (
+#	RSA => 1,
+#	DSA => 2,
+#);
 
-my %fingerprinttype = (
-	'SHA-1' => 1,
-);
+#my %fingerprinttype = (
+#	'SHA-1' => 1,
+#);
 
-my %fingerprinttypebyval = reverse %fingerprinttype;
-my %gatetypebyval= reverse %gatetype;
-my %algtypebyval	     = reverse %algtype;
+#my %fingerprinttypebyval = reverse %fingerprinttype;
+#my %gatetypebyval= reverse %gatetype;
+#my %algtypebyval	     = reverse %algtype;
 
 
 sub new {
@@ -188,16 +182,39 @@ In addition to the regular methods
 
 =head2 algorithm
 
-    print "algoritm" = ", $rr->algorithm, "\n";
-
 Returns the RR's algorithm field in decimal representation
 
     1 = RSA
     2 = DSA
 
+=head2 precedence  
 
-=head1 TODO 
+Returns the presedence
 
+=head2 	gatetype  
+
+Returns the gatetype.
+
+   0  "No gateway is present.",
+   1  "A 4-byte IPv4 address is present.",
+   2  "A 16-byte IPv6 address is present.",
+   3  "A wire-encoded domain name is present.",
+
+=head2 gateway
+
+Returns the gateway in the relevant string notation.
+
+=head2 pubkey
+
+Returns the public key in base64 notation
+
+=head2 pubbin 
+
+Returns the binary public key material in a string.
+
+=head1 TODO
+
+Check on validity of algorithm and gatetype.
 
 =head1 COPYRIGHT
 
