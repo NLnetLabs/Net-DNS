@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-$VERSION = (qw$LastChangedRevision$)[1] || 0.19;
+$VERSION = (qw$LastChangedRevision$)[1] || 0.20;
 
 =head1 NAME
 
@@ -72,15 +72,15 @@ Query all nameservers for the specified domain.
 
 Query specific nameserver as above.
 
-=item check_soa 10.2.3.4
+=item check_soa 192.168.99.0
 
 Query nameservers for specified in-addr.arpa subdomain.
 
-=item check_soa 2001:db8::1
+=item check_soa 2001:DB8::8:800:200C:417A
 
 Query nameservers for specified ip6.arpa subdomain.
 
-=item check_soa 2001:db8/32
+=item check_soa 2001:DB8:0:CD30::/60
 
 As above, for IPv6 address prefix of specified length.
 
@@ -400,7 +400,8 @@ sub NS {				# find nameservers for domain
 		last if @ns = grep{$_->type eq 'NS'} $packet->answer;
 		my ($ncache) = grep{$_->type eq 'SOA'} $packet->authority;
 		my $apex = $ncache->name if $ncache;	# zone cut
-		return NS($apex) if $apex;
+		return NS($apex) if $apex;		# NCACHE from zone server
+		return () if defined $apex;		# NCACHE from root server
 							# accept referral if any
 		my @referral = grep{$_->type eq 'NS'} $packet->authority;
 		last if @ns = grep{$_->name =~ /^$domain$/i} @referral;

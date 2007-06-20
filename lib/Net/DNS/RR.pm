@@ -14,7 +14,7 @@ use Net::DNS;
 use Net::DNS::RR::Unknown;
 
 
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision 0$)[1];
 
 =head1 NAME
 
@@ -458,16 +458,12 @@ sub new_from_hash {
 	my %keyval   = @_;
 	my $self     = {};
 
-	
-
 	while ( my ($key, $val) = each %keyval ) {
-		( $self->{lc($key)} = $val ) =~ s/\.+$// if defined $val;
+		( $self->{lc $key} = $val ) =~ s/\.+$// if defined $val;
 	}
 
-	Carp::croak('RR name not specified') unless defined $self->{name};
-	Carp::croak('RR type not specified') unless defined $self->{type};
-
-
+	croak('RR name not specified') unless defined $self->{name};
+	croak('RR type not specified') unless defined $self->{type};
 
 	$self->{'ttl'}   ||= 0;
 	$self->{'class'} ||= 'IN';
@@ -513,10 +509,7 @@ B<string> method to get the RR's string representation.
 =cut
 #' someone said that emacs gets screwy here.  Who am I to claim otherwise...
 
-sub print {
-	my $self = shift;
-	print $self->string, "\n";
-}
+sub print { print shift->string, "\n"; }
 
 =head2 string
 
@@ -529,14 +522,9 @@ B<rdatastr> method to get the RR-specific data.
 
 sub string {
 	my $self = shift;
-
-	return join("\t",
-		"$self->{'name'}.",
-	 	 $self->{'ttl'},
-		 $self->{'class'},
-		 $self->{'type'},
-		 (defined $self->rdatastr and length $self->rdatastr) ? $self->rdatastr : '; no data',
-   );
+	my $data = $self->rdatastr || '; no data';
+  
+	join "\t", "$self->{name}.", $self->{ttl}, $self->{class}, $self->{type}, $data;
 }
 
 =head2 rdatastr

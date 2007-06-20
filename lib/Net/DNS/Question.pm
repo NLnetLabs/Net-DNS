@@ -12,7 +12,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision 0$)[1];
 
 =head1 NAME
 
@@ -58,7 +58,7 @@ sub new {
 
 	# if argument is an IP address, do appropriate reverse lookup
 	if ( $qname =~ m/\d$|[:\/]/o ) {
-		my $type = $qtype =~ m/^(NS|SOA)$/o ? $qtype : 'PTR';
+		my $type = $qtype =~ m/^(A|AAAA)$/o ? 'PTR' : $qtype;
 		($qname, $qtype) = ($_, $type) if $_ = dns_addr($qname);
 	}
 

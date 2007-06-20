@@ -3,16 +3,30 @@ Revision history for Net::DNS                                     -*-text-*-
 =============================
 *** 0.59_1 UNRELEASED
 
-Fix/Feature check_soa and Packet.pm
+Fix spelling mistakes in change log using interactive spell checker (aspell).
 
-    More work by Dick Franks, cleaning up the Packet Code and
-    improving the check_soa script to report large NCACHE TTL only
-    when it is likely to have any practical consequences for the user.
-    
-    Detail: The script now performs direct test of TTL by looking up a
-       non-existent name and reporting value if it exceeds 86400. Test
-       is skipped unless minimumTTL above same threshold.
+Fix
+    Two redundant calls of $self->rdatastr() in Net::DNS::RR::string().
 
+Fix rt.cpan.org #27285 bis
+    Unreleased 0.59_1 dn_expand_PP() has security flaw allowing access to
+    arbitrary data using crafted packet with out of range compression pointer.
+    Patch by Dick Franks based on 0.59 code. 
+
+Fix rt.cpan.org #27391
+    dn_compress() produces corrupt packet for name containing empty label.
+
+Fix rt.cpan.org #26957
+    dn_compress() croaks for name having label which exceeds 63 characters.
+    Patch by Dick Franks truncates offending label.
+
+Feature check_soa test of NCACHE TTL
+    Dick Franks supplied an improved version of check_soa script which
+    performs a direct test of NCACHE TTL by looking up non-existent name and
+    reporting value if it exceeds 86400. Test is skipped unless minimumTTL is
+    above same threshold.  Recent BIND implementations impose a ceiling on
+    NCACHE TTLs internally, so a large minimumTTL value is unlikely to have
+    damaging consequences at many sites.
 
 Fix rt.cpan.org #27285
     Break out of malformed packets with compression loops.
@@ -22,46 +36,39 @@ Feature check_zone "alternate domain" and "exception file" flags
     Paul Archer supplied a patch for check_zone adding two new features.
 
 Feature Support for IPSECKEY RR
-
     Rudimentary IPSECKEY RR support added.
 
-
-Bug rt.cpan.org  #25342
+Fix rt.cpan.org  #25342
     HINFO would only accept its data fields within quotes. That has now
-    been fixed to adhere to <character-string> by inhereting parsing functions
+    been fixed to adhere to <character-string> by inheriting parsing functions
     from TXT.
 
-Bug rt.cpan.org #24631 / Feature Question.pm cleanup
+Fix rt.cpan.org #24631 / Feature IP address prefix notation
     Dick Franks supplied a cleaned up version of Question.pm.
 
-    In his own words:
-       Reworked Question.pm to deal with incomplete IP address bug and
-       address prefix notation. IPv4/prefix notation is supported for
-       completeness, although it is simpler to omit the fields.
+    Revised code deals with incomplete IPv6 address bug and accepts RFC4291
+    address prefix notation. IPv4/prefix also supported for completeness.
 
-       Changing qtype to PTR now not performed for SOA and NS query
+    This involved a minor change to the API for reverse IP lookup.  Changing
+    qtype to PTR is now performed for A and AAAA only.  This allows queries
+    for NS and SOA records at interior nodes to be specified using the address
+    prefix.  Type ANY queries now also produce the expected result.
 
-       Cleaned up TYPE/CLASS reversal code, exploiting fact that the
-       intersection of the sets of class and type names contains only
-       one member (ANY).
+    Cleaned up TYPE/CLASS reversal code, exploiting fact that the intersection
+    of the sets of class and type names contains only one member (ANY).
 
-       Minor cleanup of remaining code.
-
-    Note that this involves a minor change in the API (_not_ changing the 
-    qtype to PTR when the qname is recognized as IP address or prefix and
-    the qtype is NS or SOA).
+    Minor cleanup of remaining code.
 
 
-Bug rt.cpan.org #22019
+Fix rt.cpan.org #22019
 
-    RR->new_from_hash would add an extra dot to a FQDN
+    Expunge trailing dots from RR->new_from_hash() FQDN arguments.
     Patch by Dick Franks.
 
-Bug Recursing and EDNS OPT record
+Fix Recursion and EDNS OPT record
 
     The Recursive resolver process would add an OPT-RR with each recursion
     which causes FORMERRs with a number of authoritative servers.
-
 
 Feature SSHFP warn instead of die
 
@@ -71,8 +78,8 @@ Feature SSHFP warn instead of die
 Feature NSEC3PARAM hook 
 
     A hook to load NSEC3PARAM when available has been added.
-    WARNING:BOTH NSEC3 and NSEC3 PARAM are configured with their
-    expiremental type codes.
+    WARNING: Both NSEC3 and NSEC3PARAM are configured with their
+    experimental type codes.
 
 Feature rt r24525 
 
@@ -95,7 +102,7 @@ Fix rt 21752 and 24042
 
 Fix rt 23961
     Randomized the ID on the queries. Thanks to "hjp" for reporting and
-    sugesting a fix.
+    suggesting a fix.
 
     The randomization of the src port is supposed to be handled by the
     setting the source port to "0" (default). Overriding the default
@@ -119,10 +126,10 @@ Fix rt.cpan.org 20836, 20857, 20994, and 21402
     These tickets all revolved around proper reverse mapping of IPv6
     addresses.
 
-    Acknowledgements to Dick Franks who has provided elegant solutions and
+    Acknowledgments to Dick Franks who has provided elegant solutions and
     cleaned a bit of code.
 
-    Note that directly calling Question->new() withouth arguments will
+    Note that directly calling Question->new() without arguments will
     cause the qclass,qtype to be IN, A instead of ANY, ANY.
 
     Net::DNS::Resolver's search() method would always gracefully
@@ -142,7 +149,7 @@ Fix rt.cpan.org 18113
 
 Feature: Experimental NSEC3 hooks. 
 
-   Added hook for future support of (experimental) NSEC3 suppport
+   Added hook for future support of (experimental) NSEC3 support
    (NSEC3 having an experimental type code).
 
 
@@ -153,20 +160,20 @@ Feature: Experimental NSEC3 hooks.
 Feature: hooks for DLV support in Net::DNS::SEC
 
    added hooks for DLV support which is/will be available in
-   Net::DNS::SEC as of subversion version 592 (Tests are done agains
+   Net::DNS::SEC as of subversion version 592 (Tests are done against
    the subversion number, not against the perl release version)
    Net::DNS::SEC version 0.15 will have DLV support.
 
 Partly Fixed rt.cpan.org 18940
 
-   djhale noticed a number of error conditions under which de
+   djhale noticed a number of error conditions under which the
    udp_connection in Nameserver dies. We now print a warning instead
    of dying.
 
 
 Fix rt.cpan.org 18958
 
-   Fixed typebyname croak for SIGZERO. Acknowledgements to djhale.
+   Fixed typebyname croak for SIGZERO. Acknowledgments to djhale.
 
 
 Optimize rt.cpan.org 11931
@@ -177,8 +184,8 @@ Optimize rt.cpan.org 11931
 
 Fix dependency on "CC" rt.cpan.org 19352
 
-   The Makefile.PL depended on availabliltity of "cc" and would bail
-   out on systems where gcc is exclusivly available. Thanks to Rob
+   The Makefile.PL depended on availability of "cc" and would bail
+   out on systems where gcc is exclusively available. Thanks to Rob
    Windsor for noticing and patching.
 
 Fix compressed dnames in NAPTR/SRV
@@ -190,13 +197,13 @@ Fix compressed dnames in NAPTR/SRV
 
 Fix rt.cpan.org 18897
 
-   Zero-length rdata in TXT fixed (Acknowledgements to Roy Arends)
+   Zero-length rdata in TXT fixed (Acknowledgments to Roy Arends)
 
 Fix rt.cpan.org 18785
 
    SPF would not work unless the TXT RR was not loaded first. No
    wonder, SPF fully inherits TXT and loading of TXT.pm is therefore a
-   prerequisit.
+   prerequisite.
 
 
 Fix rt.cpan.org 18713
@@ -234,7 +241,7 @@ Fix rt.cpan.org 17783
 Fix rt.cpan.org 17694
  
    Net::DNS::typesbyval() now confesses on undefined
-   args. Acknowledgements to Dean Serenevy.
+   args. Acknowledgments to Dean Serenevy.
 
 Feature Implemented SPF (typecode 99).
 
@@ -254,7 +261,7 @@ Feature added rrsort() function.
    See Net::DNS and Net::DNS::RR documentation for details.
 
    Defaults sorting functions are currently implemented in 
-      SRV: default sort: low prioirity to high priority and for
+      SRV: default sort: low priority to high priority and for
            same preference highest weight first.
 	   weight: sort all RRs based on weight, highest first
 	   priority: see default sort
@@ -285,15 +292,15 @@ Feature Cleanup duplicated code
 
 
 
-Fix AXFR persistent sockets coliding with query sockets.
+Fix AXFR persistent sockets colliding with query sockets.
 
    I think that using the same persistent sockets for AXFR and
    'ordinary' queries could lead to race conditions. Better safe than
-   sorry. For axfrs we create a different set of persitent sockets.
+   sorry. For axfrs we create a different set of persistent sockets.
 
    Note that this prevents performing a SOA query first and then using
    the same socket for the zone transfer itself(in Net::DNS these are
-   different code paths). This behavior 00 SOA and transfer on the
+   different code paths). This behavior of SOA and transfer on the
    same socket-- seems to be suggested by 1035 section 4.2.2:
 
      "In particular, the server should allow the SOA and AXFR request
@@ -357,13 +364,13 @@ Fix rt.cpan.org 11931
   nameservers when the IP address of the interface is assigned by
   DHCP.  This is due to the DHCP assigned IP address being stored in
   DhcpIPAddress rather than IPAddress (which is then 0.0.0.0).  Adding
-  a check of DhcpIPAddress existance and not being 0.0.0.0 fixes the
+  a check of DhcpIPAddress existence and not being 0.0.0.0 fixes the
   problem.  Applied the patch submitted by "orjan". 
 
 Fix rt.cpan.org 15119
 
   main_loop() consumed 100% of memory, because of a bug that
-  couced loop_once() to loop ad infinitum.
+  caused loop_once() to loop ad infinitum.
 
 Fix rt.cpan.org 15299
 
@@ -377,10 +384,10 @@ Fix rt.cpan.org 15299
 
 Fix rt.cpan.org 14046
 
-  RRSIGs verify and create failed fror a number of RR types. The 
+  RRSIGs verify and create failed for a number of RR types. The 
   error message showed something like:
       Can't call method "dn_comp" on an undefined value 
-  This was caused by an ommission in the _canonicalRdata() method
+  This was caused by an omission in the _canonicalRdata() method
   in Net::DNS::RR that was inherited by all failing RR types.
 
   Code was added to t/05-rr.t that will test signature creation
@@ -391,14 +398,14 @@ Feature async nameserver behaviour.
   
    In rt.cpan.org 14622 Robert Stone suggested:
 
-      The fact that it needs to take over the main runnning thread
+      The fact that it needs to take over the main running thread
       limits its audience.  Since many daemon programs are already
       driven by a top level select loop, it seems useful to provide an
       API for the user to integrate Net::DNS::Nameserver processing to
       their own select loop.
 
    He also supplied example code for which he is hereby acknowledged.
-   The patch was not used because simultaneously Robert Martin-Legene
+   The patch was not used because simultaneously Robert Martin-Legène
    supplied a patch to Nameservers.pm that allowed the same async
    functionality through the use of loop_once method. Robert M-L's 
    code also carefully manages the TCP sockets, so that they can 
@@ -431,7 +438,7 @@ Fix rt.cpan.org 13944
 
   Terminating dot not printed when printing SRV record. The SRV dname should
   be printed as FQDN, that is, including the dot at the end.
-  Acknowledgements Jakob Schlyter. 
+  Acknowledgments Jakob Schlyter. 
 
   While adding the "dot" I noticed that in the fileformat parsing code
   there might be theoretical corner cases where rdata elements are not
@@ -452,7 +459,7 @@ Fix rt.cpan.org 13809
 
 Fix rt.cpan.org 13922
 
-    Fixed a problem with persistent TCP sockets which was introdcuced
+    Fixed a problem with persistent TCP sockets which was introduced
     because of using the address family as an index to the array of
     persistent sockets. 
 
@@ -460,7 +467,7 @@ Fix rt.cpan.org 13922
     a number. The key to the persistent sockets is the remote nameserver:port 
     combination.
 
-    Acknowledgements to Mike Mitchell for reporting the bug and testing
+    Acknowledgments to Mike Mitchell for reporting the bug and testing
     the solution.
 
 Feat t/01-resolve will not try to do tests from private IP space; hopefully
@@ -495,7 +502,7 @@ Fix IPv6 on AIX
 
 
 Fix rt.cpan.org 13232
-    One uncought AF_INET6.
+    One uncaught AF_INET6.
 
 *** 0.52 July 1, 2005
 
@@ -671,7 +678,7 @@ Feature: Binary characters in labels
        must be zero, and the remaining six bits of the length field limit
        the label to 63 octets or less.
      
-     Unfortunatelly dname attributes are stored strings throughout
+     Unfortunately dname attributes are stored strings throughout
      Net::DNS.  (With hindsight dnames should have had their own class
      in which one could have preserved the wire format.).
      
@@ -681,7 +688,7 @@ Feature: Binary characters in labels
      5.1.
      
      I added code to parse presentation format domain names that has
-     escpaped data such as \ddd and \X (where X is not a number) to
+     escaped data such as \ddd and \X (where X is not a number) to
      wireformat and vice verse. In the conversion from wire format to
      presentation format the characters that have special meaning in a
      zone file are escaped (so that they can be cut-n-pasted without
@@ -694,22 +701,22 @@ Feature: Binary characters in labels
      Note that wherever a name occurs as a string in Net::DNS it is
      now in presentation format.
      
-     For those that dealth with 'hostnames' (subset of all possible
+     For those that dealt with 'hostnames' (subset of all possible
      domain names) this will be a completely transparent change.
      
      Details:
      
-     I added netdnslib wich contains Net::DNS's own dn_expand. Its
+     I added netdnslib which contains Net::DNS's own dn_expand. Its
      implemented in C and the source is a hodgepodge of Berkeley based
-     code and sniplets from ISC's bind9 distribution. The behavior, in
-     terms of which chars are escaped, is similare to bind9.
+     code and snippets from ISC's bind9 distribution. The behavior, in
+     terms of which chars are escaped, is similar to bind9.
      
      There are some functions added to DNS.pm that do conversion from
      presentation and wire format and back. They should only be used
      internally (although they live in EXPORT_OK.)
      
      
-     For esotheric test cases see t/11-escapedchars.t.
+     For esoteric test cases see t/11-escapedchars.t.
  
 Fix: rt.cpan.org #11931 
      Applied the patch suggested by "Sidney". It is a practical workaround
@@ -848,7 +855,7 @@ Fix: rt.cpan.org #8803
       Since we are expecting "zonefile" presentation at input 
       a comment will need to be escaped ( \; ).
 
-      It could be argued that this is a to strict interpertation of 
+      It could be argued that this is a to strict interpretation of 
       1035 section 5.1.
 
       While working on this I discovered there are more problems with
@@ -856,7 +863,7 @@ Fix: rt.cpan.org #8803
       should be represented as "\000" in a zonefile. Net::DNS does 
       pass character strings with "non-ASCII" chars from the wire
       to the char_str_lst array but the print functions do not
-      properly escape them when prining.
+      properly escape them when printing.
 
       Properly dealing with zonefile presentation format and binary 
       data is still to be done.
@@ -903,7 +910,7 @@ Luckily those numbers don't matter as long as they work.
 
 Fixed a bug with Unknown RR types that broke zone signing [Olaf].
 
-Added callback support to Net::DNS::Resolver::Recuse.  The
+Added callback support to Net::DNS::Resolver::Recurse.  The
 demo/trace_dns.pl script demonstrates this.
 
 Added a note regarding answers with an empty answer section to the 
@@ -951,7 +958,7 @@ Net::DNS::RR::new_from_hash() now works with unknown RR types [Olaf].
 IPv6 reverse lookups can now be done with Net::DNS::Resolver::search(),
 as well as with query().
 
-Hostnames can now be used in the 'nameservers' arguement to 
+Hostnames can now be used in the 'nameservers' argument to 
 Net::DNS::Resolver->new()
 
 *** 0.45_01 February 9, 2004
@@ -988,7 +995,7 @@ $rr->rdatastr no longer returns '; no data' if the RR record has no
 data.  This happens in $rr->string now.
 
 Net::DNS::Packet::safe_push() no longer exists.  The method is now only 
-avalible from Net::DNS::Update objects.
+available from Net::DNS::Update objects.
 
 
 ** 0.44_01 January 3, 2004
@@ -1068,7 +1075,7 @@ Fixed a bug in Net::DNS::Resolver::Recurse which allowed an endless
 loop to arise in certain situations.  (cpan #3969, patch
 by Rob Brown) 
 
-Applied Mike Mitchell's patch implementing a presistant UDP socket.  
+Applied Mike Mitchell's patch implementing a persistent UDP socket.  
 See the Net::DNS::Resolver documentation for details.
 
 *** 0.41 October 3, 2003
@@ -1089,7 +1096,7 @@ Reply handlers in Net::DNS::Nameserver are now passed the peerhost.
 Reply handlers in Net::DNS::Nameserver can now tweak the header bits
 that the nameserver returns.  [Olaf]
 
-The AD header bit is now documented, and twiddleable. [Olaf]
+The AD header bit is now documented, and twiddlable. [Olaf]
 
 The change log has been trimmed, entries for versions older than 0.21
 have been removed. 
@@ -1123,7 +1130,7 @@ numbers out of CVS.
 
 *** 0.39 August 7 2003
 
-Fixed a bug on Win32 where some machines seperated lists with commas, 
+Fixed a bug on Win32 where some machines separated lists with commas, 
 not whitespace.  Thanks to Jim White for pointing it out.
 
 ** 0.38_02 July 29 2003
@@ -1135,7 +1142,7 @@ as Net::DNS does not yet have IPv6 support.
 
 ** 0.38_01 Jun 22 2003
 
-Broke Net::DNS::Resolver into seperate classes.  UNIX and Win32 
+Broke Net::DNS::Resolver into separate classes.  UNIX and Win32 
 classes are currently implemented.  Many of the globals in 
 Net::DNS::Resolver no longer exist.  They were never documented
 so you never used them.... right?
@@ -1229,7 +1236,7 @@ Various cleanups for perl 5.004.  Thanks to nathan@anderson-net.com
 
 Applied Olaf's SIG patch (thanks as always).
 
-Win32 now looks at the envirement variables when building the 
+Win32 now looks at the environment variables when building the 
 configuration defaults.  Thanks to net-dns-bug@oak-wood.co.uk 
 (That's the only name I have... [cpan #1819])
 
@@ -1244,7 +1251,7 @@ Applied Rob Brown's patch for udp timeouts.
 
 Added stuff from Rob Brown for making RPM creation easier.
 
-Fixed a typo in FAQ.pod that was making aropos and whatis
+Fixed a typo in FAQ.pod that was making apropos and whatis
 grumpy.  Thanks to Florian Hinzmann for pointing it out and a patch.
 
 
@@ -1261,7 +1268,7 @@ Added more tests.
 
 *** 0.29 2 Oct 2002
 
-Fixed $_ from creaping out of scope in Resolver.pm. Thanks to
+Fixed $_ from creeping out of scope in Resolver.pm. Thanks to
 Ilya Martynov for finding the problem and the patch to fix it.
 
 Fixed divide by zero bug there is no usable network interface(s).
@@ -1274,14 +1281,14 @@ person that I can't seem to find the address of) for reports.
 Fixed a bug in the new AUTOLOAD routines that made it impossible to set
 attributes to '0'.
 
-Fixed a bug in the RR pat that broke many updates. 
+Fixed a bug in the RR patch that broke many updates. 
 
 
 *** 0.27 15 Aug 2002
 
 Added (untested) support for perl 5.004.
 
-We now allow whitespace at the begining of a RR.
+We now allow whitespace at the beginning of a RR.
 
 Fixed an issue that gave Net::DNS::SEC problems, %Net::DNS::RR::RR is now 
 in a scope that the Net::DNS::SEC hook can see it from.
