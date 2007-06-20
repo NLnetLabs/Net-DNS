@@ -39,7 +39,11 @@ BEGIN {
 	diag ("Testing availability of $address:$TestPort");
 	my $s = IO::Socket::INET->new(Proto => 'udp',
 				      LocalAddr => $address,
-				      LocalPort => $TestPort
+				      LocalPort => $TestPort,
+				      ReusePort => 1,
+				      # turns out that closing the
+				      # socket does not immediatly
+				      # make the port available.
 	    );
 	
 	
@@ -51,7 +55,7 @@ BEGIN {
 	    exit;
 	}
 	close ($s);
-	
+
     }else{
 	
 	plan skip_all => 'Some prerequisites required for this test are not available (dont\'t worry about this)';          
