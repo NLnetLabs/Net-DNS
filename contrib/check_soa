@@ -1,5 +1,6 @@
 #!/usr/bin/perl -w
-$VERSION = (qw$LastChangedRevision$)[1] || 0.20;
+$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION ||= 0.21;
 
 =head1 NAME
 
@@ -179,9 +180,10 @@ for ( displayRR($zone, 'SOA') ) {			# simple sanity check
 	my @ncache = NCACHE($zone) if $_->minimum > $neg_ttl;
 	for ( @ncache ) {
 		my $ttl = $_->ttl;			# flag large NCACHE TTL
-		my $h = int( ($ttl+180)/360 )/10;	# rounded hours
-		report("negative cache TTL $ttl ($h h)") if $ttl > $neg_ttl;
+		report('negative cache TTL', clock($ttl)) if $ttl > $neg_ttl;
 	}
+
+	next if $mname eq lc $zone;			# local zone
 
 	if ( "$rname." =~ /[^\\]\.(.+)$/i ) {		# check mail domain for RNAME
 		if ( my $packet = $resolver->send($1, 'ANY') ) {
@@ -252,6 +254,7 @@ sub checkNS {				# check nameservers (in parallel) and report status
 
 	my %nsname;					# identify nameserver
 	unless ( $ip ) {
+		return @pass if lc $ns eq lc $zone;
 		print "\n[$index]\t$ns\n";
 		report('unresolved server name');
 		return @fail;
@@ -302,10 +305,11 @@ sub checkNS {				# check nameservers (in parallel) and report status
 	if ( @soa ) {
 		@result = @pass if $aa and @soa == 1;		# RFC2181, 6.1
 		report(scalar @soa, 'SOA records') unless @soa == 1;
-		report('non-authoritative answer') unless $aa;	# RFC1034, 6.2.1 (2)
+		my $ttl = $soa[0]->ttl;				# RFC1034, 6.2.1 (2)
+		report("non-authoritative answer\tTTL", clock($ttl)) unless $aa;
 	} elsif ( @soa = grep{$_->type eq 'SOA'} $packet->authority ) {
 		my $ttl = $soa[0]->ttl;				# RFC2308, 2.2 (1)(2)
-		report("NCACHE response (TTL $ttl seconds)");
+		report("NCACHE response\tTTL", clock($ttl));
 		return @fail unless grep{$_->name =~ /^$zone$/i} @soa;
 		report('requested SOA in authority section; violates RFC2308');
 	} elsif ( my @ns = grep{$_->type eq 'NS'} $packet->authority ) {
@@ -342,6 +346,15 @@ sub checkNS {				# check nameservers (in parallel) and report status
 	return ($result[0]+$unrep, $serial, $uniq);	# restate partial result
 }
 
+sub clock {				# human-friendly TTL
+	if ( (my $s = shift) < 180000 ) {
+		my $h = int( ($s+180)/360 )/10;
+		return "$s (${h}H)";
+	} else {
+		my $d = int( ($s+43200)/86400 );
+		return "$s (${d}D)";
+	}
+}
 
 sub displayRR {				# print specified RRs with flags or error code
 	my $packet = $resolver->send(@_) || return ();	# get specified RRs
@@ -400,8 +413,8 @@ sub NS {				# find nameservers for domain
 		last if @ns = grep{$_->type eq 'NS'} $packet->answer;
 		my ($ncache) = grep{$_->type eq 'SOA'} $packet->authority;
 		my $apex = $ncache->name if $ncache;	# zone cut
-		return NS($apex) if $apex;		# NCACHE from zone server
-		return () if defined $apex;		# NCACHE from root server
+		return NS($apex) if $apex;		# NODATA from zone server
+		return () if defined $apex;		# NXDOMAIN from root server
 							# accept referral if any
 		my @referral = grep{$_->type eq 'NS'} $packet->authority;
 		last if @ns = grep{$_->name =~ /^$domain$/i} @referral;

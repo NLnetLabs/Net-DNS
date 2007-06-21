@@ -687,29 +687,32 @@ future use.
 
 sub dn_comp {
 	my ($self, $name, $offset) = @_;
-	$name="" unless defined($name);
-	my $compname="";
 	# The Exporter module does not seem to catch this baby...
 	my @names=Net::DNS::name2labels($name);
+	my $namehash = $self->{compnames};
+	my $compname='';
 
 	while (@names) {
-		my $dname = join(".", @names);
+		my $dname = join('.', @names);
 
-		if (exists $self->{"compnames"}->{$dname}) {
-			my $pointer = $self->{"compnames"}->{$dname};
-			$compname .= pack("n", 0xc000 | $pointer);
+		if ( my $pointer = $namehash->{$dname} ) {
+			$compname .= pack('n', 0xc000 | $pointer);
 			last;
 		}
+		$namehash->{$dname} = $offset;
 
-		$self->{"compnames"}->{$dname} = $offset;
-		my $first  = shift @names;
-		my $length = length $first;
-		carp "length of $first is larger than 63 octets; see RFC1035 section 2.3.1" if $length>63;
-		$compname .= pack("C a*", $length, $first);
+		my $label  = shift @names;
+		my $length = length $label || next;	# skip if null
+		if ( $length > 63 ) {
+			$length = 63;
+			$label = substr($label, 0, $length);
+			carp "$label...\ntruncated to $length octets (RFC1035 2.3.1)";
+		}
+		$compname .= pack('C a*', $length, $label);
 		$offset   += $length + 1;
 	}
 
-	$compname .= pack("C", 0) unless @names;
+	$compname .= pack('C', 0) unless @names;
 
 	return $compname;
 }
@@ -737,89 +740,40 @@ Returns B<(undef, undef)> if the domain name couldn't be expanded.
 # This is very hot code, so we try to keep things fast.  This makes for
 # odd style sometimes.
 
-sub dn_expand
-{
-    my ($packet, $offset) = @_;
-    my ($name, $roffset);
-	if ($Net::DNS::HAVE_XS) {
-	    ($name, $roffset)=dn_expand_XS($packet, $offset);
-	} else {
-	    my %seen;
-	    ($name, $roffset)=dn_expand_PP($packet, $offset, \%seen);
-	}
-    
-	return ($name, $roffset);
-
+sub dn_expand {
+#FYI	my ($packet, $offset) = @_;
+	return dn_expand_XS(@_) if $Net::DNS::HAVE_XS;
+#	warn "USING PURE PERL dn_expand()\n";
+	return dn_expand_PP(@_, {} );	# $packet, $offset, anonymous hash
 }
 
 sub dn_expand_PP {
-	my ($packet, $pkt_offset,$seen) = @_; # $seen from $_[2] for debugging
-	my $name = "";
-	my $len;
+	my ($packet, $offset, $visited) = @_;
 	my $packetlen = length $$packet;
-	my $int16sz = Net::DNS::INT16SZ();
+	my $name = '';
 
+	while ( $offset < $packetlen ) {
+		unless ( my $length = unpack("\@$offset C", $$packet) ) {
+			$name =~ s/\.$//o;
+			return ($name, ++$offset);
 
- 	my $checked = 0;
- 	my $hasPtr = 0;
- 	my $offset = $pkt_offset;
- 
+		} elsif ( ($length & 0xc0) == 0xc0 ) {		# pointer
+			my $point = 0x3fff & unpack("\@$offset n", $$packet);
 
-	while (1) {
- 		return (undef, undef) if $checked > $packetlen; # fix endless Loop
- 
-		$len = unpack("\@$offset C", $$packet);
+			my ($suffix) = dn_expand_PP($packet, $point, $visited)
+				unless $visited->{$point}++;	# unbounded expansion
 
+ 			return ($name.$suffix, $offset+2) if defined $suffix;
 
-		# Debugging
-		#warn "USING PURE PERL dn_expand()\n";
-		if ($seen->{$offset}) {
-		  # warn "dn_expand: loop: offset=$offset (seen = ",
-		  # join(",", keys %$seen), ")\n";
-		  return ();
+		} elsif ( $length + $offset++ < $packetlen ) {	# label
+			my $element = substr($$packet, $offset, $length);
+			$name .= Net::DNS::wire2presentation($element).'.';
+			$offset += $length;
+			next;
 		}
-		$seen->{$offset} = 1;
-
-		if ($len == 0) {
-			$offset++;
- 			$pkt_offset++ if !$hasPtr;
- 			last;
-		}
-		elsif (($len & 0xc0) == 0xc0) {
- 			# pointer into message for compressed strings
- 			return (undef, undef)
-				if $packetlen < ($offset + $int16sz);
-
- 			$pkt_offset+=$int16sz if !$hasPtr;
- 			$checked += $int16sz;
- 
-
-			my $ptr = unpack("\@$offset n", $$packet);
-			$ptr &= 0x3fff;
- 			$offset = $ptr;
- 			$hasPtr = 1;
- 			next; # restart with offset from pointer
-		}
-		else {
-			$offset++;
- 			$pkt_offset+=1 if !$hasPtr;
-			return (undef, undef)
-				if $packetlen < ($offset + $len);
-
-			my $elem = substr($$packet, $offset, $len);
-
-			$name .= Net::DNS::wire2presentation($elem).".";
-
-			$offset += $len;
-			$pkt_offset+= $len if !$hasPtr;
-			$checked += $len;
-		}
+		last;
 	}
-
-	
-
-	$name =~ s/\.$//o;
-	return ($name, $pkt_offset);
+	return (undef, undef);		# corrupt packet
 }
 
 =head2 sign_tsig

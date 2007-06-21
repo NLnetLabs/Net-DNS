@@ -131,3 +131,5 @@ my $rr3 = Net::DNS::RR->new("SRI-NIC.ARPA. HINFO DEC-2060  TOPS20");
 
 is($rr3->cpu,"DEC-2060","Character string in quotes 3");
 is($rr3->os,"TOPS20","Character string in quotes 4");
+
+
