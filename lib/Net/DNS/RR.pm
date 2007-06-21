@@ -8,6 +8,7 @@ BEGIN {
     eval { require bytes; }
 } 
 
+
 use vars qw($VERSION $AUTOLOAD     %rrsortfunct );
 use Carp;
 use Net::DNS;
@@ -15,7 +16,7 @@ use Net::DNS::RR::Unknown;
 
 
 
-$VERSION = (qw$LastChangedRevision 1 $)[1];
+$VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
