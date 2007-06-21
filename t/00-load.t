@@ -17,7 +17,7 @@ BEGIN {
 diag("\nThese tests were ran with:\n");
 diag("Net::DNS::VERSION:               ".
      $Net::DNS::VERSION);
-
+diag("set environment variable NET_DNS_DEBUG to get all versions");
 
 
 sub is_rr_loaded {
@@ -52,13 +52,6 @@ foreach my $rr (@rrs) {
 	ok(is_rr_loaded($rr), "$class loaded");
 
 	next unless is_rr_loaded($rr);
-	# Print version of the loaded module
-	{
-	    no strict 'refs';
-	    $version = ${"${class}::VERSION"};
-	    use strict;
-	}
-	diag $class." version: ". $version; 
 
 }
 
