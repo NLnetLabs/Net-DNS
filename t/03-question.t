@@ -1,6 +1,6 @@
 # $Id$    -*-perl-*-
 
-use Test::More tests => 30;
+use Test::More tests => 31;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -83,4 +83,7 @@ is($q7->qtype,  'SOA',         'v6: SOA done correctly'  );
 my $q8= Net::DNS::Question->new("::1.de","IN","A");
 is ($q8->qname, '::1.de',"No expantion under TLD ");
 
+my $q9= Net::DNS::Question->new('0');
+
+is ($q9->qname, "0.in-addr.arpa","Zero gets treated as IP address");
 

@@ -12,7 +12,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$LastChangedRevision 0$)[1];
+$VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
@@ -44,7 +44,7 @@ queries in in-addr.arpa and ip6.arpa subdomains.
 sub new {
 	my $class = shift;
 
-	my $qname = shift || '';
+	my $qname = defined ($_ = shift) ? $_ : '';
 	my $qtype = uc shift || 'A';
 	my $qclass = uc shift || 'IN';
 
@@ -62,12 +62,12 @@ sub new {
 		($qname, $qtype) = ($_, $type) if $_ = dns_addr($qname);
 	}
 
-	my %self = (	qname	=> $qname,
+	my $self = {	qname	=> $qname,
 			qtype	=> $qtype,
 			qclass	=> $qclass
-			);
+			};
 
-	bless \%self, $class;
+	bless $self, $class;
 }
 
 
@@ -129,24 +129,16 @@ known as C<zclass> and refers to the zone's class.
 =cut
 
 sub AUTOLOAD {
-	my ($self) = @_;
-	
+	my $self = shift;
+
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://o;
 
 	Carp::croak "$name: no such method" unless exists $self->{$name};
 
-	no strict q/refs/;
-	
-	*{$AUTOLOAD} = sub {
-		my ($self, $new_val) = @_;
-		
-		$self->{$name} = $new_val if defined $new_val;
-		
-		return $self->{$name};
-	};
-	
-	goto &{$AUTOLOAD};	
+	return $self->{$name} unless @_;
+
+	$self->{$name} = shift;
 }
 
 

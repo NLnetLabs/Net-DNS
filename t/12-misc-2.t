@@ -51,6 +51,7 @@ BEGIN {
 	    
 	    
 	    return $s;
+	    sleep 2;
 	};
 	if ( $@ ){
 	    diag ($@);
