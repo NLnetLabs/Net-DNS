@@ -43,8 +43,8 @@ queries in in-addr.arpa and ip6.arpa subdomains.
 
 sub new {
 	my $class = shift;
-
-	my $qname = defined ($_ = shift) ? $_ : '';
+	my $stub;
+	my $qname = defined ($stub = shift) ? $stub : '';
 	my $qtype = uc shift || 'A';
 	my $qclass = uc shift || 'IN';
 

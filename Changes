@@ -1,6 +1,13 @@
 
+
+
 Revision history for Net::DNS                                     -*-text-*-
 =============================
+*** 0.61, Not RELEASED
+
+Fix rt.cpan.org #28106 and 28198
+    Modification of $_ in various places.  With thanks to Bodo Bauer.
+
 *** 0.60 20 June 2007
 
 Fix spelling mistakes in change log using interactive spell checker (aspell).
@@ -88,8 +95,8 @@ Feature rt r24525
     ship Net::DNS::Resolver::Base with its own copies of ip_is_ipv[4|6] and
     supplied a patch with those functions stripped from Net::IP.
 
-    Note that the package still depends on Net::IP because there are a
-    few tests that use it.
+    Note that the package still depends on Net::IP because
+    Net::DNS::Nameserver and a few tests depend on it.
 
 Fix rt 22334
     Fixed "perl Makefile.PL --xs" behavior, patch by Tamas Palfalvi
@@ -369,7 +376,7 @@ Fix rt.cpan.org 11931
 
 Fix rt.cpan.org 15119
 
-  main_loop() consumed 100% of memory, because of a bug that
+  main_loop() consumed 100% of CPU, because of a bug that
   caused loop_once() to loop ad infinitum.
 
 Fix rt.cpan.org 15299

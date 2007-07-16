@@ -43,7 +43,7 @@ BEGIN {
     @ISA     = qw(Exporter DynaLoader);
 
     
-    $VERSION = '0.60';
+    $VERSION = '0.60_20070716';
     $SVNVERSION = (qw$LastChangedRevision$)[1];
 
     $HAVE_XS = eval { 

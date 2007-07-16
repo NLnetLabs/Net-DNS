@@ -1478,55 +1478,58 @@ sub _create_tcp_socket {
 # The next two is lightweight versions of subroutines from Net::IP module
 
 sub _ip_is_ipv4 {
-    $_ = shift;
 
-    return 0 if !m/^[\d\.]+$/ || m/^\./ || m/\.$/;
+    my $candidate_ip = shift;
 
+    for ( $candidate_ip ) {   # $_ set to $candidate_ip fixes rt.cpan.org #28198
+        return 0 if !m/^[\d\.]+$/ || m/^\./ || m/\.$/;
 
-    # Single Numbers are considered to be IPv4
-    return 1 if m/^(\d+)$/ && $1 < 256;
+        # Single Numbers are considered to be IPv4
+        return 1 if m/^(\d+)$/ && $1 < 256;
 
-    # Count quads
-    my $n = tr/\./\./;
+        # Count quads
+        my $n = tr/\./\./;
 
-    # IPv4 must have from 1 to 4 quads
-    # remember 1.1 expands to 1.0.0.1 and is legal.
-    return 0 unless $n >= 0 && $n < 4 && !m/\.\./;
+        # IPv4 must have from 1 to 4 quads
+        # remember 1.1 expands to 1.0.0.1 and is legal.
+        return 0 unless $n >= 0 && $n < 4 && !m/\.\./;
 
-    foreach (split /\./) { # Check for invalid quads
-	return 0 unless $_ >= 0 && $_ < 256;
+        foreach (split /\./) { # Check for invalid quads
+    	    return 0 unless $_ >= 0 && $_ < 256;
+        }
     }
-
     1;
 }
 
 sub _ip_is_ipv6 {
-    $_ = shift;
 
-    # Count octets
-    my $n = tr/:/:/;
-    return 0 unless $n > 0 && $n < 8;
+    my $candidate_ip = shift;
 
-    # Does the IP address start/finishes with : || have more than one '::' pattern ?
-    return 0 if m/^:[^:]/ || m/[^:]:$/ || s/:(?=:)//g > 1;
+    for ( $candidate_ip ) {  # $_ set to $candidate_ip  fixes rt.cpan.org #28198
+        # Count octets
+        my $n = tr/:/:/;
+        return 0 unless $n > 0 && $n < 8;
 
-    # $k is a counter
-    my $k;
+        # Does the IP address start/finishes with : || have more than one '::' pattern ?
+        return 0 if m/^:[^:]/ || m/[^:]:$/ || s/:(?=:)//g > 1;
 
-    foreach (split /:/) {
-        $k++;
+        # $k is a counter
+        my $k;
 
-        next unless $_; # Empty octet ?
+        foreach (split /:/) {
+            $k++;
+
+            next unless $_; # Empty octet ?
     
-        next if /^[a-f\d]{1,4}$/i; # Normal v6 octet ?
+            next if /^[a-f\d]{1,4}$/i; # Normal v6 octet ?
         
-        if ($k == $n + 1) { # Last octet - is it IPv4 ?
-            next if _ip_is_ipv4($_);
+            if ($k == $n + 1) { # Last octet - is it IPv4 ?
+                next if _ip_is_ipv4($_);
+            }
+
+            return 0;
         }
-
-        return 0;
     }
-
     1;
 }
 
