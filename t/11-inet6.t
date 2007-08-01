@@ -113,11 +113,13 @@ foreach my $ns ($nsanswer->answer){
 }
 
 
- SKIP: { skip "No answer available to analyse (". $res->errorstring.")\n  or online tests are not enabledd", 2 unless ( -e 't/online.enabled' && $answer );
+ SKIP: { skip "No answer available to analyse (". $res->errorstring.")\n  or online tests are not enabledd", 1 unless ( -e 't/online.enabled' && $answer );
 	 
 	 # $answer->print;
 	 is (($answer->answer)[0]->type, "SOA","Query over udp6 succeeded");
 }
+
+
  SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
 	 $res->usevc(1);
 	 $res->force_v4(1);
