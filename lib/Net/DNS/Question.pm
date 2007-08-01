@@ -43,11 +43,12 @@ queries in in-addr.arpa and ip6.arpa subdomains.
 
 sub new {
 	my $class = shift;
-	my $stub;
-	my $qname = defined ($stub = shift) ? $stub : '';
+
+	my $qname = shift;
 	my $qtype = uc shift || 'A';
 	my $qclass = uc shift || 'IN';
 
+	$qname = '' unless defined $qname;	# || ''; is NOT same!
 	$qname =~ s/\.+$//o;	# strip gratuitous trailing dot
 
  	# Check if the caller has the type and class reversed.
@@ -57,10 +58,10 @@ sub new {
 		and exists $Net::DNS::typesbyname{$qclass};
 
 	# if argument is an IP address, do appropriate reverse lookup
-	if ( $qname =~ m/\d$|[:\/]/o ) {
-		my $i;
-		my $type = $qtype =~ m/^(A|AAAA)$/o ? 'PTR' : $qtype;
-		($qname, $qtype) = ($i, $type) if $i = dns_addr($qname);
+	my $reverse = dns_addr($qname) if $qname =~ m/\d$|[:\/]/o;
+	if ( $reverse ) {
+		$qname = $reverse;
+		$qtype = 'PTR' if $qtype =~ m/^(A|AAAA)$/o;
 	}
 
 	my $self = {	qname	=> $qname,
@@ -77,19 +78,19 @@ sub dns_addr {
 
 	# If arg looks like IP4 address then map to in-addr.arpa space
 	if ( $arg =~ /((^|\d+\.)+\d+)($|\/(\d*))/o ) {
-		my $i;
 		my @parse = split /\./, $1;
-		my $last = ($i = ($4 || @parse<<3)) > 24 ? 3 : ($i-1)>>3;
+		my $prefx = $4 || @parse<<3;
+		my $last = $prefx > 24 ? 3 : ($prefx-1)>>3;
 		return join '.', reverse( (@parse,(0)x3)[0 .. $last] ), 'in-addr.arpa';
 	}
 
 	# If arg looks like IP6 address then map to ip6.arpa space
 	if ( $arg =~ /^((\w*:)+)(\w*)($|\/(\d*))/o ) {
-		my $i;
 		my @parse = split /:/, (reverse "0${1}0${3}"), 9;
 		my @xpand = map{/^$/ ? ('0')x(9-@parse) : $_} @parse;
+		my $prefx = $5 || @xpand<<4;
 		my $hex = pack 'A4'x8, map{$_.'000'} ('0')x(8-@xpand), @xpand;
-		my $len = ($i = ($5 || @xpand<<4)) > 124 ? 32 : ($i+3)>>2;
+		my $len = $prefx > 124 ? 32 : ($prefx+3)>>2;
 		return join '.', split(//, substr($hex,-$len) ), 'ip6.arpa';
 	}
 

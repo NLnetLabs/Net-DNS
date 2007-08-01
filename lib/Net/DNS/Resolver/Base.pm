@@ -319,15 +319,13 @@ sub nameservers {
     if (@_) {
 	my @a;
 	foreach my $ns (@_) {
-	    if ($ns =~ /^(\d+(:?\.\d+){0,3})$/) {
-		if ( _ip_is_ipv4($ns) ) {
-		    push @a, ($1 eq '0') ? '0.0.0.0' : $1;
-		}
-		
-	    }
-	    elsif ( _ip_is_ipv6($ns) ) {
+
+	    if ( _ip_is_ipv4($ns) ) {
+		push @a, ($ns eq '0') ? '0.0.0.0' : $ns;
+
+	    } elsif ( _ip_is_ipv6($ns) ) {
 		push @a, ($ns eq '0') ? '::0' : $ns;
-		
+
 	    } else  {
 		my $defres = Net::DNS::Resolver->new;
 		my @names;
@@ -1475,62 +1473,42 @@ sub _create_tcp_socket {
 	return $sock;
 }
 
-# The next two is lightweight versions of subroutines from Net::IP module
+
+# Lightweight versions of subroutines from Net::IP module, recoded to fix rt#28198
 
 sub _ip_is_ipv4 {
+	my @field = split /\./, shift;
 
-    my $candidate_ip = shift;
+	return 0 if @field > 4;				# too many fields
 
-    for ( $candidate_ip ) {   # $_ set to $candidate_ip fixes rt.cpan.org #28198
-        return 0 if !m/^[\d\.]+$/ || m/^\./ || m/\.$/;
-
-        # Single Numbers are considered to be IPv4
-        return 1 if m/^(\d+)$/ && $1 < 256;
-
-        # Count quads
-        my $n = tr/\./\./;
-
-        # IPv4 must have from 1 to 4 quads
-        # remember 1.1 expands to 1.0.0.1 and is legal.
-        return 0 unless $n >= 0 && $n < 4 && !m/\.\./;
-
-        foreach (split /\./) { # Check for invalid quads
-    	    return 0 unless $_ >= 0 && $_ < 256;
-        }
-    }
-    1;
+	foreach ( @field ) {
+		return 0 unless /./;			# reject if empty
+		return 0 if /[^0-9]/;			# reject non-digit
+		return 0 if $_ > 255;			# reject bad value
+	}
+	return 1;
 }
+
 
 sub _ip_is_ipv6 {
 
-    my $candidate_ip = shift;
+	for ( shift ) {
+		my @field = split /:/;			# split into fields
+		return 0 if (@field < 3) or (@field > 8);
 
-    for ( $candidate_ip ) {  # $_ set to $candidate_ip  fixes rt.cpan.org #28198
-        # Count octets
-        my $n = tr/:/:/;
-        return 0 unless $n > 0 && $n < 8;
+		return 0 if /::.*::/;			# reject multiple ::
 
-        # Does the IP address start/finishes with : || have more than one '::' pattern ?
-        return 0 if m/^:[^:]/ || m/[^:]:$/ || s/:(?=:)//g > 1;
+		if ( /\./ ) {				# IPv6:IPv4
+			return 0 unless _ip_is_ipv4(pop @field);
+		}
 
-        # $k is a counter
-        my $k;
-
-        foreach (split /:/) {
-            $k++;
-
-            next unless $_; # Empty octet ?
-    
-            next if /^[a-f\d]{1,4}$/i; # Normal v6 octet ?
-        
-            if ($k == $n + 1) { # Last octet - is it IPv4 ?
-                next if _ip_is_ipv4($_);
-            }
-
-            return 0;
-        }
-    }
-    1;
+		foreach ( @field ) {
+			next unless /./;		# skip ::
+			return 0 if /[^0-9a-f]/i;	# reject non-hexdigit
+			return 0 if length $_ > 4;	# reject bad value
+		}
+	}
+	return 1;
 }
 
 

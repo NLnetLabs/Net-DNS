@@ -90,10 +90,10 @@ my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
 	    
 
 SKIP: {
-	skip 'Online tests disabled.', 2
+	skip 'Online tests disabled.', 3
 		unless -e 't/online.enabled';
 
-	skip 'Tests may not run succesful from private IP('.$ip->ip() .')', 2
+	skip 'Tests may not run succesful from private IP('.$ip->ip() .')', 3
 	    if ($ip->iptype() ne "PUBLIC");
 
 	my $res = Net::DNS::Resolver->new;

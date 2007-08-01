@@ -116,12 +116,13 @@ my $pid;
 
 	 $resolver->send("bla.foo","A");
 	 $resolver->send("bla.foo","A");
-
-	 is("unknown error or no error",$resolver->errorstring,"read_tcp failed after connection reset");
+	 sleep 1;
+	 $resolver->send("bla.foo","A");
+	 is($resolver->errorstring,"unknown error or no error","read_tcp failed after connection reset");
 
 
 	 $resolver->send("bla.foo","A");
-	 is("timeout",$resolver->errorstring,"timout received");
+	 is($resolver->errorstring,"timeout","timout received");
 
 
 

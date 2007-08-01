@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 $VERSION = (qw$LastChangedRevision$)[1];
-$VERSION ||= 0.21;
+$VERSION ||= 0.22;
 
 =head1 NAME
 
@@ -158,9 +158,9 @@ $resolver->nameservers(@server) || die $resolver->string;
 
 my @ns = NS($name);					# find NS serving name
 unless ( @ns ) {
-	displayRR($name, 'ANY');			# show RR for name if any
-	report("unable to find NS for $name.");		# name apparently in root zone
 	print $resolver->string;			# show resolver state
+	displayRR($name, 'NS');				# show response code
+	displayRR($name, 'ANY');			# show any RR for name
 	exit;						# game over
 }
 
@@ -201,7 +201,7 @@ for ( displayRR($zone, 'SOA') ) {			# simple sanity check
 	report("absolute name expected:\t$1  <----- '.' absent") if $resolver->query($1, 'ANY');
 }
 
-displayRR($name, 'ANY') unless $name =~ /^$zone\.*$/i;	# show RR for non-delegated name
+displayRR($name, 'ANY');				# show RR for user-specified name
 
 print "----\n";
 
@@ -277,11 +277,11 @@ sub checkNS {				# check nameservers (in parallel) and report status
 
 	my $packet;
 	if ( $socket ) {
-		until ($_ = $res->bgisready($socket)) {	# timed wait on socket
+		until ( $res->bgisready($socket) ) {	# timed wait on socket
 			last if time > ($sent + $udp_timeout);
 			catnap($udp_wait);		# snatch a few milliseconds sleep
 		}
-		$packet = $res->bgread($socket) if $_;	# read response if available
+		$packet = $res->bgread($socket) if $res->bgisready($socket);	# get response
 	} else {
 		$packet = $res->send($zone, 'SOA');	# use sequential query model
 	}
@@ -309,7 +309,7 @@ sub checkNS {				# check nameservers (in parallel) and report status
 		report("non-authoritative answer\tTTL", clock($ttl)) unless $aa;
 	} elsif ( @soa = grep{$_->type eq 'SOA'} $packet->authority ) {
 		my $ttl = $soa[0]->ttl;				# RFC2308, 2.2 (1)(2)
-		report("NCACHE response\tTTL", clock($ttl));
+		report("NODATA response\tTTL", clock($ttl));
 		return @fail unless grep{$_->name =~ /^$zone$/i} @soa;
 		report('requested SOA in authority section; violates RFC2308');
 	} elsif ( my @ns = grep{$_->type eq 'NS'} $packet->authority ) {
@@ -349,10 +349,10 @@ sub checkNS {				# check nameservers (in parallel) and report status
 sub clock {				# human-friendly TTL
 	if ( (my $s = shift) < 180000 ) {
 		my $h = int( ($s+180)/360 )/10;
-		return "$s (${h}H)";
+		return "$s (${h}h)";
 	} else {
 		my $d = int( ($s+43200)/86400 );
-		return "$s (${d}D)";
+		return "$s (${d}d)";
 	}
 }
 
@@ -362,10 +362,12 @@ sub displayRR {				# print specified RRs with flags or error code
 	my $rcode = $header->rcode;			# response code
 	my $na = $header->tc ? 'tc' : '';		# non-auth  response
 	my $aa = $header->aa ? "aa $na" : $na;		# authoritative answer
-	my $question = ($packet->question)[0] || Net::DNS::Question->new(@_);
+	my ($question) = $packet->question;
 	my $qname = $question->qname;
+	my $qtype = $question->qtype;
 	my @answer = $packet->answer;
-	foreach ( @answer ) {				# print RR with status flags
+	my @rr = grep{$_->type !~ /^(NS|SOA)$/o} @answer;	# almost ANY
+	foreach ( ($qtype eq 'ANY') ? @rr : @answer) {	# print RR with status flags
 		my $string = $_->string;		# display IPv6 compact form
 		$string =~ s/(:[:0]*:)(?!.*::|.+\1)/::/o if $_->type eq 'AAAA';
 		my $l = 95;				# abbreviate long RR
@@ -424,9 +426,9 @@ sub NS {				# find nameservers for domain
 		@referral = grep{$_->type eq 'NS'} $packet->authority;
 		last if @ns = grep{$_->name =~ /^$domain$/i} @referral;
 							# IP (pre 0.59 compatibility)
-		my ($q) = grep{$_->qtype eq 'PTR'} $packet->question;
-		return NS($q->qname) if $q;
-		($_, $domain) = split /\./, $domain, 2;	# strip leftmost label
+		my ($x) = grep{$_->qtype eq 'PTR'} $packet->question;
+		return NS($x->qname) if $x;
+		($x, $domain) = split /\./, $domain, 2;	# strip leftmost label
 	}
 	return @ns;
 }
