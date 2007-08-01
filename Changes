@@ -7,6 +7,9 @@ Revision history for Net::DNS                                     -*-text-*-
 Fix rt.cpan.org #28106, 28198, and 28590
     Modification of $_ in various places.  
 
+Fix
+    t/11-inet6 assumed lowercase domain names.
+
 *** 0.60 20 June 2007
 
 Fix spelling mistakes in change log using interactive spell checker (aspell).
