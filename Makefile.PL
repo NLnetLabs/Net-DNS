@@ -1,3 +1,4 @@
+
 # $Id$ -*-perl-*-
 
 use strict;
@@ -128,7 +129,8 @@ END
 if ($use_xs) {
 	# turn the XS bits on.
         print "Activating XS Magic...\n" if DEBUG; 
-	$Makefile{'MYEXTLIB'}    = 'netdns$(LIB_EXT)';
+	$Makefile{'LIBS'} = '-lresolv' if($^O =~ /solaris|sunos/i);
+	$Makefile{'OBJECT'} = '$(O_FILES)';
 	delete $Makefile{'XS'};
 	delete $Makefile{'C'};
 }

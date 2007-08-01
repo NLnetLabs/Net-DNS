@@ -1,7 +1,17 @@
+
 $Id$
 
 Revision history for Net::DNS                                     -*-text-*-
 =============================
+*** 0.61_01, UNRELEASED
+
+Fix rt.cpan.org #27970 better netdns.o
+
+    Marek Rouchal provided two minor improvements for linking the C
+    code sniplets
+
+
+
 *** 0.61, 1 August 2007
 
 Fix rt.cpan.org #28106, 28198, and 28590
