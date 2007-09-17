@@ -3,12 +3,22 @@ $Id$
 
 Revision history for Net::DNS                                     -*-text-*-
 =============================
+
+
+
 *** 0.61_01, UNRELEASED
 
 Fix rt.cpan.org #27970 better netdns.o
 
     Marek Rouchal provided two minor improvements for linking the C
     code sniplets
+
+
+Fix rt.cpan 28345
+
+    A fix in Test::Simple revealed an off by 1 error in the testplan
+    for 05-rr-rrsort.t. The fix is to remove a test, creating a dependency
+    on Test::Simple 0.71 seemed overkill.
 
 
 

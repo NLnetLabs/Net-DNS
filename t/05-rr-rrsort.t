@@ -4,7 +4,7 @@ use Test::More;
 use strict;
 plan tests => 22;
 BEGIN{
-    use_ok('Net::DNS', qw(rrsort));
+    use ('Net::DNS', qw(rrsort));
 };
 
 my $rr1=Net::DNS::RR->new("example.com.  600     IN      SRV     0 0 5060 A.example.com.");
