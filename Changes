@@ -8,6 +8,13 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.61_01, UNRELEASED
 
+Fix rt.cpan.org #29531
+
+    The code that detects a query name to be an address faulty interpreted
+    less common domain names as IP addresses and tried to map them into 
+    reverse address names.
+    Dick Franks cleaned up the regular expression to be a little stricter.
+
 Fix rt.cpan.org #27970 better netdns.o
 
     Marek Rouchal provided two minor improvements for linking the C
