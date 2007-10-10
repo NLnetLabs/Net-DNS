@@ -8,6 +8,10 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.61_01, UNRELEASED
 
+Fix rt.cpan.org #29877
+     Made 00-version.t recognize a "GIT" environment.
+
+
 Fix rt.cpan.org #29878
 
      SPF.pm did not evaluate as true. Thanks Bjorn Hansen.

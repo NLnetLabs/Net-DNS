@@ -11,6 +11,9 @@ my $blib = File::Spec->catfile(qw(blib lib));
 	
 find( sub { push(@files, $File::Find::name) if /\.pm$/}, $blib);
 
+plan skip_all => 'No versions from git checkouts' if -e '.git';
+
+
 my $can = eval { MM->can('parse_version') };
 
 if (!$@ and $can) {
