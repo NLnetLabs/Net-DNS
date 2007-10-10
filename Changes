@@ -8,6 +8,10 @@ Revision history for Net::DNS                                     -*-text-*-
 
 *** 0.61_01, UNRELEASED
 
+Fix rt.cpan.org #29878
+
+     SPF.pm did not evaluate as true. Thanks Bjorn Hansen.
+
 Fix rt.cpan.org #29531
 
     The code that detects a query name to be an address faulty interpreted

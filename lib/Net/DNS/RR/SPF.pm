@@ -13,7 +13,7 @@ use Net::DNS::RR::TXT;
 @ISA     = qw(Net::DNS::RR::TXT);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-
+1;
 
 =head1 NAME
 
