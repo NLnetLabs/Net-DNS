@@ -1,6 +1,6 @@
 # $Id$    -*-perl-*-
 
-use Test::More tests => 31;
+use Test::More tests => 32;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -87,3 +87,7 @@ my $q9= Net::DNS::Question->new('0');
 
 is ($q9->qname, "0.in-addr.arpa","Zero gets treated as IP address");
 
+
+
+my $q10=Net::DNS::Question->new("http://europe.pool.ntp.org","IN","A");
+is($q10->qname, "http://europe.pool.ntp.org","Domain name containing slashes, gets interpreted correctly")
