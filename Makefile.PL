@@ -103,6 +103,7 @@ unless (defined $use_xs) {
 	if (test_cc()) {
 		print "You have a working compiler.\n";
 		$use_xs = 1;
+		$Makefile{'MYEXTLIB'}    = 'netdns$(LIB_EXT)';
 	} else {
 		$use_xs = 0;
 		print <<END;
@@ -219,13 +220,9 @@ test_cover : pure_all
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
 	cover
 
-
-
-
 netdns$(LIB_EXT): netdns$(OBJ_EXT)
 	$(AR) '.($^O eq 'MSWin32' && $Config{'cc'} eq 'cl'?'/OUT:':'cr ').
 	  'netdns$(LIB_EXT) netdns$(OBJ_EXT)
-
 
 ';
 #    print "$content";
