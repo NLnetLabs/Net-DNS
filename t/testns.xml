@@ -16,6 +16,35 @@
     
 
 
+ <qname name="rt30316.test">
+           <qtype type="A" delay="1">
+            <header>
+             <rcode value="NOERROR"/>
+               <aa value="1"/>
+               <ra value="0"/>
+               <ad value="0"/>
+               <qr value="1"/>
+               <tc value="0"/>
+               <id value="1234"/>
+	      <qdcount value="1"/>
+              <ancount value="1"/>
+	      <nscount value="0"/>
+	      <arcount value="0"/>
+             </header>
+           <raw>
+	   07 72 74 33 30 33 31 36 04 74 65 73 74 00 <!-- qname rt30316.test -->
+	   00 01 <!-- qname and qtype IN A -->
+	   00 01 
+	   <!-- answer section -->
+	   07 72 74 33 30 33 31 36 04 74 65 73 74 00 <!-- qname rt30316.test -->
+	   00 01 00 01  00 00 00 1e 00 02 7f 35  <!-- RDATA with 2 octets for IPv4 See RT 30316 -->
+
+
+	   </raw>
+	   </qtype>
+    </qname>
+
+
 
     <qname name="example.com">
       <qtype type="AXFR" delay="1000">
@@ -505,9 +534,8 @@
       </qtype>
     </qname>
 
-
    </server>
-
+   
 
 
 

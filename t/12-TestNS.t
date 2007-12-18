@@ -92,7 +92,7 @@ BEGIN {
 my $configfile="t/testns.xml";
 
 my $test_nameservers=Net::DNS::TestNS->new($configfile, {
-#    Verbose => 1,
+    Verbose => 1,
     Validate => 1,
 });
 
@@ -111,6 +111,13 @@ $test_nameservers->run();
 
 #print join(" ", $resolver->nameservers());
 $resolver->query("bla.foo", 'TXT');
+
+
+
+# Try to see what happens with some really bogus data
+$resolver->ignqrid(1);
+$resolver->query("rt30316.test", 'A');
+exit;
 
 use Net::DNS::Resolver::Recurse;
 
@@ -164,6 +171,10 @@ $resolver->tcp_timeout($tcptimeout);
 my $ans=$resolver->query("bla.foo", 'TXT');
 is( $resolver->errorstring,"NOERROR","TCP request returned without Errors");
 is(($ans->answer)[0]->type,"TXT","TXT type returned");
+
+
+
+
 
 $test_nameservers->medea();
 
