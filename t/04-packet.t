@@ -1,203 +1,169 @@
-# $Id$    -*-perl-*-
+# $Id$	-*-perl-*-
 
-
-use Test::More tests => 41;
+use Test::More tests => 86;
 use strict;
 
-BEGIN { use_ok('Net::DNS'); }     #1
+use Net::DNS;
 
 my $had_xs=$Net::DNS::HAVE_XS; 
 
-my $domain = "example.com";
-my $type   = "MX";
-my $class  = "IN";
 
-#------------------------------------------------------------------------------
-# Make sure we can create a DNS packet.
-#------------------------------------------------------------------------------
+#	new() class constructor method must return object of appropriate class
+isa_ok(Net::DNS::Packet->new(),	'Net::DNS::Packet',	'new() object');
+
+
+#	string method returns character string representation of object
+like(Net::DNS::Packet->new(undef)->string,	"/IN\tA/",	'$packet->string' );
+
+
+#	Create a DNS query packet
+my ($domain, $type, $class) = qw(example.test MX IN);
 
 my $packet = Net::DNS::Packet->new($domain, $type, $class);
-
-ok($packet,                                 'new() returned something');         #2
-ok($packet->header,                         'header() method works');            #3
-ok($packet->header->isa('Net::DNS::Header'),'header() returns right thing');     #4
-
-
+my $question = Net::DNS::Question->new($domain, $type, $class);
+like($packet->string,	"/$class\t$type/",	'create query packet' );
+ok($packet->header,	'header() method works');
+ok($packet->header->isa('Net::DNS::Header'),	'header() returns header object');
 my @question = $packet->question;
-ok(@question && @question == 1,             'question() returned right number of items'); #5
-ok($question[0]->isa('Net::DNS::Question'), 'question() returned the right thing');       #6
+ok(@question && @question == 1,		'question() returns list with single element');
+my ($q) = @question;
+ok($q->isa('Net::DNS::Question'),	'list element is a question object');
+is_deeply($q,	$question,		'question object correct');
 
 
-my @answer = $packet->answer;
-ok(@answer == 0,     'answer() works when empty');     #7
-
-
-my @authority = $packet->authority;
-ok(@authority == 0,  'authority() works when empty');  #8
-
-my @additional = $packet->additional;
-ok(@additional == 0, 'additional() works when empty'); #9
-
-$packet->push("answer", 
-	Net::DNS::RR->new(
-		Name    => "a1.example.com",
-		Type    => "A",
-		Address => "10.0.0.1"
-	)
-);
-is($packet->header->ancount, 1, 'First push into answer section worked');      #10
-
-
-$packet->push("answer", 
-	Net::DNS::RR->new(
-		Name    => "a2.example.com",
-		Type    => "A",
-		Address => "10.0.0.2"
-	)
-);
-is($packet->header->ancount, 2, 'Second push into answer section worked');     #11
-
-
-$packet->push("authority", 
-	Net::DNS::RR->new(
-		Name    => "a3.example.com",
-		Type    => "A",
-		Address => "10.0.0.3"
-	)
-);
-is($packet->header->nscount, 1, 'First push into authority section worked');   #12
-
-
-$packet->push("authority", 
-	Net::DNS::RR->new(
-		Name    => "a4.example.com",
-		Type    => "A",
-		Address => "10.0.0.4"
-	)
-);
-is($packet->header->nscount, 2, 'Second push into authority section worked');  #13
-
-$packet->push("additional", 
-	Net::DNS::RR->new(
-		Name    => "a5.example.com",
-		Type    => "A",
-		Address => "10.0.0.5"
-	)
-);
-is($packet->header->adcount, 1, 'First push into additional section worked');  #14
-
-$packet->push("additional", 
-	Net::DNS::RR->new(
-		Name    => "a6.example.com",
-		Type    => "A",
-		Address => "10.0.0.6"
-	)
-);
-is($packet->header->adcount, 2, 'Second push into additional section worked'); #15
-
-my $data = $packet->data;
-
-my $packet2 = Net::DNS::Packet->new(\$data);
-
-ok($packet2, 'new() from data buffer works');   #16
-
-is($packet->string, $packet2->string, 'string () works correctly');  #17
-
-
-my $string = $packet2->string;
-for (1 .. 6) {
-	my $ip = "10.0.0.$_";
-	ok($string =~ m/\Q$ip/,  "Found $ip in packet");  # 18 though 23
+#	Empty packet created when new() arguments omitted
+my $empty = Net::DNS::Packet->new();
+ok($empty,	'create empty packet' );
+foreach my $method ( qw(question answer authority additional) ) {
+	my @result = $empty->$method;
+	ok(@result == 0,	"$method() returns empty list");
 }
 
-is($packet2->header->qdcount, 1, 'header question count correct');   #24
-is($packet2->header->ancount, 2, 'header answer count correct');     #25
-is($packet2->header->nscount, 2, 'header authority count correct');  #26 
-is($packet2->header->adcount, 2, 'header additional count correct'); #27
+my $empty_data = $empty->data;
+ok($empty_data,	'new() from data buffer works');
+like($empty->string,	"/ANY\tANY/",	'default question in empty packet' );
+
+
+#	parse() class constructor method must return object of appropriate class
+my $packet_data = $packet->data;
+my $packet2 = Net::DNS::Packet->parse(\$packet_data);
+isa_ok($packet2,	'Net::DNS::Packet',	'parse() object');
+is_deeply($packet2->question, $packet->question, 'check question section');
+
+
+#	parse() class constructor returns packet object from truncated data
+my $truncated = $packet->data;
+while ( chop $truncated ) {
+	my ($object,$error) = Net::DNS::Packet->parse(\$truncated);
+	my $length = length $truncated;
+	isa_ok($object,	'Net::DNS::Packet',	"parse(truncated($length))");
+}
+
+
+#	Use push() to add RRs to each section
+my $update = Net::DNS::Packet->new();
+my $index;
+foreach my $section ( qw(question answer authority additional) ) {
+	my $i = ++$index;
+	my $rr1 = Net::DNS::RR->new(	Name	=> "$section$i.example.test",
+					Type	=> "A",
+					Address	=> "10.0.0.$i"
+					);
+	my $string1 = $rr1->string;
+	my $count1 = $update->push($section, $rr1);
+	like($update->string,	"/$string1/",	"push first RR into $section section");
+	is($count1,	1,	"push() returns $section RR count");
+
+	my $j = ++$index;
+	my $rr2 = Net::DNS::RR->new(	Name	=> "$section$j.example.test",
+					Type	=> "A",
+					Address	=> "10.0.0.$j"
+					);
+	my $string2 = $rr2->string;
+	my $count2 = $update->push($section, $rr2);
+	like($update->string,	"/$string2/",	"push second RR into $section section");
+	is($count2,	2,	"push() returns $section RR count");
+}
+
+
+#	Parse data and compare with original
+my $buffer = $update->data;
+my $parsed = Net::DNS::Packet->new(\$buffer);
+ok($parsed, 'new() from data buffer works');
+foreach my $count ( qw(qdcount ancount nscount arcount) ) {
+	is($parsed->header->$count, $update->header->$count, "check header->$count correct");
+}
+
+foreach my $section ( qw(question answer authority additional) ) {
+	my $original = $update->$section;
+	my $content = $parsed->$section;
+	is_deeply($content, $original, "check content of $section section");
+}
+
+
+#	check that pop() removes RR from section
+foreach my $section ( qw(question answer authority additional) ) {
+	my $c1 = $update->push($section);
+	my $rr = $update->pop($section);
+	my $c2 = $update->push($section);
+	is($c2,	$c1-1,	"pop() RR from $section section");
+}
 
 
 
-# Test using a predefined answer. This is an answer that was generated by a bind server.
-#
 
-$data=pack("H*","22cc85000001000000010001056461636874036e657400001e0001c00c0006000100000e100025026e730472697065c012046f6c6166c02a7754e1ae0000a8c0000038400005460000001c2000002910000000800000050000000030");
-my $packet3 = Net::DNS::Packet->new(\$data);
-ok($packet3,                                 'new(\$data) returned something');         #28
+#	Test using a predefined answer. This is an answer that was generated by a bind server.
 
-is($packet3->header->qdcount, 1, 'header question count in syntetic packet correct');   #29
-is($packet3->header->ancount, 0, 'header answer count in syntetic packet correct');     #30
-is($packet3->header->nscount, 1, 'header authority count in syntetic packet  correct'); #31 
-is($packet3->header->adcount, 1, 'header additional in sytnetic  packet correct');      #32
+my $BIND = pack('H*','22cc85000001000000010001056461636874036e657400001e0001c00c0006000100000e100025026e730472697065c012046f6c6166c02a7754e1ae0000a8c0000038400005460000001c2000002910000000800000050000000030');
 
-my @rr=$packet3->additional;
+my $bind = Net::DNS::Packet->new(\$BIND);
 
-is($rr[0]->type, "OPT", "Additional section packet is EDNS0 type");                         #33
-is($rr[0]->class, "4096", "EDNS0 packet size correct");                                     #34
+is($bind->header->qdcount, 1, 'check question count in synthetic packet header');
+is($bind->header->ancount, 0, 'check answer count in synthetic packet header');
+is($bind->header->nscount, 1, 'check authority count in synthetic packet header'); 
+is($bind->header->adcount, 1, 'check additional count in synthetic packet header');
 
-my $question2=Net::DNS::Question->new("bla.foo","TXT","CHAOS");
-ok($question2->isa('Net::DNS::Question'),"Proper type of object created");  #35
+my ($rr) = $bind->additional;
 
-# In theory its valid to have multiple questions in the question section.
-# Not many servers digest it though.
-
-$packet->push("question", $question2);
-@question = $packet->question;
-ok(@question && @question == 2,             'question() returned right number of items poptest:2'); #36
-
-
-$packet->pop("question");
-
-@question = $packet->question;
-ok(@question && @question == 1,             'question() returned right number of items poptest:1'); #37
-
-$packet->pop("question");
-
-@question = $packet->question;
-
-
-ok(@question ==0,              'question() returned right number of items poptest0'); #38
+is($rr->type,	'OPT',	'Additional section packet is EDNS0 type');
+is($rr->class,	'4096',	'EDNS0 packet size correct');
 
 
 
 
+#	Check dn_expand can detect data corrupted by introducing a pointer loop.
+my $circular = pack('H*', '102500000000000100000000076578616d706c6503636f6dc00c000100010000001000047f000001');
 
-$packet=Net::DNS::Packet->new("254.9.11.10.in-addr.arpa","PTR","IN");
-
-$packet->push("answer", Net::DNS::RR->new(
-	"254.9.11.10.in-addr.arpa 86400 IN PTR
-host-84-11-9-254.customer.example.com"));
-
-$packet->push("authority", Net::DNS::RR->new(
-        "9.11.10.in-addr.arpa 86400 IN NS autons1.example.com"));
-$packet->push("authority", Net::DNS::RR->new(
-        "9.11.10.in-addr.arpa 86400 IN NS autons2.example.com"));
-$packet->push("authority", Net::DNS::RR->new(
-        "9.11.10.in-addr.arpa 86400 IN NS autons3.example.com"));
-
-$data=$packet->data;
-$packet2=Net::DNS::Packet->new(\$data);
-
-
-is($packet->string,$packet2->string,"Packet to data and back (failure indicates broken dn_comp)");  #39
-
-
-
-
-
-$data = pack("H*", '102500000000000100000000076578616d706c6503636f6dc00c000100010000001000047f000001');
-my ($pkt, $err);
-
- SKIP: {
-     skip "No dn_expand_xs available", 1 unless $had_xs;
-     ($pkt, $err) = Net::DNS::Packet->new(\$data);
-     is ($err,"answer section incomplete", "loopdetection in dn_expand_PP");
-     
+SKIP: {
+	skip 'No dn_expand_xs available', 1 unless $had_xs;
+	my ($pkt, $err) = Net::DNS::Packet->new(\$circular);
+	like($err,'/incomplete/', 'loopdetection in dn_expand_XS');
 }
 
 
 # Force use of the pure-perl parser
 $Net::DNS::HAVE_XS=0;
-($pkt, $err) = Net::DNS::Packet->new(\$data);
-is ($err,"answer section incomplete", "loopdetection in dn_expand_PP");
+my ($pkt, $err) = Net::DNS::Packet->new(\$circular);
+like($err,'/incomplete/', 'loopdetection in dn_expand_PP');
 
 $Net::DNS::HAVE_XS=$had_xs;
+
+
+# Few tests on unique_push
+undef($packet);
+my $packet=Net::DNS::Packet->new();
+
+my $rr_1=Net::DNS::RR->new('bla.FOO  100 IN TXT "lower case"');
+my $rr_2=Net::DNS::RR->new('bla.foo  100 IN TXT "lower case"');
+my $rr_3=Net::DNS::RR->new('bla.foo 100 IN TXT "MIXED CASE"');
+my $rr_4=Net::DNS::RR->new('bla.foo 100 IN TXT "mixed case"');
+
+
+$packet->unique_push("answer",$rr_1);
+$packet->unique_push("answer",$rr_2);
+is($packet->header->ancount,1,"unique_push, case sensitivity test 1");
+
+$packet->unique_push("answer",$rr_3);
+$packet->unique_push("answer",$rr_4);
+is($packet->header->ancount,3,"unique_push, case sensitivity test 2");
+

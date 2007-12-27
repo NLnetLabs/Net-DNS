@@ -91,6 +91,7 @@ BEGIN {
 	    local $SIG{'__DIE__'} = 'DEFAULT';
 	    require Net::DNS::RR::SIG; 
 	};
+
 	unless ($@) {
 		$RR{'SIG'} = 1;
 		eval { 	    
@@ -280,13 +281,8 @@ is recommended.
 
 
 sub new {
-	if (@_ == 8 && ref $_[6]) {
-		return new_from_data(@_);
-	}
-	
-	if (@_ == 2 || @_ == 3) {
-		return new_from_string(@_);
-	}
+	return new_from_string(@_) if @_ == 2;
+	return new_from_string(@_) if @_ == 3;
 	
 	return new_from_hash(@_);
 }
@@ -296,22 +292,19 @@ sub new_from_data {
 	my $class = shift;
 	my ($name, $rrtype, $rrclass, $ttl, $rdlength, $data, $offset) = @_;
 
-	my $self = {
-		'name'		=> $name,
-		'type'		=> $rrtype,
-		'class'		=> $rrclass,
-		'ttl'		=> $ttl,
-		'rdlength'	=> $rdlength,
-		'rdata'		=> substr($$data, $offset, $rdlength),
-
-	};
-
+	my $self = {	name		=> $name,
+			type		=> $rrtype,
+			class		=> $rrclass,
+			ttl		=> $ttl,
+			rdlength	=> $rdlength,
+			rdata		=> substr($$data, $offset, $rdlength)
+			};
 
 	if ($RR{$rrtype}) {
 		my $subclass = $class->_get_subclass($rrtype);
 		return $subclass->new($self, $data, $offset);
 	} else {
-	    return Net::DNS::RR::Unknown->new($self, $data, $offset);
+		return Net::DNS::RR::Unknown->new($self, $data, $offset);
 	}
 
 }
@@ -398,10 +391,8 @@ sub new_from_string {
 		'rdata'    => '',
 	};
 
-
 	if ($RR{$rrtype} && $rdata !~ m/^\s*\\#/o ) {
 		my $subclass = $class->_get_subclass($rrtype);
-		
 		return $subclass->new_from_string($self, $rdata);
 	} elsif ($RR{$rrtype}) {   # A RR type known to Net::DNS starting with \#
 		$rdata =~ m/\\\#\s+(\d+)\s+(.*)$/o;
@@ -494,6 +485,50 @@ sub new_from_hash {
 	 	return $self;
 	}
 }
+
+
+=head2 parse
+
+    ($rrobj, $offset) = Net::DNS::RR->parse(\$data, $offset);
+
+Parses a DNS resource record at the specified location within a DNS packet.
+The first argument is a reference to the packet data.
+The second argument is the offset within the packet where the resource record begins.
+
+Returns a Net::DNS::RR object and the offset of the next location in the packet.
+
+Returns undef if the object could not be created (e.g., corrupt or insufficient data).
+
+=cut
+
+sub parse {
+	my ($objclass, $data, $offset) = @_;
+
+	my ($name, $index) = Net::DNS::Packet::dn_expand($data, $offset);
+	return undef unless defined $name;
+
+	my $rdindex = $index + 10;	# + length pack('n2 N n', 1..4);
+	return undef if length $$data < $rdindex;
+	my ($type, $class, $ttl, $rdlength) = unpack("\@$index n2 N n", $$data);
+
+	my $next = $rdindex + $rdlength;
+	return undef if length $$data < $next;
+
+	$type = Net::DNS::typesbyval($type) || $type;
+
+	# Special case for OPT RR where CLASS should be
+	# interpreted as 16 bit unsigned (RFC2671, 4.3)
+	if ($type ne "OPT") {
+		$class = Net::DNS::classesbyval($class) || $class;
+	}
+	# else just retain numerical value
+
+	my $self = $objclass->new_from_data($name, $type, $class, $ttl, $rdlength, $data, $rdindex);
+	return undef unless defined $self;
+
+	return wantarray ? ($self, $next) : $self;
+}
+
 
 #
 # Some people have reported that Net::DNS dies because AUTOLOAD picks up
@@ -965,7 +1000,7 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2005 Olaf Kolkman 
+Portions Copyright (c) 2005-2007 Olaf Kolkman 
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

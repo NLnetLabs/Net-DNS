@@ -1,93 +1,158 @@
 # $Id$    -*-perl-*-
 
-use Test::More tests => 32;
+use Test::More tests => 213;
 use strict;
 
-BEGIN { use_ok('Net::DNS'); }
+use Net::DNS;
 
 
+#1	new() class constructor method must return object of appropriate class
+isa_ok(Net::DNS::Question->new(), 'Net::DNS::Question', 'new() object');
+
+#2	string method returns character string representation of object
+is(Net::DNS::Question->new()->string,	".\tIN\tA",	'$question->string' );
+
+#3	Default values used when new() arguments omitted or undefined
 my $domain = 'example.com';
-my $type   = 'MX';
-my $class  = 'IN';
+is(Net::DNS::Question->new($domain)->string,		"$domain.\tIN\tA",	"new($domain)" );
+is(Net::DNS::Question->new(undef)->string,		".\tIN\tA",		"new(undef)" );
+is(Net::DNS::Question->new($domain, 'A')->string,	"$domain.\tIN\tA",	"new($domain,A)" );
+is(Net::DNS::Question->new($domain, undef)->string,	"$domain.\tIN\tA",	"new($domain,undef)" );
+is(Net::DNS::Question->new(undef, 'A')->string,		".\tIN\tA",		"new(undef,A)" );
+is(Net::DNS::Question->new(undef, undef)->string,	".\tIN\tA",		"new(undef,undef)" );
+is(Net::DNS::Question->new($domain, 'A', 'IN')->string,	"$domain.\tIN\tA",	"new($domain,A,IN)" );
+is(Net::DNS::Question->new($domain, 'A',undef)->string,	"$domain.\tIN\tA",	"new($domain,A,undef)" );
+is(Net::DNS::Question->new($domain,undef,'IN')->string, "$domain.\tIN\tA",	"new($domain,undef,IN)" );
+is(Net::DNS::Question->new($domain,undef,undef)->string, "$domain.\tIN\tA",	"new($domain,undef,undef)" );
 
-my $q = Net::DNS::Question->new($domain, $type, $class);
+#13	Trailing dot stripped from domain name argument
+is(Net::DNS::Question->new("$domain.")->string,		"$domain.\tIN\tA",	"new($domain.)" );
 
-ok($q,                 'new() returned something.');
-
-is($q->qname,  $domain, 'qname()'  );
-is($q->qtype,  $type,   'qtype()'  );
-is($q->qclass, $class,  'qclass()' );
-
-#
-# Check the aliases
-#
-is($q->zname,  $domain, 'zname()'  );
-is($q->ztype,  $type,   'ztype()'  );
-is($q->zclass, $class,  'zclass()' );
-
-#
-# Check that we can change stuff
-#
-$q->qname('example.net');
-$q->qtype('A');
-$q->qclass('CH');
-
-is($q->qname,  'example.net', 'qname()'  );
-is($q->qtype,  'A',           'qtype()'  );
-is($q->qclass, 'CH',          'qclass()' );
+#14	Tolerate arguments in zone file order
+is(Net::DNS::Question->new($domain, 'IN', 'A')->string,	"$domain.\tIN\tA",	"new($domain,IN,A)" );
 
 
+#15	parse() class constructor method must return object of appropriate class
+my $packet = Net::DNS::Packet->new();
+my $example = Net::DNS::Question->new($domain);
+my $example_data = $example->data($packet, 0);
+my $question = Net::DNS::Question->parse(\$example_data, 0);
+isa_ok($question, 'Net::DNS::Question', 'parse() object class');
+is_deeply($question, $example, 'parse() object');
 
+#17	parse method called in list context returns (object,offset) pair
+my ($object, $next) = Net::DNS::Question->parse(\$example_data, 0);
+isa_ok($object, 'Net::DNS::Question', 'parse() returned object');
+is($next, length $example_data, 'parse() returned offset to next data');
 
-my $q2= Net::DNS::Question->new("::1","IN","A");
-is ($q2->qname, '1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa','v6: qname()');
-is($q2->qtype,  'PTR',         'v6: qtype()'  );
-is($q2->qclass, 'IN',          'v6: qclass()' );
+#19	parse method returns undef for unparsable data
+my $empty = '';
+my $circular = pack("C a* n3", 7, 'invalid', 0xc000, 1, 1);
+my $corrupt = pack("C a* n3", 7, 'invalid', 0xc100, 1, 1);
+foreach my $unparsable ($empty, $circular, $corrupt) {
+	my ($object, $offset) = Net::DNS::Question->parse(\$unparsable, 0);
+	is($object, undef, 'parse(\$unparsable) object undefined');
+	is($offset, undef, 'parse(\$unparsable) offset undefined');
+}
 
-
-my $q3= Net::DNS::Question->new("192.168.1.16","IN","A");
-is($q3->qname, '16.1.168.192.in-addr.arpa','v4: qname()');
-is($q3->qtype,  'PTR',         'v4: qtype()' );
-is($q3->qclass, 'IN',          'v4: qclass()' );
-
-
-
-
-# All these tests are based on the example in RFC4291
-# 20010DB80000CD3/60
-
-my @prefixes=qw (
-      2001:0DB8::CD30:0:0:0:0/60
-      2001:0DB8:0000:CD30:0000:0000:0000:0000/60
-      2001:0DB8::CD30:0:0:0:0/60
-      2001:0DB8:0:CD30::/60
-      2001:0DB8:0:CD30:123:4567:89AB:CDEF/60
-);
-
-foreach my $prefix  (@prefixes ){
-    my $q5= Net::DNS::Question->new($prefix,"IN","A");
-    is($q5->qname, '3.D.C.0.0.0.0.8.B.D.0.1.0.0.2.ip6.arpa','v6: prefix notation for '. $prefix);
-    is($q5->qtype,  'PTR',         'v6: PTR for ' . $prefix );
-    
+#25	parse method returns undef for incomplete data
+my $truncated = $example_data;
+while ( chop $truncated ) {
+	my ($object, $offset) = Net::DNS::Question->parse(\$truncated, 0);
+	is($object, undef, 'parse(\$truncated) object undefined');
+	is($offset, undef, 'parse(\$truncated) offset undefined');
 }
 
 
-my $q6= Net::DNS::Question->new($prefixes[1],"IN","NS");
-is($q6->qtype,  'NS',         'v6: NS done correctly'  );
 
-my $q7= Net::DNS::Question->new($prefixes[1],"IN","SOA");
-is($q7->qtype,  'SOA',         'v6: SOA done correctly'  );
-
-
-
-my $q8= Net::DNS::Question->new("::1.de","IN","A");
-is ($q8->qname, '::1.de',"No expantion under TLD ");
-
-my $q9= Net::DNS::Question->new('0');
-
-is ($q9->qname, "0.in-addr.arpa","Zero gets treated as IP address");
+#59	data method produces binary representation of object
+foreach my $class ( qw(CH IN ANY) ) {
+	foreach my $type ( qw(A AAAA MX NS SOA ANY) ) {
+		my $packet = Net::DNS::Packet->new();
+		my $example = Net::DNS::Question->new($domain, $type, $class);
+		my $example_data = $example->data($packet, 0);
+		my $question = Net::DNS::Question->parse(\$example_data, 0);
+		is_deeply($question, $example, $example->string );
+	}
+}
 
 
 
-my $q10=Net::DNS::Question->new("http://europe.pool.ntp.org","IN","A");
-is($q10->qname, "http://europe.pool.ntp.org","Domain name containing slashes, gets interpreted correctly")
+#77	Every access method able to read and modify corresponding variable
+my $q = Net::DNS::Question->new();
+foreach my $method ( qw(qname qtype qclass zname ztype zclass) ) {
+	foreach my $value ('', 'P', 'Q.', '.') {
+		$q->$method(undef);
+		my $initial = $q->$method;
+		my $written = $q->$method($value);
+		my $read = $q->$method;
+		isnt($read,	$initial,	"call $method('$value')" );
+		is($read,	$written,	"$method() is '$written'" );
+	}
+}
+
+
+
+#125	new() interprets IPv4 address as PTR query
+is(Net::DNS::Question->new('10.2.3.4')->string,	"4.3.2.10.in-addr.arpa.\tIN\tPTR",	'IPv4 PTR query' );
+is(Net::DNS::Question->new('10.0.0.0', 'NS')->qtype,	'NS',	'NS query in IPv4 space' );
+is(Net::DNS::Question->new('10.0.0.0', 'SOA')->qtype,	'SOA',	'SOA query in IPv4 space' );
+is(Net::DNS::Question->new('10.0.0.0', 'ANY')->qtype,	'ANY',	'ANY query in IPv4 space' );
+foreach my $n ( 1, 123 ) {
+	my $ip4 = "$n.$n.$n.$n";
+	my $rev = "$ip4.in-addr.arpa";
+	is(Net::DNS::Question->new($ip4)->qname,		$rev,	'IPv4 address' );
+	is(Net::DNS::Question->new("::ffff:$ip4")->qname,	$rev,	'IP6v4 syntax' );
+}
+
+
+
+#133	new() interprets IPv4 prefix as reverse query of length sufficient to contain specified bits
+is(Net::DNS::Question->new(0)->qname,		'0.in-addr.arpa',	'IPv4 prefix 0' );
+is(Net::DNS::Question->new(10)->qname,		'10.in-addr.arpa',	'IPv4 prefix 10' );
+is(Net::DNS::Question->new('10.2')->qname,	'2.10.in-addr.arpa',	'IPv4 prefix 10.2' );
+is(Net::DNS::Question->new('10.2.3')->qname,	'3.2.10.in-addr.arpa',	'IPv4 prefix 10.2.3' );
+foreach my $n ( 1..32 ) {
+	my $m = (($n + 7)>>3)<<3;
+	my $ip4 = '10.2.3.4';
+	my $equivalent = Net::DNS::Question->new("$ip4/$m")->qname;
+	is(Net::DNS::Question->new("$ip4/$n")->qname,	$equivalent,	"IPv4 prefix /$n" );
+}
+
+
+
+#169	new() interprets IPv6 address as PTR query
+is(Net::DNS::Question->new('1:2:3:4:5:6:7:8')->string,
+	"8.0.0.0.7.0.0.0.6.0.0.0.5.0.0.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.ip6.arpa.\tIN\tPTR",	'IPv6 PTR query' );
+is(Net::DNS::Question->new('::')->string,
+	"0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa.\tIN\tPTR",	'IPv6 PTR query' );
+is(Net::DNS::Question->new('::', 'NS')->qtype,	'NS',		'NS query in IPv6 space' );
+is(Net::DNS::Question->new('::', 'SOA')->qtype,	'SOA',		'SOA query in IPv6 space' );
+is(Net::DNS::Question->new('::', 'ANY')->qtype,	'ANY',		'ANY query in IPv6 space' );
+is(Net::DNS::Question->new('::x')->string, "::x.\tIN\tA",	'::x (not IPv6)' );
+
+
+#175	new() interprets IPv6 prefix as reverse query of length sufficient to contain specified bits
+is(Net::DNS::Question->new(':')->qname, Net::DNS::Question->new('0:0')->qname, 'IPv6 prefix :' );
+is(Net::DNS::Question->new('1:')->qname, Net::DNS::Question->new('1:0')->qname, 'IPv6 prefix 1:' );
+is(Net::DNS::Question->new('1:2')->qname, Net::DNS::Question->new('1:2:3:4:5:6:7:8/32')->qname, 'IPv6 prefix 1:2' );
+is(Net::DNS::Question->new('1:2:3')->qname, Net::DNS::Question->new('1:2:3:4:5:6:7:8/48')->qname, 'IPv6 prefix 1:2:3' );
+is(Net::DNS::Question->new('1:2:3:4')->qname, Net::DNS::Question->new('1:2:3:4:5:6:7:8/64')->qname, 'IPv6 prefix 1:2:3:4' );
+foreach my $n ( 1..8, 124..128 ) {
+	my $m = (($n + 3)>>2)<<2;
+	my $ip6 = '1234:5678:9012:3456:7890:1234:5678:9012';
+	my $equivalent = Net::DNS::Question->new("$ip6/$m")->qname;
+	is(Net::DNS::Question->new("$ip6/$n")->qname,	$equivalent,	"IPv6 prefix /$n" );
+}
+
+
+#193	Abbreviated IPv6 address expands to same length as canonical form
+my $canonical = length Net::DNS::Question->new('1:2:3:4:5:6:7:8')->qname;
+foreach my $i (0..6) {
+	foreach my $j (($i+3)..8) {
+		my $ip6 = join(':', 1..$i).join(':', ('')x2, $j..8);
+		is(length Net::DNS::Question->new("$ip6")->qname, $canonical, "expand $ip6" );
+	}
+}
+
+

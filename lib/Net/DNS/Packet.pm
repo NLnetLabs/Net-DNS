@@ -50,6 +50,8 @@ A C<Net::DNS::Packet> object represents a DNS packet.
 
     ($packet, $err) = Net::DNS::Packet->new(\$data);
 
+    $packet = Net::DNS::Packet->new();
+
 If passed a domain, type, and class, C<new> creates a packet
 object appropriate for making a DNS query for the requested
 information.  The type and class can be omitted; they default
@@ -64,178 +66,98 @@ error string.  The error string will only be defined if the
 packet object is undefined (i.e., couldn't be created).
 
 Returns B<undef> if unable to create a packet object (e.g., if
-the packet data is truncated).'
+the packet data is truncated).
+
+If called with an empty argument list, C<new> creates an empty packet.
 
 =cut
 
 sub new {
 	my $class = shift;
-	my %self;
+	my ($data) = @_;
+	return $class->parse(@_) if ref $data;
 
-	$self{"compnames"} = {};
+	my %self = (	header		=> Net::DNS::Header->new,
+			question	=> [],
+			answer		=> [],
+			authority	=> [],
+			additional	=> []	);
 
-  PARSE: {
-	if (ref($_[0])) {
-		my $data  = shift;
-		my $debug = shift || 0;
+	push @{$self{question}}, Net::DNS::Question->new(@_) if @_;
 
-		#--------------------------------------------------------------
-		# Parse the header section.
-		#--------------------------------------------------------------
-
-		print ";; HEADER SECTION\n" if $debug;
+	bless \%self, $class;
+}
 
 
-		$self{"header"} = Net::DNS::Header->new($data);
 
-		unless (defined $self{"header"}) {
-			return wantarray
-			       ? (undef, "header section incomplete")
-			       : undef;
-		}
+sub parse {
+	my $class = shift;
+	my $data  = shift;
+	my $debug = shift || 0;
 
-		$self{"header"}->print if $debug;
+	my %self = (	question	=> [],
+			answer		=> [],
+			authority	=> [],
+			additional	=> [],
+			answersize	=> length $$data,
+			buffer		=> $data	);
 
+	my $self = bless \%self, $class;
+	my $error;
+
+	PARSE: {
+		#------------------------------------------------------
+		# Parse header section
+		#------------------------------------------------------
+		my $header = $self{header} = Net::DNS::Header->new($data);
 		my $offset = Net::DNS::HFIXEDSZ();
 
-		#--------------------------------------------------------------
-		# Parse the question/zone section.
-		#--------------------------------------------------------------
-
-		if ($debug) {
-			print "\n";
-			my $section = ($self{"header"}->opcode eq "UPDATE")
-			            ? "ZONE"
-				    : "QUESTION";
-			print ";; $section SECTION (",
-			      $self{"header"}->qdcount, " record",
-			      $self{"header"}->qdcount == 1 ? "" : "s",
-			      ")\n";
+		unless ( $header ) {
+			$self{header} = Net::DNS::Header->new;
+			$error = 'header section incomplete';
+			last PARSE;
 		}
 
-		$self{"question"} = [];
-		foreach (1 .. $self{"header"}->qdcount) {
-			my $qobj;
-			($qobj, $offset) = parse_question($data, $offset);
-
-			unless (defined $qobj) {
-				last PARSE if $self{"header"}->tc;
-				return wantarray
-				       ? (undef, "question section incomplete")
-				       : undef;
+		#------------------------------------------------------
+		# Parse question/zone section
+		#------------------------------------------------------
+		for ( 1 .. $header->qdcount ) {
+			my $qd;
+			($qd, $offset) = Net::DNS::Question->parse($data, $offset);
+			unless ( $qd ) {
+				$error = 'question section incomplete';
+				last PARSE;
 			}
-
-			push(@{$self{"question"}}, $qobj);
-			if ($debug) {
-				print ";; ";
-				$qobj->print;
-			}
+			push(@{$self{question}}, $qd);
 		}
 			
-		#--------------------------------------------------------------
-		# Parse the answer/prerequisite section.
-		#--------------------------------------------------------------
-
-		if ($debug) {
-			print "\n";
-			my $section = ($self{"header"}->opcode eq "UPDATE")
-				    ? "PREREQUISITE"
-			            : "ANSWER";
-			print ";; $section SECTION (",
-			      $self{"header"}->ancount, " record",
-			      $self{"header"}->ancount == 1 ? "" : "s",
-			      ")\n";
-		}
-
-		$self{"answer"} = [];
-		foreach (1 .. $self{"header"}->ancount) {
-			my $rrobj;
-			($rrobj, $offset) = parse_rr($data, $offset);
-
-			unless (defined $rrobj) {
-				last PARSE if $self{"header"}->tc;
-				return wantarray
-				       ? (undef, "answer section incomplete")
-				       : undef;
+		#------------------------------------------------------
+		# Parse answer/prerequisite section
+		#------------------------------------------------------
+		for ( my $i = $header->ancount; $i > 0; $i-- ) {
+			my $rr;
+			($rr, $offset) = Net::DNS::RR->parse($data, $offset);
+			unless ( $rr ) {
+				$error = 'answer section incomplete';
+				last PARSE;
 			}
-			
-			push(@{$self{"answer"}}, $rrobj);
-			$rrobj->print if $debug;
+			push(@{$self{answer}}, $rr);
 		}
 
-		#--------------------------------------------------------------
-		# Parse the authority/update section.
-		#--------------------------------------------------------------
+		#------------------------------------------------------
+		# Retain offset for on-demand parse of remaining data
+		#------------------------------------------------------
+		$self{offset} = $offset;
 
-		if ($debug) {
-			print "\n";
-			my $section = ($self{"header"}->opcode eq "UPDATE")
-			            ? "UPDATE"
-				    : "AUTHORITY";
-			print ";; $section SECTION (",
-			      $self{"header"}->nscount, " record",
-			      $self{"header"}->nscount == 1 ? "" : "s",
-			      ")\n";
-		}
-
-		$self{"authority"} = [];
-		foreach (1 .. $self{"header"}->nscount) {
-			my $rrobj;
-			($rrobj, $offset) = parse_rr($data, $offset);
-
-			unless (defined $rrobj) {
-				last PARSE if $self{"header"}->tc;
-				return wantarray
-				       ? (undef, "authority section incomplete")
-				       : undef;
-			}
-			
-			push(@{$self{"authority"}}, $rrobj);
-			$rrobj->print if $debug;
-		}
-
-		#--------------------------------------------------------------
-		# Parse the additional section.
-		#--------------------------------------------------------------
-
-		if ($debug) {
-			print "\n";
-			print ";; ADDITIONAL SECTION (",
-			      $self{"header"}->adcount, " record",
-			      $self{"header"}->adcount == 1 ? "" : "s",
-			      ")\n";
-		}
-
-		$self{"additional"} = [];
-		foreach (1 .. $self{"header"}->arcount) {
-			my $rrobj;
-			($rrobj, $offset) = parse_rr($data, $offset);
-
-			unless (defined $rrobj) {
-				last PARSE if $self{"header"}->tc;
-				return wantarray
-				       ? (undef, "additional section incomplete")
-				       : undef;
-			}
-
-		
-			push(@{$self{"additional"}}, $rrobj);
-			$rrobj->print if $debug;
-		}
-	} else {
-		$self{"header"} = Net::DNS::Header->new;
-		$self{"header"}->qdcount(1);
-		$self{"question"} = [ Net::DNS::Question->new(@_) ];
-		$self{"answer"}     = [];
-		$self{"authority"}  = [];
-		$self{"additional"} = [];
-	}
 	} # PARSE
 
-	return wantarray
-		? ((bless \%self, $class), undef)
-		: bless \%self, $class;
+	$self->print if $debug;
+	$error = undef if $self{header}->tc;
+
+	return wantarray ? ($self, $error) : $self;
 }
+
+
 
 =head2 data
 
@@ -248,71 +170,36 @@ a nameserver.
 
 sub data {
 	my $self = shift;
+	my $data = '';
+	my $header = $self->{header};
 
-
-	#----------------------------------------------------------------------
-	# Flush the cache of already-compressed names.  This should fix the bug
-	# that caused this method to work only the first time it was called.
-	#----------------------------------------------------------------------
-
-	$self->{"compnames"} = {};
+	# Default question for empty packet
+	$self->push('question', Net::DNS::Question->new('','ANY','ANY'))
+						unless @{$self->{question}};
 
 	#----------------------------------------------------------------------
-	# Get the data for each section in the packet.
+	# Set record counts in packet header
 	#----------------------------------------------------------------------
-	# Note that EDNS OPT RR data should inly be appended to the additional
-	# section of the packet. TODO: Packet is dropped silently if is tried to
-	# have it appended to one of the other section
+	$header->qdcount( scalar @{$self->{question}} );
+	$header->ancount( scalar @{$self->{answer}} );
+	$header->nscount( scalar @{$self->{authority}} );
+	$header->arcount( scalar @{$self->{additional}} );
 
-	# Collect the data first, and count the number of records along
-	# the way. ( see rt.cpan.org: Ticket #8608 )
-	my $qdcount = 0;
-	my $ancount = 0;
-	my $nscount = 0;
-	my $arcount = 0;
-	# Note that the only pieces we;ll fill in later have predefined
-        # length.
-
-	my $headerlength=length $self->{"header"}->data;
-
-        my $data = $self->{"header"}->data;
-	
-	foreach my $question (@{$self->{"question"}}) {
-		$data .= $question->data($self, length $data);
-		$qdcount++;
+	#----------------------------------------------------------------------
+	# Get the data for each section in the packet
+	#----------------------------------------------------------------------
+	$self->{compnames} = {};
+	foreach my $component ( $header,
+				@{$self->{question}},
+				@{$self->{answer}},
+				@{$self->{authority}},
+				@{$self->{additional}}	) {
+		$data .= $component->data($self, length $data);
 	}
 
-	foreach my $rr (@{$self->{"answer"}}) {
-		$data .= $rr->data($self, length $data);
-		$ancount++;
-	}
-
-
-	foreach my $rr (@{$self->{"authority"}}) {
-		$data .= $rr->data($self, length $data);
-		$nscount++;
-	}
-
-
-	foreach my $rr (@{$self->{"additional"}}) {
-		$data .= $rr->data($self, length $data);
-		$arcount++;
-	}
-
-
-	# Fix up the header so the counts are correct.  This overwrites
-	# the user's settings, but the user should know what they aredoing.
-	$self->{"header"}->qdcount( $qdcount );
-	$self->{"header"}->ancount( $ancount );
-	$self->{"header"}->nscount( $nscount );
-	$self->{"header"}->arcount( $arcount );
-	
-	# Replace the orginal header with corrected counts.
-
-	return $self->{"header"}->data . substr ($data,$headerlength);
-
-
+	return $data;
 }
+
 
 =head2 header
 
@@ -324,8 +211,7 @@ of the packet.
 =cut
 
 sub header {
-	my $self = shift;
-	return $self->{"header"};
+	return shift->{header};
 }
 
 =head2 question, zone
@@ -341,14 +227,10 @@ specifies the zone to be updated.
 =cut
 
 sub question {
-	my $self = shift;
-	return @{$self->{"question"}};
+	return @{shift->{question}};
 }
 
-sub zone {
-	my $self = shift;
-	$self->question(@_);
-}
+sub zone { &question }
 
 =head2 answer, pre, prerequisite
 
@@ -363,16 +245,11 @@ must not preexist.
 
 =cut
 
-sub answer { 
-    if (exists($_[0]->{'answer'})) {
-	return @{$_[0]->{'answer'}};
-    } else {
-	return ();
-    } 
+sub answer {
+	return @{shift->{answer}};
 }
-  
 
-sub pre          { &answer }
+sub pre		{ &answer }
 sub prerequisite { &answer }
 
 =head2 authority, update
@@ -383,19 +260,30 @@ Returns a list of C<Net::DNS::RR> objects representing the authority
 section of the packet.
 
 In dynamic update packets, this section is known as C<update> and
-specifies the RRs or RRsets to be added or delted.
+specifies the RRs or RRsets to be added or deleted.
 
 =cut
 
-sub authority { 
-    if (exists($_[0]->{'authority'})) {
-	return @{$_[0]->{'authority'}};
-    } else {
-	return ();
-    } 
+sub authority {
+	my $self = shift;
+
+	my @rr = @{$self->{authority}};
+	return @rr if @rr;				# return if already parsed
+
+	my $data = $self->{buffer} || return @rr;	# parse authority data
+	my $nscount = $self->{header}->nscount || return @rr;
+	my $offset = $self->{offset};
+	my $rr;
+	while ( $nscount-- ) {
+		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
+		last unless $rr;
+		push(@rr, $rr);
+	}
+	$self->{offset} = $offset;			# index next section
+	return @{$self->{authority}} = @rr;
 }
 
-sub update    { &authority }
+sub update { &authority }
 
 =head2 additional
 
@@ -406,12 +294,25 @@ section of the packet.
 
 =cut
 
-sub additional { 
-    if (exists($_[0]->{'additional'})) {
-	return @{$_[0]->{'additional'}};
-    } else {
-	return ();
-    } 
+sub additional {
+	my $self = shift;
+
+	my @rr = @{$self->{additional}};
+	return @rr if @rr;				# return if already parsed
+
+	my $data = $self->{buffer} || return @rr;	# parse authority data
+	$self->authority unless @{$self->{authority}};	# after authority data
+	my $arcount = $self->{header}->arcount;
+	my $offset = $self->{offset};
+	my $rr;
+	while ( $arcount-- ) {
+		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
+		last unless $rr;
+		push(@rr, $rr);
+	}
+	undef $self->{buffer};				# discard raw data
+	undef $self->{offset};
+	return @{$self->{additional}} = @rr;
 }
 
 
@@ -424,9 +325,7 @@ similar to that used in DNS zone files.
 
 =cut
 
-sub print { 
-	print $_[0]->string;
-}
+sub print { print shift->string; }
 
 =head2 string
 
@@ -438,53 +337,39 @@ Returns a string representation of the packet.
 
 sub string {
 	my $self = shift;
-	my ($qr, $rr, $section);
-	my $retval = "";
 
-	if (exists $self->{"answerfrom"}) {
-		$retval .= ";; Answer received from $self->{answerfrom} " .
-			   "($self->{answersize} bytes)\n;;\n";
-	}
+	my $header = $self->{header};
+	my $update = $header->opcode eq 'UPDATE';
 
-	$retval .= ";; HEADER SECTION\n";
-	$retval .= $self->header->string;
+	my $server = $self->{answerfrom};
+	my $string = $server ? ";; Answer received from $server ($self->{answersize} bytes)\n" : "";
 
-	$retval .= "\n";
-	$section = ($self->header->opcode eq "UPDATE") ? "ZONE" : "QUESTION";
-	$retval .= ";; $section SECTION (" . $self->header->qdcount     . 
-		   " record" . ($self->header->qdcount == 1 ? "" : "s") .
-		   ")\n";
-	foreach $qr ($self->question) {
-		$retval .= ";; " . $qr->string . "\n";
-	}
+	$string .= ";; HEADER SECTION\n".$header->string;
 
-	$retval .= "\n";
-	$section = ($self->header->opcode eq "UPDATE") ? "PREREQUISITE" : "ANSWER";
-	$retval .= ";; $section SECTION (" . $self->header->ancount     .
-		   " record" . ($self->header->ancount == 1 ? "" : "s") .
-		   ")\n";
-	foreach $rr ($self->answer) {
-		$retval .= $rr->string . "\n";
-	}
+	my $question = $update ? 'ZONE' : 'QUESTION';
+	my @question = map{$_->string} $self->question;
+	my $qdcount = @question;
+	my $qds = $qdcount != 1 ? 's' : '';
+	$string .= join "\n;; ", "\n;; $question SECTION ($qdcount record$qds)", @question;
 
-	$retval .= "\n";
-	$section = ($self->header->opcode eq "UPDATE") ? "UPDATE" : "AUTHORITY";
-	$retval .= ";; $section SECTION (" . $self->header->nscount     .
-		  " record" . ($self->header->nscount == 1 ? "" : "s") .
-		  ")\n";
-	foreach $rr ($self->authority) {
-		$retval .= $rr->string . "\n";
-	}
+	my $answer = $update ? 'PREREQUISITE' : 'ANSWER';
+	my @answer = map{$_->string} $self->answer;
+	my $ancount = @answer;
+	my $ans = $ancount != 1 ? 's' : '';
+	$string .= join "\n", "\n\n;; $answer SECTION ($ancount record$ans)", @answer;
 
-	$retval .= "\n";
-	$retval .= ";; ADDITIONAL SECTION (" . $self->header->arcount   .
-		   " record" . ($self->header->arcount == 1 ? "" : "s") .
-		   ")\n";
-	foreach $rr ($self->additional) {
-		$retval .= $rr->string . "\n";
-	}
+	my $authority = $update ? 'UPDATE' : 'AUTHORITY';
+	my @authority = map{$_->string} $self->authority;
+	my $nscount = @authority;
+	my $nss = $nscount != 1 ? 's' : '';
+	$string .= join "\n", "\n\n;; $authority SECTION ($nscount record$nss)", @authority;
 
-	return $retval;
+	my @additional = map{$_->string} $self->additional;
+	my $arcount = @additional;
+	my $ars = $arcount != 1 ? 's' : '';
+	$string .= join "\n", "\n\n;; ADDITIONAL SECTION ($arcount record$ars)", @additional;
+
+	return $string."\n\n";
 }
 
 =head2 answerfrom
@@ -499,11 +384,9 @@ packets will return undef for this method.
 sub answerfrom {
 	my $self = shift;
 
-	$self->{"answerfrom"} = shift if @_;
+	return $self->{answerfrom} = shift if @_;
 
-	return exists $self->{"answerfrom"}
-	       ? $self->{"answerfrom"}
-	       : undef;
+	return $self->{answerfrom};
 }
 
 =head2 answersize
@@ -517,94 +400,76 @@ nameserver.  User-created packets will return undef for this method
 =cut
 
 sub answersize {
-	my $self = shift;
-
-	$self->{"answersize"} = shift if @_;
-
-	return exists $self->{"answersize"}
-	       ? $self->{"answersize"}
-	       : undef;
+	return shift->{answersize};
 }
 
 =head2 push
 
-    $packet->push(pre        => $rr);
-    $packet->push(update     => $rr);
-    $packet->push(additional => $rr);
+    $ancount = $packet->push(pre        => $rr);
+    $nscount = $packet->push(update     => $rr);
+    $arcount = $packet->push(additional => $rr);
 
-    $packet->push(update => $rr1, $rr2, $rr3);
-    $packet->push(update => @rr);
+    $nscount = $packet->push(update => $rr1, $rr2, $rr3);
+    $nscount = $packet->push(update => @rr);
 
 Adds RRs to the specified section of the packet.
+
+Returns the number of resource records in the specified section.
 
 
 =cut
 
 sub push {
-	my ($self, $section, @rr) = @_;
-	my $rr;
+	my $self = shift;
+	my $section = lc shift || '';
+	my @rr = map{ref $_ ? $_ : ()} @_;
 
-	return unless $section;
+	my $hdr = $self->{header};
+	for ( $section ) {
+		return $hdr->qdcount(push(@{$self->{question}}, @rr)) if /^que/;
 
-	$section = lc $section;
-	if (($section eq "prerequisite") || ($section eq "prereq")) {
-		$section = "pre";
-	}
-
-	if (($self->{"header"}->opcode eq "UPDATE")
-	 && (($section eq "pre") || ($section eq "update")) ) {
-		my $zone_class = ($self->zone)[0]->zclass;
-		foreach $rr (@rr) {
-			unless ($rr->class eq "NONE" || $rr->class eq "ANY") {
-				$rr->class($zone_class);
+		if ( $hdr->opcode eq 'UPDATE' ) {
+			my ($zone) = $self->zone;
+			my $zclass = $zone->zclass;
+			foreach ( @rr ) {
+				$_->class($zclass) unless $_->class =~ /ANY|NONE/;
 			}
 		}
+
+		return $hdr->ancount(push(@{$self->{answer}}, @rr)) if /^ans|^pre/;
+		return $hdr->nscount(push(@{$self->{authority}}, @rr)) if /^aut|^upd/;
+		return $hdr->adcount(push(@{$self->{additional}}, @rr)) if /^add/;
 	}
 
-	if ($section eq "answer" || $section eq "pre") {
-		push(@{$self->{"answer"}}, @rr);
-		my $ancount = $self->{"header"}->ancount;
-		$self->{"header"}->ancount($ancount + @rr);
-	} elsif ($section eq "authority" || $section eq "update") {
-		push(@{$self->{"authority"}}, @rr);
-		my $nscount = $self->{"header"}->nscount;
-		$self->{"header"}->nscount($nscount + @rr);
-	} elsif ($section eq "additional") {
-		push(@{$self->{"additional"}}, @rr);
-		my $adcount = $self->{"header"}->adcount;
-		$self->{"header"}->adcount($adcount + @rr);
-	} elsif ($section eq "question") {
-		push(@{$self->{"question"}}, @rr);
-		my $qdcount = $self->{"header"}->qdcount;
-		$self->{"header"}->qdcount($qdcount + @rr);
-	} else {
-		Carp::carp(qq(invalid section "$section"\n));
-		return;
-	}
+	carp qq(invalid section "$section");
+	return undef;	# undefined record count
 }
+
 
 =head2 unique_push
 
-    $packet->unique_push(pre        => $rr);
-    $packet->unique_push(update     => $rr);
-    $packet->unique_push(additional => $rr);
+    $ancount = $packet->unique_push(pre        => $rr);
+    $nscount = $packet->unique_push(update     => $rr);
+    $arcount = $packet->unique_push(additional => $rr);
 
-    $packet->unique_push(update => $rr1, $rr2, $rr3);
-    $packet->unique_push(update => @rr);
+    $nscount = $packet->unique_push(update => $rr1, $rr2, $rr3);
+    $nscount = $packet->unique_push(update => @rr);
 
 Adds RRs to the specified section of the packet provided that 
 the RRs do not already exist in the packet.
 
+Returns the number of resource records in the specified section.
+
 =cut
 
 sub unique_push {
-	my ($self, $section, @rrs) = @_;
-	
-	foreach my $rr (@rrs) {
-		next if $self->{'seen'}->{$rr->string}++;
+	my $self = shift;
+	my $section = shift;
+	my @rr = map{ref $_ ? $_ : ()} @_;
 
-		$self->push($section, $rr);
-	}
+	my @unique = map{$self->{seen}->{ (lc $_->name) . $_->class . $_->type  . $_->rdatastr }++ ? () : $_} @rr;
+
+	return $self->push($section, @unique);
 }
 
 =head2 safe_push
@@ -615,8 +480,7 @@ A deprecated name for C<unique_push()>.
 
 sub safe_push {
 	carp('safe_push() is deprecated, use unique_push() instead,');
-	
-	goto &unique_push;
+	&unique_push;
 }
 	
 
@@ -632,47 +496,23 @@ Removes RRs from the specified section of the packet.
 =cut
 
 sub pop {
-	my ($self, $section) = @_;
+	my $self = shift;
+	my $section = lc shift || '';
 
-	return unless $section;
-	$section = lc $section;
+	for ( $section ) {
+		return pop(@{$self->{answer}}) if /^ans|^pre/;
+		return pop(@{$self->{question}}) if /^que/;
 
-	if (($section eq "prerequisite") || ($section eq "prereq")) {
-		$section = "pre";
+		$self->additional if $self->{buffer};	# parse remaining data
+
+		return pop(@{$self->{authority}}) if /^aut|^upd/;
+		return pop(@{$self->{additional}}) if /^add/;
 	}
 
-	my $rr;
-
-	if ($section eq "answer" || $section eq "pre") {
-		my $ancount = $self->{"header"}->ancount;
-		if ($ancount) {
-			$rr = pop @{$self->{"answer"}};
-			$self->{"header"}->ancount($ancount - 1);
-		}
-	} elsif ($section eq "authority" || $section eq "update") {
-		my $nscount = $self->{"header"}->nscount;
-		if ($nscount) {
-			$rr = pop @{$self->{"authority"}};
-			$self->{"header"}->nscount($nscount - 1);
-		}
-	} elsif ($section eq "additional") {
-		my $adcount = $self->{"header"}->adcount;
-		if ($adcount) {
-			$rr = pop @{$self->{"additional"}};
-			$self->{"header"}->adcount($adcount - 1);
-		    }
-	} elsif ($section eq "question") {
-	        my $qdcount = $self->{"header"}->qdcount;
-		if ($qdcount) {
-		    	$rr = pop @{$self->{"question"}};
-			$self->{"header"}->qdcount($qdcount - 1);
-		    }
-	} else {
-		Carp::cluck(qq(invalid section "$section"\n));
-	}
-
-	return $rr;
+	carp qq(invalid section "$section");
+	return undef;
 }
+
 
 =head2 dn_comp
 
@@ -706,7 +546,7 @@ sub dn_comp {
 		if ( $length > 63 ) {
 			$length = 63;
 			$label = substr($label, 0, $length);
-			carp "$label...\ntruncated to $length octets (RFC1035 2.3.1)";
+			carp "\n$label...\ntruncated to $length octets (RFC1035 2.3.1)";
 		}
 		$compname .= pack('C a*', $length, $label);
 		$offset   += $length + 1;
@@ -763,7 +603,7 @@ sub dn_expand_PP {
 			my ($suffix) = dn_expand_PP($packet, $point, $visited)
 				unless $visited->{$point}++;	# unbounded expansion
 
- 			return ($name.$suffix, $offset+2) if defined $suffix;
+			return ($name.$suffix, $offset+2) if defined $suffix;
 
 		} elsif ( $length + $offset++ < $packetlen ) {	# label
 			my $element = substr($$packet, $offset, $length);
@@ -773,7 +613,7 @@ sub dn_expand_PP {
 		}
 		last;
 	}
-	return (undef, undef);		# corrupt packet
+	return (undef, undef);		# expansion terminated (corrupt packet)
 }
 
 =head2 sign_tsig
@@ -818,20 +658,14 @@ will probably fail.
 
 sub sign_tsig {
 	my $self = shift;
+	my $tsig = shift || return undef;
 
-	my $tsig;
-
-	if (@_ == 1 && ref($_[0])) {
-		$tsig = $_[0];
-	}
-	elsif (@_ == 2) {
-		my ($key_name, $key) = @_;
-		if (defined($key_name) && defined($key)) {
-			$tsig = Net::DNS::RR->new("$key_name TSIG $key")
-		}
+	unless ( ref $tsig && ($tsig->type eq "TSIG") ) {
+		my $key = shift || return undef;
+		$tsig = Net::DNS::RR->new("$tsig TSIG $key");
 	}
 
-	$self->push("additional", $tsig) if $tsig;
+	$self->push('additional', $tsig) if $tsig;
 	return $tsig;
 }
 
@@ -856,128 +690,34 @@ The method will call C<Carp::croak()> if Net::DNS::RR::SIG cannot be found.
 
 sub sign_sig0 {
 	my $self = shift;
-	
-	Carp::croak('The sign_sig0() method is only available when the Net::DNS::SEC package is installed.') 
-			unless $Net::DNS::DNSSEC;
-	
-	
+	my $arg = shift || return undef;
 	my $sig0;
 	
-	if (@_ == 1 && ref($_[0])) {
-		if (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG::Private")) {
-			Carp::carp('Net::DNS::RR::SIG::Private is deprecated use Net::DNS::SEC::Private instead');
-			$sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
+	croak('sign_sig0() is only available when Net::DNS::SEC is installed') 
+		unless $Net::DNS::DNSSEC;
+	
+	if ( ref $arg ) {
+		if ( UNIVERSAL::isa($arg,'Net::DNS::RR::SIG') ) {
+			$sig0 = $arg;
 		
-		} elsif (UNIVERSAL::isa($_[0],"Net::DNS::SEC::Private")) {
-			$sig0 = Net::DNS::RR::SIG->create('', $_[0]) if $_[0];
+		} elsif ( UNIVERSAL::isa($arg,'Net::DNS::SEC::Private') ) {
+			$sig0 = Net::DNS::RR::SIG->create('', $arg);
 		
-		} elsif (UNIVERSAL::isa($_[0],"Net::DNS::RR::SIG")) {
-			$sig0 = $_[0];
+		} elsif ( UNIVERSAL::isa($arg,'Net::DNS::RR::SIG::Private') ) {
+			carp ref($arg).' is deprecated - use Net::DNS::SEC::Private instead';
+			$sig0 = Net::DNS::RR::SIG->create('', $arg);
+
 		} else {
-		  Carp::croak('You are passing an incompatible class as argument to sign_sig0: ' . ref($_[0]));
+			croak 'Incompatible class as argument to sign_sig0: '.ref($arg);
+
 		}
-	} elsif (@_ == 1 && ! ref($_[0])) {
-		my $key_name = $_[0];
-		$sig0 = Net::DNS::RR::SIG->create('', $key_name) if $key_name
+
+	} else {
+		$sig0 = Net::DNS::RR::SIG->create('', $arg);
 	}
 	
 	$self->push('additional', $sig0) if $sig0;
 	return $sig0;
-}
-
-
-
-
-
-
-#------------------------------------------------------------------------------
-# parse_question
-#
-#     ($queryobj, $newoffset) = parse_question(\$data, $offset);
-#
-# Parses a question section record contained at a particular location within
-# a DNS packet.  The first argument is a reference to the packet data.  The
-# second argument is the offset within the packet where the question record
-# begins.
-#
-# Returns a Net::DNS::Question object and the offset of the next location
-# in the packet.
-#
-# Returns (undef, undef) if the question object couldn't be created (e.g.,
-# if there isn't enough data).
-#------------------------------------------------------------------------------
-
-sub parse_question {
-	my ($data, $offset) = @_;
-	my $qname;
-
-	($qname, $offset) = dn_expand($data, $offset);
-	return (undef, undef) unless defined $qname;
-
-	return (undef, undef)
-		if length($$data) < ($offset + 2 * Net::DNS::INT16SZ());
-
-	my ($qtype, $qclass) = unpack("\@$offset n2", $$data);
-	$offset += 2 * Net::DNS::INT16SZ();
-
-	$qtype  = Net::DNS::typesbyval($qtype);
-	$qclass = Net::DNS::classesbyval($qclass);
-
-	return (Net::DNS::Question->new($qname, $qtype, $qclass), $offset);
-}
-
-#------------------------------------------------------------------------------
-# parse_rr
-#
-#    ($rrobj, $newoffset) = parse_rr(\$data, $offset);
-#
-# Parses a DNS resource record (RR) contained at a particular location
-# within a DNS packet.  The first argument is a reference to a scalar
-# containing the packet data.  The second argument is the offset within
-# the data where the RR is located.
-#
-# Returns a Net::DNS::RR object and the offset of the next location
-# in the packet.
-#------------------------------------------------------------------------------
-
-sub parse_rr {
-	my ($data, $offset) = @_;
-	my $name;
-
-	($name, $offset) = dn_expand($data, $offset);
-	return (undef, undef) unless defined $name;
-
-	return (undef, undef)
-		if length($$data) < ($offset + Net::DNS::RRFIXEDSZ());
-
-	my ($type, $class, $ttl, $rdlength) = unpack("\@$offset n2 N n", $$data);
-
-	$type  = Net::DNS::typesbyval($type)    || $type;
-
-	# Special case for OPT RR where CLASS should be interperted as 16 bit 
-	# unsigned 2671 sec 4.3
-	if ($type ne "OPT") {
-	    $class = Net::DNS::classesbyval($class) || $class;
-	} 
-	# else just keep at its numerical value
-
-	$offset += Net::DNS::RRFIXEDSZ();
-
-	return (undef, undef)
-		if length($$data) < ($offset + $rdlength);
-
-	my $rrobj = Net::DNS::RR->new($name,
-				      $type,
-				      $class,
-				      $ttl,
-				      $rdlength, 
-				      $data,
-				      $offset);
-
-	return (undef, undef) unless defined $rrobj;
-
-	$offset += $rdlength;
-	return ($rrobj, $offset);
 }
 
 
@@ -988,7 +728,9 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2002-2005 Olaf Kolkman
+Portions Copyright (c) 2002-2007 Olaf Kolkman
+
+Portions Copyright (c) 2007 Dick Franks
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

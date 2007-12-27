@@ -77,7 +77,7 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 {
 	my $res = Net::DNS::Resolver::Recurse->new ;
 	my $count;
-
+	$res->debug(1);
 
 	$res->recursion_callback(sub {
 		my $packet = shift;

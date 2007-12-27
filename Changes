@@ -6,7 +6,34 @@ Revision history for Net::DNS                                     -*-text-*-
 
 
 
-*** 0.61_01, UNRELEASED
+*** 0.62, UNRELEASED
+
+Features: Move of some functionality out of the Packet to the Question
+   and RR classes; parsing of elements in the packet is now performed
+   by calling the appropriate subclasses.
+
+   New methods were introduced:
+   * Net::DNS::Packet->parse()
+   * Net::DNS::RR->parse()
+   * Net::DNS::Question->parse()
+
+   The Packet class now deferres parsing of authority/additional until
+   their content is really needed. This should cause a bit of
+   performance imporvement.
+
+   Dick Franks is acknowledged for this Good Work (TM).
+
+Feature: the Net::DNS::Packet's answersize() method will from now on
+    ignor its arguments and just return the size of the packet.
+
+Feature: The Net::DNS::RR->new() method used to call
+    Net::DNS::RR->new_from_data() whenever called with the appropriate
+    combination of arguments. That (undocumented) behavior has been depricated.
+    Use Net::DNS::RR->new_from_data() directly if you depended ont that.
+
+Feature: Net::DNS::Packets unique_push now ignores the TTL in
+    comparisson of uniqueness, this is closer to the intend of
+    RFC2181, but not yet fully complient.
 
 Fix rt.cpan.org #31042
     Makefile corrected to add a library target.
@@ -22,11 +49,9 @@ Fix rt.cpan.org #29878
 Fix various tests so they are more robust (Ask Bjoern Hansen)
 
 Fix rt.cpan.org #29531
+   Nameserver.pm, Packet.pm and Question.pm modified to avoid erroneous PTR
+   lookup in response to mischievous query packet containing an IP address.
 
-    The code that detects a query name to be an address faulty interpreted
-    less common domain names as IP addresses and tried to map them into 
-    reverse address names.
-    Dick Franks cleaned up the regular expression to be a little stricter.
 
 Fix rt.cpan.org #27970 better netdns.o
 

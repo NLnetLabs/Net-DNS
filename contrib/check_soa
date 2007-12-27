@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 $VERSION = (qw$LastChangedRevision$)[1];
-$VERSION ||= 0.22;
+$VERSION ||= 0.23;
 
 =head1 NAME
 
@@ -14,8 +14,8 @@ B<check_soa> [B<-d>] [B<-t>] [B<-v>] I<domain> [I<server> ...]
 
 B<check_soa> builds a list of nameservers for the zone
 which contains the specified domain name.
-The program queries each nameserver for the SOA record
-and prints the relevant serial number.
+The program queries each nameserver for the relevant SOA record
+and reports the zone serial number.
 
 =over 8
 
@@ -23,7 +23,7 @@ and prints the relevant serial number.
 
 Fully qualified domain name to be tested.
 Domains within ip6.arpa or in-addr.arpa namespaces
-may be specified by IP address or prefix.
+may be specified using the appropriate IP address or prefix.
 
 =item I<server>
 
@@ -151,7 +151,7 @@ my $udp_wait	= 0.010;				# minimum polling interval
 
 my $name = Net::DNS::Question->new($domain)->qname;	# invert IP address/prefix
 die "\tFeature not supported by Net::DNS ",&Net::DNS::version,"\n"
-				if $name =~ /[\/:\s]|^(\d+\.){0,2}\d+$/;
+					if $name =~ m#:[A-Fa-f0-9:]+[0-9.]*$|\s\.ip6|/\d+$#;
 
 my $resolver = Net::DNS::Resolver->new(@conf, recurse => 1 );	# create resolver object
 $resolver->nameservers(@server) || die $resolver->string;
@@ -186,14 +186,17 @@ for ( displayRR($zone, 'SOA') ) {			# simple sanity check
 	next if $mname eq lc $zone;			# local zone
 
 	if ( "$rname." =~ /[^\\]\.(.+)$/i ) {		# check mail domain for RNAME
-		if ( my $packet = $resolver->send($1, 'ANY') ) {
-			my $unresolvable = $packet->header->ra unless $packet->answer;
-			report("unresolved RNAME field:\t$1") if $unresolvable;
+		my $rnameok;
+		foreach my $type (qw(MX A AAAA)) {
+			my $packet = $resolver->send($1, $type);
+			next unless $packet;
+			$rnameok++ unless $packet->header->ra;
+			$rnameok++ if $packet->answer;
 		}
+		report("unresolved RNAME field:\t$1") unless $rnameok;
 	}
 
-	next if grep{/^$mname\.*$/i} @nameserver;	# skip if primary will be queried later
-	next if $resolver->query("$mname.", 'A');	# or at least one address record exists
+	next if $resolver->query("$mname.", 'A');	# skip if address record exists
 	next if $resolver->query("$mname.", 'AAAA');
 	report("unresolved MNAME field:\t$mname.");		# RFC2181, 7.3
 
@@ -201,14 +204,16 @@ for ( displayRR($zone, 'SOA') ) {			# simple sanity check
 	report("absolute name expected:\t$1  <----- '.' absent") if $resolver->query($1, 'ANY');
 }
 
+displayRR($zone, 'NS') if @server;			# show NS if testing specified server
 displayRR($name, 'ANY');				# show RR for user-specified name
 
 print "----\n";
 
 my ($bad) = checkNS($zone, @nameserver);		# report status
-my $s = $bad != 1 ? 's' : '';
-print "\nUnexpected response from $bad nameserver$s\n" if $bad;
 print "\n";
+exit if @server;
+my $s = $bad != 1 ? 's' : '';
+print "Unsatisfactory response from $bad nameserver$s\n\n" if $bad;
 
 exit;
 
@@ -346,6 +351,7 @@ sub checkNS {				# check nameservers (in parallel) and report status
 	return ($result[0]+$unrep, $serial, $uniq);	# restate partial result
 }
 
+
 sub clock {				# human-friendly TTL
 	if ( (my $s = shift) < 180000 ) {
 		my $h = int( ($s+180)/360 )/10;
@@ -355,6 +361,7 @@ sub clock {				# human-friendly TTL
 		return "$s (${d}d)";
 	}
 }
+
 
 sub displayRR {				# print specified RRs with flags or error code
 	my $packet = $resolver->send(@_) || return ();	# get specified RRs
@@ -380,12 +387,12 @@ sub displayRR {				# print specified RRs with flags or error code
 		$rcode = 'NODATA' unless @authority + @additional;		# type 3
 		$rcode = 'NODATA' if grep{$_->type eq 'SOA'} @authority;	# type 1 or 2
 	}
-	report("$rcode:", $question->string) unless $rcode eq 'NOERROR';
+	report("$rcode:\t", $question->string) unless $rcode eq 'NOERROR';
 	return @answer;
 }
 
 
-sub listRR {				# print all specified RRs
+sub listRR {				# print specified RRs without flags or error code
 	my $packet = $resolver->send(@_) || return ();	# get specified RRs
 	my @answer = $packet->answer;
 	foreach ( @answer ) {				# print RR
@@ -398,7 +405,7 @@ sub listRR {				# print all specified RRs
 
 
 sub NCACHE {				# get NCACHE SOA for domain
-	my $domain = shift || '.';
+	my $domain = shift || '';
 	my $seq = time;
 	my $nxdomain = "_nxdn_$seq.$domain";
 	my $reply = $resolver->send($nxdomain) || return ();

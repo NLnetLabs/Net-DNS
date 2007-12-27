@@ -2,7 +2,7 @@
 
 
 my $has_inet6;
-use Test::More tests=>11;
+use Test::More tests=>12;
 use strict;
 
 
@@ -68,8 +68,10 @@ SKIP: { skip "online tests are not enabled", 3 unless -e 't/online.enabled';
 	diag "";
 	diag "\tTesting for global IPv6 connectivity...\n";
 	diag "\t\t preparing...";
-#	$res->debug(1);
+	$res->debug(1);
 	my $nsanswer=$res->send("ripe.net","NS","IN");
+	use Data::Dumper;
+	print Dumper $nsanswer->answer;
 	is (($nsanswer->answer)[0]->type, "NS","Preparing  for v6 transport, got NS records for ripe.net");
 
 	foreach my $ns ($nsanswer->answer){
@@ -149,9 +151,6 @@ foreach my $ns ($nsanswer->answer){
 }
 
 
-
-
-
 #
 #
 #  Now test AXFR functionality.
@@ -192,3 +191,15 @@ SKIP: { skip "axfr_start did not return a socket", 2 unless defined($socket);
 	is($res2->errorstring,'Response code from server: NOTAUTH',"Transfer is not authorized (but our connection worked)");
 
 }
+
+
+use Net::DNS::Nameserver;
+my $ns = Net::DNS::Nameserver->new(
+               LocalAddr        => ['::1'  ],
+               LocalPort        => "5363",
+               ReplyHandler => \&reply_handler,
+               Verbose          => 1
+        );
+
+
+ok($ns,"nameserver object created on IPv6 ::1");

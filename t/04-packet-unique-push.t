@@ -22,7 +22,7 @@ my $tests = sub {
 			Net::DNS::RR->new_from_string('bar.example.com 60 IN A 10.0.0.1'),
 		],
 		[ 
-			2,
+			1,
 			Net::DNS::RR->new_from_string('foo.example.com 60 IN A 10.0.0.1'),
 			Net::DNS::RR->new_from_string('foo.example.com 60 IN A 10.0.0.1'),
 			Net::DNS::RR->new_from_string('foo.example.com 90 IN A 10.0.0.1'),

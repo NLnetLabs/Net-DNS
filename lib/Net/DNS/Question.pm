@@ -49,10 +49,10 @@ sub new {
 	my $qclass = uc shift || 'IN';
 
 	$qname = '' unless defined $qname;	# || ''; is NOT same!
-	$qname =~ s/\.+$//o;	# strip gratuitous trailing dot
+	$qname =~ s/\.+$//o;			# strip gratuitous trailing dot
 
- 	# Check if the caller has the type and class reversed.
- 	# We are not that kind for unknown types.... :-)
+	# Check if the caller has the type and class reversed.
+	# We are not that kind for unknown types.... :-)
 	($qtype, $qclass) = ($qclass, $qtype)
 		if exists $Net::DNS::classesbyname{$qtype}
 		and exists $Net::DNS::typesbyname{$qclass};
@@ -80,7 +80,7 @@ sub _dns_addr {
 	return undef if $arg =~ m#[^a-fA-F0-9:./]#o;
 
 	# if arg looks like IPv4 address then map to in-addr.arpa space
-	if ( $arg =~ m#(:.*:)?((^|\d+\.)+\d+)(/(\d+))?$#o ) {
+	if ( $arg =~ m#(^|:.*:)((^|\d+\.)+\d+)(/(\d+))?$#o ) {
 		my @parse = split /\./, $2;
 		my $prefx = $5 || @parse<<3;
 		my $last = $prefx > 24 ? 3 : ($prefx-1)>>3;
@@ -90,7 +90,7 @@ sub _dns_addr {
 	# if arg looks like IPv6 address then map to ip6.arpa space
 	if ( $arg =~ m#^((\w*:)+)(\w*)(/(\d+))?$#o ) {
 		my @parse = split /:/, (reverse "0${1}0${3}"), 9;
-		my @xpand = map{/^$/ ? ('0')x(9-@parse) : $_} @parse;	# expand ::
+		my @xpand = map{/./ ? $_ : ('0')x(9-@parse)} @parse;	# expand ::
 		my $prefx = $5 || @xpand<<4;		# implicit length if unspecified
 		my $hex = pack 'A4'x8, map{$_.'000'} ('0')x(8-@xpand), @xpand;
 		my $len = $prefx > 124 ? 32 : ($prefx+3)>>2;
@@ -101,6 +101,39 @@ sub _dns_addr {
 }
 
 
+=head2 parse
+
+    ($question, $offset) = Net::DNS::Question->parse(\$data, $offset);
+
+Parses a question section record at the specified location within a DNS packet.
+The first argument is a reference to the packet data.
+The second argument is the offset within the packet where the question record begins.
+
+Returns a Net::DNS::Question object and the offset of the next location in the packet.
+
+Returns undef if the question object could not be created (e.g., corrupt or insufficient data).
+
+=cut
+
+sub parse {
+	my ($class, $data, $offset) = @_;
+
+	my ($qname, $index) = Net::DNS::Packet::dn_expand($data, $offset);
+	return undef unless defined $qname;
+
+	my $next = $index + 4;		# + length pack('n2', 1, 2);
+	return undef if length $$data < $next;
+	my ($qtype, $qclass) = unpack("\@$index n2", $$data);
+
+	my $self = {	qname	=> $qname,
+			qtype	=> Net::DNS::typesbyval($qtype),
+			qclass	=> Net::DNS::classesbyval($qclass)
+			};
+
+	bless $self, $class;
+
+	return wantarray ? ($self, $next) : $self;
+}
 
 
 #
@@ -135,23 +168,33 @@ known as C<zclass> and refers to the zone's class.
 
 =cut
 
+sub qname  {
+	my $self = shift;
+
+	return $self->{qname} unless @_;
+
+	my $qname = shift;
+	$qname =~ s/\.+$//o;			# strip gratuitous trailing dot
+	$self->{qname} = $qname;
+}
+
+sub zname  { &qname;  }
+sub ztype  { &qtype;  }
+sub zclass { &qclass; }
+
+
 sub AUTOLOAD {
 	my $self = shift;
 
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://o;
 
-	Carp::croak "$AUTOLOAD: no such method" unless exists $self->{$name};
+	croak "$AUTOLOAD: no such method" unless exists $self->{$name};
 
 	return $self->{$name} = shift if @_;
 
 	return $self->{$name};
 }
-
-
-sub zname  { &qname;  }
-sub ztype  { &qtype;  }
-sub zclass { &qclass; }
 
 =head2 print
 
@@ -195,9 +238,9 @@ sub data {
 
 	my $data = $packet->dn_comp($self->{qname}, $offset);
 
-	$data .= pack 'n', Net::DNS::typesbyname(uc $self->{qtype});
-	$data .= pack 'n', Net::DNS::classesbyname(uc $self->{qclass});
-	
+	$data .= pack('n2',	Net::DNS::typesbyname(uc $self->{qtype}),
+				Net::DNS::classesbyname(uc $self->{qclass})
+				);
 	return $data;
 }
 

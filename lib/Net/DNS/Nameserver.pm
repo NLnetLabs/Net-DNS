@@ -19,7 +19,6 @@ use vars qw($VERSION
 use constant	STATE_ACCEPTED => 1;
 use constant	STATE_GOT_LENGTH => 2;
 use constant	STATE_SENDING => 3;
-use Net::IP qw(ip_is_ipv4 ip_is_ipv6 ip_normalize); 
 
 $VERSION = (qw$LastChangedRevision$)[1];
 
@@ -63,44 +62,26 @@ sub new {
 		return;
 	}
 
- 	my $addr;
- 	my $port;
- 	
- 	# make sure we have an array.
- 	$self{"LocalAddr"}= \@DEFAULT_ADDR unless defined $self{"LocalAddr"};
- 	$self{"LocalAddr"}= [ $self{"LocalAddr"} ] unless (ref($self{"LocalAddr"})eq "ARRAY");
-  
- 	my @localaddresses = @{$self{"LocalAddr"}};
- 	
- 	my @sock_tcp;   # All the TCP sockets we will listen to.
- 	my @sock_udp;   # All the UDP sockets we will listen to.
+	# local server addresses must also be accepted by a resolver
+	my @LocalAddr = ref $self{LocalAddr} ? @{$self{LocalAddr}} : ($self{LocalAddr});
+	my $resolver = Net::DNS::Resolver->new;
+	$resolver->nameservers(@DEFAULT_ADDR);
+	my @localaddresses = $resolver->nameservers(@LocalAddr);
+
+	my $port = $self{LocalPort} || $DEFAULT_PORT;
+
+	my @sock_tcp;	# All the TCP sockets we will listen to.
+	my @sock_udp;	# All the UDP sockets we will listen to.
 
 	# while we are here, print incomplete lines as they come along.
-	local $| = 1 if $self{"Verbose"};
+	local $| = 1 if $self{Verbose};
 
- 	foreach my $localaddress (@localaddresses){
-  
- 	    $port = $self{"LocalPort"} || $DEFAULT_PORT;
+	foreach my $addr (@localaddresses){
 
- 	    if ($has_inet6){
- 		$addr = $localaddress;
-	    }else{
- 		$addr = $localaddress || inet_ntoa($DEFAULT_ADDR[0]);
-	    }
+		print "Setting up listening sockets for $addr...\n" if $self{Verbose};
 
-	    # If not, it will do DNS lookups trying to resolve it as a hostname
-	    # We could also just set it to undef?
+		print "Creating TCP socket for $addr - " if $self{Verbose};
 
-	    $addr = inet_ntoa($addr) unless (ip_is_ipv4($addr) || ip_is_ipv6($addr));
-
-	    # Pretty IP-addresses, if they are otherwise binary.
-	    my $addrname = $addr;
-	    $addrname = inet_ntoa($addrname) unless $addrname =~ /^[\w\.:\-]+$/;
-
- 	    print "Setting up listening sockets for $addrname...\n" if $self{"Verbose"};
-
- 	    print "Creating TCP socket for $addrname - " if $self{"Verbose"};
-  
  	    #--------------------------------------------------------------------------
  	    # Create the TCP socket.
  	    #--------------------------------------------------------------------------
@@ -112,18 +93,18 @@ sub new {
  						    Proto	  => "tcp",
  						    Reuse	  => 1,
  						    );
- 	    if (! $sock_tcp) {
- 	        cluck "Couldn't create TCP socket: $!";
- 	        return;
- 	    }
- 	    push @sock_tcp, $sock_tcp;
- 	    print "done.\n" if $self{"Verbose"};
+	    if ( $sock_tcp ) {
+		push @sock_tcp, $sock_tcp;
+		print "done.\n" if $self{Verbose};
+	    } else {
+		cluck "Couldn't create TCP socket: $!";
+	    }
  	    
  	    #--------------------------------------------------------------------------
  	    # Create the UDP Socket.
  	    #--------------------------------------------------------------------------
  	    
- 	    print "Creating UDP socket for $addrname - " if $self{"Verbose"};
+ 	    print "Creating UDP socket for $addr - " if $self{Verbose};
  	    
  	    my $sock_udp = inet_new(
  						   LocalAddr => $addr,
@@ -131,12 +112,13 @@ sub new {
  						   Proto => "udp",
  						   );
  		
- 	    if (!$sock_udp) {
- 		cluck "Couldn't create UDP socket: $!";
- 		return;
- 	    }
- 	    push @sock_udp, $sock_udp;
- 	    print "done.\n" if $self{"Verbose"};
+	    if ( $sock_udp ) {
+		push @sock_udp, $sock_udp;
+		print "done.\n" if $self{Verbose};
+	    } else {
+		cluck "Couldn't create UDP socket: $!";
+	    }
+
  	}
  	
   	#--------------------------------------------------------------------------
@@ -180,14 +162,14 @@ sub inet_new {
 sub make_reply {
 	my ($self, $query, $peerhost) = @_;
 	
-	my $reply;
+	my $reply = Net::DNS::Packet->new();	# create empty reply packet
+	$reply->header->qr(1);
+
 	my $headermask;
 	
 	if (not $query) {
 		print "ERROR: invalid packet\n" if $self->{"Verbose"};
-		$reply = Net::DNS::Packet->new("", "ANY", "ANY");
 		$reply->header->rcode("FORMERR");
-		
 		return $reply;
 	}
 	
@@ -196,17 +178,20 @@ sub make_reply {
 		return;
 	}
 
-	
-	my $qr = ($query->question)[0];
-	
-	my $qname  = $qr ? $qr->qname  : "";
-	my $qclass = $qr ? $qr->qclass : "ANY";
-	my $qtype  = $qr ? $qr->qtype  : "ANY";
-	
-	$reply = Net::DNS::Packet->new($qname, $qtype, $qclass);
-	
+
+	# question section returned to caller
+	my @q =  $query->question  ;
+	@q=( Net::DNS::Question->new('', 'ANY', 'ANY') ) unless @q;
+
+	$reply->push("question", @q);
+
 	if ($query->header->opcode eq "QUERY") {
 		if ($query->header->qdcount == 1) {
+			my ($qr) = $q[0];
+			my $qname = $qr->qname;
+			my $qtype = $qr->qtype;
+			my $qclass = $qr->qclass;
+
 			print "query ", $query->header->id,
 			": ($qname, $qclass, $qtype) - " if $self->{"Verbose"};
 			
@@ -245,14 +230,12 @@ sub make_reply {
 	}
 	
 	
-	$reply->header->qr(1);
 	$reply->header->cd($query->header->cd);
 	$reply->header->rd($query->header->rd);	
 	$reply->header->id($query->header->id);
 	
-	
 	$reply->header->print if $self->{"Verbose"} && defined $headermask;
-	
+
 	return $reply;
 }
 
@@ -652,11 +635,11 @@ additional filtering on its basis may be applied.
 	 my ($qname, $qclass, $qtype, $peerhost) = @_;
 	 my ($rcode, @ans, @auth, @add);
 	 
-	 if ($qtype eq "A" && qname eq "foo.example.com" ) {
+	 if ($qtype eq "A" && $qname eq "foo.example.com" ) {
 		 my ($ttl, $rdata) = (3600, "10.1.2.3");
 		 push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
 		 $rcode = "NOERROR";
-	 }elsif( qname eq "foo.example.com" ) {
+	 }elsif( $qname eq "foo.example.com" ) {
 		 $rcode = "NOERROR";
 
 	 }else{
@@ -698,7 +681,7 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2005 O.M, Kolkman, RIPE NCC.
+Portions Copyright (c) 2005-2007 O.M, Kolkman, RIPE NCC.
  
 Portions Copyright (c) 2005 Robert Martin-Legene.
 
