@@ -151,7 +151,7 @@ $Net::DNS::HAVE_XS=$had_xs;
 
 # Few tests on unique_push
 undef($packet);
-my $packet=Net::DNS::Packet->new();
+$packet=Net::DNS::Packet->new();
 
 my $rr_1=Net::DNS::RR->new('bla.FOO  100 IN TXT "lower case"');
 my $rr_2=Net::DNS::RR->new('bla.foo  100 IN TXT "lower case"');
