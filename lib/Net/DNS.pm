@@ -136,8 +136,8 @@ use Carp;
     'RRSIG'     => 46,      # RFC 4034 in Net::DNS::SEC
     'NSEC'      => 47,      # RFC 4034 in Net::DNS::SEC
     'DNSKEY'    => 48,      # RFC 4034 in Net::DNS::SEC
-    'NSEC3'     => 50,   # draft-ietf-dnsext-nsec3-10 (assignment not made at time of code release !!!!)
-    'NSEC3PARAM' => 51,  # draft-ietf-dnsext-nsec3-10 (assignment not made at time of code release !!!!)
+    'NSEC3'     => 50,   # draft-ietf-dnsext-nsec3-10 (assignment made at time of code release) 
+    'NSEC3PARAM' => 51,  # draft-ietf-dnsext-nsec3-10 (assignment made at time of code release)
 
     'SPF'       => 99,      # RFC 4408
     'UINFO'     => 100,     # non-standard
