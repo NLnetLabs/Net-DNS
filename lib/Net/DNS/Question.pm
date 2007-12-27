@@ -174,7 +174,7 @@ sub qname  {
 	return $self->{qname} unless @_;
 
 	my $qname = shift;
-	$qname =~ s/\.+$//o;			# strip gratuitous trailing dot
+	$qname =~ s/\.+$//o if defined ($qname);			# strip gratuitous trailing dot
 	$self->{qname} = $qname;
 }
 
