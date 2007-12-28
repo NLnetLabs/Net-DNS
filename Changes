@@ -35,6 +35,9 @@ Feature: Net::DNS::Packets unique_push now ignores the TTL in
     comparisson of uniqueness, this is closer to the intend of
     RFC2181, but not yet fully complient.
 
+Fix rt.cpan.org #31425
+    Empty question section in Base.pm search method detected
+
 Fix rt.cpan.org #31042
     Makefile corrected to add a library target.
 

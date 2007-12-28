@@ -429,7 +429,10 @@ sub search {
 
 		my $packet = $self->send($fqname, @_) || return undef;
 
+		next unless ($packet->header->rcode eq "NOERROR"); # something 
+								 #useful happened
 		return $packet if $packet->header->ancount;	# answer found
+		next unless $packet->header->qdcount;           # question empty?
 
 		last if ($packet->question)[0]->qtype eq 'PTR';	# abort search if IP
 	}
