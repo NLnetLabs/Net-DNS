@@ -1033,6 +1033,8 @@ sub bgread {
 		
 		if (defined $ans) {
 			$self->errorstring($ans->header->rcode);
+			$ans->answerfrom($sock->peerhost);
+			$ans->answersize(length($buf));
 		} elsif (defined $err) {
 			$self->errorstring($err);
 		}

@@ -62,6 +62,10 @@ Fix rt.cpan.org #29878
 
    SPF.pm did not evaluate as true. Thanks Bjorn Hansen.
 
+
+Fix rt.cpan.org #21398
+   answersize() and answerfrom() set for persistent sockets
+
 Fix rt.cpan.org #29883
    Fix various tests only available through SVN, so they are 
    more robust (Acknowledgements Bjoern Hansen)

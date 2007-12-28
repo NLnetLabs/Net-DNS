@@ -7,7 +7,7 @@ use Data::Dumper;
 
 BEGIN {
 	if (-e 't/online.enabled') {
-		plan tests => 93;
+		plan tests => 95;
 	} else {
 		plan skip_all => 'Online tests disabled.';
 	}
@@ -184,9 +184,16 @@ $res = Net::DNS::Resolver->new(
 
 	ok ($res->bgisready($socket),"Socket is ready");
       SKIP: {
-	  skip "No socket to read from",3 unless $res->bgisready($socket);
+	  skip "No socket to read from",5 unless $res->bgisready($socket);
 	  
 	  my $ans= $res->bgread($socket);
+	  ok(defined($ans->answerfrom),"Answerfrom defined" .
+	      (defined($ans->answerfrom)? "(".$ans->answerfrom .")":"")
+	     );
+	  ok(defined($ans->answersize),"Answersize defined".
+	      (defined($ans->answersize)? "(".$ans->answersize .")":"")
+	     );
+	     
 	  undef $socket;
 	  is($ans->header->ancount, 1,"Correct answer count");	
 	  my ($a) = $ans->answer;
