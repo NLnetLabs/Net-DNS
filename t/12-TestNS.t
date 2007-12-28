@@ -18,6 +18,8 @@ use Test::More;
 use strict;
 use Net::DNS::Nameserver;
 
+my $debug=0;
+
 use vars qw(
 	    @Addresses
 	    $TestPort
@@ -92,7 +94,7 @@ BEGIN {
 my $configfile="t/testns.xml";
 
 my $test_nameservers=Net::DNS::TestNS->new($configfile, {
-    Verbose => 1,
+    Verbose => $debug,
     Validate => 1,
 });
 
@@ -103,7 +105,7 @@ use_ok("Net::DNS::Resolver");
 my $resolver=Net::DNS::Resolver->new(
 				     nameservers => \@Addresses,
 				     port        => $TestPort,
-				     debug => 1,
+				     debug => $debug,
 				     );
 
 $test_nameservers->run();
@@ -115,15 +117,15 @@ $resolver->query("bla.foo", 'TXT');
 
 
 # Try to see what happens with some really bogus data
-$resolver->ignqrid(1);
-$resolver->query("rt30316.test", 'A');
-exit;
+#$resolver->ignqrid(1);
+#$resolver->query("rt30316.test", 'A');
+
 
 use Net::DNS::Resolver::Recurse;
 
 my $res = Net::DNS::Resolver::Recurse->new(
 					   port  => $TestPort,
-					   debug => 1,
+					   debug => $debug,
 					   );
 
 

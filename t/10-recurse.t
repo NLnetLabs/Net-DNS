@@ -59,7 +59,7 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 	my $packet;
 	
 	# Try a domain that is a CNAME
-	$packet = $res->query_dorecursion("www.netscape.com.","A");
+	$packet = $res->query_dorecursion("www.google.com.","A");
 	ok($packet, 'got a packet');
 	ok(scalar $packet->answer, 'answer has RRs');
 	
@@ -78,6 +78,26 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 	my $res = Net::DNS::Resolver::Recurse->new ;
 	my $count;
 	$res->debug(1);
+	# Hard code root hints, there are some environments that will fail
+	# the test otherwise
+	$res->hints( qw(
+			
+			192.33.4.12
+			128.8.10.90
+			192.203.230.10
+			192.5.5.241
+			192.112.36.4
+			128.63.2.53
+			192.36.148.17
+			192.58.128.30
+			193.0.14.129
+			199.7.83.42
+			202.12.27.33
+			198.41.0.4
+			192.228.79.201
+
+			));
+ 
 
 	$res->recursion_callback(sub {
 		my $packet = shift;
