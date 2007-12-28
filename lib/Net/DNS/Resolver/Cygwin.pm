@@ -88,7 +88,7 @@ sub init {
 
 				my $ns;
 				my $ip;
-				$ip = getregkey($regiface, "IPAddress");
+				$ip = getregkey($regiface, "DhcpIPAddress") || getregkey($regiface, "IPAddress");
 				$ns = getregkey($regiface, "NameServer") ||
 				    getregkey($regiface, "DhcpNameServer") || ''				    unless !$ip || ($ip =~ /0\.0\.0\.0/);
 				

@@ -17,23 +17,27 @@ Features: Move of some functionality out of the Packet to the Question
    * Net::DNS::RR->parse()
    * Net::DNS::Question->parse()
 
-   The Packet class now deferres parsing of authority/additional until
+   The Packet class now defers parsing of authority/additional until
    their content is really needed. This should cause a bit of
-   performance imporvement.
+   performance improvement.
 
    Dick Franks is acknowledged for this Good Work (TM).
 
 Feature: the Net::DNS::Packet's answersize() method will from now on
-    ignor its arguments and just return the size of the packet.
+    ignore its arguments and just return the size of the packet.
 
 Feature: The Net::DNS::RR->new() method used to call
     Net::DNS::RR->new_from_data() whenever called with the appropriate
-    combination of arguments. That (undocumented) behavior has been depricated.
-    Use Net::DNS::RR->new_from_data() directly if you depended ont that.
+    combination of arguments. That (undocumented) behavior has been deprecated.
+    Use Net::DNS::RR->new_from_data() directly if you depended on that.
 
 Feature: Net::DNS::Packets unique_push now ignores the TTL in
-    comparisson of uniqueness, this is closer to the intend of
-    RFC2181, but not yet fully complient.
+    comparison of uniqueness, this is closer to the intend of
+    RFC2181, but not yet fully compliant.
+
+Fix rt.cpan.org #29816
+    Acquiring the IP address for the Resolver under Cygwin is made
+    more resilient.
 
 Fix rt.cpan.org #31425
     Empty question section in Base.pm search method detected
