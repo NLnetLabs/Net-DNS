@@ -56,15 +56,20 @@ Fix rt.cpan.org #29877
     Made 00-version.t recognize a "GIT" environment.
 
 
+
+
 Fix rt.cpan.org #29878
 
-    SPF.pm did not evaluate as true. Thanks Bjorn Hansen.
+   SPF.pm did not evaluate as true. Thanks Bjorn Hansen.
 
 Fix rt.cpan.org #29883
-    Fix various tests only available through SVN, so they are 
-    more robust (Acknowledgements Bjoern Hansen)
+   Fix various tests only available through SVN, so they are 
+   more robust (Acknowledgements Bjoern Hansen)
 
 
+Fix rt.cpan.org #24343
+   Resolver's nameserver() method would do silly things with undefined 
+   arguments.
 
 Fix rt.cpan.org #29531
    Nameserver.pm, Packet.pm and Question.pm modified to avoid erroneous PTR

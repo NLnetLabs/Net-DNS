@@ -319,7 +319,7 @@ sub nameservers {
     if (@_) {
 	my @a;
 	foreach my $ns (@_) {
-
+	    next unless defined($ns);
 	    if ( _ip_is_ipv4($ns) ) {
 		push @a, ($ns eq '0') ? '0.0.0.0' : $ns;
 
@@ -350,6 +350,7 @@ sub nameservers {
 	    }
 	}
 	
+
 	$self->{'nameservers'} = [ @a ];
     }
     my @returnval;
@@ -1483,12 +1484,15 @@ sub _ip_is_ipv4 {
 	my @field = split /\./, shift;
 
 	return 0 if @field > 4;				# too many fields
+	return 0 if @field == 0;			# no fields at all
 
 	foreach ( @field ) {
 		return 0 unless /./;			# reject if empty
 		return 0 if /[^0-9]/;			# reject non-digit
 		return 0 if $_ > 255;			# reject bad value
 	}
+
+
 	return 1;
 }
 
