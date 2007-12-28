@@ -6,7 +6,8 @@ Revision history for Net::DNS                                     -*-text-*-
 
 
 
-*** 0.62, UNRELEASED
+*** 0.62, 28 December 2007
+
 
 Features: Move of some functionality out of the Packet to the Question
    and RR classes; parsing of elements in the packet is now performed
