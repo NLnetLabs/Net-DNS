@@ -37,8 +37,11 @@ sub new_from_string {
 
 sub rdatastr {
 	my $self = shift;
-
-	return $self->{"mbox"} ? "$self->{mbox}. $self->{txtdname}." : '';
+	if (exists $self->{"mbox"}) {
+		return "$self->{mbox}. $self->{txtdname}.";
+	}
+	return '';
+	
 }
 
 sub rr_rdata {
