@@ -37,7 +37,7 @@ is($header->rcode,  'NOERROR', 'rcode() works');
 
 my $data = $header->data;
 
-my $header2 = Net::DNS::Header->new(\$data);
+my $header2 = Net::DNS::Header->parse(\$data);
 
 is_deeply($header, $header2, 'Headers are the same');
 

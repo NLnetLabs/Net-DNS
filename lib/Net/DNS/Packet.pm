@@ -102,59 +102,27 @@ sub parse {
 			answersize	=> length $$data,
 			buffer		=> $data	);
 
-	my $self = bless \%self, $class;
-	my $error;
-
-	PARSE: {
-		#------------------------------------------------------
+	my $self = eval {
 		# Parse header section
-		#------------------------------------------------------
-		my $header = $self{header} = Net::DNS::Header->new($data);
-		my $offset = Net::DNS::HFIXEDSZ();
+		my ($header, $offset) = Net::DNS::Header->parse($data);
+		$self{header} = $header;
 
-		unless ( $header ) {
-			$self{header} = Net::DNS::Header->new;
-			$error = 'header section incomplete';
-			last PARSE;
-		}
-
-		#------------------------------------------------------
 		# Parse question/zone section
-		#------------------------------------------------------
 		for ( 1 .. $header->qdcount ) {
 			my $qd;
 			($qd, $offset) = Net::DNS::Question->parse($data, $offset);
-			unless ( $qd ) {
-				$error = 'question section incomplete';
-				last PARSE;
-			}
 			push(@{$self{question}}, $qd);
 		}
 			
-		#------------------------------------------------------
-		# Parse answer/prerequisite section
-		#------------------------------------------------------
-		for ( my $i = $header->ancount; $i > 0; $i-- ) {
-			my $rr;
-			($rr, $offset) = Net::DNS::RR->parse($data, $offset);
-			unless ( $rr ) {
-				$error = 'answer section incomplete';
-				last PARSE;
-			}
-			push(@{$self{answer}}, $rr);
-		}
-
-		#------------------------------------------------------
 		# Retain offset for on-demand parse of remaining data
-		#------------------------------------------------------
 		$self{offset} = $offset;
 
-	} # PARSE
+		bless \%self, $class;
+	};
 
-	$self->print if $debug;
-	$error = undef if $self{header}->tc;
+	($self || die $@)->print if $debug;
 
-	return wantarray ? ($self, $error) : $self;
+	return wantarray ? ($self, $@) : $self;
 }
 
 
@@ -246,7 +214,28 @@ must not preexist.
 =cut
 
 sub answer {
-	return @{shift->{answer}};
+	my @rr = eval { &_answer };
+	carp "$@ caught" if $@;
+	return @rr;
+}
+
+sub _answer {
+	my ($self) = @_;
+
+	my @rr = @{$self->{answer}};
+	return @rr if @rr;				# return if already parsed
+
+	my $data = $self->{buffer};			# parse answer data
+	my $offset = $self->{offset} || return;
+	undef $self->{offset};
+	my $ancount = $self->{header}->ancount;
+	my $rr;
+	while ( $ancount-- ) {
+		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
+		push(@rr, $rr);
+	}
+	$self->{offset} = $offset;			# index next section
+	@{$self->{answer}} = @rr;
 }
 
 sub pre		{ &answer }
@@ -265,22 +254,30 @@ specifies the RRs or RRsets to be added or deleted.
 =cut
 
 sub authority {
-	my $self = shift;
+	my @rr = eval { &_authority };
+	carp "$@ caught" if $@;
+	return @rr;
+}
+
+sub _authority {
+	my ($self) = @_;
 
 	my @rr = @{$self->{authority}};
 	return @rr if @rr;				# return if already parsed
 
-	my $data = $self->{buffer} || return @rr;	# parse authority data
-	my $nscount = $self->{header}->nscount || return @rr;
-	my $offset = $self->{offset};
+	&_answer unless @{$self->{answer}};		# parse answer data
+
+	my $data = $self->{buffer};			# parse authority data
+	my $offset = $self->{offset} || return;
+	undef $self->{offset};
+	my $nscount = $self->{header}->nscount;
 	my $rr;
 	while ( $nscount-- ) {
 		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
-		last unless $rr;
 		push(@rr, $rr);
 	}
 	$self->{offset} = $offset;			# index next section
-	return @{$self->{authority}} = @rr;
+	@{$self->{authority}} = @rr;
 }
 
 sub update { &authority }
@@ -295,24 +292,30 @@ section of the packet.
 =cut
 
 sub additional {
-	my $self = shift;
+	my @rr = eval { &_additional };
+	carp "$@ caught" if $@;
+	return @rr;
+}
+
+sub _additional {
+	my ($self) = @_;
 
 	my @rr = @{$self->{additional}};
 	return @rr if @rr;				# return if already parsed
 
-	my $data = $self->{buffer} || return @rr;	# parse authority data
-	$self->authority unless @{$self->{authority}};	# after authority data
+	&_authority unless @{$self->{authority}};	# parse authority data
+
+	my $data = $self->{buffer};			# parse additional data
+	undef $self->{buffer};				# discard raw data after use
+	my $offset = $self->{offset} || return;
+	undef $self->{offset};
 	my $arcount = $self->{header}->arcount;
-	my $offset = $self->{offset};
 	my $rr;
 	while ( $arcount-- ) {
 		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
-		last unless $rr;
 		push(@rr, $rr);
 	}
-	undef $self->{buffer};				# discard raw data
-	undef $self->{offset};
-	return @{$self->{additional}} = @rr;
+	@{$self->{additional}} = @rr;
 }
 
 
@@ -325,7 +328,7 @@ similar to that used in DNS zone files.
 
 =cut
 
-sub print { print shift->string; }
+sub print {	print &string; }
 
 =head2 string
 
@@ -426,7 +429,7 @@ sub push {
 
 	my $hdr = $self->{header};
 	for ( $section ) {
-		return $hdr->qdcount(push(@{$self->{question}}, @rr)) if /^que/;
+		return $hdr->qdcount(push(@{$self->{question}}, @rr)) if /^question/;
 
 		if ( $hdr->opcode eq 'UPDATE' ) {
 			my ($zone) = $self->zone;
@@ -437,7 +440,7 @@ sub push {
 		}
 
 		return $hdr->ancount(push(@{$self->{answer}}, @rr)) if /^ans|^pre/;
-		return $hdr->nscount(push(@{$self->{authority}}, @rr)) if /^aut|^upd/;
+		return $hdr->nscount(push(@{$self->{authority}}, @rr)) if /^auth|^upd/;
 		return $hdr->adcount(push(@{$self->{additional}}, @rr)) if /^add/;
 	}
 
@@ -501,11 +504,11 @@ sub pop {
 
 	for ( $section ) {
 		return pop(@{$self->{answer}}) if /^ans|^pre/;
-		return pop(@{$self->{question}}) if /^que/;
+		return pop(@{$self->{question}}) if /^question/;
 
 		$self->additional if $self->{buffer};	# parse remaining data
 
-		return pop(@{$self->{authority}}) if /^aut|^upd/;
+		return pop(@{$self->{authority}}) if /^auth|^upd/;
 		return pop(@{$self->{additional}}) if /^add/;
 	}
 
@@ -572,7 +575,7 @@ packet where the (possibly compressed) domain name is stored.
 Returns the domain name and the offset of the next location in the
 packet.
 
-Returns B<(undef, undef)> if the domain name couldn't be expanded.
+Returns B<(undef)> if the domain name couldn't be expanded.
 
 =cut
 # '
@@ -599,21 +602,19 @@ sub dn_expand_PP {
 
 		} elsif ( ($length & 0xc0) == 0xc0 ) {		# pointer
 			my $point = 0x3fff & unpack("\@$offset n", $$packet);
+			die 'Exception: unbounded name expansion' if $visited->{$point}++;
 
-			my ($suffix) = dn_expand_PP($packet, $point, $visited)
-				unless $visited->{$point}++;	# unbounded expansion
+			my ($suffix) = dn_expand_PP($packet, $point, $visited);
 
 			return ($name.$suffix, $offset+2) if defined $suffix;
 
-		} elsif ( $length + $offset++ < $packetlen ) {	# label
-			my $element = substr($$packet, $offset, $length);
+		} else {
+			my $element = substr($$packet, ++$offset, $length);
 			$name .= Net::DNS::wire2presentation($element).'.';
 			$offset += $length;
-			next;
 		}
-		last;
 	}
-	return (undef, undef);		# expansion terminated (corrupt packet)
+	return undef;
 }
 
 =head2 sign_tsig
@@ -728,9 +729,9 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2002-2007 Olaf Kolkman
+Portions Copyright (c) 2002-2005 Olaf Kolkman
 
-Portions Copyright (c) 2007 Dick Franks
+Portions Copyright (c) 2007-2008 Dick Franks
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

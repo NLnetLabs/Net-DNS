@@ -1,10 +1,29 @@
+$Id$                       -*-text-*-
 
-$Id$
 
-Revision history for Net::DNS                                     -*-text-*-
+Revision history for Net::DNS               
 =============================
 
-*** 0.62_01, UNRELEASED
+*** 0.63, UNRELEASED
+
+Fix rt.cpan.org #32937: 5.11 introduces new warning on uc(undef)
+
+  The patch supplied fixes for methods where undefined arguments were
+  likely. For methods where undefined arguments don't make the warning
+  will be printed.
+
+
+Fix rt.cpan.org #32147: Default LocalAddr broken in Net::DNS::Nameserver 0.62
+
+Listen on the default address if LocalAddr not defined.
+
+Fix rt.cpan.org #30316 Fixes in assertion routines.
+
+  Packet parsing routines are now in an eval loop that catches
+  assertion failures. Also continued work on the functions that parse
+  the packet data only when needed. That should give a bit of speed
+  improvement.
+
 
 Bug: mbox-dname and txt-dname were not allowed to be empty in the RP RR.
    Fix by Peter Koch

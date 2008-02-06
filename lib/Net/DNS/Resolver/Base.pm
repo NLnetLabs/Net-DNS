@@ -97,7 +97,6 @@ BEGIN {
 		errorstring	   => 'unknown error or no error',
 		tsig_rr        => undef,
 		answerfrom     => '',
-		answersize     => 0,
 		querytime      => undef,
 		tcp_timeout    => 120,
 		udp_timeout    => undef,
@@ -445,8 +444,6 @@ sub query {
 	my $self = shift;
 	my $name = shift || '.';
 
-
-
 	# resolve name containing no dots or colons by appending domain
 	my @suffix = ($self->{domain} || ()) if $name !~ m/[:.]/ and $self->{defnames};
 
@@ -570,7 +567,6 @@ sub send_tcp {
 		      $buf = read_tcp($sock, $len, $self->{'debug'});
 		      
 		      $self->answerfrom($sock->peerhost);
-		      $self->answersize(length $buf);
 		      
 		      print ';; received ', length($buf), " bytes\n"
 			  if $self->{'debug'};
@@ -585,7 +581,6 @@ sub send_tcp {
 			if (defined $ans) {
 				$self->errorstring($ans->header->rcode);
 				$ans->answerfrom($self->answerfrom);
-				$ans->answersize($self->answersize);
 
 				if ($ans->header->rcode ne "NOERROR" &&
 				    $ans->header->rcode ne "NXDOMAIN"){
@@ -842,7 +837,6 @@ sub send_udp {
 			      if ($ready->recv($buf, $self->_packetsz)) {
 				  
 				  $self->answerfrom($ready->peerhost);
-				  $self->answersize(length $buf);
 				  
 				  print ';; answer from ',
 				  $ready->peerhost, ':',
@@ -857,7 +851,6 @@ sub send_udp {
 				      next SELECTOR unless  ( ($ans->header->id == $packet->header->id) || $self->{'ignqrid'} );
 				      $self->errorstring($ans->header->rcode);
 				      $ans->answerfrom($self->answerfrom);
-				      $ans->answersize($self->answersize);
 				      if ($ans->header->rcode ne "NOERROR" &&
 					  $ans->header->rcode ne "NXDOMAIN"){
 					  # Remove this one from the stack
@@ -1034,7 +1027,6 @@ sub bgread {
 		if (defined $ans) {
 			$self->errorstring($ans->header->rcode);
 			$ans->answerfrom($sock->peerhost);
-			$ans->answersize(length($buf));
 		} elsif (defined $err) {
 			$self->errorstring($err);
 		}

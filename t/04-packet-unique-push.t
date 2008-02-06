@@ -1,9 +1,27 @@
 # $Id$
 
-use Test::More tests => 75;
+use Test::More tests => 77;
 use strict;
 
 BEGIN { use_ok('Net::DNS'); }     #1
+
+
+# Matching of RR name is not case sensitive 
+my $packet=Net::DNS::Packet->new();
+
+my $rr_1=Net::DNS::RR->new('bla.FOO  100 IN TXT "lower case"');
+my $rr_2=Net::DNS::RR->new('bla.foo  100 IN TXT "lower case"');
+my $rr_3=Net::DNS::RR->new('bla.foo 100 IN TXT "MIXED CASE"');
+my $rr_4=Net::DNS::RR->new('bla.foo 100 IN TXT "mixed case"');
+
+$packet->unique_push("answer",$rr_1);
+$packet->unique_push("answer",$rr_2);
+is($packet->header->ancount,1,"unique_push, case sensitivity test 1");
+
+$packet->unique_push("answer",$rr_3);
+$packet->unique_push("answer",$rr_4);
+is($packet->header->ancount,3,"unique_push, case sensitivity test 2");
+
 
 
 my $tests = sub {
@@ -96,4 +114,4 @@ $tests->('unique_push');
 	
 	ok(!grep { $_ !~ m/deprecated/ } @warnings);
 }
-	
+

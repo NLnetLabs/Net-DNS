@@ -30,12 +30,12 @@ my ($name,$offset);
 # XS implementation
 SKIP: {
      skip("No dn_expand_xs available",1) if ! $Net::DNS::HAVE_XS; 
-     my ($name,$offset) = Net::DNS::Packet::dn_expand( \$pkt,$start_offset );
+     my ($name,$offset) = eval { Net::DNS::Packet::dn_expand( \$pkt,$start_offset ) };
      ok( !defined($name) && !defined($offset), 'XS detected invalid packet' );
  }
 $Net::DNS::HAVE_XS = 0;
 undef $name; undef $offset;
-($name,$offset) = Net::DNS::Packet::dn_expand( \$pkt,$start_offset );
+($name,$offset) = eval { Net::DNS::Packet::dn_expand( \$pkt,$start_offset ) };
 ok( !defined($name) && !defined($offset), 'PP detected invalid packet' );
 
 

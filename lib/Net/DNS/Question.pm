@@ -45,8 +45,8 @@ sub new {
 	my $class = shift;
 
 	my $qname = shift;
-	my $qtype = uc shift || 'A';
-	my $qclass = uc shift || 'IN';
+	my $qtype = uc (shift || 'A');
+	my $qclass = uc (shift || 'IN');
 
 	$qname = '' unless defined $qname;	# || ''; is NOT same!
 	$qname =~ s/\.+$//o;			# strip gratuitous trailing dot
@@ -111,18 +111,20 @@ The second argument is the offset within the packet where the question record be
 
 Returns a Net::DNS::Question object and the offset of the next location in the packet.
 
-Returns undef if the question object could not be created (e.g., corrupt or insufficient data).
+Parsing is aborted if the question object cannot be created (e.g., corrupt or insufficient data).
 
 =cut
+
+use constant PACKED_LENGTH => length pack 'n2', (0)x2;
 
 sub parse {
 	my ($class, $data, $offset) = @_;
 
 	my ($qname, $index) = Net::DNS::Packet::dn_expand($data, $offset);
-	return undef unless defined $qname;
+	die 'Exception: corrupt or incomplete data' unless $index;
 
-	my $next = $index + 4;		# + length pack('n2', 1, 2);
-	return undef if length $$data < $next;
+	my $next = $index + PACKED_LENGTH;
+	die 'Exception: incomplete data' if length $$data < $next;
 	my ($qtype, $qclass) = unpack("\@$index n2", $$data);
 
 	my $self = {	qname	=> $qname,
@@ -168,16 +170,6 @@ known as C<zclass> and refers to the zone's class.
 
 =cut
 
-sub qname  {
-	my $self = shift;
-
-	return $self->{qname} unless @_;
-
-	my $qname = shift;
-	$qname =~ s/\.+$//o if defined ($qname);			# strip gratuitous trailing dot
-	$self->{qname} = $qname;
-}
-
 sub zname  { &qname;  }
 sub ztype  { &qtype;  }
 sub zclass { &qclass; }
@@ -191,9 +183,11 @@ sub AUTOLOAD {
 
 	croak "$AUTOLOAD: no such method" unless exists $self->{$name};
 
-	return $self->{$name} = shift if @_;
+	return $self->{$name} unless @_;
 
-	return $self->{$name};
+	my $value = shift;
+	$value =~ s/\.+$//o if defined $value;	# strip gratuitous trailing dot
+	$self->{$name} = $value;
 }
 
 =head2 print
@@ -204,7 +198,7 @@ Prints the question record on the standard output.
 
 =cut
 
-sub print {	print shift->string, "\n"; }
+sub print {	print &string, "\n"; }
 
 =head2 string
 
