@@ -1,7 +1,8 @@
-package Net::DNS::RR::NS;~/Devel/net-dns-trunk/lib/Net/DNS
 #
 # $Id$
 #
+package Net::DNS::RR::NS;
+
 use strict;
 BEGIN { 
     eval { require bytes; }
