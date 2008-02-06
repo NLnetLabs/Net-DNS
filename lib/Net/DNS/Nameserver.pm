@@ -194,7 +194,7 @@ sub make_reply {
 			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
 			}else{
 			  $reply->header->rcode("SERVFAIL") unless 
-			     define $self->{"NotifyHandler"};
+			     ( ref $self->{"NotifyHandler"} eq "CODE");
 			  ($rcode, $ans, $auth, $add, $headermask) =
 			      &{$self->{"NotifyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
 			}
