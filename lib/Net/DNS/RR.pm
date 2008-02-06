@@ -497,34 +497,36 @@ The second argument is the offset within the packet where the resource record be
 
 Returns a Net::DNS::RR object and the offset of the next location in the packet.
 
-Returns undef if the object could not be created (e.g., corrupt or insufficient data).
+Parsing is aborted if the object could not be created (e.g., corrupt or insufficient data).
 
 =cut
+
+use constant PACKED_LENGTH => length pack 'n2 N n', (0)x4;
 
 sub parse {
 	my ($objclass, $data, $offset) = @_;
 
 	my ($name, $index) = Net::DNS::Packet::dn_expand($data, $offset);
-	return undef unless defined $name;
+	die 'Exception: corrupt or incomplete data' unless $index;
 
-	my $rdindex = $index + 10;	# + length pack('n2 N n', 1..4);
-	return undef if length $$data < $rdindex;
+	my $rdindex = $index + PACKED_LENGTH;
+	die 'Exception: incomplete data' if length $$data < $rdindex;
 	my ($type, $class, $ttl, $rdlength) = unpack("\@$index n2 N n", $$data);
 
 	my $next = $rdindex + $rdlength;
-	return undef if length $$data < $next;
+	die 'Exception: incomplete data' if length $$data < $next;
 
 	$type = Net::DNS::typesbyval($type) || $type;
 
 	# Special case for OPT RR where CLASS should be
 	# interpreted as 16 bit unsigned (RFC2671, 4.3)
-	if ($type ne "OPT") {
+	if ($type ne 'OPT') {
 		$class = Net::DNS::classesbyval($class) || $class;
 	}
 	# else just retain numerical value
 
 	my $self = $objclass->new_from_data($name, $type, $class, $ttl, $rdlength, $data, $rdindex);
-	return undef unless defined $self;
+	die 'Exception: corrupt or incomplete RR subtype data' unless defined $self;
 
 	return wantarray ? ($self, $next) : $self;
 }
@@ -546,7 +548,7 @@ B<string> method to get the RR's string representation.
 =cut
 #' someone said that emacs gets screwy here.  Who am I to claim otherwise...
 
-sub print { print shift->string, "\n"; }
+sub print {	print &string, "\n"; }
 
 =head2 string
 
@@ -671,11 +673,11 @@ sub data {
 
 	# Don't compress TSIG or TKEY names and don't mess with EDNS0 packets
 	if (uc($self->{'type'}) eq 'TSIG' || uc($self->{'type'}) eq 'TKEY') {
-		my $tmp_packet = Net::DNS::Packet->new('');
+		my $tmp_packet = Net::DNS::Packet->new();
 		$data = $tmp_packet->dn_comp($self->{'name'}, 0);
 		return undef unless defined $data;
 	} elsif (uc($self->{'type'}) eq 'OPT') {
-		my $tmp_packet = Net::DNS::Packet->new('');
+		my $tmp_packet = Net::DNS::Packet->new();
 		$data = $tmp_packet->dn_comp('', 0);
 	} else {
 		$data  = $packet->dn_comp($self->{'name'}, $offset);
@@ -808,7 +810,7 @@ sub AUTOLOAD {
 ***
 ***  $rr_string
 ***
-***  This object doesn not have a method "$name".  THIS IS A BUG
+***  This object does not have a method "$name".  THIS IS A BUG
 ***  IN THE CALLING SOFTWARE, which has incorrectly assumed that
 ***  the object would be of a particular type.  The calling
 ***  software should check the type of each RR object before
@@ -1001,6 +1003,8 @@ Copyright (c) 1997-2002 Michael Fuhr.
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 Portions Copyright (c) 2005-2007 Olaf Kolkman 
+
+Portions Copyright (c) 2007 Dick Franks 
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
