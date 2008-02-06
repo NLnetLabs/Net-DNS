@@ -175,7 +175,9 @@ sub make_reply {
 
 	$reply->push("question", @q);
 
-	if ($query->header->opcode eq "QUERY") {
+	if ($query->header->opcode eq "QUERY" ||
+	    $query->header->opcode eq "NS_NOTIFY_OP"   #RFC1996
+	    ) {
 		if ($query->header->qdcount == 1) {
 			my ($qr) = @q;
 			my $qname = $qr->qname;
@@ -187,9 +189,15 @@ sub make_reply {
 			
 			my ($rcode, $ans, $auth, $add);
 			
-			($rcode, $ans, $auth, $add, $headermask) =
-				&{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
-			
+			if  ($query->header->opcode eq "QUERY"){
+			  ($rcode, $ans, $auth, $add, $headermask) =
+			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
+			}else{
+			  $reply->header->rcode("SERVFAIL") unless 
+			      ref $self{NotifyHandler};
+			  ($rcode, $ans, $auth, $add, $headermask) =
+			      &{$self->{"NotifyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
+			}
 			print "$rcode\n" if $self->{"Verbose"};
 			
 			$reply->header->rcode($rcode);
@@ -510,6 +518,9 @@ Creates a nameserver object.  Attributes are:
   LocalPort		Port on which to listen.  	Defaults to 53.
   ReplyHandler		Reference to reply-handling 
 			subroutine			Required.
+  NotifyHandler         Reference to reply-handling
+                        subroutine for queries with
+                        opdcode NS_NOTIFY (RFC1996)
   Verbose		Print info about received 
 			queries.			Defaults to 0 (off).
 
@@ -523,8 +534,8 @@ IPv6 and IPv4);
 
 
 The ReplyHandler subroutine is passed the query name, query class,
-query type and optionally an argument containing header bit settings
-(see below).  It must return the response code and references to the
+query type and optionally an argument containing the peerhost the
+incoming query. It must return the response code and references to the
 answer, authority, and additional sections of the response.  Common
 response codes are:
 
@@ -535,7 +546,7 @@ response codes are:
   NOTIMP	Not implemented
   REFUSED	Query refused
 
-For advanced usage there is an optional argument containing an
+For advanced usage it may also contain a headermaks containing an
 hashref with the settings for the C<aa>, C<ra>, and C<ad> 
 header bits. The argument is of the form 
 C<< { ad => 1, aa => 0, ra => 1 } >>. 
@@ -622,8 +633,12 @@ additional filtering on its basis may be applied.
  use warnings;
  
  sub reply_handler {
-	 my ($qname, $qclass, $qtype, $peerhost) = @_;
+	 my ($qname, $qclass, $qtype, $peerhost,$query) = @_;
 	 my ($rcode, @ans, @auth, @add);
+
+	 print "Received query from $peerhost\n";
+	 $query->print;
+
 	 
 	 if ($qtype eq "A" && $qname eq "foo.example.com" ) {
 		 my ($ttl, $rdata) = (3600, "10.1.2.3");
@@ -636,6 +651,7 @@ additional filtering on its basis may be applied.
   	          $rcode = "NXDOMAIN";
 	 }
 	 
+
 	 # mark the answer as authoritive (by setting the 'aa' flag
 	 return ($rcode, \@ans, \@auth, \@add, { aa => 1 });
  }

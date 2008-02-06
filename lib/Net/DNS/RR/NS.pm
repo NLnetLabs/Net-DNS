@@ -1,4 +1,4 @@
-package Net::DNS::RR::NS;
+package Net::DNS::RR::NS;~/Devel/net-dns-trunk/lib/Net/DNS
 #
 # $Id$
 #
