@@ -4,15 +4,17 @@ $Id$                       -*-text-*-
 Revision history for Net::DNS               
 =============================
 
-*** 0.63, UNRELEASED
+*** 0.63, 8 Feb 2008
+
+This version contains a Security Fix.
 
 Feature NotifyHandler in Nameserver
 			
-The NotifyHandler is a new attribute to the nameserver used in the
-same way as the ReplyHandler except that it is executed when the
-opcode is NS_NOTIFY (RFC1996). It takes the same arguments as the
-reply handler (i.e. $qname, $qclass, $qtype, $peerhost, and $query).
-Corrections made in the documentation.
+  The NotifyHandler is a new attribute to the nameserver used in the
+  same way as the ReplyHandler except that it is executed when the
+  opcode is NS_NOTIFY (RFC1996). It takes the same arguments as the
+  reply handler (i.e. $qname, $qclass, $qtype, $peerhost, and $query).
+  Corrections made in the documentation.
 
 Fix rt.cpan.org #32937: 5.11 introduces new warning on uc(undef)
 
@@ -23,15 +25,16 @@ Fix rt.cpan.org #32937: 5.11 introduces new warning on uc(undef)
 
 Fix rt.cpan.org #32147: Default LocalAddr broken in Net::DNS::Nameserver 0.62
 
-Listen on the default address if LocalAddr not defined.
+  Listen on the default address if LocalAddr not defined.
 
-Fix rt.cpan.org #30316 Fixes in assertion routines.
 
-  Packet parsing routines are now in an eval loop that catches
-  assertion failures. Also continued work on the functions that parse
-  the packet data only when needed. That should give a bit of speed
-  improvement.
+Fix rt.cpan.org #30316  Security issue with Net::DNS Resolver.
 
+  Net/DNS/RR/A.pm in Net::DNS 0.60 build 654 allows remote attackers
+  to cause a denial of service (program "croak") via a crafted DNS
+  response (http://nvd.nist.gov/nvd.cfm?cvename=CVE-2007-6341). Packet
+  parsing routines are now enclosed in eval blocks to trap exception
+  and avoid premature termination of user program.
 
 Bug: mbox-dname and txt-dname were not allowed to be empty in the RP RR.
    Fix by Peter Koch
