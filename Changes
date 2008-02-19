@@ -3,6 +3,18 @@ $Id$                       -*-text-*-
 
 Revision history for Net::DNS               
 =============================
+*** NOT RELEASED YET
+
+
+Feature/Bug
+
+  The Notify handler introduced in 0.63 did not set the OPCODE on the
+  reply appropriately. This has been solved generically by allowing the
+  "Headermask" that is returned as 4th element by the reply or notify
+  handler in the nameserver also allows for the opcode to be set.
+  e.g. as in return ("NXDOMAIN",[],[],[],{ opcode => "NS_NOTIFY_OP" }
+  );
+
 
 *** 0.63, 8 Feb 2008
 

@@ -14,7 +14,7 @@ use Net::DNS::Nameserver;
 use Net::DNS::Resolver;
 use strict;
 use Data::Dumper;
-plan tests => 2;
+plan tests => 3;
 
 use vars qw(
 	    $address
@@ -36,6 +36,7 @@ $nameserver=Net::DNS::Nameserver->new(
 	LocalAddr        => $address,
 	LocalPort        => $TestPort,
 	ReplyHandler => \&reply_handler,
+	NotifyHandler => \&notify_handler,
 	Verbose          => 0,
 	);
 
@@ -60,11 +61,25 @@ sub reply_handler {
 
 
 
+sub notify_handler{
+    my ($qname, $qclass, $qtype, $peerhost) = @_;
+    print "NOTIFY: QNAME: $qname QTYPE: $qtype\n";
+    # mark the answer as authoritive (by setting the 'aa' flag
+
+    return ("NXDOMAIN",[],[],[],{ opcode => "NS_NOTIFY_OP" } );
+}
+
+
+
+my $notify_packet=Net::DNS::Packet->new("example.com", "SOA", "IN");
+$notify_packet->header->opcode("NS_NOTIFY_OP");
+
 #
 # For each nameserver fork-off seperate process
 #
 #
-	
+
+
 my $pid;
  FORK: {
      no strict 'subs';  # EAGAIN
@@ -74,7 +89,8 @@ my $pid;
 	 $resolver->usevc(1);
 
 	 $resolver->send("bla.foo","A");
-	 $resolver->send("bla.foo","A");
+	 my $answer=$resolver->send($notify_packet);
+	 is($answer->header->opcode,"NS_NOTIFY_OP", "OPCODE set in reply");
 	 sleep 1;
 	 $resolver->send("bla.foo","A");
 	 is($resolver->errorstring,"unknown error or no error","read_tcp failed after connection reset");

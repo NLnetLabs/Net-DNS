@@ -225,6 +225,10 @@ sub make_reply {
 		$reply->header->aa(1) if $headermask->{'aa'};
 		$reply->header->ra(1) if $headermask->{'ra'};
 		$reply->header->ad(1) if $headermask->{'ad'};
+		if (defined $Net::DNS::opcodesbyname{$headermask->{'opcode'}}){
+			print "HIERO";
+			$reply->header->opcode( $headermask->{'opcode'} );
+		}
 	}
 	
 	
