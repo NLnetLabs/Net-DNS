@@ -41,6 +41,11 @@ BEGIN {
     require DynaLoader;
     require Exporter;
     @ISA     = qw(Exporter DynaLoader);
+    # these need to live here because of dependencies further on.
+    @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
+    @EXPORT_OK= qw(name2labels wire2presentation rrsort);
+
+
 
     
     $VERSION = '0.63';
@@ -75,8 +80,6 @@ use Net::DNS::Question;
 use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
 use Carp;
 
-@EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
-@EXPORT_OK= qw(name2labels wire2presentation rrsort);
 
 
 #

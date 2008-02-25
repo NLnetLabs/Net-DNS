@@ -6,6 +6,11 @@ Revision history for Net::DNS
 *** NOT RELEASED YET
 
 
+Bug
+  @EXPORT and @EXPORT_OK moved to a begin block so that Net::DNS::SEC 
+  can make use of exported functions
+
+
 Feature/Bug
 
   The Notify handler introduced in 0.63 did not set the OPCODE on the
