@@ -6,8 +6,24 @@ Revision history for Net::DNS
 *** NOT RELEASED YET
 
 
+Feature/Bug rt.cpan.org #22019 
+
+  The initial fix for rt 22019 was to strip a trailing dot from all
+  attributes that where povided as argument for the
+  Net::DNS::RR::new_from_hash function.  We have introduced
+  Net::DNS::stripdot, a function that will strip the dots of domain
+  names, taking into account possible escapes (e.g. labels like
+  foo\\\..).  As a side effect the new_from_string method will now
+  convert possible spaces that are not trapped by some of the
+  new_from_string functions and convert them to \032 escapes.
+
+  For information: The internal storage of domain names is using
+  presentation format without trailing dots. 
+
+
+
 Bug
-  @EXPORT and @EXPORT_OK moved to a begin block so that Net::DNS::SEC 
+  @EXPORT and @EXPORT_OK moved to a BEGIN block so that Net::DNS::SEC 
   can make use of exported functions
 
 

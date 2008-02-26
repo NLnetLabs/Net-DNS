@@ -26,8 +26,7 @@ sub new_from_string {
 	my ($class, $self, $string) = @_;
 
 	if ($string) {
-		$string =~ s/\.+$//;
-		$self->{"nsdname"} = $string;
+		$self->{"nsdname"} = Net::DNS::stripdot($string);
 	}
 
 	return bless $self, $class;
@@ -50,6 +49,13 @@ sub rr_rdata {
 	return $rdata;
 }
 
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'nsdname'}=Net::DNS::stripdot($self->{'nsdname'}) if defined $self->{'nsdname'};
+}
 
 
 sub _canonicalRdata {

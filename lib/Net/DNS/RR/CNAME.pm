@@ -26,8 +26,7 @@ sub new_from_string {
 	my ($class, $self, $string) = @_;
 
 	if ($string) {
-		$string =~ s/\.+$//;
-		$self->{"cname"} = $string;
+		$self->{"cname"} = Net::DNS::stripdot($string);
 	}
 
 	return bless $self, $class;
@@ -50,7 +49,16 @@ sub rr_rdata {
 	return $rdata;
 }
 
-# rdata contains a compressed domainname... we should not have that.
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'cname'}=Net::DNS::stripdot($self->{'cname'}) if defined $self->{'cname'};
+
+
+}
+
+
 sub _canonicalRdata {	
 	my ($self) = @_;
 	return $self->_name2wire(lc($self->{"cname"}));

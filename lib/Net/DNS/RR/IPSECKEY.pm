@@ -88,8 +88,9 @@ sub new_from_string {
 			# Using the AAAA.pm parsing functionality.
 			my $AAAA=Net::DNS::RR->new("FOO AAAA ".$4);
 			$self->{"gateway"}=$AAAA->rdatastr;
-		}else	
-		{
+		}elsif ($self->{"gatetype"}==3){	
+			$self->{"gateway"}= Net::DNS::stripdot($4);
+		}else{
 			$self->{"gateway"}= $4;
 		}
 		$self->{"pubkey"}= $5;
@@ -133,8 +134,18 @@ sub rdatastr {
 	return $rdatastr;
 }
 
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'gateway'}=Net::DNS::stripdot($self->{'gateway'}) if defined $self->{'gateway'};
+}
+
+
+
 sub rr_rdata {
-	my $self = shift;
+	my $self=shift;
 	my $rdata = "";
 	if (exists $self->{"precedence"}) {
 		$rdata .= pack("C", $self->{"precedence"});
@@ -151,12 +162,7 @@ sub rr_rdata {
 		}
 		$rdata .= $self->pubbin();
 	}
-
-	return $rdata;
-
 }
-
-
 
 	
 

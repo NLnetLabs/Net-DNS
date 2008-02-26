@@ -9,11 +9,10 @@ BEGIN {
 } 
 
 
-use vars qw($VERSION $AUTOLOAD     %rrsortfunct );
+use vars qw($VERSION $AUTOLOAD %rrsortfunct );
 use Carp;
-use Net::DNS;
+use Net::DNS qw (wire2presentation name2labels stripdot);
 use Net::DNS::RR::Unknown;
-
 
 
 $VERSION = (qw$LastChangedRevision$)[1];
@@ -331,7 +330,7 @@ sub new_from_string {
 	my $rdata   = $5 || '';
 
 	$rdata =~ s/\s+$//o if $rdata;
-	$name  =~ s/\.$//o  if $name;
+	$name  = stripdot($name)  if $name;
 
 
 
@@ -452,7 +451,7 @@ sub new_from_hash {
 	my $self     = {};
 
 	while ( my ($key, $val) = each %keyval ) {
-		( $self->{lc $key} = $val ) =~ s/\.+$// if defined $val;
+	        $self->{lc $key} = $val ;
 	}
 
 	croak('RR name not specified') unless defined $self->{name};
@@ -468,8 +467,8 @@ sub new_from_hash {
 		my $subclass = $class->_get_subclass($self->{'type'});
 	   
 	    if (uc $self->{'type'} ne 'OPT') {
-			bless $self, $subclass;
-			
+		        bless $self, $subclass;
+			$self->_normalize_dnames();
 			return $self;
 	    } else {  
 			# Special processing of OPT. Since TTL and CLASS are
@@ -484,6 +483,24 @@ sub new_from_hash {
 	 	bless $self, $class;
 	 	return $self;
 	}
+}
+
+
+# When new_from_hash is used to generate the objects then it may be
+# that the names passed are not consistently FQDN or not.  Note that
+# the internal storage is without trailing dot.  this function
+# normalizes the domain names and is implemented in the records
+# themselves if more specific handling is needed
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+}
+
+
+sub _normalize_ownername {
+	my $self=shift;	
+	return $self->{'name'}=stripdot($self->{'name'});
 }
 
 
@@ -966,7 +983,6 @@ sub get_rrsort_func {
 
     return $sortsub;
 }
-
 
 
 

@@ -26,10 +26,8 @@ sub new_from_string {
 	my ($class, $self, $string) = @_;
 
 	if ($string && ($string =~ /^(\S+)\s+(\S+)$/)) {
-		$self->{"rmailbx"} = $1;
-		$self->{"emailbx"} = $2;
-		$self->{"rmailbx"} =~ s/\.+$//;
-		$self->{"emailbx"} =~ s/\.+$//;
+		$self->{"rmailbx"} = Net::DNS::stripdot($1);
+		$self->{"emailbx"} = Net::DNS::stripdot($2);
 	}
 
 	return bless $self, $class;
@@ -56,6 +54,15 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'rmailbx'}=Net::DNS::stripdot($self->{'rmailbx'}) if defined $self->{'rmailbx'};
+	$self->{'emailbx'}=Net::DNS::stripdot($self->{'emailbx'}) if defined $self->{'emailbx'};
+}
+
 
 
 sub _canonicalRdata {

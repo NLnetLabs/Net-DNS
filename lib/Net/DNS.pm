@@ -43,7 +43,7 @@ BEGIN {
     @ISA     = qw(Exporter DynaLoader);
     # these need to live here because of dependencies further on.
     @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
-    @EXPORT_OK= qw(name2labels wire2presentation rrsort);
+    @EXPORT_OK= qw(name2labels wire2presentation rrsort stripdot);
 
 
 
@@ -436,6 +436,25 @@ sub wire2presentation {
 
     return $presentation;
     
+}
+
+
+
+
+sub stripdot {
+	# Strips the final non-escaped dot from a domain name.  Note
+	# that one could have a label that looks like "foo\\\\\.\.."
+	# although not likely one wants to deal with that cracefully.
+	# This utilizes 2 functions in the DNS module to deal with
+	# thing cracefully.
+
+	my @labels=name2labels(shift);
+	my $name;
+	foreach my $label (@labels){
+		$name .= wire2presentation($label) . ".";
+	}
+	chop($name);
+	return $name;
 }
 
 

@@ -46,8 +46,8 @@ sub new_from_string {
 
 	if ($string && ($string =~ /^(\d+)\s+(\S+)$/)) {
 		$self->{"preference"} = $1;
-		$self->{"exchange"}   = $2;
-		$self->{"exchange"}   =~ s/\.+$//;;
+		$self->{"exchange"}   = Net::DNS::stripdot($2);
+
 	}
 
 	return bless $self, $class;
@@ -73,6 +73,16 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'exchange'}=Net::DNS::stripdot($self->{'exchange'}) if defined $self->{'exchange'};
+}
+
+
 
 sub _canonicalRdata {
     my ($self) = @_;

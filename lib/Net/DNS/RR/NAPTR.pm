@@ -86,8 +86,7 @@ sub new_from_string {
 		$self->{"flags"}       = $3;
 		$self->{"service"}     = $4;
 		$self->{"regexp"}      = $5;
-		$self->{"replacement"} = $6;
-		$self->{"replacement"} =~ s/\.+$//;
+		$self->{"replacement"} = Net::DNS::stripdot($6);
 	}
 
 	return bless $self, $class;
@@ -135,6 +134,15 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'replacement'}=Net::DNS::stripdot($self->{'replacement'}) if defined $self->{'replacement'};
+}
+
+
 
 1;
 __END__

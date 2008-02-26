@@ -50,10 +50,8 @@ sub new_from_string {
 
 	if ($string && ($string =~ /^(\d+)\s+(\S+)\s+(\S+)$/)) {
 		$self->{"preference"} = $1;
-		$self->{"map822"}     = $2;
-		$self->{"mapx400"}    = $3;
-		$self->{"map822"}     =~ s/\.+$//;;
-		$self->{"mapx400"}    =~ s/\.+$//;;
+		$self->{"map822"}     =Net::DNS::stripdot($2);
+		$self->{"mapx400"}    =Net::DNS::stripdot($3);
 	}
 
 	return bless $self, $class;
@@ -83,6 +81,16 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'map822'}=Net::DNS::stripdot($self->{'map822'}) if defined $self->{'map822'};
+	$self->{'mapx400'}=Net::DNS::stripdot($self->{'mapx400'}) if defined $self->{'mapx400'};
+}
+
 
 
 sub _canonicalRdata {

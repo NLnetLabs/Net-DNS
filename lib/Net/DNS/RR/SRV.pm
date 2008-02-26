@@ -91,6 +91,15 @@ sub rr_rdata {
 	return $rdata;
 }
 
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'target'}=Net::DNS::stripdot($self->{'target'}) if defined $self->{'target'};
+}
+
+
+
+
 
 1;
 __END__

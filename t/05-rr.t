@@ -19,13 +19,13 @@ BEGIN {
 	    )
 	{
 	    $HAS_NSEC3PARAM=1;
-	    plan tests => 301;  # Hook
+	    plan tests => 413;  # Hook
 	}else{
-	    plan tests => 301;
+	    plan tests => 413;
 	}
     }else{
 	$HAS_DNSSEC=0;
-	plan tests => 270;
+	plan tests => 382;
     }
 };
 
@@ -105,11 +105,11 @@ my @rrs = (
 	}, 
 	{	#[3]
 		type         => 'CNAME',
-		cname        => 'cname-cname.example.com',
+		cname        => 'cname-cname.example.com.',
 	}, 
 	{   #[4]
 		type         => 'DNAME',
-		dname        => 'dname.example.com',
+		dname        => 'dname.example.com.',
 	},
 	{	#[5]
 		type         => 'HINFO',
@@ -123,25 +123,25 @@ my @rrs = (
 	}, 
 	{	#[7]
 		type         => 'MB',
-		madname      => 'mb-madname.example.com',
+		madname      => 'mb-madname.example.com.',
 	}, 
 	{	#[8]
 		type         => 'MG',
-		mgmname      => 'mg-mgmname.example.com',
+		mgmname      => 'mg-mgmname.example.com.',
 	}, 
 	{	#[9]
 		type         => 'MINFO',
-		rmailbx      => 'minfo-rmailbx.example.com',
-		emailbx      => 'minfo-emailbx.example.com',
+		rmailbx      => 'minfo-rmailbx.example.com.',
+		emailbx      => 'minfo-emailbx.example.com.',
 	}, 
 	{	#[10]
 		type         => 'MR',
-		newname      => 'mr-newname.example.com',
+		newname      => 'mr-newname.example.com.',
 	}, 
 	{	#[11]
 		type         => 'MX',
 		preference   => 10,
-		exchange     => 'mx-exchange.example.com',
+		exchange     => 'mx-exchange.example.com.',
 	},
 	{	#[12]
 		type         => 'NAPTR',
@@ -150,11 +150,11 @@ my @rrs = (
 		flags        => 'naptr-flags',
 		service      => 'naptr-service',
 		regexp       => 'naptr-regexp',
-		replacement  => 'naptr-rEplacement.example.com',
+		replacement  => 'naptr-rEplacement.example.com.',
 	},
 	{	#[13]
 		type         => 'NS',
-		nsdname      => 'ns-nsdname.example.com',
+		nsdname      => 'ns-nsdname.example.com.',
 	},
 	{	#[14]
 		type         => 'NSAP',
@@ -169,28 +169,28 @@ my @rrs = (
 	},
 	{	#[15]
 		type         => 'PTR',
-		ptrdname     => 'ptr-ptrdname.example.com',
+		ptrdname     => 'ptr-ptrdname.example.com.',
 	},
 	{	#[16] 
 		type         => 'PX',
 		preference   => 10,
-		map822       => 'px-map822.example.com',
-		mapx400      => 'px-mapx400.example.com',
+		map822       => 'px-map822.example.com.',
+		mapx400      => 'px-mapx400.example.com.',
 	},
 	{	#[17]
 		type         => 'RP',
-		mbox		 => 'rp-mbox.example.com',
-		txtdname     => 'rp-txtdname.example.com',
+		mbox		 => 'rp-mbox.example.com.',
+		txtdname     => 'rp-txtdname.example.com.',
 	},
 	{	#[18]
 		type         => 'RT',
 		preference   => 10,
-		intermediate => 'rt-intermediate.example.com',
+		intermediate => 'rt-intermediate.example.com.',
 	},
 	{	#[19]
 		type         => 'SOA',
-		mname        => 'soa-mname.example.com',
-		rname        => 'soa-rname.example.com',
+		mname        => 'soa-mname.example.com.',
+		rname        => 'soa-rname.example.com.',
 		serial       => 12345,
 		refresh      => 7200,
 		retry        => 3600,
@@ -202,7 +202,7 @@ my @rrs = (
 		priority     => 1,
 		weight       => 2,
 		port         => 3,
-		target       => 'srv-target.example.com',
+		target       => 'srv-target.example.com.',
 	},
 	{	#[21]
 		type         => 'TXT',
@@ -276,7 +276,7 @@ my @rrs = (
 		precedence     => 10,
 		algorithm      => 2,
 		gatetype       => 3,
-		gateway        => 'gateway.example.com',
+		gateway        => 'gateway.example.com.',
 		pubkey         => "AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ==",
 	},
 
@@ -301,6 +301,14 @@ foreach my $data (@rrs) {
 	   name => $name,
 	   ttl  => $ttl,
 	   %{$data});
+
+    # Test if new-from-hash strips dots appropriatly for all subtypes
+    foreach my $meth (keys %{$data}) {
+	my $i=$data->{$meth};
+	$i =~ s/\.$//;
+	is($RR->$meth(),$i , $data->{"type"}." - $meth() correct for hash based creation");
+    }
+	
 
 
        if ($HAS_DNSSEC){
@@ -350,7 +358,10 @@ while (@answer and @rrs) {
 	is($rr->ttl,     $ttl,        	"$type - ttl() correct");              
  
 	foreach my $meth (keys %{$data}) {
-		is($rr->$meth(), $data->{$meth}, "$type - $meth() correct");
+	    my $i=$data->{$meth};
+	    $i =~ s/\.$//;
+	    next if ( $type eq "IPSECKEY" && $meth eq "gateway"  && $rr->{"gatetype"} != 3 ) ;
+	    is($rr->$meth(), $i , "$type - $meth() correct");
 	}
 	
 	my $rr2 = Net::DNS::RR->new($rr->string);

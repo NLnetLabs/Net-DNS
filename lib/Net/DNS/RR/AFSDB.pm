@@ -32,8 +32,8 @@ sub new_from_string {
 
 	if ($string && ($string =~ /^(\d+)\s+(\S+)$/)) {
 		$self->{"subtype"}  = $1;
-		$self->{"hostname"} = $2;
-		$self->{"hostname"} =~ s/\.+$//;;
+		$self->{"hostname"} = Net::DNS::stripdot($2);
+
 	}
 
 	return bless $self, $class;
@@ -59,6 +59,18 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+
+	foreach my $attribute ( qw ( hostname ) ){
+		$self->{$attribute}=Net::DNS::stripdot($self->{$attribute}) if defined $self->{$attribute};
+	}
+
+}
+
 
 
 

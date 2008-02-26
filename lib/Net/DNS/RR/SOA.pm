@@ -35,8 +35,8 @@ sub new_from_string {
 
 		@{$self}{qw(mname rname serial refresh retry expire minimum)} = $string =~ /(\S+)/g;
 
-		$self->{'mname'} =~ s/\.+$//;
-		$self->{'rname'} =~ s/\.+$//;
+		$self->{'mname'} = Net::DNS::stripdot($self->{'mname'});
+		$self->{'rname'} = Net::DNS::stripdot($self->{'rname'});
 	}
 
 	return bless $self, $class;
@@ -77,6 +77,13 @@ sub rr_rdata {
 	return $rdata;
 }
 
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'mname'}=Net::DNS::stripdot($self->{'mname'}) if defined $self->{'mname'};
+	$self->{'rname'}=Net::DNS::stripdot($self->{'rname'}) if defined $self->{'rname'};
+}
 
 
 sub _canonicalRdata {

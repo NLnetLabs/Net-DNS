@@ -25,8 +25,7 @@ sub new_from_string {
 	my ($class, $self, $string) = @_;
 
 	if ($string) {
-		$string =~ s/\.+$//;
-		$self->{"ptrdname"} = $string;
+		$self->{"ptrdname"} = Net::DNS::stripdot($string);
 	}
 
 	return bless $self, $class;
@@ -48,6 +47,15 @@ sub rr_rdata {
 
 	return $rdata;
 }
+
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'ptrdname'}=Net::DNS::stripdot($self->{'ptrdname'}) if defined $self->{'ptrdname'};
+}
+
 
 sub  _canonicalRdata {
 	my ($self, $packet, $offset) = @_;

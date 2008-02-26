@@ -26,10 +26,8 @@ sub new_from_string {
 	my ($class, $self, $string) = @_;
 
 	if ($string && ($string =~ /^(\S+)\s+(\S+)$/)) {
-		$self->{"mbox"}     = $1;
-		$self->{"txtdname"} = $2;
-		$self->{"mbox"}     =~ s/\.+$//;
-		$self->{"txtdname"} =~ s/\.+$//;
+		$self->{"mbox"}     = Net::DNS::stripdot($1);
+		$self->{"txtdname"} = Net::DNS::stripdot($2);
 	}
 
 	return bless $self, $class;
@@ -55,6 +53,15 @@ sub rr_rdata {
 	}
 
 	return $rdata;
+}
+
+
+
+sub _normalize_dnames {
+	my $self=shift;
+	$self->_normalize_ownername();
+	$self->{'mbox'}=Net::DNS::stripdot($self->{'mbox'}) if defined $self->{'mbox'};
+	$self->{'txtdname'}=Net::DNS::stripdot($self->{'txtdname'}) if defined $self->{'txtdname'};
 }
 
 
