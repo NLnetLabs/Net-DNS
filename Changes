@@ -5,6 +5,11 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Feature
+
+  Added the name of the incoming socket ($socket->sockethost) as an argument
+  into the ReplyHandler
+
 Bug t/08-online.t
 
   In particular environments a query for a.t. will resolve. A bunch of

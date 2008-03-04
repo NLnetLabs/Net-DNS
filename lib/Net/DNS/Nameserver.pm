@@ -150,7 +150,7 @@ sub inet_new {
 #------------------------------------------------------------------------------
 
 sub make_reply {
-	my ($self, $query, $peerhost) = @_;
+	my ($self, $query, $peerhost,$sockhost) = @_;
 	
 	my $reply = Net::DNS::Packet->new();	# create empty reply packet
 	$reply->header->qr(1);
@@ -191,11 +191,11 @@ sub make_reply {
 			
 			if  ($query->header->opcode eq "QUERY"){
 			  ($rcode, $ans, $auth, $add, $headermask) =
-			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
+			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $sockhost);
 			}else{
 			  $reply->header->rcode("SERVFAIL") unless 
 			     ( ref $self->{"NotifyHandler"} eq "CODE");
-			  ($rcode, $ans, $auth, $add, $headermask) =
+		  ($rcode, $ans, $auth, $add, $headermask) =
 			      &{$self->{"NotifyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
 			}
 			print "$rcode\n" if $self->{"Verbose"};
@@ -314,7 +314,7 @@ sub tcp_connection {
 			my $qbuf = substr($self->{"_tcp"}{$sock}{"inbuffer"}, 0, $self->{"_tcp"}{$sock}{"querylength"});
 			substr($self->{"_tcp"}{$sock}{"inbuffer"}, 0, $self->{"_tcp"}{$sock}{"querylength"}) = "";
 		  	my $query = Net::DNS::Packet->new(\$qbuf);
-		  	my $reply = $self->make_reply($query, $sock->peerhost);
+		  	my $reply = $self->make_reply($query, $sock->peerhost, $sock->sockhost);
 		  	if (not defined $reply) {
 		    		print "I couldn't create a reply for $peer. Closing socket.\n"
 		    			if $self->{"Verbose"};
@@ -346,13 +346,13 @@ sub udp_connection {
 	my $buf = "";
 
  	$sock->recv($buf, &Net::DNS::PACKETSZ);
- 	my ($peerhost,$peerport) = ($sock->peerhost, $sock->peerport);
- 
- 	print "UDP connection from $peerhost:$peerport\n" if $self->{"Verbose"};
+ 	my ($peerhost,$peerport,$sockhost) = ($sock->peerhost, $sock->peerport, $sock->sockhost);
+	
+ 	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{"Verbose"};
 
 	my $query = Net::DNS::Packet->new(\$buf);
 
-	my $reply = $self->make_reply($query, $peerhost) || return;
+	my $reply = $self->make_reply($query, $peerhost, $sockhost) || return;
 	my $reply_data = $reply->data;
 
 	local $| = 1 if $self->{"Verbose"};
@@ -538,10 +538,10 @@ IPv6 and IPv4);
 
 
 The ReplyHandler subroutine is passed the query name, query class,
-query type and optionally an argument containing the peerhost the
-incoming query. It must return the response code and references to the
-answer, authority, and additional sections of the response.  Common
-response codes are:
+query type and optionally an argument containing the peerhost, the
+incoming query, and the name of the incomming socket (sockethost). It
+must return the response code and references to the answer, authority,
+and additional sections of the response.  Common response codes are:
 
   NOERROR	No error
   FORMERR	Format error
@@ -637,10 +637,10 @@ additional filtering on its basis may be applied.
  use warnings;
  
  sub reply_handler {
-	 my ($qname, $qclass, $qtype, $peerhost,$query) = @_;
+	 my ($qname, $qclass, $qtype, $peerhost,$query,$sockethost) = @_;
 	 my ($rcode, @ans, @auth, @add);
 
-	 print "Received query from $peerhost\n";
+	 print "Received query from $peerhost to $sockethost\n";
 	 $query->print;
 
 	 
