@@ -5,6 +5,12 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Bug t/08-online.t
+
+  In particular environments a query for a.t. will resolve. A bunch of
+  test is skipped when this (broken) environment is detected.
+  
+
 
 Feature/Bug rt.cpan.org #22019 
 
