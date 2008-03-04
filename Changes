@@ -10,10 +10,12 @@ Feature
   Added the name of the incoming socket ($socket->sockethost) as an argument
   into the ReplyHandler
 
-Bug t/08-online.t
+Feature t/08-online.t and t/10-recurse.t
 
-  In particular environments a query for a.t. will resolve. A bunch of
-  test is skipped when this (broken) environment is detected.
+  In particular environments a query for a.t. will resolve and or
+  middleboxes will replace DNS packet content for queries to the root.
+  A bunch of test is skipped when this (broken) environment is
+  detected.
   
 
 

@@ -73,14 +73,7 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 # test the callback
 
 
-
-{
-	my $res = Net::DNS::Resolver::Recurse->new ;
-	my $count;
-	$res->debug(1);
-	# Hard code root hints, there are some environments that will fail
-	# the test otherwise
-	$res->hints( qw(
+my @HINTS= qw(
 			
 			192.33.4.12
 			128.8.10.90
@@ -96,18 +89,37 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 			198.41.0.4
 			192.228.79.201
 
-			));
- 
+			);
 
+my $res2 = Net::DNS::Resolver::Recurse->new ;
+$res2->nameservers( @HINTS );
+my $ans_at=$res2->send("a.t.", "A");
+if ($ans_at->header->ancount == 1 ){
+    diag "We are going to skip a bunch of checks.";
+    diag "There seems to be a middle box in the path that modifies your packets";
+}
+SKIP: {
+    skip "Modifying middlebox detected ",4 if ($ans_at->header->ancount == 1 );
+    
+    {
+	my $res = Net::DNS::Resolver::Recurse->new ;
+	my $count;
+	$res->debug(1);
+	# Hard code root hints, there are some environments that will fail
+	# the test otherwise
+	$res->hints( @HINTS );
+	
+	
 	$res->recursion_callback(sub {
-		my $packet = shift;
-		
-		isa_ok($packet, 'Net::DNS::Packet');
-		
-		$count++;
-	});
-
+	    my $packet = shift;
+	    
+	    isa_ok($packet, 'Net::DNS::Packet');
+	    
+	    $count++;
+				 });
+	
 	$res->query_dorecursion('a.t.net-dns.org', 'A');
 	
 	is($count, 3);
-}
+    }
+} 

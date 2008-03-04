@@ -123,11 +123,12 @@ $res = Net::DNS::Resolver->new(
     );
 
 my $ans_at=$res->send("a.t.", "A");
-
-diag "We are going to skip a bunch of checks.";
-diag "For unexplained reasons a query for 'a.t' resolves as ";
-diag "".($ans_at->answer)[0]->string ;
-diag "For users of 'dig' try 'dig a.t.' to test this hypothesis";
+if ($ans_at->header->ancount == 1 ){
+    diag "We are going to skip a bunch of checks.";
+    diag "For unexplained reasons a query for 'a.t' resolves as ";
+    diag "".($ans_at->answer)[0]->string ;
+    diag "For users of 'dig' try 'dig a.t.' to test this hypothesis";
+}
       SKIP: {
     skip "Query for a.t. resolves unexpectedly",35 if ($ans_at->header->ancount == 1 );
     
