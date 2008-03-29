@@ -138,7 +138,7 @@ sub _dorecursion {
   if ( $depth > 255 ) {
       print ";; _dorecursion() Recursion too deep, aborting...\n" if
 	  $self->{'debug'};
-      $self->errorstring="Recursion to deep, abborted";
+      $self->errorstring("Recursion too deep, abborted");
       return undef;
   }
   

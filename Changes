@@ -5,6 +5,10 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Bug rt.cpan.org #34510
+  Buggy setting of "Recursion too deep, aborted" corrected.
+  
+
 Feature
 
   Added the name of the incoming socket ($socket->sockethost) as an argument
