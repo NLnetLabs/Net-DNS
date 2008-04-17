@@ -10,7 +10,7 @@ BEGIN {
 	    # Some people try to run these on private address space."
 	    use IO::Socket::INET;
 	    my $sock = IO::Socket::INET->new(PeerAddr => '193.0.14.129', # k.root-servers.net.
-					  PeerPort => '25',
+					  PeerPort => '53',
 					  Proto    => 'udp');
 	    
 	    
@@ -48,7 +48,7 @@ BEGIN { use_ok('Net::DNS::Resolver::Recurse'); }
 
 	isa_ok($res, 'Net::DNS::Resolver::Recurse');
 
-	$res->debug(0);	
+	$res->debug(1);	
 	$res->udp_timeout(20);
 	
 	# Hard code A and K.ROOT-SERVERS.NET hint 
