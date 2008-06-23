@@ -5,10 +5,16 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+
+Fix rt.cpan.org # 35752
+
+  Perl 5.10.0 gave a number of issues on several platforms, prefering
+  XSLoader over Dynaloader seemed to fix those.
+ 
+
 Bug rt.cpan.org #34510
   Buggy setting of "Recursion too deep, aborted" corrected.
   
-
 Feature
 
   Added the name of the incoming socket ($socket->sockethost) as an argument

@@ -38,9 +38,9 @@ use vars qw(
 
 
 BEGIN {
-    require DynaLoader;
+
     require Exporter;
-    @ISA     = qw(Exporter DynaLoader);
+    @ISA     = qw(Exporter );
     # these need to live here because of dependencies further on.
     @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
     @EXPORT_OK= qw(name2labels wire2presentation rrsort stripdot);
@@ -51,9 +51,25 @@ BEGIN {
     $VERSION = '0.63';
     $SVNVERSION = (qw$LastChangedRevision$)[1];
 
+
+
+
     $HAVE_XS = eval { 
 	local $SIG{'__DIE__'} = 'DEFAULT';
-	__PACKAGE__->bootstrap(); 1 
+
+
+	eval {
+		require XSLoader;
+		XSLoader::load('Net::DNS', $VERSION);
+		1;
+	} or do {
+
+		require DynaLoader;
+		push @ISA, 'DynaLoader';
+		bootstrap Net::DNS $VERSION;
+		1;
+	};
+
 	} ? 1 : 0;
 
 }
