@@ -8,12 +8,23 @@ use Net::DNS;
 use vars qw( $HAS_DNSSEC $HAS_DLV $HAS_NSEC3 $HAS_NSEC3PARAM);
 
 
-plan tests => 2;
+plan tests => 3;
 
 
 is ( Net::DNS::stripdot ('foo\\\\\..'),'foo\\\\\.', "Stripdot does its magic in precense of escapes test 1");
 is ( Net::DNS::stripdot ('foo\\\\\.'),'foo\\\\\.', "Stripdot does its magic in precense of escapes test 2");
 
+
+
+# rt.cpan.org 41071
+my $pkt1 = Net::DNS::Packet->new('e3.example.com','AAAA','IN');
+$pkt1->push( answer => Net::DNS::RR->new(
+name => 'e3.example.com',
+type => 'AAAA',
+address => 'CAFE:BABE::1'
+));
+my $pkt2 = Net::DNS::Packet->new( \$pkt1->data );
+is(($pkt1->answer)[0]->string,($pkt2->answer)[0]->string,"New from string and new from hash creation ");
 
 
 

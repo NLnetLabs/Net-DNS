@@ -5,6 +5,13 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Fix rt.cpan.org # 41076 and # 41071
+
+  Net::DNS::RR->new_from_hash function would not normalize the content
+  of the data so that a method getting a string representation would
+  get inconsistent results depending on whether a RR was created from
+  a string of from a hash. 
+
 Fix rt.cpan.org # 41296
 
   Compression buggy for large packets. Fix by Kim Minh.

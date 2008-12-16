@@ -465,11 +465,12 @@ sub new_from_hash {
 
 	if ($RR{$self->{'type'}}) {
 		my $subclass = $class->_get_subclass($self->{'type'});
-	   
+		
 	    if (uc $self->{'type'} ne 'OPT') {
 		        bless $self, $subclass;
 			$self->_normalize_dnames();
-			return $self;
+			return _normalize_rdata($self);
+
 	    } else {  
 			# Special processing of OPT. Since TTL and CLASS are
 			# set by other variables. See Net::DNS::RR::OPT 
@@ -485,6 +486,34 @@ sub new_from_hash {
 	}
 }
 
+
+
+# Normalizes the content of the rdata so that comparing can be done between
+# RRs created via various methods.
+
+# Based on first creating packet format and then parsing it.
+
+sub _normalize_rdata {
+	my $self     = shift;
+
+	# There are a bunch of META RR types we do not want to mess with
+	return $self if ( ( uc $self ->{'type'} eq "TSIG" )||
+			  ( uc $self ->{'type'} eq "TKEY" )
+			);
+
+
+	my $pkt = {	header		=> Net::DNS::Header->new,
+			question	=> [],
+			answer		=> [],
+			authority	=> [],
+			additional	=> []	};
+	
+	bless $pkt, "Net::DNS::Packet";
+	$pkt->push( answer => $self );
+	my $pkt2 = Net::DNS::Packet->new( \$pkt->data );
+	undef ($self);
+	return ($pkt2->answer)[0];
+}
 
 # When new_from_hash is used to generate the objects then it may be
 # that the names passed are not consistently FQDN or not.  Note that
@@ -571,8 +600,7 @@ sub print {	print &string, "\n"; }
 
     print $rr->string, "\n";
 
-Returns a string representation of the RR.  Calls the
-B<rdatastr> method to get the RR-specific data.
+Returns a string representation of the RR.  Calls the B<rdatastr> method to get the RR-specific data. Domain names are returned in RFC1035 format, i.e. all non letter, digit, hyphen characters are represented as \DDD.
 
 =cut
 
