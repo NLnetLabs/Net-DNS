@@ -5,6 +5,10 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Fix rt.cpan.org # 41296
+
+  Compression buggy for large packets. Fix by Kim Minh.
+
 
 Fix rt.cpan.org # 35752
 

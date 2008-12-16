@@ -542,7 +542,7 @@ sub dn_comp {
 			$compname .= pack('n', 0xc000 | $pointer);
 			last;
 		}
-		$namehash->{$dname} = $offset;
+		$namehash->{$dname} = $offset if ($offset < 0x4000);
 
 		my $label  = shift @names;
 		my $length = length $label || next;	# skip if null

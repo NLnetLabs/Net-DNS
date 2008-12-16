@@ -89,6 +89,13 @@ foreach my $section ( qw(answer authority additional) ) {
 	is($count2,	2,	"push() returns $section RR count");
 }
 
+# Add enough distinct labels to render compression unusable at some point
+for (0..255) {
+    $update->push('answer',
+		  Net::DNS::RR->new("X$_ TXT \"" . pack("A255", "x").'"'));
+}
+$update->push('answer', Net::DNS::RR->new('XY TXT ""'));
+$update->push('answer', Net::DNS::RR->new('VW.XY TXT ""'));
 
 #	Parse data and compare with original
 my $buffer = $update->data;
