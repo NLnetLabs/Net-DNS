@@ -305,7 +305,7 @@ foreach my $data (@rrs) {
     # Test if new-from-hash strips dots appropriatly for all subtypes
     foreach my $meth (keys %{$data}) {
 	my $i=$data->{$meth};
-	$i =~ s/\.$//;
+	$i =~ s/\.$// unless $i eq ".";
 	is($RR->$meth(),$i , $data->{"type"}." - $meth() correct for hash based creation");
     }
 	
