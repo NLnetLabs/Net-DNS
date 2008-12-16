@@ -175,50 +175,46 @@ if ($ans_at->header->ancount == 1 ){
 	     }
 
 	 }
-
-
+    
+    
 #	$res->debug(1);
-	     my $socket=$res->bgsend('a.t.net-dns.org','A');
-	     ok(ref($socket)=~/^IO::Socket::INET(6?)$/,"Socket returned");
-	     diag("Error condition: ".$res->errorstring ."Socket ref:".ref($socket)) unless ref($socket)=~/^IO::Socket::INET(6?)$/;
-	     
-	     
-	     my $loop=0;
-	     # burn a little CPU to get the socket ready.
-	     # I could off course used microsleep or something.
-	     while ($loop<200000){
+    my $socket=$res->bgsend('a.t.net-dns.org','A');
+    ok(ref($socket)=~/^IO::Socket::INET(6?)$/,"Socket returned");
+    diag("Error condition: ".$res->errorstring ."Socket ref:".ref($socket)) unless ref($socket)=~/^IO::Socket::INET(6?)$/;
+    my $loop=0;
+    # burn a little CPU to get the socket ready.
+    # I could off course used microsleep or something.
+    while ($loop<200000){
 		 $loop++;
 	     }
-	     $loop=0;
-	     while ($loop<6){
-		 last if $res->bgisready($socket);
-		 sleep(1); # If burning CPU above was not sufficient.
-		 $loop++;
-
-	   
-	     $res->debug(0);
-	     
-	     ok ($res->bgisready($socket),"Socket is ready");
-	   SKIP: {
-	       skip "No socket to read from",5 unless $res->bgisready($socket);
-	       
-	       my $ans= $res->bgread($socket);
-	       ok(defined($ans->answerfrom),"Answerfrom defined" .
-		  (defined($ans->answerfrom)? "(".$ans->answerfrom .")":"")
-		   );
-	       ok(defined($ans->answersize),"Answersize defined".
-		  (defined($ans->answersize)? "(".$ans->answersize .")":"")
-		   );
-	       
-	       undef $socket;
-	       is($ans->header->ancount, 1,"Correct answer count");	
-	       my ($a) = $ans->answer;
-	       
-	       isa_ok($a, 'Net::DNS::RR::A');
-	       is(lc($a->name), 'a.t.net-dns.org',"Correct name");
-		 }
-	     }
-     
+    $loop=0;
+    while ($loop<6){
+	last if $res->bgisready($socket);
+	sleep(1); # If burning CPU above was not sufficient.
+	$loop++;
+    }
+    
+    
+    ok ($res->bgisready($socket),"Socket is ready");
+  SKIP: {
+      skip "No socket to read from",5 unless $res->bgisready($socket);
+      $res->debug(0);
+      my $ans= $res->bgread($socket);
+      ok(defined($ans->answerfrom),"Answerfrom defined" .
+	 (defined($ans->answerfrom)? "(".$ans->answerfrom .")":"")
+	  );
+      ok(defined($ans->answersize),"Answersize defined".
+	 (defined($ans->answersize)? "(".$ans->answersize .")":"")
+	  );
+      
+      undef $socket;
+      is($ans->header->ancount, 1,"Correct answer count");	
+      my ($a) = $ans->answer;
+      
+      isa_ok($a, 'Net::DNS::RR::A');
+      is(lc($a->name), 'a.t.net-dns.org',"Correct name");
+    }
+    
 #
 # test the search() and query() append the default domain and 
 # searchlist correctly.
