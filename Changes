@@ -49,10 +49,13 @@ Fix rt.cpan.org # 35752
 Bug rt.cpan.org #34510
   Buggy setting of "Recursion too deep, aborted" corrected.
   
-Feature
+Feature (rt.cpan.org #39284)
 
-  Added the name of the incoming socket ($socket->sockethost) as an argument
-  into the ReplyHandler
+  The ReplyHandler now also receives a variable with an annonymous has with the connection details. Variables
+  supplied to the Reply handler are:  $qname, $qclass, $qtype, $peerhost, $query, $conn	
+  The hash referenced by $conn contains the following buckets: sockhost, sockport,  peerhost, and peerport.
+  
+
 
 Feature t/08-online.t and t/10-recurse.t
 

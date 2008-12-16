@@ -50,7 +50,6 @@ BEGIN {
 
 sub new {
 	my ($class, %self) = @_;
-
 	unless ( ref $self{ReplyHandler} ) {
 		cluck "No reply handler!";
 		return;
@@ -150,7 +149,7 @@ sub inet_new {
 #------------------------------------------------------------------------------
 
 sub make_reply {
-	my ($self, $query, $peerhost,$sockhost) = @_;
+	my ($self, $query, $peerhost,$conn) = @_;
 	
 	my $reply = Net::DNS::Packet->new();	# create empty reply packet
 	$reply->header->qr(1);
@@ -191,12 +190,12 @@ sub make_reply {
 			
 			if  ($query->header->opcode eq "QUERY"){
 			  ($rcode, $ans, $auth, $add, $headermask) =
-			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $sockhost);
+			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $conn);
 			}else{
 			  $reply->header->rcode("SERVFAIL") unless 
 			     ( ref $self->{"NotifyHandler"} eq "CODE");
 		  ($rcode, $ans, $auth, $add, $headermask) =
-			      &{$self->{"NotifyHandler"}}($qname, $qclass, $qtype, $peerhost, $query);
+			      &{$self->{"NotifyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $conn);
 			}
 			print "$rcode\n" if $self->{"Verbose"};
 			
@@ -226,7 +225,6 @@ sub make_reply {
 		$reply->header->ra(1) if $headermask->{'ra'};
 		$reply->header->ad(1) if $headermask->{'ad'};
 		if (defined $Net::DNS::opcodesbyname{$headermask->{'opcode'}}){
-			print "HIERO";
 			$reply->header->opcode( $headermask->{'opcode'} );
 		}
 	}
@@ -314,7 +312,13 @@ sub tcp_connection {
 			my $qbuf = substr($self->{"_tcp"}{$sock}{"inbuffer"}, 0, $self->{"_tcp"}{$sock}{"querylength"});
 			substr($self->{"_tcp"}{$sock}{"inbuffer"}, 0, $self->{"_tcp"}{$sock}{"querylength"}) = "";
 		  	my $query = Net::DNS::Packet->new(\$qbuf);
-		  	my $reply = $self->make_reply($query, $sock->peerhost, $sock->sockhost);
+			my $conn = {
+				    sockhost => $sock->sockhost(),
+				    sockport => $sock->sockport(),
+				    peerhost => $sock->peerhost(),
+				    peerport => $sock->peerport()
+				   };
+		  	my $reply = $self->make_reply($query, $sock->peerhost, $conn);
 		  	if (not defined $reply) {
 		    		print "I couldn't create a reply for $peer. Closing socket.\n"
 		    			if $self->{"Verbose"};
@@ -351,8 +355,13 @@ sub udp_connection {
  	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{"Verbose"};
 
 	my $query = Net::DNS::Packet->new(\$buf);
-
-	my $reply = $self->make_reply($query, $peerhost, $sockhost) || return;
+	my $conn = {
+		    sockhost => $sock->sockhost,
+		    sockport => $sock->sockport,
+		    peerhost => $sock->peerhost,
+		    peerport => $sock->peerport
+		   };
+	my $reply = $self->make_reply($query, $peerhost, $conn) || return;
 	my $reply_data = $reply->data;
 
 	local $| = 1 if $self->{"Verbose"};
@@ -637,10 +646,10 @@ additional filtering on its basis may be applied.
  use warnings;
  
  sub reply_handler {
-	 my ($qname, $qclass, $qtype, $peerhost,$query,$sockethost) = @_;
+	 my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
 	 my ($rcode, @ans, @auth, @add);
 
-	 print "Received query from $peerhost to $sockethost\n";
+	 print "Received query from $peerhost to ". $conn->{"sockhost"}. "\n";
 	 $query->print;
 
 	 

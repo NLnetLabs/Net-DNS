@@ -4,7 +4,6 @@
 
 
 # You should have a couple of IP addresses at your disposal
-#  sudo ifconfig lo0 inet 127.53.53.12 netmask 255.255.255.255 alias
 
 # This code is not supposed to be included into the distribution.
 
@@ -46,14 +45,18 @@ my $resolver=Net::DNS::Resolver->new(
     nameservers => [ $address ],
     port       => $TestPort,
     persistent_tcp => 1,
-    debug    => 1,
+    debug    => 0,
     tcp_timeout => 2,
     );
 
 
 
 sub reply_handler {
-    my ($qname, $qclass, $qtype, $peerhost) = @_;
+    my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
+    die "Sockhost failure" if ($conn->{"sockhost"} ne "127.0.0.1");
+    die "Sockport failure" if ($conn->{"sockport"} ne $TestPort);
+    use Data::Dumper;
+    print Dumper $conn;
 #    print "QNAME: $qname QTYPE: $qtype\n";
     # mark the answer as authoritive (by setting the 'aa' flag
     return ("NXDOMAIN");
@@ -62,8 +65,8 @@ sub reply_handler {
 
 
 sub notify_handler{
-    my ($qname, $qclass, $qtype, $peerhost) = @_;
-    print "NOTIFY: QNAME: $qname QTYPE: $qtype\n";
+    my ($qname, $qclass, $qtype, $peerhost, $query,$conn) = @_;
+    #print "NOTIFY: QNAME: $qname QTYPE: $qtype\n";
     # mark the answer as authoritive (by setting the 'aa' flag
 
     return ("NXDOMAIN",[],[],[],{ opcode => "NS_NOTIFY_OP" } );
