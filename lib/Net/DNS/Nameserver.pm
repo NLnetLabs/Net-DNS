@@ -434,7 +434,7 @@ sub loop_once {
 	  # If we have buffered output, then send as much as the OS will accept
 	  # and wait with the rest
 	  my $len = length $self->{"_tcp"}{$s}{"outbuffer"};
-	  my $charssent = $sock->syswrite($self->{"_tcp"}{$s}{"outbuffer"});
+	  my $charssent = $sock->syswrite($self->{"_tcp"}{$s}{"outbuffer"}) || 0;
 	  print "Sent $charssent of $len octets to ",$self->{"_tcp"}{$s}{"peer"},".\n"
 	      if $self->{"Verbose"};
 	  substr($self->{"_tcp"}{$s}{"outbuffer"}, 0, $charssent) = "";

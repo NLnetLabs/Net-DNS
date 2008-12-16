@@ -5,6 +5,9 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Fix rt.cpan.org #37282
+    Improved error reporting during client disconnect from the nameserver
+
 NOTE rt.cpan.org # 40249
 
    Release 0.62 introduced a feature to parse data inside a packet only 
