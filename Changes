@@ -5,6 +5,29 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+NOTE rt.cpan.org # 40249
+
+   Release 0.62 introduced a feature to parse data inside a packet only 
+   when needed. This can the following to happen:
+
+   Eception: corrupt or incomplete data at
+                     /usr/lib/perl5/Net/DNS/RR.pm line 510.  
+   caught at -e line 1
+
+   This may happen when you have undefined your packet data before all the
+   sections have been fully parsed. Such as in:
+
+   $packet = Net::DNS::Packet->new(\$data);
+   undef($data);
+
+   The workaround is to force parcing by calling the methods that 
+   parse the data. e.g.
+
+   $packet = Net::DNS::Packet->new(\$data);
+   $packet->answer; $packet->additional; $packet->authority;
+   undef ($data) 
+
+
 Fix rt.cpan.org # 41076 and # 41071
 
   Net::DNS::RR->new_from_hash function would not normalize the content
@@ -123,6 +146,8 @@ Features: Move of some functionality out of the Packet to the Question
    performance improvement.
 
    Dick Franks is acknowledged for this Good Work (TM).
+
+   Added 20081216 see NOTE above under  rt.cpan.org # 40249
 
 Feature: the Net::DNS::Packet's answersize() method will from now on
     ignore its arguments and just return the size of the packet.
