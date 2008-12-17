@@ -1045,6 +1045,11 @@ sub bgisready {
 	return @ready > 0;
 }
 
+
+
+#
+# Keep this method around. Folk depend on it although its not documented and exported.
+#
 sub make_query_packet {
 	my $self = shift;
 	my $packet;

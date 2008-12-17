@@ -32,7 +32,7 @@ use vars qw(
 
 
 BEGIN {
-    $lameloop=0;
+    $lameloop=2;
     $tcptimeout=6;
     $TestPort  = 53452;
     @Addresses = qw (
@@ -82,7 +82,7 @@ BEGIN {
 	  plan skip_all => "old Net::DNS::TestNS ($Net::DNS::TestNS::VERSION)";
 	  exit;
 	}
-	plan tests => $lameloop+6;
+	plan tests => $lameloop+10;
     }else{
 
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
@@ -174,9 +174,18 @@ my $ans=$resolver->query("bla.foo", 'TXT');
 is( $resolver->errorstring,"NOERROR","TCP request returned without Errors");
 is(($ans->answer)[0]->type,"TXT","TXT type returned");
 
+my $res = Net::DNS::Resolver->new(config_file => 't/resolv.conf-testns',
+			  debug => 1,
+				  port        => $TestPort,
+    );
 
+undef($ans);
+$ans=$res->query("resolve.test","A");
 
-
+is( $res->errorstring,"NOERROR","REFUSED TEST: request returned without Errors");
+is(($ans->answer)[0]->type,"A","REFUSED TEST: type returned");
+is(($ans->answer)[0]->name,"resolve.test","REFUSED TEST: proper owner name returned");
+is($res->answerfrom,"127.53.53.10","Refused Test: Answer from proper server");
 
 $test_nameservers->medea();
 
