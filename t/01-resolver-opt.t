@@ -1,7 +1,7 @@
-# $Id$
+# $Id$    -*-perl-*-
 
 
-use Test::More tests => 60;
+use Test::More tests => 62;
 use strict;
 use File::Spec;
 
@@ -60,6 +60,8 @@ my %test_config = (
 	udp_timeout    => 60,
 	persistent_tcp => 1,
 	dnssec         => 1,
+        cdflag         => 0,
+        adflag         => 1,
 );
 
 $res = Net::DNS::Resolver->new(%test_config);

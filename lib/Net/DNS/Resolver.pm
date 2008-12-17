@@ -612,8 +612,21 @@ installed at ..." if you call it without Net::DNS::SEC being in your
     $res->cdflag(1);
 
 Sets or gets the CD bit for a dnssec query.  This bit is always zero
-for non dnssec queries. When the dnssec is enabled the flag can be set
+for non dnssec queries. When the dnssec is enabled the flag defaults to
+0 can be set to 1.
+
+
+
+=head2 adflag
+
+    print "checking disabled flag: ", $res->dnssec, "\n";
+    $res->dnssec(1);
+    $res->adflag(1);
+
+Sets or gets the AD bit for a dnssec query.  This bit is always zero
+for non dnssec queries. When the dnssec is enabled the flag defaults
 to 1.
+
 
 =head2 udppacketsize
 

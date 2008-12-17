@@ -107,7 +107,8 @@ BEGIN {
 		persistent_udp => 0,
 		dnssec         => 0,
 		udppacketsize  => 0,  # The actual default is lower bound by Net::DNS::PACKETSZ
-		cdflag         => 1,  # this is only used when {dnssec} == 1
+	        cdflag         => 0,  # this is only used when {dnssec} == 1
+	        adflag         => 1,  # this is only used when {dnssec} == 1
 		force_v4       => 0,  # force_v4 is only relevant when we have
                                       # v6 support available
 		ignqrid        => 0,  # normally packets with non-matching ID 
@@ -1069,7 +1070,10 @@ sub make_query_packet {
     	print ";; Adding EDNS extention with UDP packetsize $self->{'udppacketsize'} and DNS OK bit set\n" 
     		if $self->{'debug'};
     	
-    	my $optrr = Net::DNS::RR->new(
+    
+	$packet->header->cd($self->{'cdflag'});
+	$packet->header->cd($self->{'adflag'});
+	my $optrr = Net::DNS::RR->new(
 						Type         => 'OPT',
 						Name         => '',
 						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload

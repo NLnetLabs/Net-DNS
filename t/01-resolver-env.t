@@ -1,7 +1,7 @@
-# $Id$
+# $Id$  -*-perl-*-
 
 
-use Test::More tests => 13;
+use Test::More tests => 17;
 use strict;
 
 BEGIN { 
@@ -41,6 +41,9 @@ ok($res->debug,                    'Debug works'         );
 
 eval {
 	$Net::DNS::DNSSEC=0;
+	is ($res->cdflag(),0,"absence dnssec() sets cdflag to 0");
+	is ($res->adflag(),1,"absence of dnssec() sets adflag to 0");
+	
 	local $SIG{__WARN__}=sub { ok ($_[0]=~/You called the Net::DNS::Resolver::dnssec\(\)/, "Correct warning in absense of Net::DNS::SEC") };	
 	$res->dnssec(1);
 };
@@ -50,4 +53,6 @@ eval {
 	local $SIG{__WARN__}=sub { diag "We are ignoring that Net::DNS::SEC not installed."	 };
 	$res->dnssec(1);	
 	is ($res->udppacketsize(),2048,"dnssec() sets udppacketsize to 2048");
+	is ($res->cdflag(),0,"dnssec() sets cdflag to 0");
+	is ($res->adflag(),1,"dnssec() sets adflag to 1");
 };

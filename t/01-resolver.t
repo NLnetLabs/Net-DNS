@@ -1,6 +1,6 @@
 # $Id$  -*-perl-*-
 
-use Test::More tests => 45;
+use Test::More tests => 49;
 use strict;
 use File::Spec;
 
@@ -41,6 +41,8 @@ my %good_input = (
 	persistent_tcp => 1,
 	dnssec         => 1,
 	force_v4       => 1,
+        cdflag         => 0,
+        adflag         => 1,
 );
 
 #diag "\n\nIf you do not have Net::DNS::SEC installed you will see a warning.\n";
@@ -61,20 +63,6 @@ while (my ($param, $value) = each %good_input) {
 
 
 	
-
-my %bad_input = (
-	tsig_rr        => 'set',
-	errorstring    => 'set',
-	answerfrom     => 'set',
-	answersize     => 'set',
-	querytime      => 'set',
-	axfr_sel       => 'set',
-	axfr_rr        => 'set',
-	axfr_soa_count => 'set',
-	udppacketsize  => 'set',
-	cdflag         => 'set',
-);	
-
 # Some people try to run these on private address space."
 
 use Net::IP;

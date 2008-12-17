@@ -5,8 +5,16 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Fix rt.cpan.org #38390 and 37089
+    Added CD and AD bit control to the resolver.
+
+    The CD flag defaults to being unset and the AD flags is set by default
+    whenever DNSSEC is available. 
+    Both flags default to unset in absence of DNSSEC.
+
+
 Fix rt.cpan.org #37282
-    Improved error reporting during client disconnect from the nameserver
+   Improved error reporting during client disconnect from the nameserver
 
 NOTE rt.cpan.org # 40249
 
