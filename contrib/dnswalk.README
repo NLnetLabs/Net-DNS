@@ -2,5 +2,5 @@ $Id$
 
 Dave Barr's dnswalk now uses Net::DNS.  You can get a copy from:
 
-   http://www.cis.ohio-state.edu/~barr/dnswalk/
+  http://sourceforge.net/projects/dnswalk/
 
