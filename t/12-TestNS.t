@@ -187,8 +187,20 @@ is(($ans->answer)[0]->type,"A","REFUSED TEST: type returned");
 is(($ans->answer)[0]->name,"resolve.test","REFUSED TEST: proper owner name returned");
 is($res->answerfrom,"127.53.53.10","Refused Test: Answer from proper server");
 
+
+diag("Performing a test without actually testing on output")
+undef($res);
+undef($ans);
+use Net::DNS::Resolver::Recurse;
+$res = Net::DNS::Resolver::Recurse->new (
+    retry => 1,
+    udp_timeout => 1,
+    config_file => 't/resolv.conf-testns',
+    debug =>$debug);
+$ans = $res->query_dorecursion( "www.netscape.com.", "A");
+
+
+
+
 $test_nameservers->medea();
-
-
-
 

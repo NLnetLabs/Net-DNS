@@ -554,6 +554,18 @@
 	</ans>
       </qtype>
     </qname>
+     <qname name=".">
+       <qtype type="NS" delay="0">
+	 <header> 
+	   <rcode value="REFUSED"/> 
+	   <aa value="0"/>
+	   <ra value="0"/>
+	 </header>
+	 
+       </qtype>
+     </qname>
+
+ 
    </server>
    
    
@@ -568,7 +580,19 @@
 	 
        </qtype>
      </qname>
-     
+     <qname name=".">
+       <qtype type="NS" delay="0">
+	 <header> 
+	   <rcode value="REFUSED"/> 
+	   <aa value="0"/>
+	   <ra value="0"/>
+	 </header>
+	 
+       </qtype>
+     </qname>
+
+
+
    </server>
    
  </testns>

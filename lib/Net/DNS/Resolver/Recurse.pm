@@ -83,7 +83,7 @@ sub hints {
       }
     }
   } else {
-    warn "Server [".($self->nameservers)[0]."] did not give answers";
+    warn "Servers [". join " ",($self->nameservers),"] did not give answers";
   }
   
   # Disable recursion flag.
