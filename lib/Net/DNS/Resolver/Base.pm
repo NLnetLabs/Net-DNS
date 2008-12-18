@@ -326,11 +326,17 @@ sub nameservers {
 	    } elsif ( _ip_is_ipv6($ns) ) {
 		push @a, ($ns eq '0') ? '::0' : $ns;
 
-	    } else  {
+	} else  {
 		# Create a new resolver with all properties of the original one.
-		# Since the nameservers are still the default we are not overwriting them
-		# yet.
-		my $defres = Net::DNS::Resolver->new (%{$self});
+		# Except for the nameserfers, we want to use the default recursor 
+		# to look resolve those. Otherwise some loops may result.
+		my $defres = Net::DNS::Resolver->new ();
+		
+		foreach my $key ( keys %{$self} ){
+			next if $key eq "nameservers";
+			$defres->{$key}=$self->{$key};
+		}
+		
 		my @names;
 		
 		if ($ns !~ /\./) {
