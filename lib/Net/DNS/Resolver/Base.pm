@@ -327,7 +327,10 @@ sub nameservers {
 		push @a, ($ns eq '0') ? '::0' : $ns;
 
 	    } else  {
-		my $defres = Net::DNS::Resolver->new;
+		# Create a new resolver with all properties of the original one.
+		# Since the nameservers are still the default we are not overwriting them
+		# yet.
+		my $defres = Net::DNS::Resolver->new (%{$self});
 		my @names;
 		
 		if ($ns !~ /\./) {
@@ -365,6 +368,9 @@ sub nameservers {
 sub nameserver { &nameservers }
 
 sub cname_addr {
+	# TODO 20081217
+	# This code does not follow CNAME chanes, it only looks inside the packet. Out of bailiwick will fail.
+	# Also it is not IP agnostic
 	my $names  = shift;
 	my $packet = shift;
 	my @addr;
@@ -379,6 +385,8 @@ sub cname_addr {
 			push(@names, $rr->cname);
 		} elsif ($rr->type eq 'A') {
 			# Run a basic taint check.
+			# Remark olaf 20081217: This taint check seems to be unneeded (albeit harmless). The packet
+			# came from the wire and all parsing (untainting) has been done in Net::DNS::RR::A
 			next RR unless $rr->address =~ m/^($oct2\.$oct2\.$oct2\.$oct2)$/o;
 			
 			push(@addr, $1)
