@@ -327,16 +327,12 @@ sub nameservers {
 		push @a, ($ns eq '0') ? '::0' : $ns;
 
 	} else  {
-		# Create a new resolver with all properties of the original one.
-		# Except for the nameserfers, we want to use the default recursor 
-		# to look resolve those. Otherwise some loops may result.
+
 		my $defres = Net::DNS::Resolver->new ();
+		$defres->{"debug"}=$self->{"debug"};
+
 		
-		foreach my $key ( keys %{$self} ){
-			next if $key eq "nameservers";
-			$defres->{$key}=$self->{$key};
-		}
-		
+
 		my @names;
 		
 		if ($ns !~ /\./) {
