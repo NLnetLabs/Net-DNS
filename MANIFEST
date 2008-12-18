@@ -74,6 +74,7 @@ t/.resolv.conf
 t/00-load.t
 t/00-pod.t
 t/00-version.t
+t/001-connection-checks.t
 t/01-resolver-env.t
 t/01-resolver-file.t
 t/01-resolver-opt.t
@@ -96,5 +97,6 @@ t/10-recurse.t
 t/11-escapedchars.t
 t/11-inet6.t
 t/12-compression.t
+t/99-cleanup.t
 t/custom.txt
 TODO

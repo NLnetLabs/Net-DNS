@@ -15,37 +15,23 @@ sub DEBUG { 0; }
 unlink('Makefile');
 # clean up the online testing flag file.
 unlink("t/online.enabled"); 
+# clean up the IPv6 testing flag file.
+unlink("t/IPv6.enabled");
 
 warn <<AMEN if $] < 5.005;
 
-This verion of Net::DNS has not been tested against perl v$]
+This version of Net::DNS has not been tested against perl v$]
 The author is confident that this package will function 
 properly with older perls such as yours, but bugs may lurk. 
 
 
 AMEN
 
-#
-# Test to see if V6 is available.
-#    
-unless(    eval {require Socket6;} &&
-	   # INET6 prior to 2.01 will not work; sorry.
-	   eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}	   ){
-print <<V6WARNING;
-
-
-The libraries needed to support IPv6 transport have not been found. 
-You will need recent versions of the IO::Socket::INET6 and Socket6 
-libraries (from CPAN). 
-
-V6WARNING
-}
-
 
 #
 # Get the command line args
 #
-my ($use_xs, $online_tests);
+my ($use_xs, $online_tests, $IPv6_tests);
 
 GetOptions(
 	'xs!'           => \$use_xs,
@@ -54,7 +40,29 @@ GetOptions(
 		$use_xs = 0;
 	},
 	'online-tests!' => \$online_tests,
+	'IPv6-tests!'   => \$IPv6_tests,
 );
+
+
+
+#
+# Test to see if IPv6 is available, unless IPv6 testing has been declined.
+#    
+if (!defined $IPv6_tests || $IPv6_tests == 1) {
+	unless(    eval {require Socket6;} &&
+		   # INET6 prior to 2.01 will not work; sorry.
+		   eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}	   ){
+		print <<V6WARNING;
+
+
+The libraries needed to support IPv6 transport have not been found. 
+You will need recent versions of the IO::Socket::INET6 and Socket6 
+libraries (from CPAN). 
+
+V6WARNING
+		$IPv6_tests = 0;
+	}
+}
 
 
 
@@ -74,7 +82,7 @@ my %Makefile = (
 	},
 	XS            => {},
 	C             => [],
-	clean         => { FILES => 't/online.enabled compile.* DNS.o DNS.c DNS.bs' },
+	clean         => { FILES => 't/IPv6.enabled t/online.enabled compile.* DNS.o DNS.c DNS.bs' },
 
 
 );
@@ -164,6 +172,18 @@ if ($online_tests) {
 	print "Activating Online Tests...\n" if DEBUG; 
 	open(ENABLED, ">t/online.enabled") || die "Can't touch ./t/online.enabled $!";
 	close(ENABLED)                     || die "Can't touch ./t/online.enabled $!";
+}
+
+
+
+unless (defined $IPv6_tests) {
+	$IPv6_tests = prompt('Would you like to enable IPv6 tests?', 'y') =~ /^y/i ? 1 : 0;
+}
+
+if ($IPv6_tests) {
+	print "Activating IPv6 Tests...\n" if DEBUG; 
+	open(ENABLED, '>t/IPv6.enabled') || die "Can't touch ./t/IPv6.enabled $!";
+	close(ENABLED)                   || die "Can't touch ./t/IPv6.enabled $!";
 }
 
 WriteMakefile(%Makefile);

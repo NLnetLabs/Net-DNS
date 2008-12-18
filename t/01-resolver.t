@@ -81,6 +81,9 @@ SKIP: {
 	skip 'Online tests disabled.', 3
 		unless -e 't/online.enabled';
 
+	skip 'Online tests disabled.', 3
+		if -e 't/online.disabled';
+
 	skip 'Tests may not run succesful from private IP('.$ip->ip() .')', 3
 	    if ($ip->iptype() ne "PUBLIC");
 

@@ -6,10 +6,11 @@ use Socket;
 use Data::Dumper;
 
 BEGIN {
-	if (-e 't/online.enabled') {
+	if (-e 't/online.enabled' && ! -e 't/online.disabled' ) {
 		plan tests => 95;
 	} else {
 		plan skip_all => 'Online tests disabled.';
+		exit;
 	}
 }
 

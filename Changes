@@ -5,6 +5,17 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+
+Feature Connectivity during test
+    Addition of --no-IPv6-tests and --IPv6-tests option in Makefile.PL.
+    Note: This causes two questions to be asked when building the
+    Makefile instead of one.
+
+    Besides the test suites are constructed so that all the connectivity testing
+    happen in 001-connectivity.t and inavailability of connectivity over a certain
+    transport is signalled over files t/online.disabled and t/IPv6.disabled respectivly.
+    Both files are removed by t/99-cleanup
+
 Fix rt.cpan.org #34511
     Priming query logic contained unneeded recursion. 
     Now also fals back to hardcoded hints if there are no nameservers whatsoever.

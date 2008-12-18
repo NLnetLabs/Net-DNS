@@ -4,7 +4,7 @@ use Test::More;
 use strict;
 
 BEGIN {
-	if (-e 't/online.enabled') {
+	if (-e 't/online.enabled' && ! -e 't/online.disabled' ) {
 
 	    #
 	    # Some people try to run these on private address space."
@@ -16,15 +16,14 @@ BEGIN {
 	    
 	    unless($sock){
 		plan skip_all => "Cannot bind to socket:\n\t".$!."\n";
-		diag "This is an indication you do not have network problems";
+		diag "This is an indication you do have network problems";
 		exit;
 	    }else{
-
 		use Net::IP;
 		my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
-	    
 		if ($ip->iptype() ne "PUBLIC"){
 		    plan skip_all => 'Cannot run these tests from this IP:' .$ip->ip() ;		
+		    exit;
 		}else{
 		    plan tests => 12;
 		}
