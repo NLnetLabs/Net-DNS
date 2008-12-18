@@ -538,9 +538,6 @@
    </server>
    
 
-
-
-
    <server ip="127.53.53.10" port="53452">
     <qname name="resolve.test.">
       <qtype type="A" delay="0">
@@ -554,18 +551,18 @@
 	</ans>
       </qtype>
     </qname>
-     <qname name=".">
-       <qtype type="NS" delay="0">
-	 <header> 
-	   <rcode value="REFUSED"/> 
-	   <aa value="0"/>
-	   <ra value="0"/>
-	 </header>
-	 
+     <qname name="ns.test.zone">
+       <qtype type="A" delay="0">
+       <header> 
+	 <rcode value="NOERROR"/> 
+	 <aa value="0"/>
+	 <ra value="0"/>
+       </header>
+       <ans>
+	 ns.test.zone 30 IN A 127.53.53.10
+       </ans>
        </qtype>
      </qname>
-
- 
    </server>
    
    
@@ -580,19 +577,18 @@
 	 
        </qtype>
      </qname>
-     <qname name=".">
-       <qtype type="NS" delay="0">
-	 <header> 
-	   <rcode value="REFUSED"/> 
-	   <aa value="0"/>
-	   <ra value="0"/>
-	 </header>
-	 
+     <qname name="ns.test.zone">
+       <qtype type="A" delay="0">
+       <header> 
+	 <rcode value="NOERROR"/> 
+	 <aa value="0"/>
+	 <ra value="0"/>
+       </header>
+       <ans>
+	 ns.test.zone 30 IN A 127.53.53.10
+       </ans>
        </qtype>
      </qname>
-
-
-
    </server>
    
  </testns>
