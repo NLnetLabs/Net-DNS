@@ -208,11 +208,16 @@ if ($ans_at->header->ancount == 1 ){
 	  );
       
       undef $socket;
-      is($ans->header->ancount, 1,"Correct answer count");	
-      my ($a) = $ans->answer;
+    SKIP: {
+	skip "Answerless packet (response from ".$ans->answerfrom. " had RCODE: ".$ans->header->rcode.")", 2 unless is ($ans->header->ancount, 1,"Correct answer count");
+	my ($a) = $ans->answer;
+	
+	isa_ok($a, 'Net::DNS::RR::A');
+	is(lc($a->name), 'a.t.net-dns.org',"Correct name");
+	
+      }
       
-      isa_ok($a, 'Net::DNS::RR::A');
-      is(lc($a->name), 'a.t.net-dns.org',"Correct name");
+
     }
     
 #
