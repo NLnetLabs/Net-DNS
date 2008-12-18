@@ -82,7 +82,7 @@ BEGIN {
 	  plan skip_all => "old Net::DNS::TestNS ($Net::DNS::TestNS::VERSION)";
 	  exit;
 	}
-	plan tests => $lameloop+10;
+	plan tests => $lameloop+12;
     }else{
 
        plan skip_all => 'Some modules required for this test are not available (dont\'t worry about this)';          
@@ -173,8 +173,8 @@ $resolver->tcp_timeout($tcptimeout);
 my $ans=$resolver->query("bla.foo", 'TXT');
 is( $resolver->errorstring,"NOERROR","TCP request returned without Errors");
 is(($ans->answer)[0]->type,"TXT","TXT type returned");
-
-my $res = Net::DNS::Resolver->new(config_file => 't/resolv.conf-testns',
+undef($res);
+$res = Net::DNS::Resolver->new(config_file => 't/resolv.conf-testns',
 			  debug => 1,
 				  port        => $TestPort,
     );
@@ -188,18 +188,22 @@ is(($ans->answer)[0]->name,"resolve.test","REFUSED TEST: proper owner name retur
 is($res->answerfrom,"127.53.53.10","Refused Test: Answer from proper server");
 
 
-diag("Performing a test without actually testing on output")
+diag("Performing a test without actually testing on output");
 undef($res);
 undef($ans);
-use Net::DNS::Resolver::Recurse;
-$res = Net::DNS::Resolver::Recurse->new (
+use Net::DNS::Resolver;
+$res = Net::DNS::Resolver->new (
     retry => 1,
     udp_timeout => 1,
     config_file => 't/resolv.conf-testns',
-    debug =>$debug);
-$ans = $res->query_dorecursion( "www.netscape.com.", "A");
-
-
+    debug =>$debug,
+    port => $TestPort
+    );
+$res->nameservers("ns.test.zone");
+$ans = $res->query( "resolve.test.", "A");
+diag($res->errorstring);
+is(($ans->answer)[0]->type,"A","Problematic local resolver: type returned");
+is(($ans->answer)[0]->name,"www.net-dns.org","Proplematic: proper owner name returned");
 
 
 $test_nameservers->medea();
