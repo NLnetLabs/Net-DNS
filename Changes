@@ -5,8 +5,7 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
-
-Feature Connectivity during test
+Fix rt.cpan.org #21757 and Feature: Connectivity during test
     Addition of --no-IPv6-tests and --IPv6-tests option in Makefile.PL.
     Note: This causes two questions to be asked when building the
     Makefile instead of one.
