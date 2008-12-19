@@ -705,7 +705,6 @@ sub send_udp {
  						   LocalPort => ($srcport || undef),
  						   Proto     => 'udp',
  						   ) ;
- 	    
  	    #$^W = $old_wflag;
 	}
 	
@@ -741,7 +740,7 @@ sub send_udp {
 	      
 
 
-	      my @res = getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 
+	      my @res = Socket6::getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 
 				    0, AI_NUMERICHOST);
 	      
 	      $^W=$old_wflag ;
@@ -949,9 +948,15 @@ sub bgsend {
 	    no strict 'subs';   # Because of the eval statement in the BEGIN
 	                      # AI_NUMERICHOST is not available at compile time.
 
+	      my $old_wflag = $^W; 		#circumvent perl -w warnings about 'udp'
+	      $^W = 0;
+	      
+
 	    # The AI_NUMERICHOST surpresses lookups.
-	    my @res = getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM,
+	    my @res = Socket6::getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM,
 				  0 , AI_NUMERICHOST);
+
+	    $^W=$old_wflag;
 
 	    use strict 'subs';
 

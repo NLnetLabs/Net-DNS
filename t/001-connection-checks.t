@@ -14,8 +14,8 @@ BEGIN{
     
     ok(1,"Dummy");
     
-    $IPv4_available=1;
-    $IPv6_available=1;
+    $IPv4_available=(-e 't/online.enabled');
+    $IPv6_available= (-e 't/IPv6.enabled');
 
     diag("\n\nExecuting heuristic to see if have unlimited view of the Internet");
     diag("If the heuristic fails this could have various reasons probably having");
@@ -51,7 +51,7 @@ sub disable_ipv6 {
 
 
 BEGIN {
-    exit unless (-e 't/online.enabled') ;
+    exit unless (-e 't/IPv6.enabled') ;
     if 	( eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");}) {
 	
 	my    $tstsock = IO::Socket::INET6->new(
@@ -82,7 +82,7 @@ my $AAAA_address;
 my $res= Net::DNS::Resolver->new ( retry => 2,
 				   udp_timeout => 2,
     );
-#$res->debug(1);
+$res->debug(1);
 my $nsanswer=$res->send("net-dns.org","NS","IN");
 
 if (! defined($nsanswer)){
