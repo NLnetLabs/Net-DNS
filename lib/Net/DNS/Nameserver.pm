@@ -30,10 +30,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 BEGIN {
 	if ( FORCE_INET4 ) {
 		$has_inet6 = 0;
-	} elsif ( eval {require Socket6;} &&
-			# INET6 earlier than V2.01 will not work; sorry.
-			eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");} ) {
- 		import Socket6;
+	} elsif ( eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");} ) {
 		$has_inet6 = 1;
 	} else {
 		$has_inet6=0;

@@ -1,4 +1,4 @@
-# $Id:$ -*-perl-*-
+# $Id$ -*-perl-*-
 
 my $has_inet6;
 use Test::More;
@@ -52,12 +52,7 @@ sub disable_ipv6 {
 
 BEGIN {
     exit unless (-e 't/online.enabled') ;
-    if ( eval {require Socket6;} &&
-	 # INET6 older than 2.01 will not work; sorry.
-	 eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");}) {
-	import Socket6;
-	
-	
+    if 	( eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");}) {
 	
 	my    $tstsock = IO::Socket::INET6->new(
 	    LocalPort => 5363,

@@ -58,11 +58,8 @@ $VERSION = (qw$LastChangedRevision$)[1];
  
 BEGIN {
     if ( 
-	 eval {require Socket6;} &&
-	 # INET6 prior to 2.01 will not work; sorry.
 	 eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}
 	 ) {
- 	import Socket6;
  	$has_inet6=1;
     }else{
  	$has_inet6=0;

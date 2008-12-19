@@ -49,9 +49,7 @@ GetOptions(
 # Test to see if IPv6 is available, unless IPv6 testing has been declined.
 #    
 if (!defined $IPv6_tests || $IPv6_tests == 1) {
-	unless(    eval {require Socket6;} &&
-		   # INET6 prior to 2.01 will not work; sorry.
-		   eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.00");}	   ){
+    unless(    eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");}	   ){
 		print <<V6WARNING;
 
 
