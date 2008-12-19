@@ -17,6 +17,7 @@ BEGIN {
 diag("\nThese tests were ran with:\n");
 diag("Net::DNS::VERSION:               ".
      $Net::DNS::VERSION);
+diag("Net::DNS::SEC seems to be available") if $Net::DNS::DNSSEC;
 diag("set environment variable NET_DNS_DEBUG to get all versions");
 
 
