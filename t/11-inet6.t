@@ -29,7 +29,7 @@ my $AAAA_address;
 my $A_address;
 
 
-
+# If there is IPv6 transport only then this works too.
 my $nsanswer=$res->send("nlnetlabs.nl","NS","IN");
 is (($nsanswer->answer)[0]->type, "NS","Preparing  for v6 transport, got NS records for nlnetlabs.nl");
 
@@ -88,30 +88,33 @@ if ($answer){
 #
 #
 my $socket;
-SKIP: { skip "online tests are not enabled", 2 unless -e 't/online.enabled';
+SKIP: { skip "online tests are not enabled", 2 unless  (-e 't/IPv6.enabled' && ! -e 't/IPv6.disabled');
 
 	# First use the local resolver to query for the AAAA record of a 
 
 	$res2=Net::DNS::Resolver->new;
 	# $res2->debug(1);
 	my $nsanswer=$res2->send("net-dns.org","NS","IN");
-	is (($nsanswer->answer)[0]->type, "NS","Preparing  for v6 transport, got NS records for net-dns.org");
-	my $AAAA_address;
-	foreach my $ns ($nsanswer->answer){
-	    next if $ns->nsdname !~ /nlnetlabsl\.nl/; # User nlnetlabs.nl only
-	    my $aaaa_answer=$res2->send($ns->nsdname,"AAAA","IN");
-	    next if ($aaaa_answer->header->ancount == 0);
-	    is (($aaaa_answer->answer)[0]->type,"AAAA", "Preparing  for v6 transport, got AAAA records for ". $ns->nsdname);
-	    $AAAA_address=($aaaa_answer->answer)[0]->address;
+	SKIP:{ skip "No answers for NS queries",2 unless $nsanswer && ( $nsanswer->header->ancount != 0 );	      
+	      is (($nsanswer->answer)[0]->type, "NS","Preparing  for v6 transport, got NS records for net-dns.org");
+	      my $AAAA_address;
+	      foreach my $ns ($nsanswer->answer){
+		  next if $ns->nsdname !~ /net-dns\.org$/; # User nlnetlabs.nl only
+		  my $aaaa_answer=$res2->send($ns->nsdname,"AAAA","IN");
+		  next if ($aaaa_answer->header->ancount == 0);
+		  is (($aaaa_answer->answer)[0]->type,"AAAA", "Preparing  for v6 transport, got AAAA records for ". $ns->nsdname);
+		  $AAAA_address=($aaaa_answer->answer)[0]->address;
+		  
+		  diag ("\n\t\t Trying to connect to  ". $ns->nsdname . " ($AAAA_address)");
+		  last;
+	      }
+	      
+	      $res2->nameservers($AAAA_address);
+	      # $res2->print;
+	      
+	      $socket=$res2->axfr_start('example.com');
 
-	    diag ("\n\t\t Trying to connect to  ". $ns->nsdname . " ($AAAA_address)");
-	    last;
 	}
-
-	$res2->nameservers($AAAA_address);
-	# $res2->print;
-	
-        $socket=$res2->axfr_start('example.com');
 }
 
 
