@@ -89,7 +89,9 @@ if (! defined($nsanswer)){
     diag ("Error querying local resolver: " . $res->errorstring);
     diag "We are canceling all test";
     diag "\t\t This is not an error in Net::DNS \n";
-    disable_ipv4() &&     disable_ipv6() && exit;    
+    disable_ipv4();
+    disable_ipv6();
+    exit;    
 }
 
 

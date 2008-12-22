@@ -15,8 +15,10 @@ sub DEBUG { 0; }
 unlink('Makefile');
 # clean up the online testing flag file.
 unlink("t/online.enabled"); 
+unlink("t/online.disabled"); 
 # clean up the IPv6 testing flag file.
 unlink("t/IPv6.enabled");
+unlink("t/IPv6.disabled");
 
 warn <<AMEN if $] < 5.005;
 
