@@ -90,7 +90,26 @@ my %Makefile = (
 
 
 if ($^O eq 'MSWin32') {
-	$Makefile{'PREREQ_PM'}->{'Win32::Registry'} = 0;
+    unless(    eval {require WIN32::API; }	   ){
+	warn <<AMEN; 
+I can not find WIN32::API version 0.55 or higher.
+
+I will add WIN32::API to the list of prerequisites.
+
+Note that, WIN32::API is included in recent versions
+of ActivePerl (5.10 since build 1003) and recent
+versions of Strawberry perl (at least in the October
+version of 5.10.0.3) and the module has not be 
+tested with other versions. In case of failure please
+consider upgrading.
+	
+AMEN
+
+    }
+    $Makefile{'PREREQ_PM'}->{'enum'} = 1.0;  # Dependency for Win32::IPHelper
+    $Makefile{'PREREQ_PM'}->{'Win32::IPHelper'} = 0.05;
+    $Makefile{'PREREQ_PM'}->{'Win32::API'} = 0.55;
+    $Makefile{'PREREQ_PM'}->{'Win32::Registry'} = 0;
 }
 
 

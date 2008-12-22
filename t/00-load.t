@@ -21,10 +21,6 @@ diag("Net::DNS::SEC seems to be available") if $Net::DNS::DNSSEC;
 diag("set environment variable NET_DNS_DEBUG to get all versions");
 
 
-
-
-
-
 sub is_rr_loaded {
 	my ($rr) = @_;
 	

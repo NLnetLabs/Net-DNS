@@ -5,6 +5,18 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Fix rt.cpan.org #11931 Wrong nameserver list handling in
+                       Net::DNS::Resolver::Win32
+
+
+    The init method has been rewritten to be based on WIN32::IPhelper for
+    the selection of the domain and the IP addresses. This is believed to 
+    be more portable than trying to fetch the data from the registry.
+    We still trying to get the searchlist from the registry.
+
+    WARNING: If you use Perl under WIN32 (eg ActivePerl or Strawberry Perl)
+    then your module dependency graph has changed drastically
+
 Fix IPv6 modules
     When IO::Socket::INET6 was available but Socket6 was not the code would
     recurse to infinity.
