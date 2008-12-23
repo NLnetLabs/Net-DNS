@@ -1,6 +1,6 @@
 package Net::DNS::RR::APL::ApItem;
 #
-# $Id: APL.pm 684 2007-10-10 12:32:22Z olaf $
+# $Id$
 #
 
 
