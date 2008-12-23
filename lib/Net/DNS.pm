@@ -151,14 +151,14 @@ use Carp;
     'OPT'       => 41,      # RFC 2671
     'APL'       => 42,      # RFC 3123		
     'DS'        => 43,      # RFC 4034   # in Net::DNS::SEC
-    'SSHFP'     => 44,      # draft-ietf-secsh-dns (No RFC # yet at time of coding)
+    'SSHFP'     => 44,      # RFC 4255
     'IPSECKEY'  => 45,      # RFC 4025
     'RRSIG'     => 46,      # RFC 4034 in Net::DNS::SEC
     'NSEC'      => 47,      # RFC 4034 in Net::DNS::SEC
     'DNSKEY'    => 48,      # RFC 4034 in Net::DNS::SEC
-    'NSEC3'     => 50,   # draft-ietf-dnsext-nsec3-10 (assignment made at time of code release) 
-    'NSEC3PARAM' => 51,  # draft-ietf-dnsext-nsec3-10 (assignment made at time of code release)
-
+    'NSEC3'     => 50,      # RFC5155
+    'NSEC3PARAM' => 51,     # RFC5155
+#   'HIP'       => 55,      # RFC5205 NOT IMPLEMENTED (yet)
     'SPF'       => 99,      # RFC 4408
     'UINFO'     => 100,     # non-standard
     'UID'       => 101,     # non-standard
