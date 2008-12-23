@@ -30,6 +30,8 @@ lib/Net/DNS/Resolver/Win32.pm
 lib/Net/DNS/RR.pm
 lib/Net/DNS/RR/A.pm
 lib/Net/DNS/RR/AAAA.pm
+lib/Net/DNS/RR/APL.pm
+lib/Net/DNS/RR/APL/ApItem.pm
 lib/Net/DNS/RR/AFSDB.pm
 lib/Net/DNS/RR/CERT.pm
 lib/Net/DNS/RR/CNAME.pm
@@ -77,12 +79,14 @@ t/00-version.t
 t/001-connection-checks.t
 t/01-resolver-env.t
 t/01-resolver-file.t
+t/01-resolver-flags.t
 t/01-resolver-opt.t
 t/01-resolver.t
 t/02-header.t
 t/03-question.t
 t/04-packet-unique-push.t
 t/04-packet.t
+t/05-apl.t
 t/05-rr-opt.t
 t/05-rr-rrsort.t
 t/05-rr-sshfp.t

@@ -5,6 +5,12 @@ Revision history for Net::DNS
 =============================
 *** NOT RELEASED YET
 
+Feature rt.cpan.org #36656
+
+    Added support for the APL record (RFC 3123)
+    The module consists of a list of Address Prefix Item objects
+    as defined in the Net::DNS::RR::APL::ApItem class.
+    
 Fix rt.cpan.org #11931 Wrong nameserver list handling in
                        Net::DNS::Resolver::Win32
 

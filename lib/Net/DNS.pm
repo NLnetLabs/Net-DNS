@@ -149,6 +149,7 @@ use Carp;
     'CERT'      => 37,      # RFC 2538
     'DNAME'     => 39,      # RFC 2672
     'OPT'       => 41,      # RFC 2671
+    'APL'       => 42,      # RFC 3123		
     'DS'        => 43,      # RFC 4034   # in Net::DNS::SEC
     'SSHFP'     => 44,      # draft-ietf-secsh-dns (No RFC # yet at time of coding)
     'IPSECKEY'  => 45,      # RFC 4025

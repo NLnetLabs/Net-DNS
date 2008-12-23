@@ -79,9 +79,11 @@ BEGIN {
 		TXT
 		X25
 		OPT
+		APL
 		SSHFP
 		SPF
 		IPSECKEY
+
 	);
 
 	#  Only load DNSSEC if available

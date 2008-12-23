@@ -2,7 +2,7 @@
 # $Id$ 
 
 
-use Test::More tests => 79;
+use Test::More tests => 81;
 use strict;
 
 
