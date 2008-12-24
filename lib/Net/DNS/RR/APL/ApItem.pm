@@ -114,13 +114,13 @@ sub print {	print &string, "\n"; }
 
 
 
-=head string
+=head2 string
 
 Returns a string representation of the object in the  '[!]afi:address/prefix' format
    $apl=$apitem[0]->string;
 
 
-=head print
+=head2 print
 
 Prints the textual representation of the object.
    $apitem[0]->print;
