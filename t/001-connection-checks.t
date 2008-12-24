@@ -19,7 +19,7 @@ BEGIN{
 
     diag("\n\nExecuting heuristic to see if have unlimited view of the Internet");
     diag("If the heuristic fails this could have various reasons probably having");
-    diag("with bugs in Net::DNS");
+    diag("nothing to do with bugs in Net::DNS");
     diag("\n\n");
 }
 
