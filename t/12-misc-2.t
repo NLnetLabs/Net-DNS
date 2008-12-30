@@ -88,6 +88,7 @@ my $pid;
      no strict 'subs';  # EAGAIN
      if ($pid=fork) {# assign result of fork to $pid,
 
+	 sleep 1;
 	 # Parent process here
 	 $resolver->usevc(1);
 
