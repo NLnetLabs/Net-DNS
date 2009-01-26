@@ -93,6 +93,7 @@ t/05-rr-sshfp.t
 t/05-rr-txt.t
 t/05-rr-unknown.t
 t/05-rr.t
+t/05-rr-various.t
 t/06-update.t
 t/07-misc.t
 t/08-online.t

@@ -16,7 +16,7 @@ use Win32::Registry;
 use Data::Dumper;
 sub init {
   
-        my $debug=1;
+        my $debug=0;
 	my ($class) = @_;
 	
 	my $defaults = $class->defaults;
@@ -61,7 +61,7 @@ sub init {
 
 	my ($resobj, %keys);
 
-	my $root = 'SYSTEM\CurrentControlSet\Services\Tcplp\Parameters';
+	my $root = 'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
 	my $opened_registry =1;
 	unless ($main::HKEY_LOCAL_MACHINE->Open($root, $resobj)) {
 		# Didn't work, maybe we are on 95/98/Me?

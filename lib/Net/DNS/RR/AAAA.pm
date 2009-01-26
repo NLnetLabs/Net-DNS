@@ -24,39 +24,9 @@ sub new {
 
 sub new_from_string {
 	my ($class, $self, $string) = @_;
-
-	if ($string) {
-		my @addr;
-
-		# I think this is correct, per RFC 1884 Sections 2.2 & 2.4.4.
-		if ($string =~ /^(.*):(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
-			my ($front, $a, $b, $c, $d) = ($1, $2, $3, $4, $5);
-			$string = $front . sprintf(":%x:%x",
-						   ($a << 8 | $b),
-						   ($c << 8 | $d));
-		}
-			
-		if ($string =~ /^(.*)::(.*)$/) {
-			my ($front, $back) = ($1, $2);
-			my @front = split(/:/, $front);
-			my @back  = split(/:/, $back);
-			my $fill = 8 - (@front ? $#front + 1 : 0)
-				     - (@back  ? $#back  + 1 : 0);
-			my @middle = (0) x $fill;
-			@addr = (@front, @middle, @back);
-		}
-		else {
-			@addr = split(/:/, $string);
-			if (@addr < 8) {
-				@addr = ((0) x (8 - @addr), @addr);
-			}
-		}
-
-		$self->{"address"} = sprintf("%x:%x:%x:%x:%x:%x:%x:%x",
-					     map { hex $_ } @addr);
-	}
-
-	return bless $self, $class;
+	$self->{"address"}=$string;
+	bless $self, $class;
+	return $self->_normalize_AAAA();
 }
 
 sub rdatastr {
@@ -68,13 +38,57 @@ sub rdatastr {
 sub rr_rdata {
 	my $self = shift;
 	my $rdata = "";
-
+	$self->_normalize_AAAA();
 	if (exists $self->{"address"}) {
 		my @addr = split(/:/, $self->{"address"});
 		$rdata .= pack("n8", map { hex $_ } @addr);
 	}
 
 	return $rdata;
+}
+
+
+
+
+sub _normalize_AAAA {
+	my $self=shift();
+	return $self->{"address"} if $self->{normalized};
+	
+	my $string=$self->{"address"};
+	if ($string) {
+		my @addr;
+		# IPv4 mapped
+		# I think this is correct, per RFC 1884 Sections 2.2 & 2.4.4.
+		if ($string =~ /^(.*):(\d+)\.(\d+)\.(\d+)\.(\d+)$/) {
+			my ($front, $a, $b, $c, $d) = ($1, $2, $3, $4, $5);
+			$string = $front . sprintf(":%x:%x",
+						   ($a << 8 | $b),
+						   ($c << 8 | $d));
+		}elsif($string =~ /^(.*)::(.*)$/) {
+			my ($front, $back) = ($1, $2);
+			my @front = split(/:/, $front);
+			my @back  = split(/:/, $back);
+			my $fill = 8 - (@front ? $#front + 1 : 0)
+			  - (@back  ? $#back  + 1 : 0);
+			my @middle = (0) x $fill;
+			@addr = (@front, @middle, @back);
+		}
+		else {
+			@addr = split(/:/, $string);
+			if (@addr < 8) {
+				@addr = ((0) x (8 - @addr), @addr);
+			}
+		}
+		
+		$self->{"address"} = sprintf("%x:%x:%x:%x:%x:%x:%x:%x",
+					     map { hex $_ } @addr);
+	}
+	$self->{"normalized"}=1;
+	return $self;
+	 
+	
+	
+	
 }
 
 1;

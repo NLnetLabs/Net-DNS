@@ -1,8 +1,20 @@
 $Id$                       -*-text-*-
 
 
-Revision history for Net::DNS               
-=============================
+**** 0.65 January 26, 2009
+
+Fix rt.cpan.org #41076
+
+    When the AAAA object was constructed with new_from_hash with an
+    address containing the "::" shorthand notation normalization was
+    not done properly.
+
+Fix rt.cpan.org #42375
+
+    Typo in Win32.pm Registry root.
+
+
+
 **** 0.64 December 30, 2008
 
 Feature rt.cpan.org #36656

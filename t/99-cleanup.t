@@ -1,4 +1,4 @@
-# $Id:$ -*-perl-*-
+# $Id$ -*-perl-*-
 use Test::More;
 plan tests => 1;
 
