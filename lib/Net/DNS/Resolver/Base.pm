@@ -1084,7 +1084,7 @@ sub make_query_packet {
     	
     
 	$packet->header->cd($self->{'cdflag'});
-	$packet->header->cd($self->{'adflag'});
+	$packet->header->ad($self->{'adflag'});
 	my $optrr = Net::DNS::RR->new(
 						Type         => 'OPT',
 						Name         => '',
