@@ -1,6 +1,20 @@
 $Id$                       -*-text-*-
 
 
+**** 0.66 NOT RELEASED YET
+
+Fix rt.cpan.org #49035
+
+    Comment parsing fixed: Semicolon in character string blocks (such
+    as in TXT and NPTR) were only recognized when escaped.
+    Also fixed the NAPTR regular expression to not interpret 
+    "bla' 'foo" as two strings bla and foo, but as one: bla' 'foo
+
+Fix cd flag settings 
+
+    Resolver bug and fix reported by Jon Haidu.
+
+
 **** 0.65 January 26, 2009
 
 Fix rt.cpan.org #41076

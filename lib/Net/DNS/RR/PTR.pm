@@ -33,8 +33,8 @@ sub new_from_string {
 
 sub rdatastr {
 	my $self = shift;
-
-	return $self->{"ptrdname"} ? "$self->{ptrdname}." : '';
+	return "" unless defined $self->{ptrdname};
+	return $self->{"ptrdname"} ? "$self->{ptrdname}." : '.';
 }
 
 sub rr_rdata {

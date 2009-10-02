@@ -316,12 +316,51 @@ sub new_from_string {
 	build_regex() unless $RR_REGEX;
 
 	# strip out comments
+	# Comments start with a semi collon and run till end of line.
+	# However if the semi colon is escaped or inside a character string then we should keep it
+	# see e.g. rt.cpan 49035
+	my $loopdetection=length($rrstring);
+	my $cleanstring;
+	while ($rrstring) {
+
+		if ($rrstring=~s/^([^\\;'"]*)//o){       # Anything not special in this context.
+			$cleanstring.=$1;
+		}
+		if ($rrstring=~s/^(\\.)//o){             # Escaped special character
+			$cleanstring.=$1;
+		}
+		
+		if ($rrstring=~s/^((['"]).*(?<!\\)\2)//o){ # Anything within a matching string block. (non escaped terminator)
+			$cleanstring.=$1;
+
+			# Next: Anything within a non matched string upto
+			# the first encountered comment (but first we
+			# want to make sure we captured all the nested
+			# blocks hence elsif
+		}elsif ($rrstring=~s/^((['"]).*((?<!\\);)?)//o){
+			$cleanstring.=$1;
+		}
+		
+		$rrstring=~s/^(;.*\n)//o;  # comment till newline
+		$rrstring=~s/^(;.*$)//o;   # comment till end of string
+		print STDERR ".";
+
+		confess "Failed stripping:loop will not terminate. Please report this info: ". $cleanstring ."---". $rrstring."\n" 
+		  if ($loopdetection==length($rrstring));
+		$loopdetection=length($rrstring);
+
+
+	}
+	  
+
+
+
 	# Test for non escaped ";" by means of the look-behind assertion
 	# (the backslash is escaped)
-	$rrstring   =~ s/(?<!\\);.*//og;
+	#$rrstring   =~ s/(?<!\\);.*//og;
 	
-	($rrstring =~ m/$RR_REGEX/xso) || 
-		confess qq|qInternal Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
+	($cleanstring =~ m/$RR_REGEX/xso) || 
+		confess qq|Internal Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
 
 	my $name    = $1;
 	my $ttl     = $2 || 0;

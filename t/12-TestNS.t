@@ -1,4 +1,4 @@
-# $Id$		 -*-perl-*-
+# $Id$		 -*-perl-*- 
 
 #
 #  These tests are called only if Net::DNS::TestNS is available
@@ -173,6 +173,7 @@ $resolver->tcp_timeout($tcptimeout);
 my $ans=$resolver->query("bla.foo", 'TXT');
 is( $resolver->errorstring,"NOERROR","TCP request returned without Errors");
 is(($ans->answer)[0]->type,"TXT","TXT type returned");
+($ans->answer)[0]->print;
 undef($res);
 $res = Net::DNS::Resolver->new(config_file => 't/resolv.conf-testns',
 			  debug => $debug,

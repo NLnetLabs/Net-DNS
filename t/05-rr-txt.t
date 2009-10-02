@@ -1,8 +1,8 @@
-# $Id$
+# $Id$ -*-perl-*-
 
-use Test::More tests => 33;
+use Test::More tests => 36;
 use strict;
-
+use Data::Dumper;
 my $uut;
 
 BEGIN { use_ok('Net::DNS'); }
@@ -21,55 +21,61 @@ my $rr_base	= join(' ', $name, $ttl, $class, $type, "    " );
 #Stimulus, expected response, and test name:
 
 my @Testlist =	(
-		    {	# 2-5
-			stim		=>	q|""|,
-			rdatastr	=>	q|""|,
-			char_str_list_r	=>	['',],
-			descr		=>	'Double-quoted null string',
-			},
-		    {	# 6-9
-			stim		=>	q|''|,
-			rdatastr	=>	q|""|,
-			char_str_list_r	=>	['',],
-			descr		=>	'Single-quoted null string',
-			},
-		    {	# 10-13
-			stim		=>	qq|" \t"|,
-			rdatastr	=>	qq|" \t"|,
-			char_str_list_r	=>	[ qq| \t|, ],
-			descr		=>	'Double-quoted whitespace string',
-			},
-		    {	# 14-17
-			stim		=>	q|noquotes|,
-			rdatastr	=>	q|"noquotes"|,
-			char_str_list_r	=>	[ q|noquotes|, ],
-			descr		=>	'unquoted single string',
-			},
-		    {	# 18-21
-			stim		=>	q|"yes_quotes"|,
-			rdatastr	=>	q|"yes_quotes"|,
-			char_str_list_r	=>	[ q|yes_quotes|, ],
-			descr		=>	'Double-quoted single string',
-			},
-		    {	# 22-25
-			stim		=>	q|"escaped \" quote"|,
-			rdatastr	=>	q|"escaped \" quote"|,
-			char_str_list_r	=>	[ q|escaped " quote|, ],
-			descr		=>	'Quoted, escaped double-quote',
-			},
-		    {	# 26-29
-			stim		=>	q|two tokens|,
-			rdatastr	=>	q|"two" "tokens"|,
-			char_str_list_r	=>	[ q|two|, q|tokens|, ],
-			descr		=>	'Two unquoted strings',
-			},
-			{ # 30-33
-			stim		=> q|"missing quote|,
-			rdatastr    => q||,
-			char_str_list_r	=>	[],
-			descr		=> 'Unbalanced quotes work',
-			}
-		);
+    {	# 2-5
+	stim		=>	q|""|,
+	rdatastr	=>	q|""|,
+	char_str_list_r	=>	['',],
+	descr		=>	'Double-quoted null string',
+    },
+    {	# 6-9
+	stim		=>	q|''|,
+	rdatastr	=>	q|""|,
+	char_str_list_r	=>	['',],
+	descr		=>	'Single-quoted null string',
+    },
+    {	# 10-13
+	stim		=>	qq|" \t"|,
+	rdatastr	=>	qq|" \t"|,
+	char_str_list_r	=>	[ qq| \t|, ],
+	descr		=>	'Double-quoted whitespace string',
+    },
+    {	# 14-17
+	stim		=>	q|noquotes|,
+	rdatastr	=>	q|"noquotes"|,
+	char_str_list_r	=>	[ q|noquotes|, ],
+	descr		=>	'unquoted single string',
+    },
+    {	# 18-21
+	stim		=>	q|"yes_quotes"|,
+	rdatastr	=>	q|"yes_quotes"|,
+	char_str_list_r	=>	[ q|yes_quotes|, ],
+	descr		=>	'Double-quoted single string',
+    },
+    {	# 22-25
+	stim		=>	q|"escaped \" quote"|,
+	rdatastr	=>	q|"escaped \" quote"|,
+	char_str_list_r	=>	[ q|escaped " quote|, ],
+	descr		=>	'Quoted, escaped double-quote',
+    },
+    {	# 26-29
+	stim		=>	q|two tokens|,
+	rdatastr	=>	q|"two" "tokens"|,
+	char_str_list_r	=>	[ q|two|, q|tokens|, ],
+	descr		=>	'Two unquoted strings',
+    },
+    { # 30-33
+	stim		=> q|"missing quote|,
+	rdatastr    => q||,
+	char_str_list_r	=>	[],
+	descr		=> 'Unbalanced quotes work',
+    },
+    {	# 31-34
+	stim		=>	q|\;|,
+	rdatastr	=>	q|";"|,
+	char_str_list_r	=>	[ q|;|, ],
+	descr		=>	'Semi Colon',
+    },
+    );
 
 #------------------------------------------------------------------------------
 # Run the tests
@@ -79,11 +85,17 @@ foreach my $test_hr ( @Testlist ) {
     ok( $uut = Net::DNS::RR->new($rr_base . $test_hr->{'stim'}), 	
 		$test_hr->{'descr'} . " -- Stimulus " ); 
 		
+
+
     is($uut->rdatastr(), $test_hr->{'rdatastr'}, 			
 		$test_hr->{'descr'} . " -- Response ( rdatastr ) " ); 
 	
 	my @list = $uut->char_str_list();	
-			
+    print "\n\n";
+    print $test_hr->{'stim'};
+    print "\n--------------\n";
+    print Dumper $uut;
+    print "\n==============================\n";
     is_deeply(\@list, $test_hr->{'char_str_list_r'}, 
 		$test_hr->{'descr'} . " -- char_str_list equality"  ) ;		
 }
@@ -114,7 +126,6 @@ ok( $uut = Net::DNS::RR->new(%work_hash), 		# 30
     "RR->new_from_hash with txtdata -- Stimulus");
 ok( $uut->rdatastr() eq q|"no" "quotes"|, 		# 31
     "RR->new_from_hash with txtdata -- Response (rdatastr())");
-
 ok( $uut->rr_rdata() eq $rdata , "TXT->rr_rdata" );	# 32
 
 

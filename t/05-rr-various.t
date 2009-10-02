@@ -8,7 +8,7 @@ use Net::DNS;
 use vars qw( $HAS_DNSSEC $HAS_DLV $HAS_NSEC3 $HAS_NSEC3PARAM);
 
 
-plan tests => 4;
+plan tests => 5;
 
 
 is ( Net::DNS::stripdot ('foo\\\\\..'),'foo\\\\\.', "Stripdot does its magic in precense of escapes test 1");
@@ -31,10 +31,26 @@ is(($pkt1->answer)[0]->address,"cafe:babe:0:0:0:0:0:1","Lets have cafe:babe:0:0:
 
 
 
-#--------------
-#
-# Some test that test on appropriate normalization of internal storage
-# when using new_from_hash
+#rt 49035
+
+my $string = '5.5.5.5 1200 IN NAPTR    100 100 "u" "E2U+X-ADDRESS" "!^(.*)$!data:,CN=East test;ST=CT;C=United States;uid=ast1;intrunk=dms500!" .';
+my $newrr1 = Net::DNS::RR->new("$string");
+
+
+my $newrr2 = Net::DNS::RR->new(name=> '5.5.5.5',
+                              ttl=>  1200,
+                              class=> 'IN',
+                              type => 'NAPTR',
+                              order => '100',
+                              preference => '100',
+                              flags =>  'u',
+                              service =>  'E2U+X-ADDRESS',
+                              regexp => '!^(.*)$!data:,CN=East test;ST=CT;C=United States;uid=ast1;intrunk=dms500!',
+                              replacment => '.',
+                              rdlength => 0,
+                              rdata => '',
+        );
 
 
 
+is($newrr1->string,$newrr2->string, "Failed to parse ". $string);

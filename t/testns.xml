@@ -239,7 +239,7 @@
           <ad value="0"/>
         </header>
 	<ans>
-	bla.foo   300 IN TXT "Got it"
+	bla.foo   300 IN TXT "Got \; it"
 	</ans>
 
       </qtype>
