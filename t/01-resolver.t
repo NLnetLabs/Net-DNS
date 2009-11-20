@@ -70,7 +70,7 @@ use Net::IP;
 use IO::Socket::INET;
 
 my $sock = IO::Socket::INET->new(PeerAddr => '193.0.14.129', # k.root-servers.net.
-				 PeerPort => '25',
+				 PeerPort => '53',
 				 Proto    => 'udp');
 
 
