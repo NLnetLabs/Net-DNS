@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Fix rt.cpan.org #51009
+     Fixed handling of empty string in Net::DNS::stripdot. 
+     Elegant one-liner supplied by JMEHNLE.
+
 Fix rt.cpan.org #49035
 
     Comment parsing fixed: Semicolon in character string blocks (such

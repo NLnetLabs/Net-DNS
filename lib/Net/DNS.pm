@@ -459,19 +459,17 @@ sub wire2presentation {
 
 
 sub stripdot {
+	# Code courtesy of JMEHNLE <JMEHNLE@cpan.org>  
+	# rt.cpan.org #51009
+
 	# Strips the final non-escaped dot from a domain name.  Note
 	# that one could have a label that looks like "foo\\\\\.\.."
 	# although not likely one wants to deal with that cracefully.
 	# This utilizes 2 functions in the DNS module to deal with
 	# thing cracefully.
 
-	my @labels=name2labels(shift);
-	my $name;
-	foreach my $label (@labels){
-		$name .= wire2presentation($label) . ".";
-	}
-	chop($name);
-	return $name;
+	return join('.', map(wire2presentation($_), name2labels(shift)));
+
 }
 
 

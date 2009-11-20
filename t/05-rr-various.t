@@ -8,12 +8,12 @@ use Net::DNS;
 use vars qw( $HAS_DNSSEC $HAS_DLV $HAS_NSEC3 $HAS_NSEC3PARAM);
 
 
-plan tests => 5;
+plan tests => 6;
 
 
 is ( Net::DNS::stripdot ('foo\\\\\..'),'foo\\\\\.', "Stripdot does its magic in precense of escapes test 1");
 is ( Net::DNS::stripdot ('foo\\\\\.'),'foo\\\\\.', "Stripdot does its magic in precense of escapes test 2");
-
+is ( Net::DNS::stripdot(''),'',"Stripdot handles empty strings as it should");
 
 
 # rt.cpan.org 41071

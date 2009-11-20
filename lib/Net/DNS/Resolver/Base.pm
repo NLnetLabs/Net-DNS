@@ -996,11 +996,11 @@ sub bgsend {
 							  LocalPort => ($srcport || undef),
 					     );
 	} else {
-	    die ref($self)." bgsend:Unsoported Socket Family: $sockfamily";
+	    die ref($self)." bgsend: Unsupported Socket Family: $sockfamily";
 	}
 	
 	unless (scalar(@socket)) {
-		$self->errorstring("could not get socket");   #'
+		$self->errorstring("could not get socket");   
 		return;
 	}
 
