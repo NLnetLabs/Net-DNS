@@ -208,15 +208,15 @@ RR from string.
 One may create the object from a hash. See RFC 2671 for details for
 the meaning of the hash keys.
 
- $rr= new Net::DNS::RR {
-    name => "",     # Ignored and set to ""
+ $rr= Net::DNS::RR->new (
+    name => "",                # Ignored and set to ""
     type => "OPT",  
-    class => 1024,    # sets UDP payload size
+    class => 1024,             # sets UDP payload size
     extendedrcode =>  0x00,    # sets the extended RCODE 1 octets
     ednsflags     =>  0x0000,  # sets the ednsflags (2octets)  
-    optioncode   =>   0x0      # 2 octets
+    optioncode   =>   0x0,     # 2 octets
     optiondata   =>   0x0      # optionlength octets
- }    
+ );
 
 The ednsversion is set to 0 for now. The ttl value is determined from 
 the extendedrcode, the ednsversion and the ednsflag.
