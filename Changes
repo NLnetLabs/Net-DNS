@@ -3,6 +3,9 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Fix rt.cpan.org #43273
+    Added check for unitialized opcode in headermask in Nameserver.pm
+
 Fix rt.cpan.org #46635
     Minor documentation error in opt.pm
 
