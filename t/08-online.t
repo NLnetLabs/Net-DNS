@@ -107,7 +107,7 @@ is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
 	foreach my $method (qw(search query)) {
 	    my $packet = $res->$method($test->{'ip'});
 	    if (! defined ($packet)){
-		is($res->errorstring,"SERVFAIL","Resolver returned SERVFAIL, $method test not executed") || diag ("Problem resolving $method, resolver returned following RCODE: ". $res->errorstring);
+		ok($res->errorstring,"Resolver returned ".$res->errorstring.", $method test not executed") ;
 	    }else{
 		
 		isa_ok($packet, 
