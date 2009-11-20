@@ -106,17 +106,15 @@ is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
     foreach my $test (@tests) {
 	foreach my $method (qw(search query)) {
 	    my $packet = $res->$method($test->{'ip'});
-	    if (! defined ($packet)){
-		ok($res->errorstring,"Resolver returned ".$res->errorstring.", $method test not executed") ;
-	    }else{
-		
-		isa_ok($packet, 
-		       'Net::DNS::Packet');
 
-	    }
-	    next unless $packet;
 	    
-	    is(lc(($packet->answer)[0]->ptrdname),lc($test->{'host'}), "$method($test->{'ip'}) works");
+	  SKIP: {
+	      skip "Packet returned for $method is undefined, error returned: ".$res->errorstring, 2, if !defined ($packet);
+	      isa_ok($packet,  'Net::DNS::Packet');
+	      
+	      
+	      is(lc(($packet->answer)[0]->ptrdname),lc($test->{'host'}), "$method($test->{'ip'}) works");
+	    }
 	}
     }
 }
