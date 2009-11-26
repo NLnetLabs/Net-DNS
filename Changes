@@ -3,6 +3,15 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Fix rt.cpan.org #45407 and #43190
+    Fixed escaping of semicolon.
+
+    Note a change in behavior: 
+    For TXT and SPF the rdatastr method (and therefore the
+    print, and string method) returns the escaped format while the 
+    chr_str_list method will return unescaped format.
+
+
 Fix rt.cpan.org #43393
     Typo in 01-resolver.t
 

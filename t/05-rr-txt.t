@@ -1,6 +1,6 @@
 # $Id$ -*-perl-*-
 
-use Test::More tests => 36;
+use Test::More tests => 38;
 use strict;
 use Data::Dumper;
 my $uut;
@@ -71,7 +71,7 @@ my @Testlist =	(
     },
     {	# 31-34
 	stim		=>	q|\;|,
-	rdatastr	=>	q|";"|,
+	rdatastr	=>	q|"\;"|,
 	char_str_list_r	=>	[ q|;|, ],
 	descr		=>	'Semi Colon',
     },
@@ -144,3 +144,12 @@ is($rr3->cpu,"DEC-2060","Character string in quotes 3");
 is($rr3->os,"TOPS20","Character string in quotes 4");
 
 
+
+
+my $TXTrr=Net::DNS::RR->new('txt2.t.net-dns.org.	60	IN
+	TXT  "Test1 \" \; more stuff"  "Test2"');
+
+
+
+is ( ($TXTrr->char_str_list())[0], 'Test1 " ; more stuff', "char_str_list[0] returns unescaped ;");
+is ( $TXTrr->rdatastr,'"Test1 \" \; more stuff" "Test2"', "string method returns escaped ;");

@@ -34,8 +34,8 @@ sub new_from_string {
 
 sub rdatastr {
 	my $self = shift;
-
-	return $self->{"nsdname"} ? "$self->{nsdname}." : '';
+	return "" unless defined $self->{nsdname};
+	return "$self->{nsdname}.";
 }
 
 sub rr_rdata {

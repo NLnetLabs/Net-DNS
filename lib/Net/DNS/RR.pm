@@ -38,7 +38,6 @@ any of its methods.  If you call an unknown method, you'll get a nasty
 warning message and C<Net::DNS::RR> will return C<undef> to the caller.
 
 =cut
-#' Stupid Emacs (I Don't even USE emacs!) '
 
 # %RR needs to be available within the scope of the BEGIN block.
 # $RR_REGEX is a global just to be on the safe side.  
@@ -278,7 +277,6 @@ is recommended.
 
 =cut
 
-#' Stupid Emacs
 
 
 sub new {
@@ -343,7 +341,7 @@ sub new_from_string {
 		
 		$rrstring=~s/^(;.*\n)//o;  # comment till newline
 		$rrstring=~s/^(;.*$)//o;   # comment till end of string
-		print STDERR ".";
+		#print STDERR ".";
 
 		confess "Failed stripping:loop will not terminate. Please report this info: ". $cleanstring ."---". $rrstring."\n" 
 		  if ($loopdetection==length($rrstring));
@@ -352,13 +350,9 @@ sub new_from_string {
 
 	}
 	  
-
-
-
-	# Test for non escaped ";" by means of the look-behind assertion
-	# (the backslash is escaped)
-	#$rrstring   =~ s/(?<!\\);.*//og;
 	
+	
+
 	($cleanstring =~ m/$RR_REGEX/xso) || 
 		confess qq|Internal Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
 
@@ -629,8 +623,8 @@ sub DESTROY {}
 
     $rr->print;
 
-Prints the record to the standard output.  Calls the
-B<string> method to get the RR's string representation.
+Prints the record to the standard output.  Calls the B<string> method
+to get the RR's string representation.
 
 =cut
 #' someone said that emacs gets screwy here.  Who am I to claim otherwise...
@@ -641,7 +635,13 @@ sub print {	print &string, "\n"; }
 
     print $rr->string, "\n";
 
-Returns a string representation of the RR.  Calls the B<rdatastr> method to get the RR-specific data. Domain names are returned in RFC1035 format, i.e. all non letter, digit, hyphen characters are represented as \DDD.
+Returns a string representation of the RR.  Calls the B<rdatastr>
+method to get the RR-specific data. Domain names arereturned in
+RFC1035 format, i.e. all non letter, digit, hyphen characters are
+represented as \DDD. Besides, all domain names are expanded to fully
+qualified domain names, with trailing dot.  This is in contrast to
+accessor methods of individual data elements in RR objects, like
+B<name>, which will not return the trailing dot.
 
 =cut
 

@@ -353,7 +353,7 @@ while (@answer and @rrs) {
 	my $type = $data->{'type'};
 
 	ok($rr,                         "$type - RR defined");    
-	is($rr->name,    $name,       	"$type - name() correct");         
+	is($rr->name,    $name,    	"$type - name() correct");         
 	is($rr->class,   $class,      	"$type - class() correct");  
 	is($rr->ttl,     $ttl,        	"$type - ttl() correct");              
  
