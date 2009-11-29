@@ -48,7 +48,7 @@ BEGIN {
 
 
     
-    $VERSION = '0.65';
+    $VERSION = '0.66';
     $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
@@ -158,7 +158,7 @@ use Carp;
     'DNSKEY'    => 48,      # RFC 4034 in Net::DNS::SEC
     'NSEC3'     => 50,      # RFC5155
     'NSEC3PARAM' => 51,     # RFC5155
-#   'HIP'       => 55,      # RFC5205 NOT IMPLEMENTED (yet)
+    'HIP'       => 55,      # RFC5205 NOT IMPLEMENTED (yet)
     'SPF'       => 99,      # RFC 4408
     'UINFO'     => 100,     # non-standard
     'UID'       => 101,     # non-standard

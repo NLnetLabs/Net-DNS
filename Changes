@@ -3,6 +3,20 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+
+Feature HIP RR
+
+    Added support for the HIP RR, RFC5205
+    perldoc Net::DNS::RR::HIP for more information.
+
+
+Fix rt.cpan.org #50883
+    This is basically #11931 but for cygwin.
+
+    Codepath in Cygwin and Win32 are now the same. This adds a
+    dependency in cygwin.
+    Acknowledgements "mikaraento"
+
 Fix rt.cpan.org #45407 and #43190
     Fixed escaping of semicolon.
 

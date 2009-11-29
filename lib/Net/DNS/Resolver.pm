@@ -13,8 +13,8 @@ BEGIN {
 		require Net::DNS::Resolver::Win32;
 		@ISA = qw(Net::DNS::Resolver::Win32);
 	} elsif ($^O eq 'cygwin') {
-		require Net::DNS::Resolver::Cygwin;
-		@ISA = qw(Net::DNS::Resolver::Cygwin);
+		require Net::DNS::Resolver::Win32;
+		@ISA = qw(Net::DNS::Resolver::Win32);
 	} else {   
 		require Net::DNS::Resolver::UNIX;
 		@ISA = qw(Net::DNS::Resolver::UNIX);

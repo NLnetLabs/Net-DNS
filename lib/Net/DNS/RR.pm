@@ -80,6 +80,7 @@ BEGIN {
 		OPT
 		APL
 		SSHFP
+		HIP
 		SPF
 		IPSECKEY
 
@@ -282,7 +283,6 @@ is recommended.
 sub new {
 	return new_from_string(@_) if @_ == 2;
 	return new_from_string(@_) if @_ == 3;
-	
 	return new_from_hash(@_);
 }
 
@@ -365,6 +365,7 @@ sub new_from_string {
 	my $rdata   = $5 || '';
 
 	$rdata =~ s/\s+$//o if $rdata;
+
 	$name  = stripdot($name)  if $name;
 
 
@@ -485,6 +486,8 @@ sub new_from_hash {
 	my %keyval   = @_;
 	my $self     = {};
 
+
+
 	while ( my ($key, $val) = each %keyval ) {
 	        $self->{lc $key} = $val ;
 	}
@@ -530,6 +533,8 @@ sub new_from_hash {
 
 sub _normalize_rdata {
 	my $self     = shift;
+
+
 
 	# There are a bunch of META RR types we do not want to mess with
 	return $self if ( ( uc $self ->{'type'} eq "TSIG" )||
