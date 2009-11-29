@@ -103,5 +103,6 @@ t/11-escapedchars.t
 t/11-inet6.t
 t/12-compression.t
 t/99-cleanup.t
+t/TestData.pm
 t/custom.txt
 TODO

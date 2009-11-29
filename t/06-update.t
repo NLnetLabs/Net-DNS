@@ -1,4 +1,4 @@
-# $Id$
+# $Id$  -*-perl-*-
 
 use Test::More tests => 72;
 use strict;
