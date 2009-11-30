@@ -10,14 +10,17 @@ use vars qw(  @rrs   @EXPORT  );
 @EXPORT= qw (   @rrs  );
 
 
-@rrs = (
+@rrs=(
+
+	{	#[1]
+		type        => 'AAAA',
+		address     => '2001:7b8:206:1::1234:be21:e31e',
+	}, 
+
+
 	{  	#[0]
 		type        => 'A',
 	 	address     => '10.0.0.1',  
-	}, 
-	{	#[1]
-		type        => 'AAAA',
-		address     => '102:304:506:708:90a:b0c:d0e:ff10',
 	}, 
 	{	#[2]
 		type         => 'AFSDB',

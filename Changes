@@ -3,6 +3,14 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Fix AAAA dynamic update
+
+    Dynamic update of AAAA caused FORMERR on the prerequisite caused
+    by AAAA creating rdata even when an address whas never specified.
+    This fix may cause difference in behavior for people who expect a
+    NULL address ("::") when creating a AAAA without an address
+    specified.
+
 
 Feature HIP RR
 
