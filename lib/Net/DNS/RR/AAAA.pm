@@ -24,7 +24,7 @@ sub new {
 
 sub new_from_string {
 	my ($class, $self, $string) = @_;
-	$self->{"address"}=$string;
+	$self->{"address"}=$string if $string;
 	bless $self, $class;
 	return $self->_normalize_AAAA();
 }
@@ -38,8 +38,9 @@ sub rdatastr {
 sub rr_rdata {
 	my $self = shift;
 	my $rdata = "";
-	$self->_normalize_AAAA();
+	print Dumper $self;
 	if (exists $self->{"address"}) {
+		$self->_normalize_AAAA();
 		my @addr = split(/:/, $self->{"address"});
 		$rdata .= pack("n8", map { hex $_ } @addr);
 	}
@@ -50,8 +51,9 @@ sub rr_rdata {
 
 
 
-sub _normalize_AAAA {
+sub _normalize_AAAA{
 	my $self=shift();
+	return unless exists $self->{"address"};
 	return $self->{"address"} if $self->{normalized};
 	
 	my $string=$self->{"address"};
