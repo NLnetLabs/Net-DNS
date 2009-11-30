@@ -14,7 +14,7 @@ use vars qw(  @rrs   @EXPORT  );
 
 	{	#[1]
 		type        => 'AAAA',
-		address     => '2001:7b8:206:1::1234:be21:e31e',
+		address     => '123:45:6:7:890a:bcd:ef:123',
 	}, 
 
 
