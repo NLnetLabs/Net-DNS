@@ -77,6 +77,7 @@ my %Makefile = (
 		'IO::Socket'       => 0,
 		'MIME::Base64'     => 2.11,
 		'Digest::MD5'      => 2.12,
+		'Digest::SHA'      => 5.23,
 		'Net::IP'          => 1.2,
 		'Digest::HMAC_MD5' => 1.00,
 	},

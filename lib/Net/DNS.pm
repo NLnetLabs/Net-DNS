@@ -156,6 +156,7 @@ use Carp;
     'RRSIG'     => 46,      # RFC 4034 in Net::DNS::SEC
     'NSEC'      => 47,      # RFC 4034 in Net::DNS::SEC
     'DNSKEY'    => 48,      # RFC 4034 in Net::DNS::SEC
+    'DHCID'     => 49,      # RFC4701
     'NSEC3'     => 50,      # RFC5155
     'NSEC3PARAM' => 51,     # RFC5155
     'HIP'       => 55,      # RFC5205 NOT IMPLEMENTED (yet)

@@ -64,6 +64,7 @@ sub runtests {
 	my $RR=Net::DNS::RR->new(
 	    %{$data});
 
+
 	my $update = Net::DNS::Update->new('example.com');
 	# Prerequisite is that no type records exist for the name. Again for some
 	# RRs we need special casing
@@ -193,7 +194,7 @@ options {
 zone "example.com" IN {
   type master;
   file "t/example.com";
-  allow-update { localhost; };
+  allow-update { 127/8; };
 };
 
 
@@ -216,14 +217,11 @@ example.com.   	 IN	SOA ns.example.com. olaf.cpan.org. (
 
 
 
-example.com.  IN NS ns.example.com.
-ns.example.com.   IN A 127.53.53.8
-
-cut.example.com.  IN NS ns.example.net.
-ns.example.net. IN A 10.6.6.6
+example.com.              IN      NS    ns.example.com.
+ns.example.com.           IN       A    127.53.53.8
 
 
-mx-exchange.example.com.   IN A 127.53.53.8
+mx-exchange.example.com.  IN       A    127.53.53.8
 
 
 ENDZONE
@@ -234,18 +232,19 @@ my $pid;
 die "Can't fork: $!" unless defined($pid = fork);
 if ($pid) {           # parent
     select(undef, undef, undef, 0.5);
-
     runtests();
+#    sleep 90;
     kill 2, $pid;
 
 } else {
+    unlink("t/example.com.jnl") if -f "t/example.com.jnl";
     # Consider sanitizing the environment even more.
-    exec $named, '-f', '-c', 't/named.conf'
+    exec $named, '-f', '-c',  't/named.conf'
                 or die "can't exec myprog: $!";
 }
 
 
-unlink("t/named.conf");
+#unlink("t/named.conf");
 unlink("t/named-pid");
-unlink("t/example.com");
+#unlink("t/example.com");
 unlink("t/example.com.jnl");

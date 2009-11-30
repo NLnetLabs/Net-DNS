@@ -38,7 +38,6 @@ sub rdatastr {
 sub rr_rdata {
 	my $self = shift;
 	my $rdata = "";
-	print Dumper $self;
 	if (exists $self->{"address"}) {
 		$self->_normalize_AAAA();
 		my @addr = split(/:/, $self->{"address"});

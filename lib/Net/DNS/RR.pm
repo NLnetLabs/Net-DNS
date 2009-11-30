@@ -52,6 +52,7 @@ BEGIN {
 		AFSDB
 		CNAME
 		CERT
+		DHCID
 		DNAME
 		EID
 		HINFO
@@ -503,7 +504,6 @@ sub new_from_hash {
 
 	if ($RR{$self->{'type'}}) {
 		my $subclass = $class->_get_subclass($self->{'type'});
-		
 	    if (uc $self->{'type'} ne 'OPT') {
 		        bless $self, $subclass;
 			$self->_normalize_dnames();

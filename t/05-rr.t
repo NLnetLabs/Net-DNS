@@ -5,28 +5,41 @@ use strict;
 use t::TestData;
 use Net::DNS;
 use vars qw( $HAS_DNSSEC $HAS_DLV $HAS_NSEC3 $HAS_NSEC3PARAM);
+use Data::Dumper;
+
 
 my $keypathrsa="Kexample.com.+005+24866.private";
 my $rsakeyrr;
 
 BEGIN {
+
+	my $methods=0;
+	my $number=0;
+	foreach my $rr ( @rrs ){
+	    $methods += keys(%$rr);
+	}
+	diag "Number of RRs: ".  @rrs . " Number of methods: ".$methods."\n";
+	$number=  3 +  2*$methods +  6*scalar @rrs;
+
+
     if(
 	eval {require Net::DNS::SEC;}
 	){
 	$HAS_DNSSEC=1;
-	if (
+	if ( 
 	    defined($Net::DNS::SEC::SVNVERSION) && 
 	    $Net::DNS::SEC::SVNVERSION > 619 
 	    )
 	{
 	    $HAS_NSEC3PARAM=1;
-	    plan tests => 429;  # Hook
+	    plan tests => $number;  # Hook
 	}else{
-	    plan tests => 429;
+	    plan tests => $number;
 	}
     }else{
 	$HAS_DNSSEC=0;
-	plan tests => 397;
+
+	plan tests => $number- @rrs -1 ;
     }
 };
 
@@ -108,7 +121,6 @@ foreach my $data (@rrs) {
 	   name => $name,
 	   ttl  => $ttl,
 	   %{$data});
-
 
 
     # Test if new-from-hash strips dots appropriatly for all subtypes

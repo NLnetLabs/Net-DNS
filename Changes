@@ -18,6 +18,10 @@ Feature HIP RR
     perldoc Net::DNS::RR::HIP for more information.
 
 
+Feature DHCID RR
+    Added rudimentary support for the DHCID RR.
+
+
 Fix rt.cpan.org #50883
     This is basically #11931 but for cygwin.
 
