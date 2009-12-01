@@ -3,6 +3,9 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Fix rt.cpan.org #52307 AAAA v4compat parsing bug 
+    Acknowledgement: BLBLACK
+
 Fix AAAA dynamic update
 
     Dynamic update of AAAA caused FORMERR on the prerequisite caused

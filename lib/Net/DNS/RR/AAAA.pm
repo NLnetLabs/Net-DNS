@@ -65,7 +65,8 @@ sub _normalize_AAAA{
 			$string = $front . sprintf(":%x:%x",
 						   ($a << 8 | $b),
 						   ($c << 8 | $d));
-		}elsif($string =~ /^(.*)::(.*)$/) {
+		}
+		if($string =~ /^(.*)::(.*)$/) {
 			my ($front, $back) = ($1, $2);
 			my @front = split(/:/, $front);
 			my @back  = split(/:/, $back);

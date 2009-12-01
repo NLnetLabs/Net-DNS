@@ -8,12 +8,17 @@ use Net::DNS;
 use vars qw( $HAS_DNSSEC $HAS_DLV $HAS_NSEC3 $HAS_NSEC3PARAM);
 
 
-plan tests => 6;
+plan tests => 7;
 
 
 is ( Net::DNS::stripdot ('foo\\\\\..'),'foo\\\\\.', "Stripdot does its magic in precense of escapes test 1");
 is ( Net::DNS::stripdot ('foo\\\\\.'),'foo\\\\\.', "Stripdot does its magic in precense of escapes test 2");
 is ( Net::DNS::stripdot(''),'',"Stripdot handles empty strings as it should");
+
+
+
+my $rr_aaaa_v4compat = Net::DNS::RR->new("foo AAAA ::0.0.0.2");
+is($rr_aaaa_v4compat->address, "0:0:0:0:0:0:0:2", "v4compat AAAA records parsed correctly");
 
 
 # rt.cpan.org 41071
@@ -54,3 +59,5 @@ my $newrr2 = Net::DNS::RR->new(name=> '5.5.5.5',
 
 
 is($newrr1->string,$newrr2->string, "Failed to parse ". $string);
+
+
