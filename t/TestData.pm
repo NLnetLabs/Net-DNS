@@ -12,77 +12,87 @@ use vars qw(  @rrs   @EXPORT  );
 
 
 @rrs=(
+      {	#[0]
+       type         => 'SOA',
+       mname        => 'soa-mname.example.com.',
+       rname        => 'soa-rname.example.com.',
+       serial       => 12345,
+       refresh      => 7200,
+       retry        => 3600,
+       expire       => 2592000,
+       minimum      => 86400,
+      },
       
-      {  	#[0]
+      {  	#[1]
        type        => 'A',
        address     => '10.0.0.1',  
       }, 
 
-      {	#[1]
+      {	#[2]
        type        => 'AAAA',
        address     => '123:45:6:7:890a:bcd:ef:123',
       }, 
       
 
-      {	#[2]
+      {	#[3]
        type         => 'AFSDB',
        subtype      => 1,
        hostname     => 'afsdb-hostname.example.com',
       }, 
-      {	#[3]
+      {	#[4]
        type         => 'CNAME',
        cname        => 'cname-cname.example.com.',
       }, 
-      {   #[4]
+      {   #[5]
        type         => 'DNAME',
        dname        => 'dname.example.com.',
       },
-      {	#[5]
+      {	#[6]
        type         => 'HINFO',
        cpu          => 'test-cpu',
        os           => 'test-os',
       }, 
-      {	#[6]
+      {	#[7]
        type         => 'ISDN',
        address      => '987654321',
        sa           => '001',
       }, 
-      {	#[7]
+      {	#[8]
        type         => 'MB',
        madname      => 'mb-madname.example.com.',
       }, 
-      {	#[8]
+      {	#[9]
        type         => 'MG',
        mgmname      => 'mg-mgmname.example.com.',
       }, 
-      {	#[9]
+      {	#[10]
        type         => 'MINFO',
        rmailbx      => 'minfo-rmailbx.example.com.',
        emailbx      => 'minfo-emailbx.example.com.',
       }, 
-      {	#[10]
+      {	#[11]
        type         => 'MR',
        newname      => 'mr-newname.example.com.',
       }, 
-      {	#[11]
+      {	#[12]
        type         => 'MX',
        preference   => 10,
        exchange     => 'mx-exchange.example.com.',
       },
-      {	#[12]
+      {	#[13]
        type         => 'NAPTR',
        order        => 100,
        preference   => 10,
        flags        => 'U',
        service      => 'BLA+FOO',
-       regexp       => '/urn:cid:.+@([^\.]+\.)(.*)$/\2/i',
+       regexp       => '!^.*$!mailto:information@example.com!i',
        replacement  => 'naptr-rEplacement.example.com.',
       },
-      {	#[13]
+      {	#[14]
        type         => 'NS',
        nsdname      => 'ns-nsdname.example.com.',
       },
-      {	#[14]
+      {	#[15]
        type         => 'NSAP',
        afi          => '47',
        idi          => '0005',
@@ -93,35 +103,25 @@ use vars qw(  @rrs   @EXPORT  );
        id           => '00800a123456',
        sel          => '00',
       },
-      {	#[15]
+      {	#[16]
        type         => 'PTR',
        ptrdname     => 'ptr-ptrdname.example.com.',
       },
-      {	#[16] 
+      {	#[17] 
        type         => 'PX',
        preference   => 10,
        map822       => 'px-map822.example.com.',
        mapx400      => 'px-mapx400.example.com.',
       },
-      {	#[17]
+      {	#[18]
        type         => 'RP',
        mbox		 => 'rp-mbox.example.com.',
        txtdname     => 'rp-txtdname.example.com.',
       },
-      {	#[18]
+      {	#[19]
        type         => 'RT',
        preference   => 10,
        intermediate => 'rt-intermediate.example.com.',
-      },
-      {	#[19]
-       type         => 'SOA',
-       mname        => 'soa-mname.example.com.',
-       rname        => 'soa-rname.example.com.',
-       serial       => 12345,
-       refresh      => 7200,
-       retry        => 3600,
-       expire       => 2592000,
-       minimum      => 86400,
       },
       {	#[20]
        type         => 'SRV',

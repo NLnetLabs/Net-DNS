@@ -3,6 +3,12 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Fix NSAP RR string representation
+
+    RFC1706 specifies the masterfile format to have a leading "0x" and
+    optional dot. This was not how the RR was represented with the
+    rdatastr method (and hence string and print).
+
 Fix rt.cpan.org #52307 AAAA v4compat parsing bug 
     Acknowledgement: BLBLACK
 

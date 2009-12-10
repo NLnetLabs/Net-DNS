@@ -28,10 +28,59 @@ use vars qw(
             $numberoftests
             $tcptimeout
             $named
+            $namedcheckzone
 	    );
 
 
+sub buildzonefile {
+    # Send the update to the zone's primary master. (should be consistent with named.conf fragment below)
+    open (ZONEFILE, "> t/example.com") || die "could not open t/zonefile";
+    # @rrs is exported from t::TestData
 
+    print ZONEFILE ";;; TEST ZONE FILE created by t-UpdateBind.t\n";
+    
+    print ZONEFILE "\$TTL 10\n";
+
+    foreach my $data (@rrs) {
+	# pause a moment
+	select(undef, undef, undef, 0.1);
+	
+	$data->{'name'}="bla.example.com.";
+	# special casing for SOA, that must be zone-apex
+	$data->{'name'}="example.com" if ($data->{'type'} eq 'SOA');
+	
+	# special casing for CNAME, may not have any data at the name
+	# foo.example.com has A and AAAA rrs
+	$data->{'name'}="alias-1.example.com" if ($data->{'type'} eq 'CNAME');
+	
+	# special casing for NS, may not have any data at the name
+	$data->{'name'}="zonecut-1.example.com" if ($data->{'type'} eq 'NS');
+
+
+
+
+	$data->{'ttl'}=10;
+	my $RR=Net::DNS::RR->new(
+	    %{$data});
+
+	print ZONEFILE $RR->string ."\n";
+
+    }
+
+    print ZONEFILE <<ZONEDATA;
+
+
+example.com.              IN      NS    ns.example.com.
+ns.example.com.           IN       A    127.53.53.8
+
+
+mx-exchange.example.com.  IN       A    127.53.53.8
+
+ZONEDATA
+
+
+ 
+}
  
 
 sub runtests {
@@ -52,10 +101,10 @@ sub runtests {
 
 	# special casing for CNAME, may not have any data at the name
 	# foo.example.com has A and AAAA rrs
-	$data->{'name'}="alias.example.com" if ($data->{'type'} eq 'CNAME');
+	$data->{'name'}="alias-2.example.com" if ($data->{'type'} eq 'CNAME');
 
 	# special casing for NS, may not have any data at the name
-	$data->{'name'}="zonecut.example.com" if ($data->{'type'} eq 'NS');
+	$data->{'name'}="zonecut-2.example.com" if ($data->{'type'} eq 'NS');
 
 
 
@@ -87,6 +136,8 @@ sub runtests {
 	    
 		
 	}
+
+
 	my $query=Net::DNS::Packet->new($data->{'name'},$data->{'type'});
 	undef($reply);
 	$reply=$res->send($query);
@@ -98,7 +149,6 @@ sub runtests {
 	  skip "no answer returned ". ($updatesuccess?"errorcode: ":"after failed update: ").$reply->header->rcode, 1 unless defined ($ans) && $updatesuccess ;
 	  is( $ans->string,$RR->string,"In and out match ". $data->{'type'});
 	}
-
 
 	unless ($data->{type} eq "A" ||
 		$data->{type} eq "SOA" 
@@ -122,23 +172,71 @@ sub runtests {
 	    }
 	    
 	}
+	
+	# Query the data as loaded from the zonefile
+	undef($query);
+	undef($reply);
+	$data->{'name'} =~ s/foo/bla/;
+	$data->{'name'} =~ s/-2/-1/;
+	# CHEATING by modifying attributes
+	$RR->{'name'} =~ s/foo/bla/;
+	$RR->{'name'} =~ s/-2/-1/;
+	$query=Net::DNS::Packet->new($data->{'name'},$data->{'type'});
+	$reply=$res->send($query);
+
+      SKIP:{
+	  skip "no answer returned ". ($updatesuccess?"errorcode: ":"after failed update: ").$reply->header->rcode, 2 unless defined ($ans) && $updatesuccess ;
+	  
+	  
+	  #$reply->print;
+	  if ($data->{'type'} eq "IPSECKEY") {
+	      #special casing for IPSEC KEY
+	      ok ( $reply->answer == 4 , "Answer for IPSECKEY contains 4 RR");
+	      my $i=0;
+	      while ($i < $reply->answer){
+		  my $ans=($reply->answer)[$i];
+		  $i++;
+		  next unless $ans->string eq $RR->string;
+		  is( $ans->string,$RR->string,"query from authoritative zone match ". $data->{'type'});
+		  last;
+	      }
+	      
+	      
+  	  }else{
+	      
+	      my $ans;
+	      if ($data->{'type'} eq "NS"){
+		  #special case for NS: delegation
+		  $ans=($reply->authority)[0] 
+	      }else{
+		  # Other query types have their answer as first (an only) RR in the answer section
+		  ok ( $reply->answer == 1 , "Answer contains 1 RR for $data->{'name'} $data->{'type'}");
+		  $ans=($reply->answer)[0];
+	  }
+	      
+	      is( $ans->string,$RR->string,"query from authoritative zone match ". $data->{'type'});
+	      
+	      
+	  }	  
+	}
     }
-
+    
 }
-
+    
 
 
 
 
 BEGIN {
     $named="/usr/local/sbin/named";
+    $namedcheckzone="/usr/local/sbin/named-checkzone";
     $tcptimeout=6;
     $TestPort  = 5334;
     @Addresses = qw (
 		     127.53.53.8
 		     );
 
-    $numberoftests=3*@rrs-2;
+    $numberoftests=5*@rrs-3;
     
     if(
        eval {require IO::Socket;}
@@ -177,6 +275,11 @@ BEGIN {
 
 }	
 
+
+
+
+buildzonefile();
+ok(   ! system("$namedcheckzone example.com t/example.com"), "Checking zone loading");
 open(NAMEDCONF, ">t/named.conf") || die "could not open t/named.conf";
 
 
@@ -201,30 +304,6 @@ zone "example.com" IN {
 
 ENDCONF
 
-open(ZONEFILE,">t/example.com") || die "could not open t/example.com";
-
-print ZONEFILE <<ENDZONE;
-;;; TESTZONE fot 12-TestUpdate.t
-
-\$TTL 60
-example.com.   	 IN	SOA ns.example.com. olaf.cpan.org. (
-                                1 ; serial
-				100        ; refresh (7 minutes 30 seconds)
-				50         ; retry (30 seconds)
-				500     ; expire (4 days)
-				10        ; minimum (10 minutes)
-				)
-
-
-
-example.com.              IN      NS    ns.example.com.
-ns.example.com.           IN       A    127.53.53.8
-
-
-mx-exchange.example.com.  IN       A    127.53.53.8
-
-
-ENDZONE
 
 my $pid;
 
@@ -233,7 +312,7 @@ die "Can't fork: $!" unless defined($pid = fork);
 if ($pid) {           # parent
     select(undef, undef, undef, 0.5);
     runtests();
-#    sleep 90;
+#   sleep 60;
     kill 2, $pid;
 
 } else {
@@ -244,7 +323,7 @@ if ($pid) {           # parent
 }
 
 
-#unlink("t/named.conf");
+unlink("t/named.conf");
 unlink("t/named-pid");
-#unlink("t/example.com");
+unlink("t/example.com");
 unlink("t/example.com.jnl");
