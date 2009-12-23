@@ -3,6 +3,14 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+
+FIX rt.cpan.org #47265 (partial)
+
+    Frequently Net:DNS under Windows XP has a UDP problem which is
+    caused by a buggy implementation of SOCKS under Windows.
+
+    One liner added to not continue UDP processing when that happens.
+
 Feature KX RR
     
     Added support for the KX RR, RFC2230

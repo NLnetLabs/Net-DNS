@@ -162,8 +162,8 @@ use Carp;
     'NSEC3PARAM' => 51,     # RFC5155
 # 52-54 are unassigned		
     'HIP'       => 55,      # RFC5205
-    'NINFO'     => 56,      #							NOT IMPLEMENTED 
-    'RKEY'      => 57,      #							NOT IMPLEMENTED
+    'NINFO'     => 56,      # non-standard					NOT IMPLEMENTED 
+    'RKEY'      => 57,      # non-standard					NOT IMPLEMENTED
 # 58-98 are unasigned
     'SPF'       => 99,      # RFC 4408
     'UINFO'     => 100,     # non-standard

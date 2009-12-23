@@ -348,7 +348,13 @@ sub udp_connection {
 
  	$sock->recv($buf, &Net::DNS::PACKETSZ);
  	my ($peerhost,$peerport,$sockhost) = ($sock->peerhost, $sock->peerport, $sock->sockhost);
+	unless (defined $peerhost && defined $peerport){
+		print "the Peer host and sock host appear to be undefined: bailing out of handling the UDP connection" if $self->{"Verbose"};
+		return;
+	}
 	
+
+
  	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{"Verbose"};
 
 	my $query = Net::DNS::Packet->new(\$buf);
