@@ -57,6 +57,7 @@ BEGIN {
 		EID
 		HINFO
 		ISDN
+		KX
 		LOC
 		MB
 		MG

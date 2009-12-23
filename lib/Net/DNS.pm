@@ -102,6 +102,7 @@ use Carp;
 # If you implement an RR record make sure you also add it to 
 # %Net::DNS::RR::RR hash otherwise it will be treated as unknown type.
 # 
+# See http://www.iana.org/assignments/dns-parameters for assignments and references.
 
 # Do not use these tybesby hashes directly. Use the interface
 # functions, see below.
@@ -110,15 +111,15 @@ use Carp;
     'SIGZERO'   => 0,       # RFC2931 consider this a pseudo type
     'A'         => 1,       # RFC 1035, Section 3.4.1
     'NS'        => 2,       # RFC 1035, Section 3.3.11
-    'MD'        => 3,       # RFC 1035, Section 3.3.4 (obsolete)
-    'MF'        => 4,       # RFC 1035, Section 3.3.5 (obsolete)
+    'MD'        => 3,       # RFC 1035, Section 3.3.4 (obsolete)		NOT IMPLEMENTED
+    'MF'        => 4,       # RFC 1035, Section 3.3.5 (obsolete)		NOT IMPLEMENTED
     'CNAME'     => 5,       # RFC 1035, Section 3.3.1
     'SOA'       => 6,       # RFC 1035, Section 3.3.13
     'MB'        => 7,       # RFC 1035, Section 3.3.3
     'MG'        => 8,       # RFC 1035, Section 3.3.6
     'MR'        => 9,       # RFC 1035, Section 3.3.8
     'NULL'      => 10,      # RFC 1035, Section 3.3.10
-    'WKS'       => 11,      # RFC 1035, Section 3.4.2 (deprecated)
+    'WKS'       => 11,      # RFC 1035, Section 3.4.2 (deprecated)		NOT IMPLEMENTED
     'PTR'       => 12,      # RFC 1035, Section 3.3.12
     'HINFO'     => 13,      # RFC 1035, Section 3.3.2
     'MINFO'     => 14,      # RFC 1035, Section 3.3.7
@@ -129,42 +130,47 @@ use Carp;
     'X25'       => 19,      # RFC 1183, Section 3.1
     'ISDN'      => 20,      # RFC 1183, Section 3.2
     'RT'        => 21,      # RFC 1183, Section 3.3
-    'NSAP'      => 22,      # RFC 1706, Section 5
-    'NSAP_PTR'  => 23,      # RFC 1348 (obsolete)
-    # The following 2 RRs are impemented in Net::DNS::SEC
-    'SIG'       => 24,      # RFC 2535, Section 4.1
-    'KEY'       => 25,      # RFC 2535, Section 3.1
+    'NSAP'      => 22,      # RFC 1706, Section 5 
+    'NSAP_PTR'  => 23,      # RFC 1348 (obsolete by RFC 1637)			NOT IMPLEMENTED
+    'SIG'       => 24,      # RFC 2535, Section 4.1				impemented in Net::DNS::SEC
+    'KEY'       => 25,      # RFC 2535, Section 3.1				impemented in Net::DNS::SEC
     'PX'        => 26,      # RFC 2163,
-    'GPOS'      => 27,      # RFC 1712 (obsolete)
+    'GPOS'      => 27,      # RFC 1712 (obsolete ?)				NOT IMPLEMENTED
     'AAAA'      => 28,      # RFC 1886, Section 2.1
     'LOC'       => 29,      # RFC 1876
-    # The following RR is impemented in Net::DNS::SEC
-    'NXT'       => 30,      # RFC 2535, Section 5.2 obsoleted by RFC3755
+    'NXT'       => 30,      # RFC 2535, Section 5.2 obsoleted by RFC3755	impemented in Net::DNS::SEC
     'EID'       => 31,      # draft-ietf-nimrod-dns-xx.txt
     'NIMLOC'    => 32,      # draft-ietf-nimrod-dns-xx.txt
     'SRV'       => 33,      # RFC 2052
-    'ATMA'      => 34,      # ???
+    'ATMA'      => 34,      # non-standard    					NOT IMPLEMENTED
     'NAPTR'     => 35,      # RFC 2168
     'KX'        => 36,      # RFC 2230
     'CERT'      => 37,      # RFC 2538
+    'A6'        => 38,      # RFC3226, RFC2874. See RFC 3363 made A6 exp.	NOT IMPLEMENTED
     'DNAME'     => 39,      # RFC 2672
+    'SINK'      => 40,      # non-standard					NOT IMPLEMENTED
     'OPT'       => 41,      # RFC 2671
     'APL'       => 42,      # RFC 3123		
-    'DS'        => 43,      # RFC 4034   # in Net::DNS::SEC
+    'DS'        => 43,      # RFC 4034  					implemented in Net::DNS::SEC
     'SSHFP'     => 44,      # RFC 4255
     'IPSECKEY'  => 45,      # RFC 4025
-    'RRSIG'     => 46,      # RFC 4034 in Net::DNS::SEC
-    'NSEC'      => 47,      # RFC 4034 in Net::DNS::SEC
-    'DNSKEY'    => 48,      # RFC 4034 in Net::DNS::SEC
+    'RRSIG'     => 46,      # RFC 4034 						implemented in Net::DNS::SEC
+    'NSEC'      => 47,      # RFC 4034						implemented in Net::DNS::SEC
+    'DNSKEY'    => 48,      # RFC 4034						inplemented in Net::DNS::SEC
     'DHCID'     => 49,      # RFC4701
     'NSEC3'     => 50,      # RFC5155
     'NSEC3PARAM' => 51,     # RFC5155
-    'HIP'       => 55,      # RFC5205 NOT IMPLEMENTED (yet)
+# 52-54 are unassigned		
+    'HIP'       => 55,      # RFC5205
+    'NINFO'     => 56,      #							NOT IMPLEMENTED 
+    'RKEY'      => 57,      #							NOT IMPLEMENTED
+# 58-98 are unasigned
     'SPF'       => 99,      # RFC 4408
     'UINFO'     => 100,     # non-standard
     'UID'       => 101,     # non-standard
     'GID'       => 102,     # non-standard
     'UNSPEC'    => 103,     # non-standard
+# 104-248 are unasigned
     'TKEY'      => 249,     # RFC 2930
     'TSIG'      => 250,     # RFC 2931
     'IXFR'      => 251,     # RFC 1995
@@ -172,7 +178,8 @@ use Carp;
     'MAILB'     => 253,     # RFC 1035 (MB, MG, MR)
     'MAILA'     => 254,     # RFC 1035 (obsolete - see MX)
     'ANY'       => 255,     # RFC 1035
-    'DLV'       => 32769    # RFC 4431  in Net::DNS::SEC		
+    'TA'        => 32768,    # non-standard					NOT IMPLEMENTED
+    'DLV'       => 32769    # RFC 4431						implemented in Net::DNS::SEC		
 );
 %typesbyval = reverse %typesbyname;
 

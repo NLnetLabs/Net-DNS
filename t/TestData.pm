@@ -205,19 +205,27 @@ use vars qw(  @rrs   @EXPORT  );
        gateway        => 'gateway.example.com.',
        pubkey         => "AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ==",
       },
-      {
+      { #[29]
        type => 'HIP',
        pkalgorithm => 2,
        hit   => "200100107b1a74df365639cc39f1d578",
        pubkey => "AwEAAbdxyhNuSutc5EMzxTs9LBPCIkOFH8cIvM4p9+LrV4e19WzK00+CI6zBCQTdtWsuxKbWIy87UOoJTwkUs7lBu+Upr1gsNrut79ryra+bSRGQb1slImA8YVJyuIDsj7kwzG7jnERNqnWxZ48AWkskmdHaVDP4BcelrTI3rMXdXF5D",
        rendezvousservers => [ qw|example.net example.com| ],
       },
-      { 
+      { #[30]
        type => 'DHCID',
        identifiertype => 2,
        digesttype => 1,
        digest => 'Y2/AuCccgoJbsaxcQc9TUapptP69lOjxfNuVAA2kjEA=',
       },
+
+      {	#[31]
+       type         => 'KX',
+       preference   => 10,
+       exchange     => 'kx-exchange.example.com.',
+      },
+
+
       
      );
 

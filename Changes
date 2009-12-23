@@ -3,6 +3,13 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Feature KX RR
+    
+    Added support for the KX RR, RFC2230
+    The implementation is trivial since the KX inherets almost all of
+    its functionality by inheritance from the MX RR.
+
+
 Fix NSAP RR string representation
 
     RFC1706 specifies the masterfile format to have a leading "0x" and
@@ -17,6 +24,7 @@ Fix AAAA dynamic update
     Dynamic update of AAAA caused FORMERR on the prerequisite caused
     by AAAA creating rdata even when an address whas never specified.
     This fix may cause difference in behavior for people who expect a
+
     NULL address ("::") when creating a AAAA without an address
     specified.
 

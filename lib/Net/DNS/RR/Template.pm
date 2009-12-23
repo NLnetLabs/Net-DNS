@@ -5,7 +5,8 @@ package Net::DNS::RR::Template;
 # This is a template for specifiying new RR classes.
 #
 # After completing the template make sure the the RR code is specified
-# in DNS.pm %typesbyname and the RR is added to MANIFEST
+# in DNS.pm %typesbyname, it is added to the %RR hash in RR.pm, and
+# the RR is added to MANIFEST
 
 
 
@@ -115,6 +116,28 @@ sub _canonicalRdata {
 
 
 
+# In case you want to offer users a sorted order then you will have to define the following functions,
+# otherwise just remove these.
+
+# Highest preference sorted first.
+__PACKAGE__->set_rrsort_func("preference",
+			       sub {
+				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
+				   $a->{'preference'} <=> $b->{'preference'}
+}
+);
+
+
+__PACKAGE__->set_rrsort_func("default_sort",
+			       __PACKAGE__->get_rrsort_func("preference")
+
+    );
+
+
+
+
+
+
 
 1;
 __END__
@@ -148,7 +171,7 @@ it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS, L<Net::DNS::RR>,
+L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR>
 
 
 =cut

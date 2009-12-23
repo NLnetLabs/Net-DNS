@@ -5,7 +5,7 @@
 #
 
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use strict;
 
 
@@ -92,3 +92,7 @@ is (
 
 
 
+
+
+my $rr = Net::DNS::RR->new('atma.example IN TYPE34 \# 4  0A0000 01  ');
+is($rr->string,'atma.example.	0	IN	ATMA	\# 4 0a000001',"ATMA, is known but undefined");
