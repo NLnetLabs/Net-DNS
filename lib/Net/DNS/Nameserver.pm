@@ -399,9 +399,10 @@ sub get_open_tcp {
 
 sub loop_once {
   my ($self, $timeout) = @_;
-  $timeout=0 unless defined($timeout);
-  print ";loop_once called with $timeout \n" if $self->{"Verbose"} >4;
+
+  print ";loop_once called with timeout: ".defined($timeout)?$timeout:"undefined"."\n" if $self->{"Verbose"} >4;
   foreach my $sock (keys %{$self->{"_tcp"}}) {
+      # There is TCP traffic to handle
       $timeout = 0.1 if $self->{"_tcp"}{$sock}{"outbuffer"};
   }
   my @ready = $self->{"select"}->can_read($timeout);
@@ -591,10 +592,6 @@ Start accepting queries. Calling main_loop never returns.
 
 =cut
 
-#####
-#
-#  The functionality might change. Left "undocumented" for now.
-#
 =head2 loop_once
 
 	$ns->loop_once( [TIMEOUT_IN_SECONDS] );

@@ -999,7 +999,7 @@ sub bgsend {
 	    die ref($self)." bgsend: Unsupported Socket Family: $sockfamily";
 	}
 	
-	unless (scalar(@socket)) {
+	unless ($socket[$sockfamily]) {
 		$self->errorstring("could not get socket");   
 		return;
 	}

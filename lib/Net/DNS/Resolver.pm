@@ -399,6 +399,9 @@ call C<< $res->bgread >> to get the response packet.  You can use C<<
 $res->bgisready >> or C<IO::Select> to find out if the socket is ready
 before reading it.
 
+bgsend does not support persistent sockets.
+
+
 =head2 bgread
 
     $packet = $res->bgread($socket);
