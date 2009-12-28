@@ -39,7 +39,7 @@ sub new_from_string {
 	my ( $class, $self, $rdata_string ) = @_ ;
 	
 	bless $self, $class;
-        
+        return $self unless $rdata_string;
 	$self->_build_char_str_list($rdata_string);
 	my @elements= $self->char_str_list();
 	if (@elements==2){
@@ -48,11 +48,11 @@ sub new_from_string {
 		$self->{"cpu"} = $elements[0];
 		$self->{"os"}  = $elements[1];
 	}else{
-		return $self;
+		return;
 	}
 	
 	
-	return bless $self, $class;
+	return $self;
 }
 
 sub rdatastr {
