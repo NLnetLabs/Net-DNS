@@ -146,7 +146,7 @@ sub runtests {
 	#special case for NS: delegation
 	$ans=($reply->authority)[0] if $data->{'type'} eq "NS";  
       SKIP:{
-	  skip "no answer returned ". ($updatesuccess?"errorcode: ":"after failed update: ").$reply->header->rcode, 1 unless defined ($ans) && $updatesuccess ;
+	  skip "no answer returned ". ($updatesuccess?"errorcode: ":" after failed update: ").$reply->header->rcode, 1 unless defined ($ans) && $updatesuccess ;
 	  is( $ans->string,$RR->string,"In and out match ". $data->{'type'});
 	}
 
@@ -165,11 +165,22 @@ sub runtests {
 	    $reply = $res->send($update);
 	    # Did it work?
 	  SKIP: {
-	      skip  $updatesuccess?'Update failed: '.$res->errorstring:"Delete cannot succeed after a failed update" , 1 unless $reply && $updatesuccess ;
+	      skip  $updatesuccess?'Update failed: '.$res->errorstring:"Delete cannot succeed after a failed update" , 2 unless $reply && $updatesuccess ;
 	      
 	      is ($reply->header->rcode, 'NOERROR', "Delete succeeded for ".$data->{'type'}) ||
-		  diag ('Update failed: ', $reply->header->rcode)
+		  diag ('Update failed: ', $reply->header->rcode);
+		  
+		  undef($reply);
+	      $reply=$res->send($query);
+	      ok(! $reply->answer, "empty answer section for ".
+		 $data->{'name'}.' '.$data->{'type'}. " after rr_del");
+
+
 	    }
+
+
+
+	    
 	    
 	}
 	
@@ -236,7 +247,7 @@ BEGIN {
 		     127.53.53.8
 		     );
 
-    $numberoftests=5*@rrs-3;
+    $numberoftests=6*@rrs-5;
     
     if(
        eval {require IO::Socket;}

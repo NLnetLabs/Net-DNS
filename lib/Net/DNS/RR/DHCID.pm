@@ -65,11 +65,9 @@ sub new_from_string {
 	$string =~ tr/()//d if $string;
 	$string =~ s/\n//mg if $string;
 	$string=~s/\s//g if $string;	
-	return  unless $string;
-
-	$self->{'rdatastr'}= $string;
-
 	bless $self, $class;
+	return $self unless $string;
+	$self->{'rdatastr'}= $string;
 	my $data=$self->rr_rdata();
 	$self->{'identifiertype'} = unpack('n', substr($data, 0 , 2));
 	$self->{'digesttype'}    = unpack('C', substr($data, 2, 1));
@@ -120,7 +118,7 @@ sub digest {
 sub rr_rdata {
 	my $self=shift;
 	my $rdata;
-	if ($self->digesttype) { 
+	if ($self->{'digesttype'}) { 
 		$rdata = pack("n", $self->identifiertype);
 		$rdata .= pack("C", $self->digesttype);
 		$rdata .= $self->digestbin;

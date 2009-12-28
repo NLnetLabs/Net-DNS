@@ -48,7 +48,7 @@ sub new_from_string {
 		$self->{"cpu"} = $elements[0];
 		$self->{"os"}  = $elements[1];
 	}else{
-		return;
+		return $self;
 	}
 	
 	

@@ -52,7 +52,7 @@ sub rr_rdata {
 
 sub _normalize_AAAA{
 	my $self=shift();
-	return unless exists $self->{"address"};
+	return $self unless exists $self->{"address"};
 	return $self->{"address"} if $self->{normalized};
 	
 	my $string=$self->{"address"};

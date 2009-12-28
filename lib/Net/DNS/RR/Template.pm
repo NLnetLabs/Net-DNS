@@ -37,7 +37,8 @@ sub new {
 
 
 # The new_from_string method parses the wire data.
-
+# Make sure the new from string method allows for emtpy strings as input.
+# As this is critical for dynamic update (rr_del).
 sub new_from_string {
 	my ($class, $self, $string) = @_;
 

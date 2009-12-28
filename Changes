@@ -3,6 +3,11 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Fix rt.cpan.org #43770
+
+     Update->rr_del() was reported broken for AAAA after 0.65.
+     The same bug also occured in HINFO RR.
+
 
 Fix rt.cpan.org #43765
     
