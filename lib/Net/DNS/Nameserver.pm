@@ -60,7 +60,8 @@ sub new {
 	my @localaddresses = $resolver->nameservers(@LocalAddr);
 
 	my $port = $self{LocalPort} || DEFAULT_PORT;
-
+	$self{Truncate}=1 unless defined ($self{Truncate});
+	
 	my @sock_tcp;	# All the TCP sockets we will listen to.
 	my @sock_udp;	# All the UDP sockets we will listen to.
 
@@ -365,18 +366,30 @@ sub udp_connection {
 		    peerport => $sock->peerport
 		   };
 	my $reply = $self->make_reply($query, $peerhost, $conn) || return;
-	my $reply_data = $reply->data;
-
+	my $max_len = $self->max_udp_len($query);
+ 	print "Maximum reply length as advertosed in EDNS from $peerhost:$peerport: $max_len\n" if $self->{"Verbose"};
+	$reply->truncate($max_len) if $self->{Truncate};
 	local $| = 1 if $self->{"Verbose"};
 	print "Writing response - " if $self->{"Verbose"};
 
-	if ($sock->send($reply_data)) { # 
+	if ($sock->send($reply->data)) { # 
 	  print "done\n" if $self->{"Verbose"};
 	}
 	else {
 	  print "failed to send reply: $!\n" if $self->{"Verbose"};
 	}
       }
+
+
+sub max_udp_len {
+	my ($self, $query) = @_;
+
+	for my $rr ($query->additional) {
+		return $rr->size if $rr->type eq 'OPT';
+	}
+
+	return 512;
+}
 
 
 sub get_open_tcp {
@@ -526,7 +539,8 @@ objects.  See L</EXAMPLE> for an example.
 	LocalAddr	 => ['::1' , '127.0.0.1' ],
 	LocalPort	 => "5353",
 	ReplyHandler => \&reply_handler,
-	Verbose		 => 1
+	Verbose		 => 1,
+        Truncate         => 0,
  );
 
 Creates a nameserver object.  Attributes are:
@@ -540,7 +554,8 @@ Creates a nameserver object.  Attributes are:
                         opdcode NS_NOTIFY (RFC1996)
   Verbose		Print info about received 
 			queries.			Defaults to 0 (off).
-
+  Truncate              Truncates UDP packets that
+                        are to big for the reply        Defaults to 1 (on)
 
 The LocalAddr attribute may alternatively be specified as a list of IP
 addresses to listen to. 
@@ -578,6 +593,14 @@ The nameserver will listen for both UDP and TCP connections.  On
 Unix-like systems, the program will probably have to run as root
 to listen on the default port, 53.	A non-privileged user should
 be able to listen on ports 1024 and higher.
+
+Packet Truncation is new functionality for
+$Net::DNS::Nameserver::VERSION>830 and uses the
+Net::DNS::Packet::truncate method with a size determinde by the
+advertised EDNS0 size in the query, or 512 if EDNS0 is not advertised
+in the query. Only UDP replies are truncated. If you want to do packet
+runcation yourself you should set Truncate to 0 and use the truncate
+method on the reply packet in the code you use for the ReplyHandler.
 
 Returns a Net::DNS::Nameserver object, or undef if the object
 couldn't be created.
@@ -700,7 +723,7 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2005-2007 O.M, Kolkman, RIPE NCC.
+Portions Copyright (c) 2005-2009 O.M, Kolkman, RIPE NCC.
  
 Portions Copyright (c) 2005 Robert Martin-Legene.
 

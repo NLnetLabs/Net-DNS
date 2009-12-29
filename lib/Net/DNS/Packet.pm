@@ -14,7 +14,7 @@ use Carp;
 use Net::DNS ;
 use Net::DNS::Question;
 use Net::DNS::RR;
-
+use Data::Dumper;
 
 
 require Exporter;
@@ -721,6 +721,86 @@ sub sign_sig0 {
 	return $sig0;
 }
 
+=head2 truncate
+
+The truncate method takes a maximum length as argument and then tries
+to truncate the packet an set the TC bit according to the rules of
+RFC2181 Section 9.
+
+The minimum maximum length that is honored is 512 octets.
+
+=cut
+
+# From RFC2181:
+#9. The TC (truncated) header bit
+#
+#   The TC bit should be set in responses only when an RRSet is required
+#   as a part of the response, but could not be included in its entirety.
+#   The TC bit should not be set merely because some extra information
+#   could have been included, but there was insufficient room.  This
+#   includes the results of additional section processing.  In such cases
+#   the entire RRSet that will not fit in the response should be omitted,
+#   and the reply sent as is, with the TC bit clear.  If the recipient of
+#   the reply needs the omitted data, it can construct a query for that
+#   data and send that separately.
+#
+#   Where TC is set, the partial RRSet that would not completely fit may
+#   be left in the response.  When a DNS client receives a reply with TC
+#   set, it should ignore that response, and query again, using a
+#   mechanism, such as a TCP connection, that will permit larger replies.
+
+# Code inspired on a contribution from Aaron Crane via rt.cpan.org 33547
+
+sub truncate {
+	my $self=shift;
+	my $max_len=shift;
+	my $debug=shift;
+	$max_len=$max_len>512?$max_len:512;
+
+	print "Truncating to $max_len\n" if $debug;
+
+	if (length $self->data() > $max_len) {
+		# first remove data from the additional section
+		while (length $self->data() > $max_len){
+			# first remove _complete_ RRstes from the additonal section.
+			my $popped= CORE::pop(@{$self->{'additional'}});
+			last unless defined($popped);
+			print "Removed ".$popped->string." from additional \n" if $debug;
+			my $i=0;
+			my @stripped_additonal;
+
+			while ($i< @{$self->{'additional'}}){
+				#remove all of these same RRtypes
+				if  (#${$self->{'additional'}}[$i]->name eq "ns2.example.com" &&
+				    ${$self->{'additional'}}[$i]->type eq $popped->type &&
+				    ${$self->{'additional'}}[$i]->name eq $popped->name &&
+				    ${$self->{'additional'}}[$i]->class eq $popped->class ){
+					print "       Also removed ". ${$self->{'additional'}}[$i]->string." from additonal \n" if $debug;				}else{
+					CORE::push @stripped_additonal,  ${$self->{'additional'}}[$i];
+				}
+				$i++;
+			}
+			$self->{'additional'}=\@stripped_additonal;
+		}
+		
+		return $self if length $self->data <= $max_len;
+		
+      		my @sections = qw<authority answer question>;
+		while (@sections) {
+			while (my $popped=$self->pop($sections[0])) {
+				last unless defined($popped);
+				print "Popped ".$popped->string." from the $sections[0] section\n" if $debug;
+				$self->header->tc(1);
+				return $self if length $self->data <= $max_len;
+				next;
+			}
+			shift @sections;
+		}
+	}
+	return $self;
+}
+
+
 
 
 =head1 COPYRIGHT
@@ -729,7 +809,7 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2002-2005 Olaf Kolkman
+Portions Copyright (c) 2002-2009 Olaf Kolkman
 
 Portions Copyright (c) 2007-2008 Dick Franks
 

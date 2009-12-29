@@ -3,6 +3,28 @@ $Id$                       -*-text-*-
 
 **** 0.66 NOT RELEASED YET
 
+Feature Truncation for Nameserver
+    fixes rt.cpan.org #33547 and #42744
+
+    TAKE CARE:
+    this feature may cause unexpected behavior for your nameservers
+    and can be turned off by setting Truncate to 0 during the creation
+    of the nameserver. 
+    my $ns = Net::DNS::Nameserver->new(
+		Truncate => 0,
+
+    );
+
+
+    Net::DNS::Packet::truncate is a new method that is called from
+    within Net::DNS::Nameserver that truncates a packet according to
+    the rules of RFC2181 section 9.
+
+    Acknowledgement Aaron Crane for an elegant test and for
+    inspiration for a direction.
+
+
+
 Fix rt.cpan.org #43770
 
      Update->rr_del() was reported broken for AAAA after 0.65.

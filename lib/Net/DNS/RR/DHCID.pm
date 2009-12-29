@@ -79,6 +79,7 @@ sub new_from_string {
 
 sub rdatastr {
 	my $self     = shift;
+
 	return $self->{'rdatastr'};
 }
 
@@ -117,7 +118,7 @@ sub digest {
 
 sub rr_rdata {
 	my $self=shift;
-	my $rdata;
+	my $rdata='';
 	if ($self->{'digesttype'}) { 
 		$rdata = pack("n", $self->identifiertype);
 		$rdata .= pack("C", $self->digesttype);

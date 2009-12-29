@@ -9,9 +9,25 @@ require Exporter;
 use vars qw(  @rrs   @EXPORT  );
 @EXPORT= qw (   @rrs  );
 
+@_rrs=(
+    {	#[0]
+       type         => 'SOA',
+       mname        => 'soa-mname.example.com.',
+       rname        => 'soa-rname.example.com.',
+       serial       => 12345,
+       refresh      => 7200,
+       retry        => 3600,
+       expire       => 2592000,
+       minimum      => 86400,
+      },
+  
+      {	#[6]
+       type         => 'HINFO',
+       cpu          => 'test-cpu',
+       os           => 'test-os',
+      }, 
 
-
-
+);
 @rrs=(
       {	#[0]
        type         => 'SOA',

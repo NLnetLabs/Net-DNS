@@ -91,11 +91,11 @@ foreach my $test_hr ( @Testlist ) {
 		$test_hr->{'descr'} . " -- Response ( rdatastr ) " ); 
 	
 	my @list = $uut->char_str_list();	
-#    print "\n\n";
-#    print $test_hr->{'stim'};
-#    print "\n--------------\n";
-#    print Dumper $uut;
-#    print "\n==============================\n";
+    print "\n\n";
+    print $test_hr->{'stim'};
+    print "\n--------------\n";
+    print Dumper $uut;
+    print "\n==============================\n";
     is_deeply(\@list, $test_hr->{'char_str_list_r'}, 
 		$test_hr->{'descr'} . " -- char_str_list equality"  ) ;		
 }

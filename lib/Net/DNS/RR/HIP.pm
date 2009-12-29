@@ -112,7 +112,7 @@ sub rr_rdata {
 
 sub rdatastr {
 	my $self = shift;
-	my $rdatastr;
+	my $rdatastr='';
 
 	if (exists $self->{"pubkey"}) {
 		$rdatastr = $self->pkalgorithm       . ' '   .
@@ -124,9 +124,6 @@ sub rdatastr {
 		}
 		chop $rdatastr;
 		
-	}
-	else {
-		$rdatastr = '';
 	}
 
 	return $rdatastr;
