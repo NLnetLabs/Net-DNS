@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 0.66 NOT RELEASED YET
+**** 0.66 Dec 30, 2009
 
 Feature Truncation for Nameserver
     fixes rt.cpan.org #33547 and #42744
