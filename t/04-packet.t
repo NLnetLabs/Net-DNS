@@ -1,11 +1,9 @@
 # $Id$	-*-perl-*-
 
-use Test::More tests => 80;
+use Test::More tests => 78;
 use strict;
 
 use Net::DNS;
-
-my $had_xs=$Net::DNS::HAVE_XS; 
 
 
 #	new() class constructor method must return object of appropriate class
@@ -13,7 +11,7 @@ isa_ok(Net::DNS::Packet->new(),	'Net::DNS::Packet',	'new() object');
 
 
 #	string method returns character string representation of object
-like(Net::DNS::Packet->new(undef)->string,	"/IN\tA/",	'$packet->string' );
+like(Net::DNS::Packet->new()->string,	'/HEADER/',	'$packet->string' );
 
 
 #	Create a DNS query packet
@@ -30,7 +28,7 @@ my @question = $packet->question;
 ok(@question && @question == 1,		'packet->question() returns single element list');
 my ($q) = @question;
 ok($q->isa('Net::DNS::Question'),	'list element is a question object');
-is_deeply($q,	$question,		'question object correct');
+is($q->string,	$question->string,	'question object correct');
 
 
 #	Empty packet created when new() arguments omitted
@@ -44,23 +42,26 @@ foreach my $method ( qw(question answer authority additional) ) {
 #	Default question added to empty packet
 my $default = Net::DNS::Question->new qw(. ANY ANY);
 ok($empty->data,	'packet->data() method works');
-my ($data) = $empty->question;
-is_deeply($data,	$default,	'implicit question in empty packet' );
+my ($implicit) = $empty->question;
+is($implicit->string,	$default->string,	'implicit question in empty packet' );
 
 
 #	parse() class constructor method must return object of appropriate class
 my $packet_data = $packet->data;
 my $packet2 = Net::DNS::Packet->parse(\$packet_data);
 isa_ok($packet2,	'Net::DNS::Packet',	'parse() object');
-is_deeply($packet2->question, $packet->question, 'check question section');
+is($packet2->string, $packet->string, 'decoded packet matches original');
 
 
 #	parse() class constructor raises exception when data truncated
-my $truncated = $packet->data;
-while ( chop $truncated ) {
-	my ($object,$error) = eval { Net::DNS::Packet->parse(\$truncated) };
+my @data = unpack 'C*', $packet->data;
+while ( @data ) {
+	pop(@data);
+	my $truncated = pack 'C*', @data;
+	my ($object,$error) = eval{ Net::DNS::Packet->parse(\$truncated) };
 	my $length = length $truncated;
-	like($error,	'/exception/i',	"parse(truncated($length))");
+	chomp $error;
+	ok($error,	"truncated ($length octets):\t$error");
 }
 
 
@@ -139,21 +140,4 @@ my ($rr) = $bind->additional;
 
 is($rr->type,	'OPT',	'Additional section packet is EDNS0 type');
 is($rr->class,	'4096',	'EDNS0 packet size correct');
-
-
-
-#	Check dn_expand can detect data corrupted by introducing a pointer loop.
-my $circular = pack('H*', '1025000000010000000000007696e76616c6964c00000010001');
-
-SKIP: {
-	skip 'No dn_expand_xs available', 1 unless $had_xs;
-	my ($pkt, $error) = Net::DNS::Packet->parse(\$circular);
-	like($error,	'/exception/i',	'loopdetection in dn_expand_XS');
-}
-
-
-# Force use of the pure-perl parser
-$Net::DNS::HAVE_XS=0;
-my ($pkt, $error) = Net::DNS::Packet->parse(\$circular);
-like($error,	'/exception/i',	'loopdetection in dn_expand_PP');
 

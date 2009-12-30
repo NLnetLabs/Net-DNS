@@ -24,11 +24,27 @@ Feature Truncation for Nameserver
     inspiration for a direction.
 
 
+Feature: Added Net::DNS::Domain
+    Net::DNS::Domain is an attemt to consistently approach the various
+    ways we interface with what RFC 1035 calls <domain-name>. 
+
+    The class and its test script t/02-domain.t are included to be
+    exposed to various architectures.
+
+    The class and its methods may be subject to change, both in terms of
+    naming and functionality.
+    
+    A contribution by Dick Franks
+
+Fix improved fuzzy matching of CLASS and TYPE in the Question
+    constructor method.
+
+    A contribution by Dick Franks.
 
 Fix rt.cpan.org #43770
 
-     Update->rr_del() was reported broken for AAAA after 0.65.
-     The same bug also occured in HINFO RR.
+    Update->rr_del() was reported broken for AAAA after 0.65.
+    The same bug also occured in HINFO RR.
 
 
 Fix rt.cpan.org #43765

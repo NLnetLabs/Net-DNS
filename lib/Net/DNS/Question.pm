@@ -12,7 +12,7 @@ use vars qw($VERSION $AUTOLOAD);
 use Carp;
 use Net::DNS;
 
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision: 800$)[1];
 
 =head1 NAME
 
@@ -42,34 +42,38 @@ queries in in-addr.arpa and ip6.arpa subdomains.
 =cut
 
 sub new {
-	my $class = shift;
-
-	my $qname = shift;
-	my $qtype = uc (shift || 'A');
-	my $qclass = uc (shift || 'IN');
+	my $self   = bless {}, shift;
+	my $qname  = shift;
+	my $qtype  = uc (shift || '');
+	my $qclass = uc (shift || '');
 
 	$qname = '' unless defined $qname;	# || ''; is NOT same!
 	$qname =~ s/\.+$//o;			# strip gratuitous trailing dot
 
-	# Check if the caller has the type and class reversed.
-	# We are not that kind for unknown types.... :-)
-	($qtype, $qclass) = ($qclass, $qtype)
-		if exists $Net::DNS::classesbyname{$qtype}
-		and exists $Net::DNS::typesbyname{$qclass};
+	# tolerate (possibly unknown) type and class in zone file order
+	unless ( exists $Net::DNS::classesbyname{$qclass} ) {
+		( $qtype, $qclass ) = ( $qclass, $qtype )
+				if exists $Net::DNS::classesbyname{$qtype};
+		( $qtype, $qclass ) = ( $qclass, $qtype ) if $qtype =~ /CLASS/;
+	}
+	unless ( exists $Net::DNS::typesbyname{$qtype} ) {
+		( $qtype, $qclass ) = ( $qclass, $qtype )
+				if exists $Net::DNS::typesbyname{$qclass};
+		( $qtype, $qclass ) = ( $qclass, $qtype ) if $qclass =~ /TYPE/;
+	}
 
 	# if argument is an IP address, do appropriate reverse lookup
 	my $reverse = _dns_addr($qname) if $qname =~ m/:|\d$/o;
 	if ( $reverse ) {
 		$qname = $reverse;
-		$qtype = 'PTR' if $qtype =~ m/^(A|AAAA)$/o;
+		$qtype ||= 'PTR';
 	}
 
-	my $self = {	qname	=> $qname,
-			qtype	=> $qtype,
-			qclass	=> $qclass
-			};
+	$self->{qname}  = $qname;
+	$self->{qtype}  = ( $qtype || 'A' );
+	$self->{qclass} = ( $qclass || 'IN' );
 
-	bless $self, $class;
+	return $self;
 }
 
 
@@ -238,16 +242,23 @@ sub data {
 	return $data;
 }
 
+
+1;
+__END__
+
+
 =head1 COPYRIGHT
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2003,2006-2007 Dick Franks.
+Portions Copyright (c) 2003,2006-2009 Dick Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
@@ -257,4 +268,3 @@ RFC 1035 Section 4.1.2
 
 =cut
 
-1;
