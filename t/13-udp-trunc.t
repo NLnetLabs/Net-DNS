@@ -21,7 +21,7 @@ BEGIN{
     $TestPort  = 5334;
     $Address = "127.0.0.1";
 
-    $numberoftests=82;
+    $numberoftests=100;
     
     if(
 	eval {require IO::Socket;}
@@ -68,26 +68,37 @@ BEGIN{
 	    [5, 1, 1],
 	    [10, 1, 1],
 	    [1, 1, 30],
-	    [10, 10, 400],
+	    [40, 40, 40],
 	    [50, 1, 1],
 	    [1, 50, 1],
-	    [200, 1, 1],
-	    [200, 1, 50],
+	    [20, 20, 1],
+	    [20, 1, 50],
+	    [60, 60, 60],
+	    [60, 100, 60],
 	    ) {
             @full_response = make_response($n);
+	    
+
+	    my $notcomp=Net::DNS::Packet->new();
+	    $notcomp->push("question", $query->question);
+	    my ($ans, $auth, $add)=@full_response;
+	    $notcomp->push("answer",	 @$ans)  if $ans;
+	    $notcomp->push("authority",  @$auth) if $auth;
+	    $notcomp->push("additional", @$add)  if $add;
+	    #$notcomp->print;
             my $socket = Mock::UDP->new($query->data);
             $ns->udp_connection($socket);
             my $reply_data = $socket->output;
-	    
-            my $reply = Net::DNS::Packet->new(\$reply_data);
+	    my $reply = Net::DNS::Packet->new(\$reply_data);
 	    #$reply->print;
+	    
 	    cmp_ok(length $reply_data, '<=', $size,
-		   "UDP-$size reply for $n->[0] A records short enough") || $reply->print;
-            ok($reply, "found UDP-$size reply for $n->[0] A records");
+		   "UDP-$size reply for\t($n->[0] , $n->[1], $n->[2])\t records short enough ($size: ".length($notcomp->data) ."->". length ( $reply_data ) . ")") || $reply->print;
+            ok($reply, "UDP-$size reply for\t($n->[0] , $n->[1], $n->[2])\t received answer");
             my $got      = reply_records($reply);
             my $expected = response_records($query, @full_response);
             ok(is_prefix($reply->header->tc, $got, $expected),
-               "UDP-$size reply for $n->[0] answer, $n->[1] authority and $n->[2] additional records complete or sanely truncated");
+               "UDP-$size reply for\t($n->[0] , $n->[1], $n->[2])\t records complete or sanely truncated");
         }
     }
 }

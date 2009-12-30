@@ -754,7 +754,7 @@ The minimum maximum length that is honored is 512 octets.
 sub truncate {
 	my $self=shift;
 	my $max_len=shift;
-	my $debug=shift;
+	my $debug=0;
 	$max_len=$max_len>512?$max_len:512;
 
 	print "Truncating to $max_len\n" if $debug;
@@ -771,7 +771,7 @@ sub truncate {
 
 			while ($i< @{$self->{'additional'}}){
 				#remove all of these same RRtypes
-				if  (#${$self->{'additional'}}[$i]->name eq "ns2.example.com" &&
+				if  (
 				    ${$self->{'additional'}}[$i]->type eq $popped->type &&
 				    ${$self->{'additional'}}[$i]->name eq $popped->name &&
 				    ${$self->{'additional'}}[$i]->class eq $popped->class ){
