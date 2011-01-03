@@ -62,8 +62,8 @@ C<new> creates a packet object from that data.  A second argument
 can be passed to turn on debugging output for packet parsing.
 
 If called in array context, returns a packet object and an
-error string.  The error string will only be defined if the
-packet object is undefined (i.e., couldn't be created).
+error string.  The content of the error string is unspecified
+if the packet object was successfully created.
 
 Returns B<undef> if unable to create a packet object (e.g., if
 the packet data is truncated).
