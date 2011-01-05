@@ -77,6 +77,21 @@ sub rr_rdata {
 	return $rdata;
 }
 
+sub new_serial {
+	my ($self, $inc) = @_;
+
+	if($inc) {
+		$self->{serial} += $inc;
+	} else {
+        my @ymdh = (localtime(time))[5,4,3,2];
+		my $newserial = sprintf("%.4d%.2d%.2d%.2d", $ymdh[0] + 1900, $ymdh[1] + 1, @ymdh[2,3]);
+	        $self->{serial} = ($newserial > $self->{serial})
+			? $newserial
+			: $self->{serial} + 1;
+	}
+	return $self->{serial};
+}
+
 
 sub _normalize_dnames {
 	my $self=shift;
@@ -165,11 +180,22 @@ Returns the zone's expire interval.
 
 Returns the minimum (default) TTL for records in this zone.
 
+=head2 newserial
+
+    $rr->newserial();
+
+Generates a new serial for this SOA depending on the current date and a
+counter. When called without an argument the serial will have the form
+YYYYMMDDxx, where xx starts at 00. If the current serial did have the same
+date, xx will be incremented.
+
 =head1 COPYRIGHT
 
 Copyright (c) 1997-2002 Michael Fuhr. 
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
+
+Portions Copyright (c) 2010 Benjamin Tietz.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

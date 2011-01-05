@@ -150,7 +150,7 @@ In addition to the regular methods
 
 =head2 algorithm
 
-    print "algoritm" = ", $rr->algorithm, "\n";
+    print "algorithm" = ", $rr->algorithm, "\n";
 
 Returns the RR's algorithm field in decimal representation
 

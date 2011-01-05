@@ -16,7 +16,7 @@ use Win32::Registry;
 use Data::Dumper;
 sub init {
   
-        my $debug=0;
+	my $debug=0;
 	my ($class) = @_;
 	
 	my $defaults = $class->defaults;
@@ -52,7 +52,7 @@ sub init {
 	}
 
 	my $domain=$FIXED_INFO->{'DomainName'}||'';
-	my $searchlist = "$domain" ;
+	my $searchlist; 
 	
 
 	#
@@ -70,23 +70,25 @@ sub init {
 			or  $opened_registry =0;
 	}
 
+	if ($domain) {
+		$defaults->{'domain'} = $domain;
+		$searchlist = $domain;
+	}
 	
 	if ($opened_registry &&  $resobj->GetValues(\%keys)){
+		$searchlist  .= "," if $searchlist; # $domain already in there
 		$searchlist  .= $keys{'SearchList'}->[2];
 	}
 	
 	
 	
-	if ($domain) {
-		$defaults->{'domain'} = $domain;
-	}
 
 	my $usedevolution = $keys{'UseDomainNameDevolution'}->[2];
 	if ($searchlist) {
 		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
 		my @a;
 		my %h;
-		foreach my $entry (split(m/[\s,]+/, $searchlist)) {
+		foreach my $entry (split(m/[\s,]+/, lc $searchlist)) {
 			push(@a, $entry) unless $h{$entry};
 			$h{$entry} = 1;
 			if ($usedevolution) {

@@ -190,10 +190,15 @@ sub make_reply {
 			  ($rcode, $ans, $auth, $add, $headermask) =
 			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $conn);
 			}else{
-			  $reply->header->rcode("SERVFAIL") unless 
-			     ( ref $self->{"NotifyHandler"} eq "CODE");
-		  ($rcode, $ans, $auth, $add, $headermask) =
-			      &{$self->{"NotifyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $conn);
+				if ( ref $self->{"NotifyHandler"} eq "CODE") {
+					($rcode, $ans, $auth, $add, $headermask) =
+						&{$self->{"NotifyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $conn);
+				}else{
+					$rcode = "NOTIMP";
+					$headermask = {
+						opcode => "NS_NOTIFY_OP"
+					};
+				}
 			}
 			print "$rcode\n" if $self->{"Verbose"};
 			
