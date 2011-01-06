@@ -251,9 +251,11 @@ sub readfromtcp {
   	my ($self, $sock) = @_;
 	return -1 unless defined $self->{"_tcp"}{$sock};
 	my $peer = $self->{"_tcp"}{$sock}{"peer"};
+	my $buf;
 	my $charsread = $sock->sysread(
-	    $self->{"_tcp"}{$sock}{"inbuffer"}, 
+		$buf,
 	    16384);
+	$self->{"_tcp"}{$sock}{"inbuffer"} = $self->{"_tcp"}{$sock}{"inbuffer"} . $buf;
 	$self->{"_tcp"}{$sock}{"timeout"} = time()+$self->{IdleTimeout}; # Reset idle timer
 	print "Received $charsread octets from $peer\n" if $self->{"Verbose"};
 	if ($charsread == 0) { # 0 octets means socket has closed
