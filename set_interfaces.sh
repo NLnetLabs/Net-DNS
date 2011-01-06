@@ -3,6 +3,7 @@
 #
 # Somewhat simple script to set the local interfaces.
 # Works for Mac OS X.
+# Also works for FreeBSD.
 # $Id$
 
 
@@ -39,7 +40,7 @@ if   [ $? != 0 ] ; then
 	sudo ifconfig ${INTERFACE}:7 inet 127.53.53.12 \
 	    netmask 255.255.255.255 
 
-    elif [ "$SYSTEM" = "Darwin" ]; then
+    elif [ "$SYSTEM" = "Darwin" -o "$SYSTEM" = "FreeBSD" ]; then
 	echo "Setting Interfaces"
 	INTERFACE=lo0
 	sudo ifconfig ${INTERFACE} inet 127.53.53.1 \
