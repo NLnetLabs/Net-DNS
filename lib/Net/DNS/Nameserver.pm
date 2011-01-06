@@ -61,6 +61,7 @@ sub new {
 
 	my $port = $self{LocalPort} || DEFAULT_PORT;
 	$self{Truncate}=1 unless defined ($self{Truncate});
+	$self{IdleTimeout}=120 unless defined ($self{IdleTimeout});
 	
 	my @sock_tcp;	# All the TCP sockets we will listen to.
 	my @sock_udp;	# All the UDP sockets we will listen to.
@@ -253,7 +254,7 @@ sub readfromtcp {
 	my $charsread = $sock->sysread(
 	    $self->{"_tcp"}{$sock}{"inbuffer"}, 
 	    16384);
-	$self->{"_tcp"}{$sock}{"timeout"} = time()+120; # Reset idle timer
+	$self->{"_tcp"}{$sock}{"timeout"} = time()+$self->{IdleTimeout}; # Reset idle timer
 	print "Received $charsread octets from $peer\n" if $self->{"Verbose"};
 	if ($charsread == 0) { # 0 octets means socket has closed
 	  print "Connection to $peer closed or lost.\n" if $self->{"Verbose"};
@@ -287,7 +288,7 @@ sub tcp_connection {
 		$self->{"_tcp"}{$client}{"peer"} = "tcp:".$peerhost.":".$peerport;
 		$self->{"_tcp"}{$client}{"state"} = STATE_ACCEPTED;
 		$self->{"_tcp"}{$client}{"socket"} = $client;
-		$self->{"_tcp"}{$client}{"timeout"} = time()+120;
+		$self->{"_tcp"}{$client}{"timeout"} = time()+$self->{IdleTimeout};
  		$self->{"select"}->add($client);
 		# After we accepted we will look at the socket again 
 		# to see if there is any data there. ---Olaf
@@ -480,7 +481,7 @@ sub loop_once {
 		  $self->tcp_connection($self->{"_tcp"}{"socket"});
 	      }
 	  }
-	  $self->{"_tcp"}{$s}{"timeout"} = time()+120;
+	  $self->{"_tcp"}{$s}{"timeout"} = time()+$self->{IdleTimeout};
       } else {
 	  # Get rid of idle clients.
 	  my $timeout = $self->{"_tcp"}{$s}{"timeout"};
@@ -561,6 +562,9 @@ Creates a nameserver object.  Attributes are:
 			queries.			Defaults to 0 (off).
   Truncate              Truncates UDP packets that
                         are to big for the reply        Defaults to 1 (on)
+  IdleTimeout   TCP clients are disconnected
+                if they are idle longer than
+				this duration. Defaults to 120 (secs)
 
 The LocalAddr attribute may alternatively be specified as a list of IP
 addresses to listen to. 
