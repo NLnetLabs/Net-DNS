@@ -24,7 +24,7 @@ Net::DNS is a perl implementation of a DNS resolver.
 
 =head2 Where can I find Test::More?
 
-Test::More is part of the Test-Simple packge, by Michael G Schwern.
+Test::More is part of the Test-Simple package, by Michael G Schwern.
 You should be able to find the distrubution here:
 
 	http://search.cpan.org/dist/Test-Simple/

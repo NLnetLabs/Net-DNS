@@ -595,7 +595,7 @@ secured zones will contain DNSKEY, NSEC and RRSIG records.
 
 Setting calling the dnssec method with a non-zero value will set the
 UDP packet size to the default value of 2048. If that is to small or
-to big for your environement you should call the udppacketsize()
+to big for your environment you should call the udppacketsize()
 method immeditatly after.
 
    $res->dnssec(1);    # turns on DNSSEC and sets udp packetsize to 2048
@@ -637,7 +637,7 @@ to 1.
     $res->udppacketsize(2048);
 
 udppacketsize will set or get the packet size. If set to a value greater than 
-Net::DNS::PACKETSZ() an EDNS extension will be added indicating suppport for MTU path 
+Net::DNS::PACKETSZ() an EDNS extension will be added indicating support for MTU path 
 recovery.
 
 Default udppacketsize is Net::DNS::PACKETSZ() (512)

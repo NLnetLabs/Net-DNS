@@ -578,7 +578,7 @@ IPv6 and IPv4);
 
 The ReplyHandler subroutine is passed the query name, query class,
 query type and optionally an argument containing the peerhost, the
-incoming query, and the name of the incomming socket (sockethost). It
+incoming query, and the name of the incoming socket (sockethost). It
 must return the response code and references to the answer, authority,
 and additional sections of the response.  Common response codes are:
 
@@ -725,7 +725,7 @@ address". This should really only be a problem on a server which has
 more than one IP-address (besides localhost - any experience with IPv6
 complications here, would be nice). If this is a problem for you, a
 work-around would be to not listen to INADDR_ANY but to specify each
-address that you want this module to listen on. A seperate set of
+address that you want this module to listen on. A separate set of
 sockets will then be created for each IP-address.
 
 =head1 COPYRIGHT
