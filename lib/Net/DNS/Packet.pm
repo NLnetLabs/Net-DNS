@@ -629,8 +629,9 @@ sub dn_expand_PP {
 
     $response = $res->send($update);
 
-Signs a packet with a TSIG resource record (see RFC 2845).  Uses the
-following defaults:
+Attaches a TSIG resource record object containing a key, which will
+be used to signs a packet with a TSIG resource record (see RFC 2845).
+Uses the following defaults:
 
     algorithm   = HMAC-MD5.SIG-ALG.REG.INT
     time_signed = current time
@@ -651,9 +652,6 @@ seconds:
     $query->sign_tsig($tsig);
 
     $response = $res->send($query);
-
-You shouldn't modify a packet after signing it; otherwise authentication
-will probably fail.
 
 =cut
 
