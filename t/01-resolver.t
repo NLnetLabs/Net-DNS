@@ -63,34 +63,32 @@ while (my ($param, $value) = each %good_input) {
 
 
 	
-# Some people try to run these on private address space."
-
-use Net::IP;
-
-use IO::Socket::INET;
-
-my $sock = IO::Socket::INET->new(PeerAddr => '193.0.14.129', # k.root-servers.net.
-				 PeerPort => '53',
-				 Proto    => 'udp');
-
-
-my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
-	    
-
 SKIP: {
+	# Test first, if we want online tests at all.
 	skip 'Online tests disabled.', 3
 		unless -e 't/online.enabled';
 
 	skip 'Online tests disabled.', 3
 		if -e 't/online.disabled';
 
+	# Some people try to run these on private address space - test for this case and skip.
+	use Net::IP;
+	use IO::Socket::INET;
+
+	my $sock = IO::Socket::INET->new(PeerAddr => '193.0.14.129', # k.root-servers.net.
+					 PeerPort => '53',
+					 Proto    => 'udp');
+
+	my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
+
 	skip 'Tests may not run succesful from private IP('.$ip->ip() .')', 3
 	    if ($ip->iptype() ne "PUBLIC");
+
 
 	my $res = Net::DNS::Resolver->new;
 	
 	$res->nameservers('a.t.net-dns.org');
-	my $ip = ($res->nameservers)[0];
+	$ip = ($res->nameservers)[0];
 	is($ip, '10.0.1.128', 'Nameservers() looks up IP.') or
 	    diag ($res->errorstring . $res->print) ;
 	
