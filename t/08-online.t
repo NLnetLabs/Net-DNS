@@ -49,31 +49,32 @@ foreach my $data (@rrs) {
     
     my $packet = $res->send($data->{'name'}, $data->{'type'}, 'IN');
     
-    ok($packet, "Got an answer for $data->{name} IN $data->{type}");
-    is($packet->header->qdcount, 1, 'Only one question');
-    is($packet->header->ancount, 1, 'Got single answer');
-    
-    my $question = ($packet->question)[0];
-    my $answer   = ($packet->answer)[0];
-    
-    ok($question,                           'Got question'            );
-    is($question->qname,  $data->{'name'},  'Question has right name' );
-    is($question->qtype,  $data->{'type'},  'Question has right type' );
-    is($question->qclass, 'IN',             'Question has right class');
-    
-    ok($answer,                                                       );
-    is($answer->class,    'IN',             'Class correct'           );
-    
-    
-    foreach my $meth (keys %{$data}) {
-	if ($meth eq "name"){
-	    #names should be case insensitive
-	    is(lc($answer->$meth()),lc($data->{$meth}), "$meth correct ($data->{name})");
-	}else{
-	    is($answer->$meth(), $data->{$meth}, "$meth correct ($data->{name})");
+    if (ok($packet, "Got an answer for $data->{name} IN $data->{type}")) {
+		is($packet->header->qdcount, 1, 'Only one question');
+		if (is($packet->header->ancount, 1, 'Got single answer')) {
+		
+			my $question = ($packet->question)[0];
+			my $answer   = ($packet->answer)[0];
+			
+			ok($question,                           'Got question'            );
+			is($question->qname,  $data->{'name'},  'Question has right name' );
+			is($question->qtype,  $data->{'type'},  'Question has right type' );
+			is($question->qclass, 'IN',             'Question has right class');
+			
+			ok($answer,                                                       );
+			is($answer->class,    'IN',             'Class correct'           );
+			
+			
+			foreach my $meth (keys %{$data}) {
+			if ($meth eq "name"){
+				#names should be case insensitive
+				is(lc($answer->$meth()),lc($data->{$meth}), "$meth correct ($data->{name})");
+			}else{
+				is($answer->$meth(), $data->{$meth}, "$meth correct ($data->{name})");
+			}
+		}
+		}
 	}
-	
-    }
 }
 
 # Does the mx() function work.
