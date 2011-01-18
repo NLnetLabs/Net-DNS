@@ -180,14 +180,21 @@ Returns the zone's expire interval.
 
 Returns the minimum (default) TTL for records in this zone.
 
-=head2 newserial
+=head2 new_serial
 
-    $rr->newserial();
+Increments this SOA records serial number. It will generate
+a date-based serial number. Or you can pass a positive number to
+add to the current serial number.
 
-Generates a new serial for this SOA depending on the current date and a
-counter. When called without an argument the serial will have the form
-YYYYMMDDxx, where xx starts at 00. If the current serial did have the same
-date, xx will be incremented.
+    $rr->new_serial();
+
+Generates a new serial number based on date: YYYYmmddHHxx format,
+where xx starts at 00. Increments current serial by 1 if the new
+serial is smaller or equal as the current.
+
+    $rr->new_serial(50);
+
+Adds 50 to the original serial number.
 
 =head1 COPYRIGHT
 
