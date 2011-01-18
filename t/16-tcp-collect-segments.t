@@ -41,9 +41,9 @@ sub reply_handler {
     my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
     die "Sockhost failure" if ($conn->{"sockhost"} ne "127.0.0.1");
     die "Sockport failure" if ($conn->{"sockport"} ne $TestPort);
-	use Data::Dumper;
-	print Dumper $conn;
-	print "QNAME: $qname QTYPE: $qtype\n";
+#	use Data::Dumper;
+#	print Dumper $conn;
+#	print "QNAME: $qname QTYPE: $qtype\n";
     return ("NXDOMAIN");
 }
 
@@ -83,17 +83,19 @@ my $pid;
 	 	$packet = Net::DNS::Packet->new(\$buf, 1);
 
 		 if (ok(defined($packet), 'We received an answer')) {
-			ok($packet->header->rcode == 'NXDOMAIN', 'Correct answer received');
+			ok($packet->header->rcode eq 'NXDOMAIN', 'Correct answer received');
 		 }
 	}
+	kill 1, $pid;
 
      } elsif (defined($pid)) {
 	  # Child process here
 	  #parent process pid is available with getppid
-	  # exec will transfer control to the child process,
+	  # exit will transfer control to the child process,
 	  my $i = 0;
 
 	  while ($i < 10) {
+	  	  print "Child running $i\n";
 		  $nameserver->loop_once(10);
 		  $i += 1;
 	  }

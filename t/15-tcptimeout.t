@@ -74,6 +74,7 @@ my $pid;
 	 sleep 1; $tickler->send("3.bla.foo","A");
 	 sleep 1; $tickler->send("4.bla.foo","A");
 	 ok(! defined($resolver->send("C.bla.foo","A")), 'Third query failed after three seconds idle time');
+	 kill 1, $pid;
 
      } elsif (defined($pid)) {
 	  # Child process here
