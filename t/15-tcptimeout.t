@@ -1,3 +1,4 @@
+# $Id$
 # This code is not supposed to be included into the distribution.
 
 use Test::More;
