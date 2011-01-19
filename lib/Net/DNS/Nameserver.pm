@@ -564,9 +564,9 @@ Creates a nameserver object.  Attributes are:
 			queries.			Defaults to 0 (off).
   Truncate              Truncates UDP packets that
                         are to big for the reply        Defaults to 1 (on)
-  IdleTimeout   TCP clients are disconnected
-                if they are idle longer than
-				this duration. Defaults to 120 (secs)
+  IdleTimeout           TCP clients are disconnected
+                        if they are idle longer than
+                        this duration.                  Defaults to 120 (secs)
 
 The LocalAddr attribute may alternatively be specified as a list of IP
 addresses to listen to. 
