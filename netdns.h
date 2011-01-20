@@ -1,5 +1,5 @@
 #include <sys/types.h>
-#if defined(_MSC_VER) || defined(__MINGW32_VERSION)
+#if defined(_MSC_VER) || defined(__MINGW32_VERSION) || defined(__MINGW32__) 
 typedef unsigned char u_char;
 #endif
 #define TESTVAL 4
