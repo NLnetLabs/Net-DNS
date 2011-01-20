@@ -168,7 +168,8 @@ sub _process_args {
 	my ($self, %args) = @_;
 	
 	if ($args{'config_file'}) {
-		$self->read_config_file($args{'config_file'});
+		my $file = $args{'config_file'};
+		$self->read_config_file($file) or croak "Could not open $file: $!";
 	}
 	
 	foreach my $attr (keys %args) {
@@ -237,7 +238,7 @@ sub read_config_file {
 	
 	local *FILE;
 
-	open(FILE, "< $file") or croak "Could not open $file: $!";
+	open(FILE, "<", $file) or return;
 	local $/ = "\n";
 	local $_;
 	
@@ -272,6 +273,8 @@ sub read_config_file {
 		
 		$config->{'nameservers'} = [ @ns ]         if @ns;
 		$config->{'searchlist'}  = [ @searchlist ] if @searchlist;
+
+		return 1;
 	    }
  
 
