@@ -1082,6 +1082,21 @@ sub STORABLE_thaw {
 	return $self;
 }
 
+
+#
+#	dump
+#
+#	    $rr->dump;
+#
+#	Prints a depth-first recursive listing of the record data structure.
+#
+
+sub dump {				## print internal data structure
+	use Data::Dumper;
+	print Dumper(shift);
+}
+
+
 =head1 BUGS
 
 This version of C<Net::DNS::RR> does little sanity checking on user-created
