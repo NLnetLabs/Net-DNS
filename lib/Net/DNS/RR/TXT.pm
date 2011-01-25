@@ -54,7 +54,8 @@ sub rdatastr {
 		return join(' ', map { 
 			my $str = $_;  
 			$str =~ s/"/\\"/g;  
-			$str =~ s/;/\\;/g;  
+			$str =~ s/;/\\;/g;
+			$str =~ s/([\x00-\x1F\x7F-\xFF])/sprintf"\\%.3d",ord($1)/eg;
 			qq("$str");
 		} @{$self->{'char_str_list'}});
 	} 
