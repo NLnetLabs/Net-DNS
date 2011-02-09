@@ -590,6 +590,11 @@ Parsing is aborted if the object could not be created (e.g., corrupt or insuffic
 
 use constant PACKED_LENGTH => length pack 'n2 N n', (0)x4;
 
+sub decode {			## make "new" test scripts work with existing architecture
+	my ( $class, $data, $offset ) = @_;
+	return $class->parse( $data, $offset || 0 );
+}
+
 sub parse {
 	my ($objclass, $data, $offset) = @_;
 
@@ -758,6 +763,13 @@ sub rr_rdata {
 # representation of an RR.
 #------------------------------------------------------------------------------
 
+sub encode {			## make "new" test scripts work with existing architecture
+	my ( $self, $offset, $hash ) = @_;
+	my $packet = new Net::DNS::Packet();
+	$packet->{compnames} = $hash || {};
+	return $self->data( $packet, $offset || 0 );
+}
+
 sub data {
 	my ($self, $packet, $offset) = @_;
 	my $data;
@@ -815,6 +827,8 @@ sub data {
 #  packets in wire format withoud domain name compression.
 #  It is essential to DNSSEC RFC 2535 section 8
 #------------------------------------------------------------------------------
+
+sub canonical {&_canonicaldata}
 
 sub _canonicaldata {
 	my $self = shift;

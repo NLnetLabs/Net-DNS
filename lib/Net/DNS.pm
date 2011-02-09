@@ -42,7 +42,7 @@ BEGIN {
     require Exporter;
     @ISA     = qw(Exporter );
     # these need to live here because of dependencies further on.
-    @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del);
+    @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del SEQUENTIAL YYYYMMDDxx);
     @EXPORT_OK= qw(name2labels wire2presentation rrsort stripdot);
 
 
@@ -538,6 +538,21 @@ sub presentation2wire {
 
 
 
+#
+# Auxiliary functions to support policy-driven zone serial numbering.
+#
+#	$successor = $soa->serial(SEQUENTIAL);
+#	$successor = $soa->serial(YYYYMMDDxx);
+#
+
+sub SEQUENTIAL() { undef }
+
+sub YYYYMMDDxx() {
+	my ( $dd, $mm, $yy ) = ( localtime )[3 .. 5];
+	return 1900010000 + sprintf '%d%0.2d%0.2d00', $yy, $mm, $dd;
+}
+
+
 
 sub rrsort {
     my ($rrtype,$attribute,@rr_array)=@_;
@@ -791,6 +806,29 @@ section of a dynamic update packet.
 
 Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
 be created.
+
+
+
+=head1 Zone Serial Number Management
+
+The Net::DNS module provides auxiliary functions which support
+policy-driven zone serial numbering regimes.
+
+=head2 Strictly Sequential
+
+    $successor = $soa->serial( SEQUENTIAL );
+
+The existing serial number is incremented modulo 2**32.
+
+=head2 Date Encoded
+
+    $successor = $soa->serial( YYYYMMDDxx );
+
+The 32 bit value returned by the auxiliary YYYYMMDDxx() function
+will be used as the base for the date-coded zone serial number.
+Serial number increments must be limited to 100 per day for the
+date information to remain useful.
+
 
 
 =head2 Sorting of RR arrays

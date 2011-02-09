@@ -77,19 +77,41 @@ sub rr_rdata {
 	return $rdata;
 }
 
-sub new_serial {
-	my ($self, $inc) = @_;
 
-	if($inc) {
-		$self->{serial} += $inc;
-	} else {
-        my @ymdh = (localtime(time))[5,4,3,2];
-		my $newserial = sprintf("%.4d%.2d%.2d%.2d", $ymdh[0] + 1900, $ymdh[1] + 1, @ymdh[2,3]);
-	        $self->{serial} = ($newserial > $self->{serial})
-			? $newserial
-			: $self->{serial} + 1;
+sub serial {
+	use integer;
+	my $self = shift;
+
+	return $self->{serial} || 0 unless @_;			# current/default value
+
+	my $value = shift;					# replace if in sequence
+	return $self->{serial} = $value if _ordered( $self->{serial}, $value );
+
+	# unwise to assume 32-bit hardware, or that integer overflow goes unpunished
+	my $serial = 0xFFFFFFFF & ( 0 + $self->{serial} );
+	return $self->{serial} ^= 0xFFFFFFFF if ( $serial & 0x7FFFFFFF ) == 0x7FFFFFFF;	   # wrap
+	return $self->{serial} = $serial + 1;			# increment
+}
+
+
+sub _ordered($$) {				## irreflexive partial ordering (32-bit)
+	use integer;
+	my ( $a, $b ) = @_;
+
+	return defined $b unless defined $a;			# ( undef, any )
+	return 0 unless defined $b;				# ( any, undef )
+
+	# unwise to assume 32-bit hardware, or that integer overflow goes unpunished
+	if ( $a < 0 ) {						# translate $a<0 region
+		$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;		#  0	 <= $a < 2**31
+		$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;		# -2**31 <= $b < 2**32
 	}
-	return $self->{serial};
+
+	if ( $a < $b ) {
+		return $a > ( $b - 0x80000000 );
+	} else {
+		return $b < ( $a - 0x80000000 );
+	}
 }
 
 
@@ -116,7 +138,6 @@ sub _canonicalRdata {
 
 	return $rdata;
 }
-
 
 
 1;
@@ -150,11 +171,19 @@ this zone.
 Returns a domain name that specifies the mailbox for the person
 responsible for this zone.
 
+
 =head2 serial
 
     print "serial = ", $rr->serial, "\n";
+    $new_serial = $rr->serial(value);
 
-Returns the zone's serial number.
+Unsigned 32 bit version number of the original copy of the zone.
+Zone transfers preserve this value.
+
+RFC1982 defines a strict (irreflexive) partial ordering for zone
+serial numbers. The serial number will be incremented unless the
+replacement value argument satisfies the ordering constraint.
+
 
 =head2 refresh
 
@@ -180,21 +209,39 @@ Returns the zone's expire interval.
 
 Returns the minimum (default) TTL for records in this zone.
 
-=head2 new_serial
 
-Increments this SOA records serial number. It will generate
-a date-based serial number. Or you can pass a positive number to
-add to the current serial number.
+=head1 Zone Serial Number Management
 
-    $rr->new_serial();
+The internal logic of the serial() method offers support for
+several widely used zone serial numbering policies.
 
-Generates a new serial number based on date: YYYYmmddHHxx format,
-where xx starts at 00. Increments current serial by 1 if the new
-serial is smaller or equal as the current.
+=head2 Strictly Sequential
 
-    $rr->new_serial(50);
+    $successor = $soa->serial( SEQUENTIAL );
 
-Adds 50 to the original serial number.
+The existing serial number is incremented modulo 2**32 because
+the value returned by the auxiliary SEQUENTIAL() function can never
+satisfy the serial number ordering constraint.
+
+=head2 Date Encoded
+
+    $successor = $soa->serial( YYYYMMDDxx );
+
+The 32 bit value returned by the auxiliary YYYYMMDDxx() function
+will be used if it satisfies the ordering constraint, otherwise
+the existing serial number will be incremented as above.
+
+Serial number increments must be limited to 100 per day for the
+date information to remain useful.
+
+=head2 Time Encoded
+
+    $successor = $soa->serial( time );
+
+The 32 bit value returned by the perl CORE::time() function will
+be used if it satisfies the serial number ordering constraint,
+otherwise the existing value will be incremented as above.
+
 
 =head1 COPYRIGHT
 
@@ -202,7 +249,7 @@ Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2010 Benjamin Tietz.
+Portions Copyright (c) 2011 Dick Franks.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
@@ -211,6 +258,6 @@ it and/or modify it under the same terms as Perl itself.
 
 L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.13
+RFC 1035 Section 3.3.13, RFC1982
 
 =cut
