@@ -366,7 +366,11 @@ sub udp_connection {
 
  	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{"Verbose"};
 
-	my $query = Net::DNS::Packet->new(\$buf);
+	my ($query, $err) = Net::DNS::Packet->new(\$buf, $self->{"Verbose"});
+	if (!defined($query)) {
+		print "Error interpreting query: $err\n" if $self->{"Verbose"};
+		return;
+	}
 	my $conn = {
 		    sockhost => $sock->sockhost,
 		    sockport => $sock->sockport,
