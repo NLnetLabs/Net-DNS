@@ -492,44 +492,24 @@ sub stripdot {
 sub presentation2wire {
     my  $presentation=shift;
     my  $wire="";
-    my $length=length($presentation);
     
-    my $i=0;
-    
-    while ($i < $length ){
-	my $char=unpack("x".$i."C1",$presentation);
-	if (  $char == ord ('.')){
-	    return ($wire,substr($presentation,$i+1));
-	}
-	if (  $char == ord ('\\')){
-	    #backslash found
-	    pos($presentation)=$i+1;
-	    if ($presentation=~/\G(\d\d\d)/){
-		$wire.=pack("C",$1);
-		$i+=3;
-	    }elsif($presentation=~/\Gx([0..9a..fA..F][0..9a..fA..F])/){
-		$wire.=pack("H*",$1);
-		$i+=3;
-	    }elsif($presentation=~/\G\./){
-		$wire.="\.";
-		$i+=1;
-	    }elsif($presentation=~/\G@/){
-		$wire.="@";
-		$i+=1;
-	    }elsif($presentation=~/\G\(/){
-		$wire.="(";
-		$i+=1;
-	    }elsif($presentation=~/\G\)/){
-		$wire.=")";
-		$i+=1;
-           }elsif($presentation=~/\G\\/){
-               $wire.="\\"; 
-               $i+=1;
+    while ($presentation =~ /\G([^.\\]*)([.\\]?)/g){
+        $wire .= $1 if defined $1;
+
+        if ($2) {
+            if ($2 eq '.') {
+                return ($wire,substr($presentation,pos $presentation));
 	    }
-	}else{
-	    $wire .=  pack("C",$char);  
+
+            #backslash found
+            if ($presentation =~ /\G(\d\d\d)/gc) {
+                $wire.=pack("C",$1);
+            } elsif ($presentation =~ /\Gx([0..9a..fA..F][0..9a..fA..F])/gc){
+                $wire.=pack("H*",$1);
+            } elsif ($presentation =~ /\G([@().\\])/gc){
+                $wire .= $1;
+            }
         }
-	$i++;
     }
     
     return $wire;
