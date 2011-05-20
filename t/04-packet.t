@@ -40,7 +40,7 @@ foreach my $method ( qw(question answer authority additional) ) {
 }
 
 #	Default question added to empty packet
-my $default = Net::DNS::Question->new qw(. ANY ANY);
+my $default = Net::DNS::Question->new(qw(. ANY ANY));
 ok($empty->data,	'packet->data() method works');
 my ($implicit) = $empty->question;
 is($implicit->string,	$default->string,	'implicit question in empty packet' );
