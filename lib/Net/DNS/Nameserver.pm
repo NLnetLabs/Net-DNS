@@ -484,7 +484,7 @@ sub loop_once {
 		  # send the response... well, unless it's a lot of tiny queries,
 		  # in which case we will be generating an entire TCP packet per
 		  # reply. --robert
-		  $self->tcp_connection($self->{"_tcp"}{"socket"});
+		  $self->tcp_connection($self->{"_tcp"}{$s}{"socket"});
 	      }
 	  }
 	  $self->{"_tcp"}{$s}{"timeout"} = time()+$self->{IdleTimeout};
