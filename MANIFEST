@@ -17,6 +17,7 @@ demo/trace_dns.pl
 DNS.xs
 lib/Net/DNS.pm
 lib/Net/DNS/Domain.pm
+lib/Net/DNS/DomainName.pm
 lib/Net/DNS/FAQ.pod
 lib/Net/DNS/Header.pm
 lib/Net/DNS/Nameserver.pm
