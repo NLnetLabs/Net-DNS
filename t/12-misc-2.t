@@ -92,7 +92,7 @@ my $pid;
 	 # Parent process here
 	 $resolver->usevc(1);
 
-	 $resolver->send("bla.foo","A");
+	 # $resolver->send("bla.foo","A");
 	 my $answer=$resolver->send($notify_packet);
 	 is($answer->header->opcode,"NS_NOTIFY_OP", "OPCODE set in reply");
 	 sleep 1;

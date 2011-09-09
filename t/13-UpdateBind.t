@@ -274,7 +274,8 @@ BEGIN {
 	}
 
 	if ( ! -x $named ) {
-	  diag ("You will need to have named installed at  ". $named);
+	  #diag ();
+	  plan skip_all => "You will need to have named installed at  ". $named;          
 	  exit;
 	}
 	plan tests => $numberoftests;
