@@ -2,7 +2,7 @@ package Net::DNS::DomainName;
 use base qw(Net::DNS::Domain);
 
 #
-# $Id:$
+# $Id$
 #
 
 use vars qw($VERSION);
