@@ -124,7 +124,7 @@ Returns the domain name as a character string corresponding to the
 Character escape sequences are used to represent a dot inside a
 domain name label and the escape character itself.
 
-Domain names containing unicode characters are supported if the
+Domain names containing Unicode characters are supported if the
 Net::LibIDN module is installed.
 
 Any non-printable code point is represented using the appropriate
@@ -238,15 +238,15 @@ sub origin {
 	my $class = shift;
 	my $name = shift || '';
 
-	if ( $name !~ /^\.*$/ ) {				# suffix
-		my $domain = new Net::DNS::Domain("$name.");
-		return sub {					# closure w.r.t. $domain
-			local $ORIGIN = $domain;		# dynamically scoped $ORIGIN
-			my $constructor = shift;
-			&$constructor;
-				}
-	}
 	return sub { my $constructor = shift; &$constructor; }	# all names absolute
+			unless $name =~ /[^.]/o;
+
+	my $domain = new Net::DNS::Domain($name);
+	return sub {						# closure w.r.t. $domain
+		local $ORIGIN = $domain;			# dynamically scoped $ORIGIN
+		my $constructor = shift;
+		&$constructor;
+			}
 }
 
 
@@ -359,8 +359,6 @@ __END__
 ########################################
 
 =head1 BUGS
-
-This program contains language which some viewers may find offensive.
 
 Coding strategy is intended to avoid creating unnecessary argument
 lists and stack frames. This improves efficiency at the expense of
