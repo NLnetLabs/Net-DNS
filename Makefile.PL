@@ -35,35 +35,51 @@ AMEN
 #
 my ($use_xs, $online_tests, $IPv6_tests);
 
-GetOptions(
+my $help = 0;
+my $online_tests = 2; # 2 = non-fatal, 1 is on, 0 if off
+
+unless (GetOptions(
 	'xs!'           => \$use_xs,
 	'pm'            => sub { 
 		warn qq/\n\tWARNING: Use of "--pm" is deprecated.  Use "--noxs" instead.\n\n/;
 		$use_xs = 0;
 	},
 	'online-tests!' => \$online_tests,
+	'non-fatal-online-tests' => sub {
+		$online_tests = 2;
+	},
 	'IPv6-tests!'   => \$IPv6_tests,
-);
+	'help|?'        => \$help,
+)) {
+	print "Error: Unrecognized option.\n"; print "Try perl Makefile.PL --help for more information\n";
+	exit 1;	
+};
 
+if ($help) {
+	print <<EOT;
 
+Usage: perl Makefile.PL [OPTION...]
 
-#
-# Test to see if IPv6 is available, unless IPv6 testing has been declined.
-#    
-if (!defined $IPv6_tests || $IPv6_tests == 1) {
-    unless(    eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");}	   ){
-		print <<V6WARNING;
+Prepare Makefile for building and installing Net::DNS
 
+  --xs | --noxs			Enable or disable linkage to the libresolv 
+				library Default the libresolv library is 
+				linked when a compiler is found.
 
-The libraries needed to support IPv6 transport have not been found. 
-You will need recent versions of the IO::Socket::INET6 and Socket6 
-libraries (from CPAN). 
+  --online-tests		Perform tests by communicating with the
+				outside world.  Beware that their success is
+				also dependent on outside influences.
 
-V6WARNING
-		$IPv6_tests = 0;
-	}
-}
+  --noonline-tests		Skip online tests completely.
 
+  --non-fatal-online-tests	Perform online test, but do let failures 
+				negatively affect the outcome of running
+				make test.  This is the default.
+
+EOT
+
+	exit 0;
+};
 
 
 #
@@ -178,43 +194,74 @@ if ($use_xs) {
 # Check if we have internet connection
 # (I lifted this code from LWP... )
 #
-unless (defined $online_tests) {
+
+if ($online_tests) {
 	my $s = IO::Socket::INET->new(
 		PeerAddr => "www.google.com:80",
 		Timeout  => 10,
 	);
 	
-	if ($s) {
-		close($s);
-	
+	unless ($s) {
 		print <<EOT;
 	
-You appear to be directly connected to the Internet.  I have some tests
-that try to query live nameservers.
+You appear not to be directly connected to the Internet.
+Disabling online tests altogether...
 	
 EOT
-	
-		$online_tests = prompt("Do you want to enable these tests?", "y") =~ /^y/i ? 1 : 0;
+
+		$online_tests = 0;
+	} else {
+		close($s);
+	}
+
+}
+if ($online_tests) {
+	if ($online_tests == 2) {
+		print "\nActivating Non Fatal Online Tests...\n\n";
+	} else {
+		print "\nActivating Online Tests...\n\n";
+	}
+	print <<EOT;
+Warning!
+========
+Online tests depend on conditions out of the control of Net::DNS. The tests 
+check for the expected results when both Net::DNS and the outside world are
+functioning properly. In case of failure it is often undecidable if the error
+lies with Net::DNS or elsewhere.
+
+EOT
+	open(ENABLED, ">t/online.enabled") || die "Can't touch ./t/online.enabled $!";
+	close(ENABLED)                     || die "Can't touch ./t/online.enabled $!";
+	if ($online_tests == 2) {
+		open(NONFATAL, ">t/online.nonfatal") || die "Can't touch ./t/online.nonfatal $!";
+		close(NONFATAL)                     || die "Can't touch ./t/online.nonfatal $!";
 	}
 }
 
-if ($online_tests) {
-	print "Activating Online Tests...\n" if DEBUG; 
-	open(ENABLED, ">t/online.enabled") || die "Can't touch ./t/online.enabled $!";
-	close(ENABLED)                     || die "Can't touch ./t/online.enabled $!";
+
+#
+# Test to see if IPv6 is available, unless IPv6 testing has been declined.
+#    
+if (!defined $IPv6_tests || $IPv6_tests == 1) {
+	unless(    eval {require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01");}	   ) {
+		print <<V6WARNING;
+
+The libraries needed to support IPv6 transport have not been found. 
+You will need recent versions of the IO::Socket::INET6 and Socket6 
+libraries (from CPAN). 
+
+V6WARNING
+		if ($IPv6_tests) {
+			$IPv6_tests = prompt('Are you sure you wish to enable IPv6 tests?', 'y') =~ /^y/i ? 1 : 0;
+		}
+	}
+	if ($IPv6_tests) {
+		print "\nActivating IPv6 Tests...\n"; 
+		open(ENABLED, '>t/IPv6.enabled') || die "Can't touch ./t/IPv6.enabled $!";
+		close(ENABLED)                   || die "Can't touch ./t/IPv6.enabled $!";
+	}
 }
 
-
-
-unless (defined $IPv6_tests) {
-	$IPv6_tests = prompt('Would you like to enable IPv6 tests?', 'y') =~ /^y/i ? 1 : 0;
-}
-
-if ($IPv6_tests) {
-	print "Activating IPv6 Tests...\n" if DEBUG; 
-	open(ENABLED, '>t/IPv6.enabled') || die "Can't touch ./t/IPv6.enabled $!";
-	close(ENABLED)                   || die "Can't touch ./t/IPv6.enabled $!";
-}
 
 WriteMakefile(%Makefile);
 

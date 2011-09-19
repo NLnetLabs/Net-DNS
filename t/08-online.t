@@ -4,10 +4,12 @@ use Test::More;
 use strict;
 use Socket;
 use Data::Dumper;
+use t::NonFatal;
 
 BEGIN {
 	if (-e 't/online.enabled' && ! -e 't/online.disabled' ) {
 		plan tests => 95;
+		NonFatalBegin();
 	} else {
 		plan skip_all => 'Online tests disabled.';
 		exit;
@@ -269,3 +271,5 @@ if ($ans_at->header->ancount == 1 ){
 	
 
 	}
+
+NonFatalEnd();

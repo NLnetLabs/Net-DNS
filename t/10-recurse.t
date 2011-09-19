@@ -2,6 +2,7 @@
 
 use Test::More;
 use strict;
+use t::NonFatal;
 
 BEGIN {
 	if (-e 't/online.enabled' && ! -e 't/online.disabled' ) {
@@ -26,6 +27,7 @@ BEGIN {
 		    exit;
 		}else{
 		    plan tests => 12;
+		    NonFatalBegin();
 		}
 	    }
 
@@ -122,3 +124,5 @@ SKIP: {
 	is($count, 3);
     }
 } 
+
+NonFatalEnd();

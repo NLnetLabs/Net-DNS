@@ -3,6 +3,7 @@
 use Test::More tests => 49;
 use strict;
 use File::Spec;
+use t::NonFatal;
 
 BEGIN { use_ok('Net::DNS'); }
 
@@ -84,6 +85,7 @@ SKIP: {
 	skip 'Tests may not run succesful from private IP('.$ip->ip() .')', 3
 	    if ($ip->iptype() ne "PUBLIC");
 
+	NonFatalBegin();
 
 	my $res = Net::DNS::Resolver->new;
 	
@@ -120,6 +122,7 @@ SKIP: {
 	};
 	is($die, 0, 'No deaths because of \$_');
 
+	NonFatalEnd();
 
 }	
 
