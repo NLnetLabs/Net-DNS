@@ -203,31 +203,22 @@ sub typesbyname {
 
     return $typesbyname{$name} if defined $typesbyname{$name};
 
-    confess "Net::DNS::typesbyname() argument ($name) is not TYPE###" unless 
-        $name =~ m/^\s*TYPE(\d+)\s*$/o;  
-    
-    my $val = $1;
-    
-    confess 'Net::DNS::typesbyname() argument larger than ' . 0xffff if $val > 0xffff;
-    
+    confess "unknown type $name" unless $name =~ m/TYPE(\d+)/o;
+
+    my $val = 0 + $1;
+    confess 'argument out of range' if $val > 0xffff;
+
     return $val;
 }
 
-
-
 sub typesbyval {
     my $val = shift;
-    confess "Net::DNS::typesbyval() argument is not defined" unless defined $val;
-    confess "Net::DNS::typesbyval() argument ($val) is not numeric" unless 
-	$val =~ s/^\s*0*(\d+)\s*$/$1/o;
 
-    
-    
-    return $typesbyval{$val} if $typesbyval{$val};
-    
-    confess 'Net::DNS::typesbyval() argument larger than '. 0xffff if 
-        $val > 0xffff;
-    
+    return $typesbyval{$val} if defined $typesbyval{$val};
+
+    $val += 0;
+    confess 'argument out of range' if $val > 0xffff;
+
     return "TYPE$val";
 }
 
@@ -256,30 +247,25 @@ sub typesbyval {
 
 sub classesbyname {
     my $name = uc shift;
-    return $classesbyname{$name} if $classesbyname{$name};
-    
-    confess "Net::DNS::classesbyval() argument is not CLASS### ($name)" unless 
-        $name =~ m/^\s*CLASS(\d+)\s*$/o;
-    
-    my $val = $1;
-    
-    confess 'Net::DNS::classesbyval() argument larger than '. 0xffff if $val > 0xffff;
-    
+
+    return $classesbyname{$name} if defined $classesbyname{$name};
+
+    confess "unknown class $name" unless $name =~ m/CLASS(\d+)/o;
+
+    my $val = 0 + $1;
+    confess 'argument out of range' if $val > 0xffff;
+
     return $val;
 }
 
-
-
 sub classesbyval {
     my $val = shift;
-    
-    confess "Net::DNS::classesbyname() argument is not numeric ($val)" unless 
-	$val =~ s/^\s*0*([0-9]+)\s*$/$1/o;
-    
-    return $classesbyval{$val} if $classesbyval{$val};
-    
-    confess 'Net::DNS::classesbyname() argument larger than ' . 0xffff if $val > 0xffff;
-    
+
+    return $classesbyval{$val} if defined $classesbyval{$val};
+
+    $val += 0;
+    confess 'argument out of range' if $val > 0xffff;
+
     return "CLASS$val";
 }
 

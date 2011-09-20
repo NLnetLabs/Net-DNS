@@ -192,6 +192,7 @@ sub pubkey {
 sub _normalize_dnames {
 	my $self=shift;
 	$self->_normalize_ownername();
+	$self->{'rendezvousservers'} ||= [];
 	my @dnames = @{$self->{'rendezvousservers'}};
 	$self->{'rendezvousservers'}=[];
 	foreach my $dname (@dnames){

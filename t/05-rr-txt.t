@@ -124,9 +124,9 @@ $work_hash{'txtdata'} = q|no quotes|;
 
 ok( $uut = Net::DNS::RR->new(%work_hash), 		# 30
     "RR->new_from_hash with txtdata -- Stimulus");
-ok( $uut->rdatastr() eq q|"no" "quotes"|, 		# 31
+is( $uut->rdatastr(), q|"no" "quotes"|, 		# 31
     "RR->new_from_hash with txtdata -- Response (rdatastr())");
-ok( $uut->rr_rdata() eq $rdata , "TXT->rr_rdata" );	# 32
+is( $uut->rr_rdata(), $rdata , "TXT->rr_rdata" );	# 32
 
 
 

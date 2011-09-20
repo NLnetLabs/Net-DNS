@@ -20,13 +20,12 @@ is(Net::DNS::typesbyval(1),            'A','       typesbyval(1) returns A');
 
 is(Net::DNS::typesbyval(Net::DNS::typesbyname('TYPE001')), 'A', 'typesbyval(typebyname(TYPE001)) returns A');
 
-
-eval {
-	Net::DNS::typesbyval(0xffff+1);
-};
-
-
-like($@, '/Net::DNS::typesbyval\(\) argument larger than 65535/', 'Fails on large TYPE code');
+{				## check for exception if type number too large
+	my $large = 65536;
+	eval { Net::DNS::typesbyval($large); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "Net::DNS::typesbyval($large)\t[$exception]" );
+}
 
 
 is(Net::DNS::classesbyname('CLASS124'), 124,       'classesbyname(CLASS124) returns 124');
@@ -35,11 +34,13 @@ is(Net::DNS::classesbyval(1),           'IN',      'classesbyval(1) returns IN')
 
 is(Net::DNS::classesbyval(Net::DNS::classesbyname('CLASS04')), 'HS', 'classesbyval(typebyname(CLASS04)) returns HS');
 
-eval {
-    Net::DNS::classesbyval(0xffff+1);
-};
+{				## check for exception if class number too large
+	my $large = 65536;
+	eval { Net::DNS::classesbyval($large); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "Net::DNS::classesbyval($large)\t[$exception]" );
+}
 
-like($@, '/Net::DNS::classesbyname\(\) argument larger than 65535/', 'Fails on large CLASS code');
 
 
 {
@@ -52,11 +53,12 @@ like($@, '/Net::DNS::classesbyname\(\) argument larger than 65535/', 'Fails on l
 	is($rr->address,'10.0.0.1', 'Unknown RR representation for A parsed OK');
 }
 
-eval {
-   Net::DNS::RR->new('e.example IN A \# 4  0A0000 01 11 ');
-};
+{				## check for exception if RFC3597 hexadecimal data too long
+	eval { new Net::DNS::RR('e.example IN A \# 4 0A0000 01 11') };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "hexadecimal string not declared length:\t[$exception]" );
+}
 
-like($@, '/\\\# 4  0A0000 01 11 is inconsistent\; length does not match content/', 'Fails on inconsistent length and hex presentation');
 
 {
 	my $rr = Net::DNS::RR->new('e.example IN TYPE4555 \# 4  0A0000 01  ');
