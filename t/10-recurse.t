@@ -20,10 +20,9 @@ BEGIN {
 		diag "This is an indication you do have network problems";
 		exit;
 	    }else{
-		use Net::IP;
-		my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
-		if ($ip->iptype() ne "PUBLIC"){
-		    plan skip_all => 'Cannot run these tests from this IP:' .$ip->ip() ;		
+		my $ip = inet_ntoa($sock->sockaddr);
+		if ( $ip =~ /^(10|172\.(1[6-9]|2.|30|31)|192.168)\./ ) {
+		    plan skip_all => "Cannot run these tests from this IP: $ip";		
 		    exit;
 		}else{
 		    plan tests => 12;

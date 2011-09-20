@@ -9,7 +9,6 @@ requires:
     Digest::MD5:                   2.12
     IO::Socket:                    0
     MIME::Base64:                  2.11
-    Net::IP:                       1.2
     Test::More:                    0.18
 
 distribution_type: module

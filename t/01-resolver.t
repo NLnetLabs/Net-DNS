@@ -73,17 +73,16 @@ SKIP: {
 		if -e 't/online.disabled';
 
 	# Some people try to run these on private address space - test for this case and skip.
-	use Net::IP;
 	use IO::Socket::INET;
 
 	my $sock = IO::Socket::INET->new(PeerAddr => '193.0.14.129', # k.root-servers.net.
 					 PeerPort => '53',
 					 Proto    => 'udp');
 
-	my $ip=Net::IP->new(inet_ntoa($sock->sockaddr));
+	my $ip=inet_ntoa($sock->sockaddr);
 
-	skip 'Tests may not run succesful from private IP('.$ip->ip() .')', 3
-	    if ($ip->iptype() ne "PUBLIC");
+	skip "Tests may not succeed from private IP: $ip", 3
+		if $ip =~ /^(10|172\.(1[6-9]|2.|30|31)|192.168)\./;
 
 	NonFatalBegin();
 

@@ -84,7 +84,7 @@ EOT
 
 #
 # Get our makefile started...
-#  NB Net::IP is still needed for tests.
+#
 my %Makefile = (
 	NAME          => 'Net::DNS',
 	VERSION_FROM  => 'lib/Net/DNS.pm',
@@ -94,7 +94,6 @@ my %Makefile = (
 		'MIME::Base64'     => 2.11,
 		'Digest::MD5'      => 2.12,
 		'Digest::SHA'      => 5.23,
-		'Net::IP'          => 1.2,
 		'Digest::HMAC_MD5' => 1.00,
 	},
 	XS            => {},
