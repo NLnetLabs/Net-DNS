@@ -42,7 +42,7 @@ BEGIN {
     require Exporter;
     @ISA     = qw(Exporter );
     # these need to live here because of dependencies further on.
-    @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del SEQUENTIAL YYYYMMDDxx);
+    @EXPORT = qw(mx yxrrset nxrrset yxdomain nxdomain rr_add rr_del SEQUENTIAL UNIXTIME YYYYMMDDxx);
     @EXPORT_OK= qw(name2labels wire2presentation rrsort stripdot);
 
 
@@ -357,29 +357,22 @@ sub mx {
     return @ret;
 }
 
-sub yxrrset {
-    return Net::DNS::RR->new_from_string(shift, 'yxrrset');
-}
 
-sub nxrrset {
-    return Net::DNS::RR->new_from_string(shift, 'nxrrset');
-}
+#
+# Auxiliary functions to support dynamic update.
+#
 
-sub yxdomain {
-    return Net::DNS::RR->new_from_string(shift, 'yxdomain');
-}
+sub yxrrset { return new Net::DNS::RR( shift, 'yxrrset' ); }
 
-sub nxdomain {
-    return Net::DNS::RR->new_from_string(shift, 'nxdomain');
-}
+sub nxrrset { return new Net::DNS::RR( shift, 'nxrrset' ); }
 
-sub rr_add {
-    return Net::DNS::RR->new_from_string(shift, 'rr_add');
-}
+sub yxdomain { return new Net::DNS::RR( shift, 'yxdomain' ); }
 
-sub rr_del {
-    return Net::DNS::RR->new_from_string(shift, 'rr_del');
-}
+sub nxdomain { return new Net::DNS::RR( shift, 'nxdomain' ); }
+
+sub rr_add { return new Net::DNS::RR( shift, 'rr_add' ); }
+
+sub rr_del { return new Net::DNS::RR( shift, 'rr_del' ); }
 
 
 
@@ -508,10 +501,13 @@ sub presentation2wire {
 # Auxiliary functions to support policy-driven zone serial numbering.
 #
 #	$successor = $soa->serial(SEQUENTIAL);
+#	$successor = $soa->serial(UNIXTIME);
 #	$successor = $soa->serial(YYYYMMDDxx);
 #
 
 sub SEQUENTIAL() { undef }
+
+sub UNIXTIME() { return CORE::time; }
 
 sub YYYYMMDDxx() {
 	my ( $dd, $mm, $yy ) = ( localtime )[3 .. 5];
@@ -785,6 +781,14 @@ policy-driven zone serial numbering regimes.
     $successor = $soa->serial( SEQUENTIAL );
 
 The existing serial number is incremented modulo 2**32.
+
+=head2 Time Encoded
+
+    $successor = $soa->serial( UNIXTIME );
+
+The Unix time scale will be used as the basis for zone serial
+numbering. The serial number will be incremented if the time
+elapsed since the previous update is less than one second.
 
 =head2 Date Encoded
 

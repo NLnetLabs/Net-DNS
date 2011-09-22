@@ -764,8 +764,8 @@ sub rr_rdata {
 #------------------------------------------------------------------------------
 
 sub encode {			## make "new" test scripts work with existing architecture
-	my ( $self, $offset, $hash ) = @_;
-	my $packet = new Net::DNS::Packet();
+	my ( $self, $offset, $hash, $packet ) = @_;
+	$packet ||= new Net::DNS::Packet();
 	$packet->{compnames} = $hash || {};
 	return $self->data( $packet, $offset || 0 );
 }

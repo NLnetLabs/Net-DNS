@@ -13,21 +13,15 @@ find( sub { push(@files, $File::Find::name) if /\.pm$/}, $blib);
 
 plan skip_all => 'No versions from git checkouts' if -e '.git';
 
+plan skip_all => ' Not sure how to parse versions.' unless eval { MM->can('parse_version') };
 
-my $can = eval { MM->can('parse_version') };
+plan tests => scalar @files;
 
-if (!$@ and $can) {
-	plan tests => (2* scalar @files) - 1;
-} else {
-	plan skip_all => ' Not sure how to parse versions.';
-}
 
-foreach my $file (@files) {
+foreach my $file ( sort @files ) {
 	my $version = MM->parse_version($file);
 	diag("$file\t=>\t$version") if $ENV{'NET_DNS_DEBUG'};
-	isnt("$file: $version", "$file: undef", "$file has a version");
-	next if $file =~ /Net\/DNS.pm$/;
-	ok ($version>290,"$file: version has reasonable value");
+	ok( $version =~ /[\d.]{3}/, "file version: $version\t$file" );
 }
 
 

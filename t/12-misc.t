@@ -60,7 +60,7 @@ BEGIN {
 	    my $s = IO::Socket::INET->new(Proto => 'udp',
 					  LocalAddr => $address,
 					  LocalPort => $TestPort
-		);
+		) or print "IO::Socket::INET->new $!";
 	    
 	    
 	    
