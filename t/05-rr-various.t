@@ -51,7 +51,7 @@ my $newrr2 = Net::DNS::RR->new(name=> '5.5.5.5',
                               flags =>  'u',
                               service =>  'E2U+X-ADDRESS',
                               regexp => '!^(.*)$!data:,CN=East test;ST=CT;C=United States;uid=ast1;intrunk=dms500!',
-                              replacment => '.',
+                              replacement => '.',
                               rdlength => 0,
                               rdata => '',
         );

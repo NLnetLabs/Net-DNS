@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-$VERSION = (qw$LastChangedRevision$)[1] || 0.31;
+$VERSION = (qw$LastChangedRevision$)[1] || 0.32;
 
 
 eval "use encoding 'utf8';";
@@ -492,7 +492,7 @@ sub NS {				## find NS records for domain
 
 	if ( my ($ncache) = grep { $_->type eq 'SOA' } $packet->authority ) {
 		my $apex = lc $ncache->name;
-		return () unless split /\./, $apex;		# protect root servers
+		return () unless $apex =~ /[^.]/;		# protect root servers
 		return NS($apex) if $apex ne $domain;
 	}
 

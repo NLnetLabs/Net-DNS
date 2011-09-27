@@ -33,10 +33,11 @@ AMEN
 #
 # Get the command line args
 #
-my ($use_xs, $online_tests, $IPv6_tests);
 
 my $help = 0;
-my $online_tests = 2; # 2 = non-fatal, 1 is on, 0 if off
+my $IPv6_tests;
+my $online_tests = 2;	# 2 = non-fatal, 1 = on, 0 = off
+my $use_xs;
 
 unless (GetOptions(
 	'xs!'           => \$use_xs,
@@ -72,7 +73,7 @@ Prepare Makefile for building and installing Net::DNS
 
   --noonline-tests		Skip online tests completely.
 
-  --non-fatal-online-tests	Perform online test, but do let failures 
+  --non-fatal-online-tests	Perform online test, but do not let failures 
 				negatively affect the outcome of running
 				make test.  This is the default.
 
