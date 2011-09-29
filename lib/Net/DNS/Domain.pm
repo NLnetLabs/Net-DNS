@@ -89,18 +89,18 @@ sub new {
 	for ($identifier) {
 		croak 'domain identifier undefined' unless defined $_;
 
-		unless (/\.$/o) {				# make FQDN
+		unless (/\.$/) {				# make FQDN
 			$self->{origin} = $ORIGIN if $ORIGIN;	# dynamically scoped $ORIGIN
 		}
 
-		if (/\\/o) {
-			s/\\\\/\\092/go;			# disguise escaped escape
-			s/\\\./\\046/go;			# disguise escaped dot
+		if (/\\/) {
+			s/\\\\/\\092/g;				# disguise escaped escape
+			s/\\\./\\046/g;				# disguise escaped dot
 
-			@{$self->{label}} = map { _unescape( _encode_ascii($_) ) } split /\.+/o;
+			@{$self->{label}} = map { _unescape( _encode_ascii($_) ) } split /\.+/;
 
-		} elsif ( not /^\@$/o ) {
-			@{$self->{label}} = split /\056+/o, _encode_ascii($_);
+		} elsif ( not /^\@$/ ) {
+			@{$self->{label}} = split /\056+/, _encode_ascii($_);
 		}
 	}
 
@@ -136,7 +136,7 @@ sub name {
 	return &identifier unless LIBIDN;
 
 	for (&identifier) {
-		return $_ unless /xn--/o;
+		return $_ unless /xn--/;
 
 		my $self = shift;
 		return $self->{name} ||= Encode::decode_utf8( Net::LibIDN::idn_to_unicode( $_, 'utf8' ) || $_ );
@@ -216,7 +216,7 @@ represented by the appropriate escape sequence.
 sub string {
 	for (&identifier) {
 		return $_ if $_ eq $dot;			# root
-		s/^([\$'";@])/\\$1/o;				# escape leading special char
+		s/^([\$'";@])/\\$1/;				# escape leading special char
 		return $_ . $dot;
 	}
 }
@@ -239,7 +239,7 @@ sub origin {
 	my $name = shift || '';
 
 	return sub { my $constructor = shift; &$constructor; }	# all names absolute
-			unless $name =~ /[^.]/o;
+			unless $name =~ /[^.]/;
 
 	my $domain = new Net::DNS::Domain($name);
 	return sub {						# closure w.r.t. $domain
@@ -287,7 +287,7 @@ sub _decode_ascii {
 sub _encode_ascii {
 
 	if (UTF8) {
-		return &Encode::encode_utf8 unless $_[0] =~ /[^\000-\177]/o;
+		return &Encode::encode_utf8 unless $_[0] =~ /[^\000-\177]/;
 		croak 'Net::LibIDN module not installed' unless LIBIDN;
 		return Net::LibIDN::idn_to_ascii( shift, 'utf8' ) || croak 'invalid name';
 	}
@@ -334,19 +334,19 @@ sub _escape {				## Insert escape sequences in string
 sub _unescape {				## Remove escape sequences in string
 	use bytes;
 	for (shift) {
-		return $_ unless /\\/o;
+		return $_ unless /\\/;
 
-		s/\134\134/\134\060\071\062/go;			# camouflage escaped \
+		s/\134\134/\134\060\071\062/g;			# camouflage escaped \
 
 		# assume absolutely nothing about local character encoding
-		while (/\134([\060-\071]{3})/o) {
+		while (/\134([\060-\071]{3})/) {
 			my $n = $1;
 			$n =~ tr [\060-\071] [0123456789];
 			my $x = $n == 92 ? "\134\134" : pack 'C', $n;
 			s/\134$1/$x/g;
 		}
 
-		s/\134(.)/$1/g;
+		s/\134(.)/$1/;
 		return $_;
 	}
 }
