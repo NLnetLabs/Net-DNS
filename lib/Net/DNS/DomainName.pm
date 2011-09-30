@@ -91,7 +91,6 @@ sub decode {
 			return wantarray ? ( $self, ++$index ) : $self;
 
 		} elsif ( $header < 0x40 ) {			# non-terminal label
-			$cache->{$index} = $self;
 			push( @{$self->{label}}, substr( $$buffer, ++$index, $header ) );
 			$index += $header;
 
@@ -100,8 +99,8 @@ sub decode {
 
 		} else {					# compression pointer
 			my $link = 0x3FFF & unpack( "\@$index n", $$buffer );
-			last unless $link < $offset;
-			$self->{origin} = $cache->{$link} || decode Net::DNS::DomainName( $buffer, $link, $cache );
+			croak 'corrupt compression pointer' unless $link < $offset;
+			$self->{origin} = $cache->{$link} ||= decode Net::DNS::DomainName( $buffer, $link, $cache );
 			return wantarray ? ( $self, $index + 2 ) : $self;
 		}
 	}
@@ -124,18 +123,6 @@ sub encode {
 
 
 ########################################
-
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {				## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
-}
-
-
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
 
 sub _wire {				## Generate list of wire-format labels
 	my $self = shift;
