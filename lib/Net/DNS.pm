@@ -208,7 +208,7 @@ sub typesbyname {
     my $val = 0 + $1;
     confess 'argument out of range' if $val > 0xffff;
 
-    return $val;
+    return $val ? $val : '0 but true';
 }
 
 sub typesbyval {
