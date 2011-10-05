@@ -136,7 +136,7 @@ AMEN3
     $Makefile{'PREREQ_PM'}->{'enum'} = 1.0;  # Dependency for Win32::IPHelper
     $Makefile{'PREREQ_PM'}->{'Win32::IPHelper'} = 0.05;
     $Makefile{'PREREQ_PM'}->{'Win32::API'} = 0.55;
-    $Makefile{'PREREQ_PM'}->{'Win32::Registry'} = 0;
+    $Makefile{'PREREQ_PM'}->{'Win32::TieRegistry'} = 0;
 }
 
 

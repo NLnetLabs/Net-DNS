@@ -12,7 +12,7 @@ use Net::DNS::Resolver::Base ();
 $VERSION = (qw$LastChangedRevision$)[1];
 
 use Win32::IPHelper;
-use Win32::Registry;
+use Win32::TieRegistry qw(KEY_READ REG_DWORD);
 use Data::Dumper;
 sub init {
   
@@ -59,15 +59,14 @@ sub init {
 	# The Win32::IPHelper  does not return searchlist. Lets do a best effort attempt to get 
 	# a searchlist from the registry.
 
-	my ($resobj, %keys);
+	my $usedevolution = 0;
 
-	my $root = 'SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
-	my $opened_registry =1;
-	unless ($main::HKEY_LOCAL_MACHINE->Open($root, $resobj)) {
+	my $root = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
+	my $reg_tcpip = $Registry->Open($root, {Access => KEY_READ});
+	if (!defined $reg_tcpip) {
 		# Didn't work, maybe we are on 95/98/Me?
-		$root = 'SYSTEM\CurrentControlSet\Services\VxD\MSTCP';
-		$main::HKEY_LOCAL_MACHINE->Open($root, $resobj)
-			or  $opened_registry =0;
+		$root = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VxD\MSTCP';
+		$reg_tcpip = $Registry->Open($root, {Access => KEY_READ});
 	}
 
 	if ($domain) {
@@ -75,15 +74,13 @@ sub init {
 		$searchlist = $domain;
 	}
 	
-	if ($opened_registry &&  $resobj->GetValues(\%keys)){
-		$searchlist  .= "," if $searchlist; # $domain already in there
-		$searchlist  .= $keys{'SearchList'}->[2];
+	if (defined $reg_tcpip){
+		$searchlist .= "," if $searchlist; # $domain already in there
+		$searchlist .= $reg_tcpip->GetValue('SearchList');
+		my ($value, $type) = $reg_tcpip->GetValue('UseDomainNameDevolution');
+		$usedevolution = defined $value && $type == REG_DWORD ? hex $value : 0;
 	}
 	
-	
-	
-
-	my $usedevolution = $keys{'UseDomainNameDevolution'}->[2];
 	if ($searchlist) {
 		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
 		my @a;
