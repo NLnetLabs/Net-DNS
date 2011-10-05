@@ -92,10 +92,22 @@ my $pid;
 	 # Parent process here
 	 $resolver->usevc(1);
 
-	 # $resolver->send("bla.foo","A");
+	 $resolver->send("bla.foo","A");
+	 # Unfortunately Net::DNS::Nameserver::loop_once behaves non-
+	 # deterministic. Either it returns when a connect was received and
+	 # no data is read, or it also reads the data. Therefor, we don't
+	 # know if processing this in the child process took one or two calls
+	 # to loop_once.
+	 #
 	 my $answer=$resolver->send($notify_packet);
 	 is($answer->header->opcode,"NS_NOTIFY_OP", "OPCODE set in reply");
-	 sleep 1;
+
+	 # The (nameserving) child process should now exit. But, because we
+	 # do not know if the previous two queries took two or three loop_once
+	 # The third one just timeouts very quickly (1 second) and we wait
+	 # for it to timeout here (if it didn't already exit).
+	 #
+	 sleep 2;
 	 $resolver->send("bla.foo","A");
 	 is($resolver->errorstring,"unknown error or no error","read_tcp failed after connection reset");
 
@@ -111,6 +123,7 @@ my $pid;
 	  # exec will transfer control to the child process,
 	  $nameserver->loop_once(60);
 	  $nameserver->loop_once(10);
+	  $nameserver->loop_once(1);
 	  exit;
 
       } elsif ($! == EAGAIN) {
