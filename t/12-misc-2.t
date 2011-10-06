@@ -12,7 +12,6 @@ use Test::More;
 use Net::DNS::Nameserver;
 use Net::DNS::Resolver;
 use strict;
-use Data::Dumper;
 plan tests => 3;
 
 use vars qw(
@@ -55,8 +54,8 @@ sub reply_handler {
     my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
     die "Sockhost failure" if ($conn->{"sockhost"} ne "127.0.0.1");
     die "Sockport failure" if ($conn->{"sockport"} ne $TestPort);
-    use Data::Dumper;
-    print Dumper $conn;
+    #use Data::Dumper;
+    #print Dumper $conn;
 #    print "QNAME: $qname QTYPE: $qtype\n";
     # mark the answer as authoritive (by setting the 'aa' flag
     return ("NXDOMAIN");
@@ -113,8 +112,11 @@ my $pid;
 
 
 	 $resolver->send("bla.foo","A");
-	 is($resolver->errorstring,"timeout","timout received");
-
+	 # Error will be "timeout" on Unix, but something different on windows,
+	 # such as: "An established connection was aborted by the software in
+	 # your host machine."
+	 #
+	 isnt($resolver->errorstring,"unknown error or no error",$resolver->errorstring);
 
 
      } elsif (defined($pid)) {

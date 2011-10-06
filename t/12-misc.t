@@ -30,10 +30,14 @@ use vars qw(
             $tcptimeout
 	    );
 
-
-
-
 BEGIN {
+    # Unfortunately creating an new IO::Socket::INET object on an non-existant
+    # IP address does not return an error on Windows.
+
+    if ( $^O eq 'MSWin32' ) {
+	plan skip_all =>  "This test doesn't work properly on windows";
+	exit;
+    }
     $lameloop=0;
     $TestPort  = 53452;
     @Addresses = qw (
@@ -61,8 +65,6 @@ BEGIN {
 					  LocalAddr => $address,
 					  LocalPort => $TestPort
 		) or print "IO::Socket::INET->new $!";
-	    
-	    
 	    
 	    unless ($s){
 		diag ("This test needs ".join (" ",@Addresses). " to be configured on your system");

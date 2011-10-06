@@ -3,9 +3,9 @@
 
 use Test::More;
 use Net::DNS::Nameserver;
-use Net::DNS::Resolver;
+use Net::DNS::Packet;
 use strict;
-use Data::Dumper;
+
 plan tests => 2;
 
 use vars qw(
@@ -29,22 +29,10 @@ $nameserver=Net::DNS::Nameserver->new(
 	);
 
 
-my $resolver=Net::DNS::Resolver->new(
-    nameservers => [ $address ],
-    port       => $TestPort,
-    persistent_tcp => 1,
-    debug    => 0,
-    tcp_timeout => 2,
-    );
-
-
 sub reply_handler {
     my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
     die "Sockhost failure" if ($conn->{"sockhost"} ne "127.0.0.1");
     die "Sockport failure" if ($conn->{"sockport"} ne $TestPort);
-#	use Data::Dumper;
-#	print Dumper $conn;
-#	print "QNAME: $qname QTYPE: $qtype\n";
     return ("NXDOMAIN");
 }
 
@@ -55,9 +43,8 @@ my $pid;
 
 	 sleep 1;
 	 # Parent process here
-	 $resolver->usevc(1);
 
-	 my $packet = $resolver->make_query_packet("A.bla.foo", "A");
+	 my $packet = Net::DNS::Packet->new("A.bla.foo", "A");
 	 my $data   = $packet->data;
 
 	 my $sock = new IO::Socket::INET(
@@ -67,6 +54,7 @@ my $pid;
 	 );
 	 my $lenmsg = pack('n', length($data));
 	 $data = $lenmsg . $data;
+
 	 while (length $data) {
 		 $sock->send(substr($data, 0, 10));
 		 $sock->flush();
@@ -81,7 +69,7 @@ my $pid;
 	 	$sock->recv($buf, 2);
 	 	$lenmsg = unpack('n', $buf);
 	 	$sock->recv($buf, $lenmsg);
-	 	$packet = Net::DNS::Packet->new(\$buf, 1);
+	 	$packet = Net::DNS::Packet->new(\$buf);
 
 		 if (ok(defined($packet), 'We received an answer')) {
 			ok($packet->header->rcode eq 'NXDOMAIN', 'Correct answer received');
@@ -95,9 +83,12 @@ my $pid;
 	  # exit will transfer control to the child process,
 	  my $i = 0;
 
-	  while ($i < 10) {
-	  	  print "Child running $i\n";
-		  $nameserver->loop_once(10);
+	  # The packet it 27 bytes long and will thus be sent in three parts.
+	  # Because the first might take up two calls to loop_once, we need
+	  # four calls.
+	  #
+	  while ($i < 4) {
+		  $nameserver->loop_once(2);
 		  $i += 1;
 	  }
 

@@ -83,8 +83,14 @@ my $pid;
 	  # exec will transfer control to the child process,
 	  my $i = 0;
 
-	  while ($i < 10) {
-		  $nameserver->loop_once(10);
+	  # Since we're using tcp (i.e. virual circuit) we might use up two 
+	  # loop_once to process the first query. We send 7 queries in total
+	  # and thus need 8 loop_once calls on the server side. 9 to be safe.
+	  # With a loop_once timeout value of 2 we asume all queries are 
+	  # answered within a second.
+	  #
+	  while ($i < 9) {
+		  $nameserver->loop_once(2);
 		  $i += 1;
 	  }
 
