@@ -47,6 +47,12 @@ BEGIN {
 
 sub new {
 	my ($class, %self) = @_;
+	my $self = bless \%self, $class;
+	if (!exists $self{ReplyHandler}) {
+		if (my $handler = UNIVERSAL::can($class, "ReplyHandler")) {
+			$self{ReplyHandler} = sub { $handler->($self, @_); };
+		}
+	}
 	unless ( ref $self{ReplyHandler} ) {
 		cluck "No reply handler!";
 		return;
@@ -127,7 +133,6 @@ sub new {
 	# Return the object.
 	#--------------------------------------------------------------------------
 
-	my $self = bless \%self, $class;
 	return $self;
 }
 
