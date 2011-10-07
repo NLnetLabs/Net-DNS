@@ -430,7 +430,7 @@ sub get_open_tcp {
 sub loop_once {
   my ($self, $timeout) = @_;
 
-  print ";loop_once called with timeout: ".(defined($timeout)?$timeout:"undefined")."\n" if $self->{"Verbose"} >4;
+  print ";loop_once called with timeout: ".(defined($timeout)?$timeout:"undefined")."\n" if $self->{"Verbose"} && $self->{"Verbose"} >4;
   foreach my $sock (keys %{$self->{"_tcp"}}) {
       # There is TCP traffic to handle
       $timeout = 0.1 if $self->{"_tcp"}{$sock}{"outbuffer"};

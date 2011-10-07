@@ -64,7 +64,7 @@ BEGIN {
 	    my $s = IO::Socket::INET->new(Proto => 'udp',
 					  LocalAddr => $address,
 					  LocalPort => $TestPort
-		) or print "IO::Socket::INET->new $!";
+		) or diag("IO::Socket::INET->new $!");
 	    
 	    unless ($s){
 		diag ("This test needs ".join (" ",@Addresses). " to be configured on your system");
