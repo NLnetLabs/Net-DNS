@@ -53,7 +53,7 @@ sub new {
 			$self{ReplyHandler} = sub { $handler->($self, @_); };
 		}
 	}
-	unless ( ref $self{ReplyHandler} ) {
+	unless ( "CODE" eq ref $self{ReplyHandler} ) {
 		cluck "No reply handler!";
 		return;
 	}
