@@ -44,12 +44,12 @@ use Carp;
 use constant ENCODE => eval { require Encode; };
 
 use constant UTF8 => eval {
-	Encode::decode_utf8( chr(91) ) eq '[';			# specifically not UTF-EBCDIC
+	Encode::decode( 'utf-8', chr(91) ) eq '[';			# specifically not UTF-EBCDIC
 };
 
 use constant LIBIDN => eval {
 	require Net::LibIDN;					# tested and working
-	UTF8 && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf8' ) eq 'xn--fiqs8s';
+	UTF8 && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
 };
 
 
@@ -139,7 +139,7 @@ sub name {
 		return $_ unless /xn--/;
 
 		my $self = shift;
-		return $self->{name} ||= Encode::decode_utf8( Net::LibIDN::idn_to_unicode( $_, 'utf8' ) || $_ );
+		return $self->{name} ||= Encode::decode( 'utf-8', Net::LibIDN::idn_to_unicode( $_, 'utf-8' ) || $_ );
 	}
 }
 
@@ -266,7 +266,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 sub _decode_ascii {
 
-	return &Encode::decode_utf8 if UTF8;
+	return &Encode::decode( 'utf-8', shift ) if UTF8;
 
 	return &Encode::decode( 'ascii', shift ) if ENCODE;
 
@@ -287,9 +287,9 @@ sub _decode_ascii {
 sub _encode_ascii {
 
 	if (UTF8) {
-		return &Encode::encode_utf8 unless $_[0] =~ /[^\000-\177]/;
+		return &Encode::encode( 'utf-8', shift ) unless $_[0] =~ /[^\000-\177]/;
 		croak 'Net::LibIDN module not installed' unless LIBIDN;
-		return Net::LibIDN::idn_to_ascii( shift, 'utf8' ) || croak 'invalid name';
+		return Net::LibIDN::idn_to_ascii( shift, 'utf-8' ) || croak 'invalid name';
 	}
 
 	return Encode::encode( 'ascii', shift ) if ENCODE;
