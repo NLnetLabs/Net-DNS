@@ -1,13 +1,11 @@
-#!/usr/bin/perl -w
-$VERSION = (qw$LastChangedRevision$)[1] || 0.33;
-
-
-eval "use encoding 'utf8';";
+#!/usr/bin/perl
+$VERSION = (qw$LastChangedRevision$)[1] || 0.34;
 
 
 =head1 NAME
 
 check_soa - Check nameservers for a domain
+
 
 =head1 SYNOPSIS
 
@@ -167,6 +165,8 @@ END
 
 require Net::DNS;
 
+no warnings;
+
 
 my @conf = (
 	debug => ( $option{d} || 0 ),				# -d	enable diagnostics
@@ -188,9 +188,9 @@ $resolver->nameservers(@nameserver) or die $resolver->string;
 
 
 my ($question) = new Net::DNS::Packet($domain)->question;	# invert IP address/prefix
-my $name = lc $question->qname;
-die "\tFeature not supported by Net::DNS ", &Net::DNS::version, "\n"
-		if $name =~ m/:[A-Fa-f0-9:]+[0-9.]*$|\s\.ip6|\/\d+$/;
+my $name       = lc $question->qname;
+my $NetDNSrev  = &Net::DNS::version;
+die "\tFeature not supported by Net::DNS $NetDNSrev\n" if $name =~ m#[:/\s]|\.\d+$#;
 
 my @ns = NS($name);						# find NS serving name
 unless (@ns) {
@@ -212,8 +212,9 @@ foreach my $soa (@soa) {					# simple sanity check
 	my $rname = lc $soa->rname;				# responsible person
 
 	my $resolved;						# check MNAME resolvable
-	for (qw( A AAAA )) {
-		last if $resolved = $resolver->query( $mname, $_ );
+	foreach my $rrtype (qw( A AAAA )) {
+		my $probe = $resolver->send( $mname, $rrtype );
+		last if ( $resolved = scalar $probe->answer );
 	}
 
 	for ($mname) {						# locally served zone insanity
@@ -221,21 +222,20 @@ foreach my $soa (@soa) {					# simple sanity check
 		displayRR( $zone, 'NS' ) unless @nameserver;	# ensure NS always listed
 		displayRR( $zone, 'ANY' ) unless $_ eq $name;	# ensure other RRs listed
 		last unless /(in-addr|ip6)\.arpa/i;
-		report("NS for locally served zone should not have address record  [RFC6303]") if $resolved;
+		report('unexpected address record in locally served zone [RFC6303]') if $resolved;
 	}
 
 	last unless @nsname;					# suppress remaining tests
 
 	report( 'unresolved MNAME', $mname ) unless $resolved;
 
-	report('MNAME deprecated by RFC2181, 7.3') if $mname eq $zone;
-
 	unless ( $rname =~ /(@|[^\\]\.)([^@]+)$/ ) {		# parse RNAME
 		report( 'incomplete RNAME', $rname ) unless $rname eq '<>';
 	} elsif ( $2 ne $mname ) {
 		my $resolved;					# check RNAME resolvable
-		for (qw( MX A AAAA CNAME )) {
-			last if $resolved = $resolver->query( $2, $_ );
+		foreach my $rrtype (qw( MX A AAAA CNAME )) {
+			my $probe = $resolver->send( $2, $rrtype );
+			last if ( $resolved = scalar $probe->answer );
 		}
 		report( 'unresolved RNAME', $rname ) unless $resolved;
 	}
@@ -281,12 +281,12 @@ sub checkNS0 {				## initial status vector for checkNS
 	my $hash   = {};
 	my $res	   = new Net::DNS::Resolver(@conf);
 
-	foreach ( @soa, @ncache ) {
-		my $mname = lc $_->mname;			# populate hash with name/IP of primary
-		foreach ( $mname, $res->nameservers($mname) ) {
-			$hash->{$_} = $mname;
+	foreach my $soa ( @soa, @ncache ) {
+		my $mname = lc $soa->mname;			# populate hash with name/IP of primary
+		foreach my $id ( $mname, $res->nameservers($mname) ) {
+			$hash->{$id} = $mname;
 		}
-		$serial = $_->serial;
+		$serial = $soa->serial;
 	}
 
 	return ( 0, $serial, $hash );
@@ -340,8 +340,8 @@ sub checkNS {				## query nameservers (concurrently) and report status
 		$rcode = $packet->header->rcode;		# NXDOMAIN or fault at nameserver
 	} else {
 		@soa = grep { $_->type eq 'SOA' } $packet->answer;
-		foreach (@soa) {
-			my $mname = lc $_->mname;		# hash MNAME by IP
+		foreach my $soa (@soa) {
+			my $mname = lc $soa->mname;		# hash MNAME by IP
 			my @ip = $res->nameservers($mname) unless $hash->{$mname};
 			foreach ( $mname, @ip ) { $hash->{$_} = $mname }
 		}
@@ -359,10 +359,10 @@ sub checkNS {				## query nameservers (concurrently) and report status
 
 	if ($verbose) {						# show PTR record
 		my @ptr = grep { $_->type eq 'PTR' } displayRR($ip) if $ip;
-		my @fqn = sort map { lc $_->ptrdname } @ptr;
-		foreach ( @fqn ? @fqn : ($ns) ) {		# show address records
-			displayRR( $_, 'A' );
-			displayRR( $_, 'AAAA' );
+		my @fwd = sort map { lc $_->ptrdname } @ptr;
+		foreach my $name ( @fwd ? @fwd : ($ns) ) {	# show address records
+			displayRR( $name, 'A' );
+			displayRR( $name, 'AAAA' );
 		}
 	}
 
@@ -404,10 +404,9 @@ sub checkNS {				## query nameservers (concurrently) and report status
 
 	my ($serial) = map { $_->serial } @soa;			# check serial number
 
-	if ( $primary and ordered( $serial, $latest ) ) {	# primary must have latest data
-		for ( $res->send( $zone, 'SOA' )->answer ) {	# retest before pointing finger
-			$serial = $_->serial if $_->type eq 'SOA';
-		}
+	if ( $primary && ordered( $serial, $latest ) ) {	# primary should have latest data
+		my $retest = $res->send( $zone, 'SOA' );	# retest before pointing finger
+		($serial) = map { $_->serial } $retest->answer if $retest;
 	}
 
 	print "\t\t\tzone serial\t", $serial, "\n";
@@ -446,18 +445,18 @@ sub displayRR {				## print specified RRs or error code
 	my @ncache     = grep { $_->type eq 'SOA' } @authority; # per RFC2308
 	my @workaround = @ncache if $qtype eq 'SOA';		# SOA misplaced/withheld?
 	my @remark     = qw(unexpected) if @workaround;
-	$rcode = 'NODATA' if ( $rcode eq 'NOERROR' ) and @ncache;
 
-	foreach my $rr ( @answer, @workaround ) {		# print RR with status flags
-		my $type = $rr->type || '';
+	$rcode = 'NODATA' if @ncache && $rcode eq 'NOERROR';	# no matching data at (non-empty) node
 
-		next if $qtype eq 'ANY' and $type =~ /^(SOA|NS)$/o;
+	foreach my $rr ( @answer, @workaround ) {		# print RRs unless shown elsewhere
+
+		next if $qtype eq 'ANY' && $rr->type =~ /^(SOA|NS)$/;
 
 		for ( $rr->string ) {
-			my $l = $verbose ? length $_ : 95;	# abbreviate long RR
+			my $l = $verbose ? length($_) : 108;	# abbreviate long RR
 			my $name = $rr->name;
 			print ";\t$name\n" unless /^$name/;	# annotate IDN
-			substr( $_, $l ) = ' ...' if length($_) > $l and $type !~ /^(SOA|PTR)$/o;
+			substr( $_, $l ) = ' ...' if length($_) > $l && $rr->type ne 'SOA';
 			print "$_\n";
 		}
 	}
@@ -512,7 +511,7 @@ sub ordered {				## irreflexive 32-bit partial ordering
 	return defined $b unless defined $a;			# ( undef, any )
 	return 0 unless defined $b;				# ( any, undef )
 
-	# unwise to assume 32-bit hardware, or that integer overflow goes unpunished
+	# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
 	if ( $a < 0 ) {						# translate $a<0 region
 		$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;		#  0	 <= $a < 2**31
 		$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;		# -2**31 <= $b < 2**32
