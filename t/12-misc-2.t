@@ -52,7 +52,8 @@ my $resolver=Net::DNS::Resolver->new(
 
 sub reply_handler {
     my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
-    die "Sockhost failure" if ($conn->{"sockhost"} ne "127.0.0.1");
+    # The sockhost might actually be different on jailed environments
+    # die "Sockhost failure" if ($conn->{"sockhost"} ne "127.0.0.1");
     die "Sockport failure" if ($conn->{"sockport"} ne $TestPort);
     #use Data::Dumper;
     #print Dumper $conn;
