@@ -12,6 +12,11 @@ use constant UTF8 => eval {
 
 use constant LIBIDN => eval { require Net::LibIDN; };		# optional IDN support
 
+use constant LIBIDNOK => eval {					# tested and working
+	LIBIDN && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
+};
+
+
 
 BEGIN {
 	use_ok('Net::DNS::Domain');
@@ -150,6 +155,7 @@ t20: {
 SKIP: {
 	skip( 'IDN test - Unicode/UTF-8 not supported', 8 ) unless UTF8;
 	skip( 'IDN test - Net::LibIDN not installed', 8 ) unless LIBIDN;
+	skip( 'IDN test - Net::LibIDN not working', 8 ) unless LIBIDNOK;
 	my $a_label = 'xn--fiqs8s';
 	my $u_label = eval{ pack( 'U*', 20013, 22269 ); };
 	is( new Net::DNS::Domain($a_label)->identifier, $a_label, 'IDN A-label domain->identifier' );
