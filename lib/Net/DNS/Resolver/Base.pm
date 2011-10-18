@@ -349,8 +349,15 @@ sub nameservers {
 		
 		my $packet = $defres->search($ns);
 		$self->errorstring($defres->errorstring);
-		if (defined($packet)) {
-		    push @a, cname_addr([@names], $packet);
+		if (defined($packet) && (my @adresses = cname_addr([@names], $packet))) {
+		    push @a, @adresses;
+		}
+		else {
+		    $packet = $defres->search($ns, 'AAAA');
+		    $self->errorstring($defres->errorstring);
+		    if (defined($packet)) {
+			push @a, cname_addr([@names], $packet);
+		    }
 		}
 	    }
 	}
@@ -393,6 +400,9 @@ sub cname_addr {
 			
 			push(@addr, $1)
 		}
+		elsif ($rr->type eq 'AAAA') {
+			push(@addr, $rr->address)
+        }
 	}
 	
 	
@@ -667,7 +677,7 @@ sub send_udp {
 	    
             my $srcaddr6 = $srcaddr eq '0.0.0.0' ? '::' : $srcaddr;
 	    
-	    print ";; Trying to set up a AF_INET6() family type UDP socket with srcaddr: $srcaddr ... "
+	    print ";; Trying to set up a AF_INET6() family type UDP socket with srcaddr: $srcaddr6 ... "
 		if $self->{'debug'};
 
 	    
