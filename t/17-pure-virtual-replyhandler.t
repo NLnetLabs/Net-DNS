@@ -63,6 +63,39 @@ package NoReplyHanlderNameserver;
 
 package main;
 
+sub MyReplyHandler {
+	my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
+	my ($rcode, @ans, @auth, @add);
+	push @ans, Net::DNS::RR->new(qq($qname 3600 $qclass $qtype "MyReplyHandler"));
+	return ("NOERROR", \@ans, \@auth, \@add, { aa => 1});
+}
+
+sub serve {
+    my $nameserver = shift;
+
+    no strict 'subs'; # EAGAIN
+
+    FORK: {
+        if (! (my $pid = fork)) {
+            if (defined $pid) {
+                $nameserver->loop_once(3);
+                $nameserver->loop_once(1);
+                exit(0);
+            } elsif ($! == EAGAIN) {
+                # EAGAIN is the supposedly recoverable fork error
+                sleep 5;
+                redo FORK;                
+            } else {
+                # weird fork error
+                die "Can't fork: $!\n";
+            }
+        }
+    }
+}
+
+
+# -- test 1 -------------------------------------------------------------------
+
 { 
 	my $warning;
 	local $SIG{__WARN__} = sub { $warning = (split /\n/, $_[0])[0]; };
@@ -73,12 +106,7 @@ package main;
 	is($nameserver, undef, "ReplyHandler is required: $warning");
 };
 
-sub MyReplyHandler {
-	my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
-	my ($rcode, @ans, @auth, @add);
-	push @ans, Net::DNS::RR->new(qq($qname 3600 $qclass $qtype "MyReplyHandler"));
-	return ("NOERROR", \@ans, \@auth, \@add, { aa => 1});
-}
+# -- test 2 -------------------------------------------------------------------
 
 my $nameserver = NoReplyHandlerNameserver->new(
 	LocalAddr => $address, 
@@ -87,49 +115,12 @@ my $nameserver = NoReplyHandlerNameserver->new(
 	);
 isnt($nameserver, undef, "ReplyHandler as parameter makes nameserver");
 
-my @nameservers = (
-	$nameserver,
-	MyNameserver->new(
-		LocalAddr  => $address,
-		LocalPort  => $TestPort2,
-		),
-	AnotherNameserver->new(
-		LocalAddr  => $address,
-		LocalPort  => $TestPort3,
-		),
-	YetAnotherNameserver->new(
-		LocalAddr  => $address,
-		LocalPort  => $TestPort4,
-		),
-	);
+# -- test 3 -------------------------------------------------------------------
 
+# Nameservers will be forked one by one, because forking all nameservers at 
+# once does not work too well on windows.
 
-my $pid;
-my @pids;
-foreach my $nameserver (@nameservers) {
-    FORK: {
-	 no strict 'subs';  # EAGAIN
-	 if ($pid=fork) {# assign result of fork to $pid,
-
-	     # Parent process here
-	    push @pids, $pid;
-
-	 } elsif (defined($pid)) {
-	      $nameserver->loop_once(3);
-	      $nameserver->loop_once(3);
-	      exit;
-
-	  } elsif ($! == EAGAIN) {
-	      # EAGAIN is the supposedly recoverable fork error
-	      sleep 5;
-	      redo FORK;
-	  }else {
-	      #weird fork error
-	      die "Can't fork: $!\n";
-	  }
-    }
-}
-
+serve($nameserver);
 
 my $resolver = Net::DNS::Resolver->new(
 	nameservers => ["127.0.0.1"],
@@ -142,19 +133,49 @@ sleep 1;
 my $answer = $resolver->query("example.", "TXT"); 
 is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"MyReplyHandler"), "ReplyHandler as parameter");
 
+wait;
+
+# -- test 4 -------------------------------------------------------------------
+
+serve(MyNameserver->new(
+	LocalAddr  => $address,
+	LocalPort  => $TestPort2,
+	));
+
 $resolver->port($TestPort2);
+sleep 1;
+
 $answer = $resolver->query("example.", "TXT"); 
 is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"MyNameserver"), "ReplyHandler as method");
 
+wait;
+
+# -- test 5 -------------------------------------------------------------------
+
+serve(AnotherNameserver->new(
+	LocalAddr  => $address,
+	LocalPort  => $TestPort3,
+	));
+
 $resolver->port($TestPort3);
+sleep 1;
+
 $answer = $resolver->query("example.", "TXT"); 
 is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"AnotherNameserver"), "ReplyHandler as method in the super class");
 
+wait;
+
+# -- test 6 -------------------------------------------------------------------
+
+serve(YetAnotherNameserver->new(
+	LocalAddr  => $address,
+	LocalPort  => $TestPort4,
+	));
+
 $resolver->port($TestPort4);
+sleep 1;
+
 $answer = $resolver->query("example.", "TXT"); 
 is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"YetAnotherNameserver"), "Overloaded ReplyHandler");
 
-foreach $pid (@pids) {
-	kill 1, $pid;
-}
 

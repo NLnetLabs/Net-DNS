@@ -99,9 +99,7 @@ my %Makefile = (
 	},
 	XS            => {},
 	C             => [],
-	clean         => { FILES => 't/IPv6.enabled t/online.enabled compile.* DNS.o DNS.c DNS.bs' },
-
-
+	clean         => { FILES => 't/IPv6.enabled t/online.enabled t/online.nonfatal compile.* DNS.o DNS.c DNS.bs lib/Net/DNS/Resolver/Win32' },
 );
 
 
@@ -134,9 +132,31 @@ AMEN3
 
     }
     $Makefile{'PREREQ_PM'}->{'enum'} = 1.0;  # Dependency for Win32::IPHelper
-    $Makefile{'PREREQ_PM'}->{'Win32::IPHelper'} = 0.05;
+    $Makefile{'PREREQ_PM'}->{'Win32::IPHelper'} = 0.07;
     $Makefile{'PREREQ_PM'}->{'Win32::API'} = 0.55;
     $Makefile{'PREREQ_PM'}->{'Win32::TieRegistry'} = 0;
+
+    # On 64 bit versions of windows Win32::IPHelper <= 0.06 is known not to 
+    # work.
+    # 
+    if ( $INC{'Win32/IPHelper.pm'} || eval {
+		    	local $SIG{__WARN__} = sub {};
+		    	require Win32::IPHelper;
+		} && ($ENV{'PROCESSOR_ARCHITECTURE'} =~ /64/
+		  ||  $ENV{'PROCESSOR_ARCHITEW6432'} =~ /64/)
+		  && $Win32::IPHelper::VERSION < 0.07 ) {
+	    warn <<IPHelper64bitWarning;
+
+WARNING!
+========
+You have a Win32::IPHelper version $Win32::IPHelper::VERSION.  On 64bit machines Net::DNS::Resolver
+will not work with a Win32::IPHelper before version 0.07.  Please upgrade your
+Win32::IPHelper module.
+
+
+IPHelper64bitWarning
+
+    }
 }
 
 
