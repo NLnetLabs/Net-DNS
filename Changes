@@ -47,8 +47,8 @@ Fix online tests to use the library as documented and not use knowledge of the
 
 	A contribution from Dick Franks
 
-Feature to make online tests non-fatal by default.
-
+Fix rt.cpan.org #55682
+	Make online tests non-fatal by default.
 	All interactive prompts are removed from Makefile.PL.
 	Online tests may still be made a requisite by using the --online-tests
 	option.

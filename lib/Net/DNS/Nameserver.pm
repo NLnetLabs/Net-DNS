@@ -206,6 +206,10 @@ sub make_reply {
 					};
 				}
 			}
+			if (! defined($rcode)) {
+				print "remaining silent\n" if $self->{'Verbose'};
+				return undef;
+			}
 			print "$rcode\n" if $self->{"Verbose"};
 			
 			$reply->header->rcode($rcode);
