@@ -45,12 +45,12 @@ Fix rt.cpan.org #24525
 Fix online tests to use the library as documented and not use knowledge of the
 	internal workings of the classses that should be hidden..
 
-	A contribtion from Dick Franks
+	A contribution from Dick Franks
 
 Feature to make online tests non-fatal by default.
 
 	All interactive prompts are removed from Makefile.PL.
-	Online tests may still be made a requisite by using the --oneline-tests
+	Online tests may still be made a requisite by using the --online-tests
 	option.
 	
 Major rework of Net::DNS::Domain.pm and the addition of Net::DNS::DomainName.pm
@@ -65,7 +65,7 @@ Fix rt.cpan.org #69174
 
 Fix rt.cpan.org #68338
 
-	Suppress warnings of the deprecated use of qw as paranthese in 
+	Suppress warnings of the deprecated use of qw as parentheses in 
 	perl 5.14.
 
 Enhancement rt.cpan.org #67418
@@ -77,7 +77,7 @@ Fix rt.cpan.org #67133
 
 	Gracefully handle corrupted incoming packets in Net::DNS::Nameserver.
 
-Feature to manage serial numbers in SOA records in a modular and extendable way.
+Feature to manage serial numbers in SOA records in a modular and extendible way.
 
 	Three modules are provided. Strictly sequential, Data Encoded and 
 	Time Encoded.  A contribution from Dick Franks.
@@ -114,7 +114,7 @@ Feature rt.cpan.org #57289
 
 Fix rt.cpan.org #53595
 
-	Fix documentation to reflect code behaviour where on succesfull packet
+	Fix documentation to reflect code behaviour where on successful packet
 	creation, the error should be ignored.
 
 Fix rt.cpan.org #58914
