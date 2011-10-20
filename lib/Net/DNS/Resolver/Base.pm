@@ -936,8 +936,8 @@ sub bgsend {
 		return;
 	}
 
-		$self->_reset_errorstring;
-
+	$self->_reset_errorstring;
+	
 	my $packet = $self->make_query_packet(@_);
 	my $packet_data = $packet->data;
 

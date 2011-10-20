@@ -400,7 +400,7 @@ $res->bgisready >> or C<IO::Select> to find out if the socket is ready
 before reading it.
 
 bgsend does not support persistent sockets.
-
+bgsend does not support the usevc option (TCP).
 
 =head2 bgread
 
