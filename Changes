@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 0.67 Oct ??, 2011
 
+Fix rt.cpan.org #71796
+
+	Prevent TCP accepts from blocking on unfinished 3-way handi shakes.
+
 Fix rt.cpan.org #65607
 
 	Make 64bits windows work by depending on Win32::IPHelper version 0.07

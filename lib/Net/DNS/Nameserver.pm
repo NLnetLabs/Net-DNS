@@ -89,6 +89,7 @@ sub new {
  						    Listen	  => 64,
  						    Proto	  => "tcp",
  						    Reuse	  => 1,
+						    Blocking     =>  0,
  						    );
 	    if ( $sock_tcp ) {
 		push @sock_tcp, $sock_tcp;
