@@ -112,6 +112,7 @@ t/12-compression.t
 t/13-udp-trunc.t
 t/17-pure-virtual-replyhandler.t 
 t/99-cleanup.t
+t/NonFatal.pm
 t/TestData.pm
 t/custom.txt
 TODO

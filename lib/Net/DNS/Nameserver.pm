@@ -593,8 +593,9 @@ IPv6 and IPv4);
 The ReplyHandler subroutine is passed the query name, query class,
 query type and optionally an argument containing the peerhost, the
 incoming query, and the name of the incoming socket (sockethost). It
-must return the response code and references to the answer, authority,
-and additional sections of the response.  Common response codes are:
+must either return the response code and references to the answer, 
+authority, and additional sections of the response, or undef to leave
+the query unanswered.  Common response codes are:
 
   NOERROR	No error
   FORMERR	Format error
@@ -603,7 +604,7 @@ and additional sections of the response.  Common response codes are:
   NOTIMP	Not implemented
   REFUSED	Query refused
 
-For advanced usage it may also contain a headermaks containing an
+For advanced usage it may also contain a headermask containing an
 hashref with the settings for the C<aa>, C<ra>, and C<ad> 
 header bits. The argument is of the form 
 C<< { ad => 1, aa => 0, ra => 1 } >>. 

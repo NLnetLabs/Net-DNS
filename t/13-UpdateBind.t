@@ -21,6 +21,7 @@ use Net::DNS;
 use Net::DNS::Update;
 use Data::Dumper;
 use t::TestData;
+use POSIX;
 
 use vars qw(
 	    @Addresses
@@ -75,7 +76,8 @@ ns.example.com.           IN       A    127.53.53.8
 
 
 mx-exchange.example.com.  IN       A    127.53.53.8
-
+srv-target.example.com.   IN       A    127.53.53.8
+ns-nsdname.example.com.   IN       A    127.53.53.8
 ZONEDATA
 
 
@@ -85,7 +87,10 @@ ZONEDATA
 
 sub runtests {
     # Send the update to the zone's primary master. (should be consistent with named.conf fragment below)
-    my $res = Net::DNS::Resolver->new;
+    my $res = Net::DNS::Resolver->new(
+		udp_timeout => 0.3, # Answers from the localhost should be
+		tcp_timeout => 0.3  # received really quickly.
+	    );
     $res->nameservers('127.53.53.8');
     $res->port('5334');
     sleep (1);
@@ -142,11 +147,11 @@ sub runtests {
 	undef($reply);
 	$reply=$res->send($query);
 	#$reply->print;
-	my $ans=($reply->answer)[0];
+	my $ans=$reply && ($reply->answer)[0];
 	#special case for NS: delegation
-	$ans=($reply->authority)[0] if $data->{'type'} eq "NS";  
+	$ans=$reply && ($reply->authority)[0] if $data->{'type'} eq "NS";  
       SKIP:{
-	  skip "no answer returned ". ($updatesuccess?"errorcode: ":" after failed update: ").$reply->header->rcode, 1 unless defined ($ans) && $updatesuccess ;
+	  skip "no answer returned ". ($updatesuccess?"errorcode: ":" after failed update: ").($reply && $reply->header && $reply->header->rcode || ""), 1 unless defined ($ans) && $updatesuccess ;
 	  is( $ans->string,$RR->string,"In and out match ". $data->{'type'});
 	}
 
@@ -196,7 +201,7 @@ sub runtests {
 	$reply=$res->send($query);
 
       SKIP:{
-	  skip "no answer returned ". ($updatesuccess?"errorcode: ":"after failed update: ").$reply->header->rcode, 2 unless defined ($ans) && $updatesuccess ;
+	  skip "no answer returned ". ($updatesuccess?"errorcode: ":"after failed update: ").($reply && $reply->header && $reply->header->rcode || ""), ($data->{'type'} eq "NS" || $data->{'type'} eq "IPSECKEY" && $data->{'gateway'} eq "gateway.example.com." ? 1 : 2) unless defined ($ans) && $updatesuccess ;
 	  
 	  
 	  #$reply->print;
@@ -277,6 +282,9 @@ BEGIN {
 	  #diag ();
 	  plan skip_all => "You will need to have named installed at  ". $named;          
 	  exit;
+	} elsif ( ! -x $namedcheckzone ) {
+	  plan skip_all => "You will need to have named-checkzone installed at  ". $named;          
+	  exit;
 	}
 	plan tests => $numberoftests;
     }else{
@@ -323,8 +331,15 @@ my $pid;
 die "Can't fork: $!" unless defined($pid = fork);
 if ($pid) {           # parent
     select(undef, undef, undef, 0.5);
+    # On apparmored systems like Ubuntu, when /usr/local/sbin/named is a
+    # symbol link to /usr/sbin/named, it exits immediately.
+    if ( waitpid( $pid, &WNOHANG ) == $pid ) {
+	diag( "$named seems to have exited immediately.\n" .
+	      "Maybe it is running in a confined environment such as with \n" .
+	      "apparmor on Ubuntu and SUSE Linux." );
+	exit -1;
+    }
     runtests();
-#   sleep 60;
     kill 2, $pid;
 
 } else {

@@ -79,14 +79,15 @@ SKIP: {
 					 PeerPort => '53',
 					 Proto    => 'udp');
 
-	my $ip=inet_ntoa($sock->sockaddr);
+	
+	my $ip = $sock ? inet_ntoa($sock->sockaddr) : undef;
 
 	skip "Tests may not succeed from private IP: $ip", 3
-		if $ip =~ /^(10|172\.(1[6-9]|2.|30|31)|192.168)\./;
+		if $ip && $ip =~ /^(10|172\.(1[6-9]|2.|30|31)|192.168)\./;
 
 	NonFatalBegin();
 
-	my $res = Net::DNS::Resolver->new;
+	my $res = Net::DNS::Resolver->new(udp_timeout => 3, tcp_timeout => 3);
 	
 	$res->nameservers('a.t.net-dns.org');
 	$ip = ($res->nameservers)[0];
@@ -104,7 +105,7 @@ SKIP: {
 	# places
 	my $die = 0;
 	undef ($res); # default values again
-	$res = Net::DNS::Resolver->new();
+	$res = Net::DNS::Resolver->new(udp_timeout => 3, tcp_timeout => 3);
 
 	eval{
 	    

@@ -328,7 +328,10 @@ sub nameservers {
 
 	} else  {
 
-		my $defres = Net::DNS::Resolver->new ();
+		my $defres = Net::DNS::Resolver->new(
+			    udp_timeout => $self->udp_timeout,
+			    tcp_timeout => $self->tcp_timeout
+			);
 		$defres->{"debug"}=$self->{"debug"};
 
 		

@@ -18,7 +18,15 @@ BEGIN {
 
 BEGIN { use_ok('Net::DNS'); }
 
-my $res = Net::DNS::Resolver->new;
+sub timeoutres {
+    return Net::DNS::Resolver->new(
+		tcp_timeout => 3,
+		udp_timeout => 3 
+	    );
+}
+
+
+my $res = &timeoutres;
 #$res->debug(1);
 my @rrs = (
 	{
@@ -75,12 +83,26 @@ foreach my $data (@rrs) {
 				is($answer->$meth(), $data->{$meth}, "$meth correct ($data->{name})");
 			}
 		}
+		} else {
+		    foreach (1 .. 6) { 
+			ok(1, "skipping subtest $_"); 
+		    }
+		    foreach (keys %{$data}) {
+			ok(1, "skipping subtest for method $_");
+		    }
 		}
+	} else {
+	    foreach (1 .. 8) {
+		ok(0, "skipping subtest $_");
+	    }
+	    foreach (keys %{$data}) {
+		ok(1, "skipping subtest for method $_");
+	    }
 	}
 }
 
 # Does the mx() function work.
-my @mx = mx('mx2.t.net-dns.org');
+my @mx = mx(&timeoutres, 'mx2.t.net-dns.org');
 
 my $wanted_names = [qw(a.t.net-dns.org a2.t.net-dns.org)];
 my $names        = [ map { $_->exchange } @mx ];
@@ -89,7 +111,7 @@ my $names        = [ map { $_->exchange } @mx ];
 is_deeply($names, $wanted_names, "mx() seems to be working");
 
 # some people seem to use mx() in scalar context
-is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
+is(scalar mx(&timeoutres, 'mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
 
 #
 # test that search() and query() DTRT with reverse lookups
@@ -125,17 +147,19 @@ is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
 $res = Net::DNS::Resolver->new(
 	domain     => 't.net-dns.org',
     searchlist => ['t.net-dns.org', 'net-dns.org'],
+	udp_timeout => 3,
+	tcp_timeout => 3,
     );
 
 my $ans_at=$res->send("a.t.", "A");
-if ($ans_at->header->ancount >= 1 ){
+if ($ans_at && $ans_at->header && $ans_at->header->ancount >= 1 ){
     diag "We are going to skip a bunch of checks.";
     diag "For unexplained reasons a query for 'a.t' resolves as ";
     diag "".($ans_at->answer)[0]->string ;
     diag "For users of 'dig' try 'dig a.t.' to test this hypothesis";
 }
       SKIP: {
-    skip "Query for a.t. resolves unexpectedly",35 if ($ans_at->header->ancount >= 1 );
+    skip "Query for a.t. resolves unexpectedly",35 if ($ans_at && $ans_at->header && $ans_at->header->ancount >= 1 );
     
     
 #$res->debug(1);
@@ -172,11 +196,11 @@ if ($ans_at->header->ancount >= 1 ){
 		 
 		 isa_ok($ans, 'Net::DNS::Packet');
 		 
-		 is($ans->header->ancount, 1,"Correct answer count (with $method)");
-		 my ($a) = $ans->answer;
+		 is($ans && $ans->header && $ans->header->ancount, 1,"Correct answer count (with $method)");
+		 my ($a) = $ans && $ans->answer;
 		 
 		 isa_ok($a, 'Net::DNS::RR::A');
-		 is(lc($a->name), 'a.t.net-dns.org',"Correct name (with $method)");
+		 is($a && lc($a->name), 'a.t.net-dns.org',"Correct name (with $method)");
 	     }
 
 	 }
@@ -261,12 +285,12 @@ if ($ans_at->header->ancount >= 1 ){
 		
 		isa_ok($ans, 'Net::DNS::Packet');
 
-		is($ans->header->ancount, 1,"Correct answer count (with persistent socket and $method)");
+		is($ans && $ans->header && $ans->header->ancount, 1,"Correct answer count (with persistent socket and $method)");
 		
-		my ($a) = $ans->answer;
+		my ($a) = $ans && $ans->answer;
 		
 		isa_ok($a, 'Net::DNS::RR::A');
-		is(lc($a->name), 'a.t.net-dns.org',"Correct name (with persistent socket and $method)");
+		is($a && lc($a->name), 'a.t.net-dns.org',"Correct name (with persistent socket and $method)");
 	}
 	
 

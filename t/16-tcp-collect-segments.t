@@ -72,8 +72,8 @@ my $pid;
 	 	$sock->recv($buf, $lenmsg);
 	 	$packet = Net::DNS::Packet->new(\$buf);
 
-		 if (ok(defined($packet), 'We received an answer')) {
-			ok($packet->header->rcode eq 'NXDOMAIN', 'Correct answer received');
+		 if (ok(defined($packet), 'We received the (fragmented) answer')) {
+			ok($packet->header->rcode eq 'NXDOMAIN', 'The received answer was correct (complete)');
 		 }
 	}
 	kill 1, $pid;
