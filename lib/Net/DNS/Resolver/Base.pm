@@ -590,7 +590,16 @@ sub send_tcp {
 		      
 		      $buf = read_tcp($sock, $len, $self->{'debug'});
 		      
-		      $self->answerfrom($sock->peerhost);
+		      # peerhost doesn't work for TCP on some systems.
+		      #
+		      eval { $self->answerfrom( $sock->peerhost ); };
+		      if ( $@ ) {
+			  if ( $has_inet6 && $sock->sockdomain() == AF_INET6 ) {
+			      $self->answerfrom( Socket6::inet_ntop( AF_INET6, (Socket6::sockaddr_in6(getpeername($sock)))[1]) );
+			  } else {
+			      $self->answerfrom(inet_ntoa((sockaddr_in(getpeername($sock)))[1]));
+			  }
+		      }
 		      
 		      print ';; received ', length($buf), " bytes\n"
 			  if $self->{'debug'};

@@ -104,16 +104,15 @@ my %Makefile = (
 
 
 
-if ($^O eq 'MSWin32' || $^O eq 'cygwin') {
+if ($^O eq 'MSWin32') {
     unless(    eval {require WIN32::API; }	   ){
 	warn <<AMEN; 
 I can not find WIN32::API version 0.55 or higher.
-
 I will add WIN32::API to the list of prerequisites.
 AMEN
 
 
-if ( $^O eq "MSWin32" ){ 
+if ( $^O eq "MSWin32" ){
     warn <<AMEN2;
 Note that, WIN32::API is included in recent versions
 of ActivePerl (5.10 since build 1003) and recent
@@ -122,11 +121,6 @@ version of 5.10.0.3) and the module has not be
 tested with other versions. In case of failure please
 consider upgrading.
 AMEN2
-}else{
-    warn <<AMEN3;
-When using cygwin missing dependencies can be installed using CPAN.
-AMEN3
-
 }
 
 
@@ -193,13 +187,6 @@ END
 
 	}
 }
-
-
-
-
-
-
-
 
 if ($use_xs) {
 	# turn the XS bits on.
