@@ -577,6 +577,12 @@ sub send_tcp {
 	      my $sel = IO::Select->new($sock);
 	      my $timeout=$self->{'tcp_timeout'};
 	      if ($sel->can_read($timeout)) {
+		      # Read peerhost just before receiving data, because on 
+		      # some systems (cygwin) receiving data on TCP resets 
+		      # ${*$sock}{'io_socket_peername'} to garbage.
+		      #
+		      my $peerhost = $sock->peerhost;
+
 		      my $buf = read_tcp($sock, Net::DNS::INT16SZ(), $self->{'debug'});
 		      next NAMESERVER unless length($buf); # Failure to get anything
 		      my ($len) = unpack('n', $buf);
@@ -590,16 +596,10 @@ sub send_tcp {
 		      
 		      $buf = read_tcp($sock, $len, $self->{'debug'});
 		      
-		      # peerhost doesn't work for TCP on some systems.
+		      # Cannot use $sock->peerhost, because on some systems it 
+		      # returns garbage after reading from TCP.
 		      #
-		      eval { $self->answerfrom( $sock->peerhost ); };
-		      if ( $@ ) {
-			  if ( $has_inet6 && $sock->sockdomain() == AF_INET6 ) {
-			      $self->answerfrom( Socket6::inet_ntop( AF_INET6, (Socket6::sockaddr_in6(getpeername($sock)))[1]) );
-			  } else {
-			      $self->answerfrom(inet_ntoa((sockaddr_in(getpeername($sock)))[1]));
-			  }
-		      }
+		      $self->answerfrom( $peerhost );
 		      
 		      print ';; received ', length($buf), " bytes\n"
 			  if $self->{'debug'};
