@@ -3,9 +3,9 @@ package Net::DNS::Update;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw($VERSION @ISA);
 
 use Net::DNS;
@@ -87,26 +87,26 @@ show only the creation of the update packet.
 =head2 Add a new host
 
  #!/usr/bin/perl -w
- 
+
  use Net::DNS;
  use strict;
- 
+
  # Create the update packet.
  my $update = Net::DNS::Update->new('example.com');
- 
+
  # Prerequisite is that no A records exist for the name.
  $update->push(pre => nxrrset('foo.example.com. A'));
- 
+
  # Add two A records for the name.
  $update->push(update => rr_add('foo.example.com. 86400 A 192.168.1.2'));
  $update->push(update => rr_add('foo.example.com. 86400 A 172.16.3.4'));
- 
+
  # Send the update to the zone's primary master.
  my $res = Net::DNS::Resolver->new;
  $res->nameservers('primary-master.example.com');
- 
+
  my $reply = $res->send($update);
- 
+
  # Did it work?
  if ($reply) {
      if ($reply->header->rcode eq 'NOERROR') {
@@ -182,7 +182,7 @@ production nameservers.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

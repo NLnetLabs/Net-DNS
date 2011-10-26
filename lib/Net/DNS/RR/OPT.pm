@@ -4,9 +4,9 @@ package Net::DNS::RR::OPT;
 #
 
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION %extendedrcodesbyname %extendedrcodesbyval $EDNSVERSION);
 
 use Carp;
@@ -17,7 +17,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 $EDNSVERSION = 0;
 
 %extendedrcodesbyname = (
-	"ONLY_RDATA" => 0,		# No name specified see 4.6 of 2671 
+	"ONLY_RDATA" => 0,		# No name specified see 4.6 of 2671
 	"UNDEF1"     => 1,
 	"UNDEF2"     => 2,
 	"UNDEF3"     => 3,
@@ -51,12 +51,12 @@ sub new {
 	}
 
 	$self->{"_rcode_flags"}  = pack("N",$self->{"ttl"});
-	
+
 	$self->{"extendedrcode"} = unpack("C", substr($self->{"_rcode_flags"}, 0, 1));
 	$self->{"ednsversion"}   = unpack("C", substr($self->{"_rcode_flags"}, 1, 1));
 	$self->{"ednsflags"}     = unpack("n", substr($self->{"_rcode_flags"}, 2, 2));
-	
-	
+
+
 	return bless $self, $class;
 }
 
@@ -67,8 +67,8 @@ sub new {
 
 sub new_from_string {
     my ($class, $self ) = @_;
-    
-    # There is no such thing as an OPT RR in a ZONE file. 
+
+    # There is no such thing as an OPT RR in a ZONE file.
     # Not implemented!
     croak "You should not try to create a OPT RR from a string\nNot implemented";
     return bless $self, $class;
@@ -78,29 +78,29 @@ sub new_from_string {
 
 sub new_from_hash {
 	my ($class, $self ) = @_;
-	
+
 	$self->{"name"} = "" ;   # should allway be "root"
-	# Setting the MTU smaller then 512 does not make sense 
+	# Setting the MTU smaller then 512 does not make sense
 	# should we test for a maximum here?
 	if ($self->{"class"} eq "IN" || $self->{"class"} < 512) {
 		$self->{"class"} = 512;    # Default value...
 	}
-	
+
 	$self->{"extendedrcode"} = 0 unless exists $self->{"extendedrcode"};
-	
+
 	$self->{"ednsflags"}   = 0 unless exists $self->{"ednsflags"};
 	$self->{"ednsversion"} = $EDNSVERSION unless exists $self->{"ednsversion"};
-	$self->{"ttl"}= unpack ("N", 
+	$self->{"ttl"}= unpack ("N",
 		pack("C", $self->{"extendedrcode"}) .
 		pack("C", $self->{"ednsversion"})  .
 		pack("n", $self->{"ednsflags"})
 	);
-	
+
 	if (exists  $self->{"optioncode"}) {
 		$self->{"optiondata"}   = "" if ! exists  $self->{"optiondata"};
 		$self->{"optionlength"} = length $self->{"optiondata"}
 	}
-	
+
 	return bless $self, $class;
 
 }
@@ -112,8 +112,8 @@ sub new_from_hash {
 sub string {
    my $self = shift;
    return
-	"; EDNS Version "     . $self->{"ednsversion"} . 
-	"\t UDP Packetsize: " .  $self->{"class"} . 
+	"; EDNS Version "     . $self->{"ednsversion"} .
+	"\t UDP Packetsize: " .  $self->{"class"} .
 	"\n; EDNS-RCODE:\t"   . $self->{"extendedrcode"} .
 	" (" . $extendedrcodesbyval{ $self->{"extendedrcode"} }. ")" .
 	"\n; EDNS-FLAGS:\t"   . sprintf("0x%04x", $self->{"ednsflags"}) .
@@ -129,15 +129,15 @@ sub rdatastr {
 sub rr_rdata {
 	my $self = shift;
 	my $rdata;
-	
+
 	if (exists $self->{"optioncode"}) {
 		$rdata  = pack("n", $self->{"optioncode"});
-		$rdata .= pack("n", $self->{"optionlength"}); 
+		$rdata .= pack("n", $self->{"optionlength"});
 		$rdata .= $self->{"optiondata"}
 	} else {
 		$rdata = "";
 	}
-	
+
 	return $rdata;
 }
 
@@ -199,7 +199,7 @@ Class for EDNS pseudo resource record OPT.
 
 This object should only be used inside the Net::DNS classes itself.
 
-=head2 new 
+=head2 new
 
 Since "OPT" is a pseudo record and should not be stored in
 masterfiles; Therefore we have not implemented a method to create this
@@ -210,22 +210,22 @@ the meaning of the hash keys.
 
  $rr= Net::DNS::RR->new (
     name => "",                # Ignored and set to ""
-    type => "OPT",  
+    type => "OPT",
     class => 1024,             # sets UDP payload size
     extendedrcode =>  0x00,    # sets the extended RCODE 1 octets
-    ednsflags     =>  0x0000,  # sets the ednsflags (2octets)  
+    ednsflags     =>  0x0000,  # sets the ednsflags (2octets)
     optioncode   =>   0x0,     # 2 octets
     optiondata   =>   0x0      # optionlength octets
  );
 
-The ednsversion is set to 0 for now. The ttl value is determined from 
+The ednsversion is set to 0 for now. The ttl value is determined from
 the extendedrcode, the ednsversion and the ednsflag.
-The rdata is constructed from the optioncode and optiondata 
+The rdata is constructed from the optioncode and optiondata
 see section 4.4 of RFC 2671
 
 If optioncode is left undefined then we do not expect any RDATA.
 
-The defaults are no rdata.   
+The defaults are no rdata.
 
 
 =head2 do, set_do, clear_do
@@ -239,13 +239,13 @@ Reads, sets and clears the do flag. (first bit in the ednssflags);
 
     $opt->size(1498);
     print "Packet size:". $opt->size() ;
- 
+
 Sets or gets the packet size.
 
 
 =head1 TODO
 
-- This class is tailored to use with dnssec. 
+- This class is tailored to use with dnssec.
 
 - Do some range checking on the input.
 

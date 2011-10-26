@@ -34,22 +34,22 @@ Net::DNS::Resolver - DNS resolver class
 =head1 SYNOPSIS
 
   use Net::DNS;
-  
+
   my $res = Net::DNS::Resolver->new;
-  
+
   # Perform a lookup, using the searchlist if appropriate.
   my $answer = $res->search('example.com');
-  
+
   # Perform a lookup, without the searchlist
   my $answer = $res->query('example.com', 'MX');
-  
+
   # Perform a lookup, without pre or post-processing
   my $answer = $res->send('example.com', 'MX', 'CH');
-  
+
   # Send a prebuilt packet
   my $packet = Net::DNS::Packet->new(...);
   my $answer = $res->send($packet);
-  
+
 =head1 DESCRIPTION
 
 Instances of the C<Net::DNS::Resolver> class represent resolver objects.
@@ -63,10 +63,10 @@ recursion is desired, etc.
 
   # Use the system defaults
   my $res = Net::DNS::Resolver->new;
-  
+
   # Use my own configuration file
   my $res = Net::DNS::Resolver->new(config_file => '/my/dns.conf');
-  
+
   # Set options in the constructor
   my $res = Net::DNS::Resolver->new(
   	nameservers => [qw(10.1.1.128 10.1.2.128)],
@@ -75,7 +75,7 @@ recursion is desired, etc.
   );
 
 Returns a resolver object.  If given no arguments, C<new()> returns an
-object configured to your system's defaults.  On UNIX systems the 
+object configured to your system's defaults.  On UNIX systems the
 defaults are read from the following files, in the order indicated:
 
     /etc/resolv.conf
@@ -112,7 +112,7 @@ dynamically configured network interfaces may confuse Net::DNS.
 You can include a configuration file of your own when creating a
 resolver object:
 
- # Use my own configuration file 
+ # Use my own configuration file
  my $res = Net::DNS::Resolver->new(config_file => '/my/dns.conf');
 
 This is supported on both UNIX and Windows.  Values pulled from a custom
@@ -127,7 +127,7 @@ arguments to new() are supported:
 
 =item nameservers
 
-An array reference of nameservers to query.  
+An array reference of nameservers to query.
 
 =item searchlist
 
@@ -239,7 +239,7 @@ any answers or not, use the send() method instead.
     $packet = $res->send('user.passwd.example.com', 'TXT', 'HS');
 
 Performs a DNS query for the given name.  Neither the searchlist
-nor the default domain will be appended.  
+nor the default domain will be appended.
 
 The argument list can be either a C<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
@@ -322,7 +322,7 @@ See also L</axfr>.
 
 Gets or sets the nameservers to be queried.
 
-Also see the IPv6 transport notes below    
+Also see the IPv6 transport notes below
 
 =head2 print
 
@@ -382,7 +382,7 @@ The default is 0.0.0.0, meaning any local address.
 Performs a background DNS query for the given name, i.e., sends a
 query packet to the first nameserver listed in C<< $res->nameservers >>
 and returns immediately without waiting for a response.  The program
-can then perform other tasks while waiting for a response from the 
+can then perform other tasks while waiting for a response from the
 nameserver.
 
 The argument list can be either a C<Net::DNS::Packet> object or a list
@@ -636,8 +636,8 @@ to 1.
     print "udppacketsize: ", $res->udppacketsize, "\n";
     $res->udppacketsize(2048);
 
-udppacketsize will set or get the packet size. If set to a value greater than 
-Net::DNS::PACKETSZ() an EDNS extension will be added indicating support for MTU path 
+udppacketsize will set or get the packet size. If set to a value greater than
+Net::DNS::PACKETSZ() an EDNS extension will be added indicating support for MTU path
 recovery.
 
 Default udppacketsize is Net::DNS::PACKETSZ() (512)
@@ -646,20 +646,20 @@ Default udppacketsize is Net::DNS::PACKETSZ() (512)
 
 Net::DNS::Resolver is actually an empty subclass.  At compile time a
 super class is chosen based on the current platform.  A side benefit of
-this allows for easy modification of the methods in Net::DNS::Resolver. 
-You simply add a method to the namespace!  
+this allows for easy modification of the methods in Net::DNS::Resolver.
+You simply add a method to the namespace!
 
 For example, if we wanted to cache lookups:
 
  package Net::DNS::Resolver;
- 
+
  my %cache;
- 
+
  sub search {
 	my ($self, @args) = @_;
-	
+
 	return $cache{@args} ||= $self->SUPER::search(@args);
- } 
+ }
 
 
 =head1 IPv6 transport
@@ -681,7 +681,7 @@ For example
 
     $res->nameservers('192.168.1.1', '192.168.2.2', '2001:610:240:0:53:0:0:3');
     $res->force_v4(1);
-    print join (" ",$res->nameserver());	    
+    print join (" ",$res->nameserver());
 
 Will print: 192.168.1.1 192.168.2.2
 
@@ -749,7 +749,7 @@ bgsend does not honor the usevc flag and only uses UDP for transport.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 Portions Copyright (c) 2005 Olaf M. Kolkman, NLnet Labs.

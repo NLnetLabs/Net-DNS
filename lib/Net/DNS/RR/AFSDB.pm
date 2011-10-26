@@ -4,9 +4,9 @@ package Net::DNS::RR::AFSDB;
 #
 use strict;
 
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 
 use vars qw(@ISA $VERSION);
 
@@ -118,7 +118,7 @@ Returns the RR's hostname field.  See RFC 1183.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

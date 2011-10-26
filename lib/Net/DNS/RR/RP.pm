@@ -3,9 +3,9 @@ package Net::DNS::RR::RP;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
@@ -39,7 +39,7 @@ sub rdatastr {
 		return "$self->{mbox}. $self->{txtdname}.";
 	}
 	return '';
-	
+
 }
 
 sub rr_rdata {
@@ -112,7 +112,7 @@ information about the responsible person.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

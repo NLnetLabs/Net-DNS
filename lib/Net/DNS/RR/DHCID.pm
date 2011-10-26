@@ -6,9 +6,9 @@ use Data::Dumper;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION );
 use Socket;
 use MIME::Base64;
@@ -47,14 +47,14 @@ sub new {
     my $offsettodigest    = $offset+3;
 
     bless $self, $class;
-    
+
     $self->{'identifiertype'}=(unpack('n', substr($$data, $offsettoidentifiertype, 2)));
     $self->{'digesttype'}=(unpack('C', substr($$data, $offsettodigesttype, 1)));
     $self->{'digestbin'}=(substr($$data, $offsettodigest, $self->{'rdlength'}-3));
     $self->digest();
     $self->{'rdatastr'}=encode_base64 (substr($$data,$offset, $self->{'rdlength'}),"");
     return $self;
-    
+
 }
 
 
@@ -64,7 +64,7 @@ sub new_from_string {
 	# first turn multiline into single line
 	$string =~ tr/()//d if $string;
 	$string =~ s/\n//mg if $string;
-	$string=~s/\s//g if $string;	
+	$string=~s/\s//g if $string;
 	bless $self, $class;
 	return $self unless $string;
 	$self->{'rdatastr'}= $string;
@@ -119,7 +119,7 @@ sub digest {
 sub rr_rdata {
 	my $self=shift;
 	my $rdata='';
-	if ($self->{'digesttype'}) { 
+	if ($self->{'digesttype'}) {
 		$rdata = pack("n", $self->identifiertype);
 		$rdata .= pack("C", $self->digesttype);
 		$rdata .= $self->digestbin;
@@ -127,10 +127,10 @@ sub rr_rdata {
 		$rdata .= decode_base64($self->{'rdatastr'});
 	}
 	return $rdata;
-	
+
 }
 
-	
+
 
 1;
 

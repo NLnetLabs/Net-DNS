@@ -3,9 +3,9 @@ package Net::DNS::RR::APL;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
@@ -35,13 +35,13 @@ This is an RR type for address prefix lists. Please see the RFC3123 for details.
 Returns an array of Net::DNS::APL::ApItem objects.
 
 Each ApItem objecst contains the following attribute that can be
-accessed and set using methods of the same name: addressfamily, 
+accessed and set using methods of the same name: addressfamily,
 prefix, negation, address
 
   foreach my $ap ($apl->aplist()){
-     	print $ap->negation()?"!":"";		
-    	print $ap->addressfamily().":";		
-    	print $ap->address();		
+     	print $ap->negation()?"!":"";
+    	print $ap->addressfamily().":";
+    	print $ap->address();
     	print $ap->prefix(). " ";
     }
 
@@ -49,7 +49,7 @@ In addition the  Net::DNS::APL::ApItem objects can be printed using
 the string method.
 
     foreach my $ap ($apl->aplist())
-              print $ap->string."\n";		
+              print $ap->string."\n";
     }
 
 
@@ -64,7 +64,7 @@ the string method.
 sub new {
 	my ($class, $self, $data, $offset) = @_;
 	my $max=$offset+$self->{"rdlength"};
-	
+
 	while ($offset < $max){
 		my $apitem;
 		($apitem,$offset)=Net::DNS::RR::APL::ApItem->new_from_wire($$data,$offset);

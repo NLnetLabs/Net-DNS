@@ -23,7 +23,7 @@ $VERSION = (qw$LastChangedRevision: 718 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
-	
+
         if ($self->{'rdlength'} > 0) {
 		#example attribute foo is a domain name.
 		§($self->{"foo"}) = Net::DNS::Packet::dn_expand($data, $offset);
@@ -45,7 +45,7 @@ sub new_from_string {
 	# first turn multiline into single line
 	$string =~ tr/()//d if $string;
 	$string =~ s/\n//mg if $string;
-	
+
 	# Regulare expression parsing goes here.
 
 	if ($string) {
@@ -64,7 +64,7 @@ sub new_from_string {
 sub rr_rdata {
 	my ($self, $packet, $offset) = @_;
 	my $rdata = "";
-	
+
  	if (exists $self->{"foo"}) {
 		# For all new RR types  DO NOT USE dn_comp. Use _name2wire
 		$rdata=$self->_name2wire($self->{"foo"});
@@ -75,15 +75,15 @@ sub rr_rdata {
 
 
 
-# rdatastr method returns the string representation of the 'rdata' section of the RR. It is used in the 
+# rdatastr method returns the string representation of the 'rdata' section of the RR. It is used in the
 # RR print and RR string methods.
 
 sub rdatastr {
 	my $self = shift;
 	my $rdatastr;
 
-	if (exists $self->{"foo"}) {	
-		$rdatastr  = $self->{"foo"}.".";			
+	if (exists $self->{"foo"}) {
+		$rdatastr  = $self->{"foo"}.".";
 	}
 	else {
 		$rdatastr = '';
@@ -96,7 +96,7 @@ sub rdatastr {
 
 
 
-# If the RR contains domain names than the two functions will need to be defined. Otherwise just remove them and 
+# If the RR contains domain names than the two functions will need to be defined. Otherwise just remove them and
 # inheritance will take care of this.
 
 
@@ -165,7 +165,7 @@ Returns the name of the nameserver.
 
 =head1 COPYRIGHT
 
-Copyright (c) 
+Copyright (c)
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

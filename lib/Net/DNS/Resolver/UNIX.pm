@@ -20,25 +20,25 @@ push(@config_path, '.');
 
 sub init {
 	my ($class) = @_;
-	
-	$class->read_config_file($resolv_conf) if -f $resolv_conf && -r _; 
-	
+
+	$class->read_config_file($resolv_conf) if -f $resolv_conf && -r _;
+
 	foreach my $dir (@config_path) {
 		my $file = "$dir/$dotfile";
 		$class->read_config_file($file) if -f $file && -r _ && -o _;
 	}
-	
+
 	$class->read_env;
-	
+
 	my $defaults = $class->defaults;
-	
+
 	if (!$defaults->{'domain'} && @{$defaults->{'searchlist'}}) {
 		$defaults->{'domain'} = $defaults->{'searchlist'}[0];
 	} elsif (!@{$defaults->{'searchlist'}} && $defaults->{'domain'}) {
 		$defaults->{'searchlist'} = [ $defaults->{'domain'} ];
 	}
 }
-	
+
 1;
 __END__
 
@@ -60,7 +60,7 @@ for all your resolving needs.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

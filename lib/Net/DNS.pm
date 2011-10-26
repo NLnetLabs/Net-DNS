@@ -6,7 +6,7 @@ package Net::DNS;
 use strict;
 
 
-BEGIN { 
+BEGIN {
     eval { require bytes; }
 }
 
@@ -47,14 +47,14 @@ BEGIN {
 
 
 
-    
+
     $VERSION = '0.67';
     $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
 
 
-    $HAVE_XS = eval { 
+    $HAVE_XS = eval {
 	local $SIG{'__DIE__'} = 'DEFAULT';
 
 
@@ -78,10 +78,10 @@ BEGIN {
 
 BEGIN {
 
-    $DNSSEC = eval { 
+    $DNSSEC = eval {
 	    local $SIG{'__DIE__'} = 'DEFAULT';
-	    require Net::DNS::SEC; 
-	    1 
+	    require Net::DNS::SEC;
+	    1
 	    } ? 1 : 0;
 
 
@@ -99,9 +99,9 @@ use Carp;
 
 
 #
-# If you implement an RR record make sure you also add it to 
+# If you implement an RR record make sure you also add it to
 # %Net::DNS::RR::RR hash otherwise it will be treated as unknown type.
-# 
+#
 # See http://www.iana.org/assignments/dns-parameters for assignments and references.
 
 # Do not use these tybesby hashes directly. Use the interface
@@ -130,7 +130,7 @@ use Carp;
     'X25'       => 19,      # RFC 1183, Section 3.1
     'ISDN'      => 20,      # RFC 1183, Section 3.2
     'RT'        => 21,      # RFC 1183, Section 3.3
-    'NSAP'      => 22,      # RFC 1706, Section 5 
+    'NSAP'      => 22,      # RFC 1706, Section 5
     'NSAP_PTR'  => 23,      # RFC 1348 (obsolete by RFC 1637)			NOT IMPLEMENTED
     'SIG'       => 24,      # RFC 2535, Section 4.1				impemented in Net::DNS::SEC
     'KEY'       => 25,      # RFC 2535, Section 3.1				impemented in Net::DNS::SEC
@@ -150,7 +150,7 @@ use Carp;
     'DNAME'     => 39,      # RFC 2672
     'SINK'      => 40,      # non-standard					NOT IMPLEMENTED
     'OPT'       => 41,      # RFC 2671
-    'APL'       => 42,      # RFC 3123		
+    'APL'       => 42,      # RFC 3123
     'DS'        => 43,      # RFC 4034  					implemented in Net::DNS::SEC
     'SSHFP'     => 44,      # RFC 4255
     'IPSECKEY'  => 45,      # RFC 4025
@@ -160,9 +160,9 @@ use Carp;
     'DHCID'     => 49,      # RFC4701
     'NSEC3'     => 50,      # RFC5155
     'NSEC3PARAM' => 51,     # RFC5155
-# 52-54 are unassigned		
+# 52-54 are unassigned
     'HIP'       => 55,      # RFC5205
-    'NINFO'     => 56,      # non-standard					NOT IMPLEMENTED 
+    'NINFO'     => 56,      # non-standard					NOT IMPLEMENTED
     'RKEY'      => 57,      # non-standard					NOT IMPLEMENTED
 # 58-98 are unasigned
     'SPF'       => 99,      # RFC 4408
@@ -179,7 +179,7 @@ use Carp;
     'MAILA'     => 254,     # RFC 1035 (obsolete - see MX)
     'ANY'       => 255,     # RFC 1035
     'TA'        => 32768,    # non-standard					NOT IMPLEMENTED
-    'DLV'       => 32769    # RFC 4431						implemented in Net::DNS::SEC		
+    'DLV'       => 32769    # RFC 4431						implemented in Net::DNS::SEC
 );
 %typesbyval = reverse %typesbyname;
 
@@ -225,9 +225,9 @@ sub typesbyval {
 
 
 #
-# Do not use these classesby hashes directly. See below. 
+# Do not use these classesby hashes directly. See below.
 #
- 
+
 %classesbyname = (
     'IN'        => 1,       # RFC 1035
     'CH'        => 3,       # RFC 1035
@@ -350,7 +350,7 @@ sub mx {
     # Then we sort the list by preference
     # Then we return it.
     # We do this into an array to force list context.
-    my @ret = sort { $a->preference <=> $b->preference } 
+    my @ret = sort { $a->preference <=> $b->preference }
               grep { $_->type eq 'MX'} $ans->answer;
 
 
@@ -411,27 +411,27 @@ sub wire2presentation {
     # I start looking forward and do the magic.
 
     my $i=0;
-    
+
     while ($i < $length ){
 	my $char=unpack("x".$i."C1",$wire);
 	if ( $char < 33 || $char > 126 ){
 	    $presentation.= sprintf ("\\%03u" ,$char);
-	}elsif ( $char == ord( "\"" )) {   
-	    $presentation.= "\\\"";    
-	}elsif ( $char == ord( "\$" )) {   
-	    $presentation.= "\\\$";    
-	}elsif ( $char == ord( "(" )) {   
-	    $presentation.= "\\(";    
-	}elsif ( $char == ord( ")" )) {   
-	    $presentation.= "\\)";    
-	}elsif ( $char == ord( ";" )) {   
-	    $presentation.= "\\;";    
-	}elsif ( $char == ord( "@" )) {   
-	    $presentation.= "\\@";    
-	}elsif ( $char == ord( "\\" )) {   
-	    $presentation.= "\\\\" ; 
+	}elsif ( $char == ord( "\"" )) {
+	    $presentation.= "\\\"";
+	}elsif ( $char == ord( "\$" )) {
+	    $presentation.= "\\\$";
+	}elsif ( $char == ord( "(" )) {
+	    $presentation.= "\\(";
+	}elsif ( $char == ord( ")" )) {
+	    $presentation.= "\\)";
+	}elsif ( $char == ord( ";" )) {
+	    $presentation.= "\\;";
+	}elsif ( $char == ord( "@" )) {
+	    $presentation.= "\\@";
+	}elsif ( $char == ord( "\\" )) {
+	    $presentation.= "\\\\" ;
 	}elsif ( $char==ord (".") ){
-	    $presentation.= "\\." ; 
+	    $presentation.= "\\." ;
 	}else{
 	    $presentation.=chr($char) 	;
 	}
@@ -439,14 +439,14 @@ sub wire2presentation {
     }
 
     return $presentation;
-    
+
 }
 
 
 
 
 sub stripdot {
-	# Code courtesy of JMEHNLE <JMEHNLE@cpan.org>  
+	# Code courtesy of JMEHNLE <JMEHNLE@cpan.org>
 	# rt.cpan.org #51009
 
 	# Strips the final non-escaped dot from a domain name.  Note
@@ -471,7 +471,7 @@ sub stripdot {
 sub presentation2wire {
     my  $presentation=shift;
     my  $wire="";
-    
+
     while ($presentation =~ /\G([^.\\]*)([.\\]?)/g){
         $wire .= $1 if defined $1;
 
@@ -490,7 +490,7 @@ sub presentation2wire {
             }
         }
     }
-    
+
     return $wire;
 }
 
@@ -528,7 +528,7 @@ sub rrsort {
     }
 
     # attribute is empty or not specified.
-    
+
     if( ref($attribute)=~/^Net::DNS::RR::.*/){
 	# push the attribute back on the array.
 	push @rr_array,$attribute;
@@ -543,8 +543,8 @@ sub rrsort {
     return () unless  @extracted_rr;
     my $func=("Net::DNS::RR::".$rrtype)->get_rrsort_func($attribute);
     my @sorted=sort $func  @extracted_rr;
-    return @sorted; 
-    
+    return @sorted;
+
 }
 
 
@@ -620,7 +620,7 @@ The additional section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
 
 The L<Net::DNS::Update|Net::DNS::Update> package is a subclass of
 L<Net::DNS::Packet|Net::DNS::Packet> for creating packet objects to be
-used in dynamic updates.  
+used in dynamic updates.
 
 =head2 Header Objects
 
@@ -806,7 +806,7 @@ date information to remain useful.
 As of version 0.55 there is functionality to help you sort RR
 arrays. 'rrsort()' is the function that is available to do the
 sorting. In most cases rrsort will give you the answer that you
-want but you can specify your own sorting method by using the 
+want but you can specify your own sorting method by using the
 Net::DNS::RR::FOO->set_rrsort_func() class method. See L<Net::DNS::RR>
 for details.
 
@@ -824,7 +824,7 @@ the attribute that is specified as second argument.
 There are a number of RRs for which the sorting function is
 specifically defined for certain attributes.  If such sorting function
 is defined in the code (it can be set or overwritten using the
-set_rrsort_func() class method) that function is used. 
+set_rrsort_func() class method) that function is used.
 
 For instance:
    my @prioritysorted=rrsort("SRV","priority",@rr_array);
@@ -832,7 +832,7 @@ returns the SRV records sorted from lowest to heighest priority and
 for equal priorities from heighes to lowes weight.
 
 If the function does not exist then a numerical sort on the attribute
-value is performed. 
+value is performed.
    my @portsorted=rrsort("SRV","port",@rr_array);
 
 If the attribute does not exist for a certain RR than the RRs are
@@ -863,7 +863,7 @@ dynamic updates.
   use Net::DNS;
   my $res   = Net::DNS::Resolver->new;
   my $query = $res->search("host.example.com");
-  
+
   if ($query) {
       foreach my $rr ($query->answer) {
           next unless $rr->type eq "A";
@@ -878,7 +878,7 @@ dynamic updates.
   use Net::DNS;
   my $res   = Net::DNS::Resolver->new;
   my $query = $res->query("example.com", "NS");
-  
+
   if ($query) {
       foreach $rr (grep { $_->type eq 'NS' } $query->answer) {
           print $rr->nsdname, "\n";
@@ -894,7 +894,7 @@ dynamic updates.
   my $name = "example.com";
   my $res  = Net::DNS::Resolver->new;
   my @mx   = mx($res, $name);
-  
+
   if (@mx) {
       foreach $rr (@mx) {
           print $rr->preference, " ", $rr->exchange, "\n";
@@ -909,7 +909,7 @@ dynamic updates.
   use Net::DNS;
   my $res   = Net::DNS::Resolver->new;
   my $query = $res->query("example.com", "SOA");
-  
+
   if ($query) {
       ($query->answer)[0]->print;
   } else {
@@ -921,9 +921,9 @@ dynamic updates.
   use Net::DNS;
   my $res  = Net::DNS::Resolver->new;
   $res->nameservers("ns.example.com");
-  
+
   my @zone = $res->axfr("example.com");
-  
+
   foreach $rr (@zone) {
       $rr->print;
   }
@@ -949,12 +949,12 @@ has arrived.
 
   use Net::DNS;
   use IO::Select;
-  
+
   my $timeout = 5;
   my $res     = Net::DNS::Resolver->new;
   my $bgsock  = $res->bgsend("host.example.com");
   my $sel     = IO::Select->new($bgsock);
-  
+
   # Add more sockets to $sel if desired.
   my @ready = $sel->can_read($timeout);
   if (@ready) {
@@ -981,7 +981,7 @@ the source distribution.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 Portions Copyright (c) 2005 Olaf Kolkman (RIPE NCC)
 Portions Copyright (c) 2006 Olaf Kolkman (NLnet Labs)
@@ -1001,7 +1001,7 @@ Between 2002 and 2004 Net::DNS was maintained by:
 
 Net::DNS was created by:
 	Michael Fuhr
-	mike@fuhr.org 
+	mike@fuhr.org
 
 
 
@@ -1012,7 +1012,7 @@ Stay tuned and syncicate:
     http://www.net-dns.org/blog/
 
 =head1 SEE ALSO
- 
+
 L<perl(1)>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>, L<Net::DNS::Update>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>, RFC 1035,
 I<DNS and BIND> by Paul Albitz & Cricket Liu

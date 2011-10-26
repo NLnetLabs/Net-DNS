@@ -3,9 +3,9 @@ package Net::DNS::RR::NULL;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 use Net::DNS::Packet;
@@ -49,7 +49,7 @@ Returns the record's data section as binary data.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

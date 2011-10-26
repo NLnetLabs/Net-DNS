@@ -3,9 +3,9 @@ package Net::DNS::RR::SPF;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 use Net::DNS::RR::TXT;
 

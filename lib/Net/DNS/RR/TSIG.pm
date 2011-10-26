@@ -3,9 +3,9 @@ package Net::DNS::RR::TSIG;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 use Digest::HMAC_MD5;
@@ -152,21 +152,21 @@ sub sig_data {
 	# Don't compress the record (key) name.
 	my $tmppacket = Net::DNS::Packet->new("");
 	$sigdata .= $tmppacket->dn_comp(lc($self->{"name"}), 0);
-	
+
 	$sigdata .= pack("n", $Net::DNS::classesbyname{uc($self->{"class"})});
 	$sigdata .= pack("N", $self->{"ttl"});
-	
+
 	# Don't compress the algorithm name.
 	$tmppacket->{"compnames"} = {};
 	$sigdata .= $tmppacket->dn_comp(lc($self->{"algorithm"}), 0);
-	
+
 	$sigdata .= pack("nN", 0, $self->{"time_signed"});	# bug
 	$sigdata .= pack("n", $self->{"fudge"});
 	$sigdata .= pack("nn", $self->{"error"}, $self->{"other_len"});
-	
+
 	$sigdata .= pack("nN", 0, $self->{"other_data"})
 	    if $self->{"other_data"};
-	
+
 	return $sigdata;
 }
 
@@ -296,20 +296,20 @@ time as the number of seconds since 1 Jan 1970 00:00:00 UTC.
      my $sigdata = $tsig->sig_data($packet);
 
 Returns the packet packed according to RFC2845 in a form for signing. This
-is only needed if you want to supply an external signing function, such as is 
-needed for TSIG-GSS. 
+is only needed if you want to supply an external signing function, such as is
+needed for TSIG-GSS.
 
 =head2 sign_func
 
      sub my_sign_fn($$) {
 	     my ($key, $data) = @_;
-	     
+
 	     return some_digest_algorithm($key, $data);
      }
 
      $tsig->sign_func(\&my_sign_fn);
 
-This sets the signing function to be used for this TSIG record. 
+This sets the signing function to be used for this TSIG record.
 
 The default signing function is HMAC-MD5.
 
@@ -329,7 +329,7 @@ appropriate sign_func.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2002 Michael Fuhr. 
+Copyright (c) 2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
@@ -339,7 +339,7 @@ it and/or modify it under the same terms as Perl itself.
 =head1 ACKNOWLEDGMENT
 
 Most of the code in the Net::DNS::RR::TSIG module was contributed
-by Chris Turbeville. 
+by Chris Turbeville.
 
 Support for external signing functions was added by Andrew Tridgell.
 

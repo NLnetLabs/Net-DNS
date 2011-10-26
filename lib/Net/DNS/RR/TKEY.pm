@@ -3,9 +3,9 @@ package Net::DNS::RR::TKEY;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 use Digest::HMAC_MD5;

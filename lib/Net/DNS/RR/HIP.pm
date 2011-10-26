@@ -20,15 +20,15 @@ $VERSION = (qw$LastChangedRevision: 718 $)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
-	
+
         if ($self->{'rdlength'} > 0) {
                 my $offset_pkalgorithm  = $offset+1;
                 my $offset_pklength     = $offset+2;
                 my $offset_hit          = $offset+4;
-		
+
                 $self->{'_hitlength'} = unpack('C', substr($$data, $offset, 1));
 		my $offset_pubkey    = $offset_hit + $self->{'_hitlength'};
-		
+
                 $self->{'pkalgorithm'}    = unpack('C', substr($$data, $offset_pkalgorithm, 1));
                 $self->{'_pklength'}    = unpack('n', substr($$data, $offset_pklength, 2));
 		my $offset_rendezvous    = $offset_pubkey + $self->{'_pklength'};
@@ -63,12 +63,12 @@ sub new_from_string {
 	# first turn multiline into single line
 	$string =~ tr/()//d if $string;
 	$string =~ s/\n//mg if $string;
-	
+
 	if ($string && ($string =~ /^\s*(\d+)\s+(\S+)\s+(.*)$/)) {
 		@{$self}{qw(pkalgorithm hit)} = ($1, $2);
 		$self->{'hitbin'}=pack("H*",$self->{'hit'});
 		my $reststring=$3;
-		# rest string are the space separated components of the base64 encoded public key 
+		# rest string are the space separated components of the base64 encoded public key
 		# appended by fully qualified domain names.
 		# We'll chop off the FQDNs
 		$self->{'rendezvousservers'}=[];
@@ -92,7 +92,7 @@ sub rr_rdata {
 	my $rdata = "";
 
 	if (exists $self->{"pubkey"}) {
-		# This is for consistency. 
+		# This is for consistency.
 		my $hitbin=$self->hitbin();
 		my $pubkeybin=$self->pubkeybin();
 		$rdata = pack("C", $self->{'_hitlength'});
@@ -118,12 +118,12 @@ sub rdatastr {
 		$rdatastr = $self->pkalgorithm       . ' '   .
 		            $self->hit  . ' '  .
 		            $self->pubkey       . ' ';
-		
+
 		foreach my $dname ( @{$self->rendezvousservers()} ) {
 			$rdatastr .= $dname.". ";
 		}
 		chop $rdatastr;
-		
+
 	}
 
 	return $rdatastr;
@@ -139,7 +139,7 @@ sub hitbin {
 	$self->{'hitbin'}=pack("H*",$self->{'hit'}) unless defined ($self->{'hitbin'});
 	$self->{'_hitlength'} =length($self->{'hitbin'});
 	return ($self->{'hitbin'});
-}	
+}
 
 
 sub hit {
@@ -151,7 +151,7 @@ sub hit {
 	$self->{'hit'}=unpack("H*",$self->{'hitbin'}) unless defined ($self->{'hit'});
 	$self->{'_hitlength'} =length($self->{'hitbin'});
 	return ($self->{'hit'});
-}	
+}
 
 
 
@@ -166,7 +166,7 @@ sub pubkeybin {
 	$self->{'pubkeybin'}= decode_base64($self->{'pubkey'}) unless defined ($self->{'pubkeybin'});
 	$self->{'_pklength'} =length($self->{'pubkeybin'});
 	return ($self->{'pubkeybin'});
-}	
+}
 
 
 
@@ -183,7 +183,7 @@ sub pubkey {
 	$self->{'pubkey'}= encode_base64($self->{'pubkeybin'},"") unless defined ($self->{'pubkey'});
 	$self->{'_pklength'} =length($self->{'pubkeybin'});
 	return ($self->{'pubkey'});
-}	
+}
 
 
 
@@ -249,7 +249,7 @@ Returns or sets the hit in base16 representation.
 
 =head2 hitbin
 
-Returns or sets the binary representation of the the hit. 
+Returns or sets the binary representation of the the hit.
 
 Using hit or hitbin to set the one of these attributes will update both attributes.
 
@@ -259,7 +259,7 @@ Returns or sets the publick key in base64 representation.
 
 =head2 pubkey
 
-Returns or sets the binary representation of the the public key. 
+Returns or sets the binary representation of the the public key.
 
 Using pubkey or pubkeybin to set the one of these attributes will update both attributes.
 
@@ -286,7 +286,7 @@ parsing of the HIP RR depends on rendevous server names containing at
 least one . (dot) in their domain name. Failure of string parsing will
 return an 'undef'.
 
-The rdatastr method (and hence the string and print methods) return the 
+The rdatastr method (and hence the string and print methods) return the
 rendezvousservers as fully qualified domain names.
 
 

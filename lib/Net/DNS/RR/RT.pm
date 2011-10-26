@@ -3,9 +3,9 @@ package Net::DNS::RR::RT;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
@@ -32,7 +32,7 @@ sub new {
 	if ($self->{"rdlength"} > 0) {
 		($self->{"preference"})   = unpack("\@$offset n", $$data);
 		$offset += Net::DNS::INT16SZ();
-		
+
 		($self->{"intermediate"}) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
 
@@ -123,7 +123,7 @@ Returns the domain name of the intermediate host.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 Portions Copyright (c) 2005 Olaf Kolkman NLnet Labs.

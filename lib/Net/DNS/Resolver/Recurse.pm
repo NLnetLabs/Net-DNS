@@ -12,7 +12,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 
 my @hardcodedhints = qw (
-198.41.0.4 
+198.41.0.4
 192.58.128.30
 192.112.36.4
 202.12.27.33
@@ -37,7 +37,7 @@ sub hints {
   my $self = shift;
   my @hints = @_;
   print ";; hints(@hints)\n" if $self->{'debug'};
-  
+
   if (!@hints && !$self->nameservers){
 	  return $self->hints( @hardcodedhints )
   }elsif (!@hints && $self->nameservers) {
@@ -51,10 +51,10 @@ sub hints {
   # for who it thinks is authoritative for
   # the (root) zone as a sanity check.
   # Nice idea.
-  
-  $self->recurse(1); 
+
+  $self->recurse(1);
   my $packet=$self->query(".", "NS", "IN");
-  $self->recurse(0); 
+  $self->recurse(0);
   my %hints = ();
   if ($packet) {
     if (my @ans = $packet->answer) {
@@ -85,8 +85,8 @@ sub hints {
 	      push @{ $hints{$server} }, $rr->rdatastr;
 	    }
 	  }
-	  
-	} 
+
+	}
       }
     }
     foreach my $server (keys %hints) {
@@ -98,7 +98,7 @@ sub hints {
     $self->{'hints'} = \%hints;
   } else {
     $self->{'hints'} = {};
-  } 
+  }
   if (%{ $self->{'hints'} }) {
     if ($self->{'debug'}) {
       print ";; USING THE FOLLOWING HINT IPS:\n";
@@ -114,21 +114,21 @@ sub hints {
     print $self->nameservers([]);
     return $self->hints();
   }
-  
+
   # Disable recursion flag.
 
-  
+
   return $self->nameservers( map { @{ $_ } } values %{ $self->{'hints'} } );
 }
 
 
 sub recursion_callback {
 	my ($self, $sub) = @_;
-	
+
 	if ($sub && UNIVERSAL::isa($sub, 'CODE')) {
 		$self->{'callback'} = $sub;
 	}
-	
+
 	return $self->{'callback'};
 }
 
@@ -170,7 +170,7 @@ sub _dorecursion {
       $self->errorstring("Recursion too deep, abborted");
       return undef;
   }
-  
+
   $known_zone =~ s/\.*$/./;
 
   # Get IPs from authorities
@@ -209,14 +209,14 @@ sub _dorecursion {
 		 $depth+1);         # depth
 	    @ans = $auth_packet->answer if $auth_packet;
 	}
-	
+
 	$auth_packet =
 	    $self->_dorecursion
 	    ($self->make_query_packet($ns,"A"),  # packet
 	     ".",               # known_zone
 	     $self->{'hints'},  # known_authorities
 	     $depth+1);         # depth
-	
+
 	push (@ans,$auth_packet->answer ) if $auth_packet;
 
         if ( @ans ) {
@@ -263,22 +263,22 @@ sub _dorecursion {
     print ";; _dorecursion() No authority information could be obtained.\n" if $self->{'debug'};
     return undef;
   }
-  
+
   # Cut the deck of IPs in a random place.
   print ";; _dorecursion() cutting deck of (".scalar(@ns).") authorities...\n" if $self->{'debug'};
   splice(@ns, 0, 0, splice(@ns, int(rand @ns)));
-  
-  
+
+
  LEVEL:  foreach my $levelns (@ns){
    print ";; _dorecursion() Trying nameserver [$levelns]\n" if $self->{'debug'};
    $self->nameservers($levelns);
-   
+
    if (my $packet = $self->send( $query_packet )) {
-     
+
      if ($self->{'callback'}) {
        $self->{'callback'}->($packet);
      }
-     
+
      my $of = undef;
      print ";; _dorecursion() Response received from [",$self->answerfrom,"]\n" if $self->{'debug'};
      if (my $status = $packet->header->rcode) {
@@ -348,7 +348,7 @@ sub _dorecursion {
      }
    }
  }
-  
+
   return undef;
 }
 
@@ -381,11 +381,11 @@ the root (.) zone.
 
   $res->hints(@ips);
 
-If no hints are passed, the default nameserver is asked for the hints. 
+If no hints are passed, the default nameserver is asked for the hints.
 Normally these IPs can be obtained from the following location:
 
   ftp://ftp.internic.net/domain/named.root
-  
+
 =head2 recursion_callback
 
 This method is takes a code reference, which is then invoked each time a
@@ -394,11 +394,11 @@ dig's C<+trace> function:
 
  $res->recursion_callback(sub {
      my $packet = shift;
-		
+
      $_->print for $packet->additional;
-		
-     printf(";; Received %d bytes from %s\n\n", 
-         $packet->answersize, 
+
+     printf(";; Received %d bytes from %s\n\n",
+         $packet->answersize,
          $packet->answerfrom
      );
  });

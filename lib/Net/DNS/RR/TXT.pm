@@ -3,9 +3,9 @@ package Net::DNS::RR::TXT;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 use Text::ParseWords;
@@ -15,17 +15,17 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;
-	
+
 	my $rdlength = $self->{'rdlength'} or return bless $self, $class;
 	my $end      = $offset + $rdlength;
-	
+
 	while ($offset < $end) {
 		my $strlen = unpack("\@$offset C", $$data);
 		++$offset;
-		
+
 		my $char_str = substr($$data, $offset, $strlen);
 		$offset += $strlen;
-		
+
 		push(@{$self->{'char_str_list'}}, $char_str);
 	}
 
@@ -34,9 +34,9 @@ sub new {
 
 sub new_from_string {
     my ( $class, $self, $rdata_string ) = @_ ;
-    
+
     bless $self, $class;
-        
+
     $self->_build_char_str_list($rdata_string);
 
     return $self;
@@ -49,23 +49,23 @@ sub txtdata {
 
 sub rdatastr {
 	my $self = shift;
-		
+
 	if ($self->char_str_list) {
-		return join(' ', map { 
-			my $str = $_;  
-			$str =~ s/"/\\"/g;  
+		return join(' ', map {
+			my $str = $_;
+			$str =~ s/"/\\"/g;
 			$str =~ s/;/\\;/g;
 			#$str =~ s/([\x00-\x1F\x7F-\xFF])/sprintf"\\%.3d",ord($1)/eg;
 			qq("$str");
 		} @{$self->{'char_str_list'}});
-	} 
-	
+	}
+
 	return '';
 }
 
 sub _build_char_str_list {
 	my ($self, $rdata_string) = @_;
-	
+
 	my @words;
 
 	@words= shellwords($rdata_string) if $rdata_string;
@@ -82,7 +82,7 @@ sub _build_char_str_list {
 
 sub char_str_list {
 	my $self = shift;
-	
+
 	if (not $self->{'char_str_list'}) {
 		$self->_build_char_str_list( $self->{'txtdata'} );
 	}
@@ -123,19 +123,19 @@ Class for DNS Text (TXT) resource records.
 
     print "txtdata = ", $rr->txtdata, "\n";
 
-Returns the descriptive text as a single string, regardless of actual 
-number of <character-string> elements.  Of questionable value.  Should 
-be deprecated.  
+Returns the descriptive text as a single string, regardless of actual
+number of <character-string> elements.  Of questionable value.  Should
+be deprecated.
 
 Use C<< $txt->rdatastr() >> or C<< $txt->char_str_list() >> instead.
 
 
 =head2 char_str_list
 
- print "Individual <character-string> list: \n\t", 
+ print "Individual <character-string> list: \n\t",
        join("\n\t", $rr->char_str_list());
 
-Returns a list of the individual <character-string> elements, 
+Returns a list of the individual <character-string> elements,
 as unquoted strings.  Used by TXT->rdatastr and TXT->rr_rdata.
 
 NB: rdatastr will return quoted strings.
@@ -158,7 +158,7 @@ escaped.
 my $TXTrr=Net::DNS::RR->new('txt2.t.net-dns.org.	60	IN
 	TXT  "Test1 \" \; more stuff"  "Test2"');
 
-would result in 
+would result in
 $TXTrr->char_str_list())[0] containing 'Test1 " ; more stuff'
 and
 $TXTrr->char_str_list())[1] containing 'Test2'
@@ -171,7 +171,7 @@ method) returns the escaped format.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 Portions Copyright (c) 2005 Olaf Kolkman (NLnet Labs)

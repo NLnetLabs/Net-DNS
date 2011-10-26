@@ -4,7 +4,7 @@ package Net::DNS::Packet;
 #
 use strict;
 
-BEGIN { 
+BEGIN {
     eval { require bytes; }
 }
 
@@ -113,7 +113,7 @@ sub parse {
 			($qd, $offset) = Net::DNS::Question->parse($data, $offset);
 			push(@{$self{question}}, $qd);
 		}
-			
+
 		# Retain offset for on-demand parse of remaining data
 		$self{offset} = $offset;
 
@@ -458,7 +458,7 @@ sub push {
     $nscount = $packet->unique_push(update => $rr1, $rr2, $rr3);
     $nscount = $packet->unique_push(update => @rr);
 
-Adds RRs to the specified section of the packet provided that 
+Adds RRs to the specified section of the packet provided that
 the RRs do not already exist in the packet.
 
 Returns the number of resource records in the specified section.
@@ -485,7 +485,7 @@ sub safe_push {
 	carp('safe_push() is deprecated, use unique_push() instead,');
 	&unique_push;
 }
-	
+
 
 =head2 pop
 
@@ -691,17 +691,17 @@ sub sign_sig0 {
 	my $self = shift;
 	my $arg = shift || return undef;
 	my $sig0;
-	
-	croak('sign_sig0() is only available when Net::DNS::SEC is installed') 
+
+	croak('sign_sig0() is only available when Net::DNS::SEC is installed')
 		unless $Net::DNS::DNSSEC;
-	
+
 	if ( ref $arg ) {
 		if ( UNIVERSAL::isa($arg,'Net::DNS::RR::SIG') ) {
 			$sig0 = $arg;
-		
+
 		} elsif ( UNIVERSAL::isa($arg,'Net::DNS::SEC::Private') ) {
 			$sig0 = Net::DNS::RR::SIG->create('', $arg);
-		
+
 		} elsif ( UNIVERSAL::isa($arg,'Net::DNS::RR::SIG::Private') ) {
 			carp ref($arg).' is deprecated - use Net::DNS::SEC::Private instead';
 			$sig0 = Net::DNS::RR::SIG->create('', $arg);
@@ -714,7 +714,7 @@ sub sign_sig0 {
 	} else {
 		$sig0 = Net::DNS::RR::SIG->create('', $arg);
 	}
-	
+
 	$self->push('additional', $sig0) if $sig0;
 	return $sig0;
 }
@@ -780,9 +780,9 @@ sub truncate {
 			}
 			$self->{'additional'}=\@stripped_additonal;
 		}
-		
+
 		return $self if length $self->data <= $max_len;
-		
+
       		my @sections = qw<authority answer question>;
 		while (@sections) {
 			while (my $popped=$self->pop($sections[0])) {
@@ -803,7 +803,7 @@ sub truncate {
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

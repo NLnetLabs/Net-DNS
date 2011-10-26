@@ -3,9 +3,9 @@ package Net::DNS::RR::NSAP;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
@@ -63,20 +63,20 @@ sub new {
 
 sub new_from_string {
 	my ($class, $self, $string) = @_;
-	
+
 	if ($string) {
 		$string =~ s/\.//g;  # remove all dots.
 		$string =~ s/^0x//;  # remove leading 0x
-		
+
 		if ($string =~ /^[a-zA-Z0-9]{40}$/) {
-			@{ $self }{ qw(afi idi dfi aa rsvd rd area id sel) } = 
+			@{ $self }{ qw(afi idi dfi aa rsvd rd area id sel) } =
 				unpack("A2A4A2A6A4A4A4A12A2", $string);
-		} 
+		}
 	}
-	
+
 	return bless $self, $class;
 }
-	
+
 
 sub idp {
 	my $self = shift;
@@ -88,7 +88,7 @@ sub idp {
 sub dsp {
 	my $self = shift;
 
-	return join('', 
+	return join('',
 			 $self->{"dfi"},
 			 $self->{"aa"},
 			 $self->rsvd,
@@ -220,13 +220,13 @@ Returns the RR's initial domain identifier.
 
 Returns the RR's DSP format identifier.
 
-=head2 aa 
+=head2 aa
 
     print "aa = ", $rr->aa, "\n";
 
 Returns the RR's administrative authority.
 
-=head2 rsvd 
+=head2 rsvd
 
     print "rsvd = ", $rr->rsvd, "\n";
 
@@ -260,13 +260,13 @@ Returns the RR's NSAP selector.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 
 All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.. 
+it and/or modify it under the same terms as Perl itself..
 
 =head1 SEE ALSO
 

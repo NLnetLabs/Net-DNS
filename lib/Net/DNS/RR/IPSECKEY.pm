@@ -5,9 +5,9 @@ package Net::DNS::RR::IPSECKEY;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION );
 use Socket;
 
@@ -17,7 +17,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 @ISA = qw(Net::DNS::RR);
 
-    
+
 #my %gatetype = (
 #    0 => "No gateway is present.",
 #    1 => "A 4-byte IPv4 address is present.",
@@ -41,13 +41,13 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
-    
+
     my $offsettoprec    = $offset;
     my $offsettogatetype = $offset+1;
     my $offsettoalgor    = $offset+2;
     my $offsettogateway  = $offset+3;
     my $offsettopubkey;
-		
+
     $self->{'precedence'} = unpack('C', substr($$data, $offsettoprec, 1));
     $self->{'gatetype'}    = unpack('C', substr($$data, $offsettogatetype, 1));
     $self->{'algorithm'}    = unpack('C', substr($$data, $offsettoalgor, 1));
@@ -67,7 +67,7 @@ sub new {
 
     }else{
 	die "Could not parse packet, no known gateway type (".$self->{'gatetype'}.")";
-    }	
+    }
     my($pubmaterial)=substr($$data, $offsettopubkey,
 			    ($self->{"rdlength"}-$offsettopubkey+$offset));
 
@@ -88,7 +88,7 @@ sub new_from_string {
 			# Using the AAAA.pm parsing functionality.
 			my $AAAA=Net::DNS::RR->new("FOO AAAA ".$4);
 			$self->{"gateway"}=$AAAA->rdatastr;
-		}elsif ($self->{"gatetype"}==3){	
+		}elsif ($self->{"gatetype"}==3){
 			$self->{"gateway"}= Net::DNS::stripdot($4);
 		}else{
 			$self->{"gateway"}= $4;
@@ -105,7 +105,7 @@ sub pubkey {
   my $self=shift;
 
   $self->{"pubkey"}= encode_base64($self->{"pubbin"},"") unless defined $self->{"pubkey"};
- 
+
   return $self->{"pubkey"};
 }
 
@@ -153,10 +153,10 @@ sub rr_rdata {
 		$rdata .= pack("C", $self->{"algorithm"});
 		if ($self->{"gatetype"}==1 ){
 			$rdata .= inet_aton($self->{"gateway"});
-		}elsif($self->{"gatetype"}==2){	
+		}elsif($self->{"gatetype"}==2){
 			my @addr = split(/:/, $self->{"gateway"});
 			$rdata .= pack("n8", map { hex $_ } @addr);
-		}elsif($self->{"gatetype"}==3){	
+		}elsif($self->{"gatetype"}==3){
 			# No Compression _name2wire will do.
 			$rdata .= $self->_name2wire($self->{"gateway"});
 		}
@@ -164,7 +164,7 @@ sub rr_rdata {
 	}
 }
 
-	
+
 
 1;
 
@@ -183,7 +183,7 @@ CLASS for the IPSECKEY RR.
 
 =head1 METHODS
 
-In addition to the regular methods 
+In addition to the regular methods
 
 
 =head2 algorithm
@@ -193,11 +193,11 @@ Returns the RR's algorithm field in decimal representation
     1 = RSA
     2 = DSA
 
-=head2 precedence  
+=head2 precedence
 
 Returns the presedence
 
-=head2 	gatetype  
+=head2 	gatetype
 
 Returns the gatetype.
 
@@ -214,7 +214,7 @@ Returns the gateway in the relevant string notation.
 
 Returns the public key in base64 notation
 
-=head2 pubbin 
+=head2 pubbin
 
 Returns the binary public key material in a string.
 

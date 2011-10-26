@@ -3,9 +3,9 @@ package Net::DNS::RR::NAPTR;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
@@ -46,28 +46,28 @@ sub new {
 	if ($self->{"rdlength"} > 0) {
 		($self->{"order"} ) = unpack("\@$offset n", $$data);
 		$offset += Net::DNS::INT16SZ();
-		
+
 		($self->{"preference"}) = unpack("\@$offset n", $$data);
 		$offset += Net::DNS::INT16SZ();
-		
+
 		my ($len) = unpack("\@$offset C", $$data);
 		++$offset;
 		($self->{"flags"}) = unpack("\@$offset a$len", $$data);
 		$offset += $len;
-		
+
 		$len = unpack("\@$offset C", $$data);
 		++$offset;
 		($self->{"service"}) = unpack("\@$offset a$len", $$data);
 		$offset += $len;
-		
+
 		$len = unpack("\@$offset C", $$data);
 		++$offset;
 		($self->{"regexp"}) = unpack("\@$offset a$len", $$data);
 		$offset += $len;
-		
+
 		($self->{"replacement"}) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
-  
+
 	return bless $self, $class;
 }
 
@@ -198,7 +198,7 @@ Returns the replacement field.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 Portions Copyright (c) 2005 Olaf Kolkman NLnet Labs.

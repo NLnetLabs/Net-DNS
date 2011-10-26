@@ -3,9 +3,9 @@ package Net::DNS::RR::LOC;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(
         @ISA $VERSION @poweroften $reference_alt
         $reference_latlon $conv_sec $conv_min $conv_deg
@@ -44,31 +44,31 @@ sub new {
 	if ($self->{"rdlength"} > 0) {
 		my ($version) = unpack("\@$offset C", $$data);
 		++$offset;
-	
+
 		$self->{"version"} = $version;
-	
+
 		if ($version == 0) {
 			my ($size) = unpack("\@$offset C", $$data);
 			$size = precsize_ntoval($size);
 			++$offset;
-	
+
 			my ($horiz_pre) = unpack("\@$offset C", $$data);
 			$horiz_pre = precsize_ntoval($horiz_pre);
 			++$offset;
-	
+
 			my ($vert_pre) = unpack("\@$offset C", $$data);
 			$vert_pre = precsize_ntoval($vert_pre);
 			++$offset;
-	
+
 			my ($latitude) = unpack("\@$offset N", $$data);
 			$offset += Net::DNS::INT32SZ();
-	
+
 			my ($longitude) = unpack("\@$offset N", $$data);
 			$offset += Net::DNS::INT32SZ();
-	
+
 			my ($altitude) = unpack("\@$offset N", $$data);
 			$offset += Net::DNS::INT32SZ();
-	
+
 			$self->{"size"}      = $size;
 			$self->{"horiz_pre"} = $horiz_pre;
 			$self->{"vert_pre"}  = $vert_pre;
@@ -87,7 +87,7 @@ sub new {
 sub new_from_string {
 	my ($class, $self, $string) = @_;
 
-	if ($string && 
+	if ($string &&
 	    $string =~ /^ (\d+) \s+		# deg lat
 			  ((\d+) \s+)?		# min lat
 			  (([\d.]+) \s+)?	# sec lat
@@ -147,12 +147,12 @@ sub rdatastr {
 			my $size      = $self->{"size"};
 			my $horiz_pre = $self->{"horiz_pre"};
 			my $vert_pre  = $self->{"vert_pre"};
-	
+
 			$altitude   = ($altitude - $reference_alt) / 100;
 			$size      /= 100;
 			$horiz_pre /= 100;
 			$vert_pre  /= 100;
-	
+
 			$rdatastr = latlon2dms($lat, "NS")       . " " .
 			            latlon2dms($lon, "EW")       . " " .
 			            sprintf("%.2fm", $altitude)  . " " .
@@ -221,7 +221,7 @@ sub latlon2dms {
 	$abs  = abs($rawmsec - $reference_latlon);
 	$deg  = int($abs / $conv_deg);
 	$abs  -= $deg * $conv_deg;
-	$min  = int($abs / $conv_min); 
+	$min  = int($abs / $conv_min);
 	$abs -= $min * $conv_min;
 	$sec  = int($abs / $conv_sec);
 	$abs -= $sec * $conv_sec;
@@ -290,7 +290,7 @@ details.
 Returns the version number of the representation; programs should
 always check this.  C<Net::DNS> currently supports only version 0.
 
-=head2 size 
+=head2 size
 
     print "size = ", $rr->size, "\n";
 
@@ -345,7 +345,7 @@ below the WGS 84 reference spheroid used by GPS.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

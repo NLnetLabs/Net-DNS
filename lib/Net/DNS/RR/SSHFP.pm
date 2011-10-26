@@ -3,19 +3,19 @@ package Net::DNS::RR::SSHFP;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION $HasBabble);
 
 BEGIN {
 	eval {
-		require Digest::BubbleBabble; 
+		require Digest::BubbleBabble;
 		Digest::BubbleBabble->import(qw(bubblebabble))
 	};
-		
+
 	$HasBabble = $@ ? 0 : 1;
-	
+
 }
 
 $VERSION = (qw$LastChangedRevision$)[1];
@@ -37,49 +37,49 @@ my %algtypebyval	     = reverse %algtype;
 
 sub new {
     my ($class, $self, $data, $offset) = @_;
-    
+
 	if ($self->{'rdlength'} > 0) {
 		my $offsettoalg    = $offset;
 		my $offsettofptype = $offset+1;
 		my $offsettofp     = $offset+2;
 		my $fplength       = 20;   # This will need to change if other fingerprint types
 								   # are being deployed.
-	
-	
+
+
 		$self->{'algorithm'} = unpack('C', substr($$data, $offsettoalg, 1));
 		$self->{'fptype'}    = unpack('C', substr($$data, $offsettofptype, 1));
-	
+
 		unless (defined $fingerprinttypebyval{$self->{'fptype'}}){
 		  warn "This fingerprint type $self->{'fptype'} has not yet been implemented, creation of SSHFP failed\n." ;
 		  return undef;
 		}
 
-							   
+
 		# All this is SHA-1 dependend
 		$self->{'fpbin'} = substr($$data,$offsettofp, $fplength); # SHA1 digest 20 bytes long
-	
+
 		$self->{'fingerprint'} = uc unpack('H*', $self->{'fpbin'});
     }
-    
-    
+
+
     return bless $self, $class;
 }
 
 
 sub new_from_string {
 	my ($class, $self, $string) = @_;
-	
-	if ($string) {		
+
+	if ($string) {
 		$string =~ tr/()//d;
 		$string =~ s/;.*$//mg;
 		$string =~ s/\n//g;
-		
+
 		@{$self}{qw(algorithm fptype fingerprint)} = split(m/\s+/, $string, 3);
-					
+
 		# We allow spaces in the fingerprint.
-		$self->{'fingerprint'} =~ s/\s//g;		
+		$self->{'fingerprint'} =~ s/\s//g;
     }
-	    
+
 	return bless $self, $class;
 }
 
@@ -90,9 +90,9 @@ sub rdatastr {
 	my $rdatastr = '';
 
 	if (exists $self->{"algorithm"}) {
-		$rdatastr = join('  ', @{$self}{qw(algorithm fptype fingerprint)}) 
+		$rdatastr = join('  ', @{$self}{qw(algorithm fptype fingerprint)})
 					.' ; ' . $self->babble;
-	} 
+	}
 
 	return $rdatastr;
 }
@@ -100,10 +100,10 @@ sub rdatastr {
 sub rr_rdata {
     my $self = shift;
 
-    if (exists $self->{"algorithm"}) {   	    
+    if (exists $self->{"algorithm"}) {
     	return pack('C2',  @{$self}{qw(algorithm fptype)}) . $self->fpbin;
     }
-    
+
     return '';
 
 }
@@ -112,9 +112,9 @@ sub rr_rdata {
 
 sub babble {
     my $self = shift;
-    
+
     if ($HasBabble) {
-		return bubblebabble(Digest => $self->fpbin);	
+		return bubblebabble(Digest => $self->fpbin);
     } else {
 		return "";
     }
@@ -123,10 +123,10 @@ sub babble {
 
 sub fpbin {
 	my ($self) = @_;
-			
+
 	return $self->{'fpbin'} ||= pack('H*', $self->{'fingerprint'});
 }
-	
+
 
 1;
 
@@ -145,7 +145,7 @@ Class for Delegation signer (SSHFP) resource records.
 
 =head1 METHODS
 
-In addition to the regular methods 
+In addition to the regular methods
 
 
 =head2 algorithm
@@ -192,7 +192,7 @@ the string method is called.
 
 The method returns an empty string if Digest::BubbleBable is not installed.
 
-=head1 TODO 
+=head1 TODO
 
 =head1 ACKNOWLEDGEMENT
 

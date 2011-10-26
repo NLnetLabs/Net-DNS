@@ -3,9 +3,9 @@ package Net::DNS::RR::MX;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
@@ -34,7 +34,7 @@ sub new {
 	if ($self->{"rdlength"} > 0) {
 		($self->{"preference"}) = unpack("\@$offset n", $$data);
 		$offset += Net::DNS::INT16SZ();
-		
+
 		($self->{"exchange"}) = Net::DNS::Packet::dn_expand($data, $offset);
 	}
 
@@ -87,12 +87,12 @@ sub _normalize_dnames {
 sub _canonicalRdata {
     my ($self) = @_;
     my $rdata = "";
-    
+
     if (exists $self->{"preference"}) {
 	$rdata .= pack("n", $self->{"preference"});
 	$rdata .= $self->_name2wire(lc($self->{"exchange"}))
 	}
-    
+
     return $rdata;
 }
 
@@ -128,7 +128,7 @@ Returns name of this mail exchange.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 Portions Copyright (c) 2005 Olaf Kolkman NLnet Labs.

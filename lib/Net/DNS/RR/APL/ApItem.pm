@@ -7,9 +7,9 @@ package Net::DNS::RR::APL::ApItem;
 use Net::DNS::Resolver::Base;
 use Socket;
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
@@ -23,12 +23,12 @@ use Data::Dumper;
 
 =head1 NAME
 
-Net::DNS::RR::APL::ApItem - DNS APL  ApItem 
+Net::DNS::RR::APL::ApItem - DNS APL  ApItem
 
 
 =head1 SYNOPSIS
 
-use Net::DNS::RR::APL::ApItem;  
+use Net::DNS::RR::APL::ApItem;
 
 my $apitem=Net::DNS::RR::APL::ApItem->new();
 
@@ -96,15 +96,15 @@ sub parse {
 		my $address=$3;
 		my $prefix=$4;
 		# Sanity check
-		return if ( ($addressfamily == 1) && (! Net::DNS::Resolver::Base::_ip_is_ipv4($address) || $prefix > 32 )); 
-		return if ( ($addressfamily == 2) && (! Net::DNS::Resolver::Base::_ip_is_ipv6($address) || $prefix > 128 )); 
+		return if ( ($addressfamily == 1) && (! Net::DNS::Resolver::Base::_ip_is_ipv4($address) || $prefix > 32 ));
+		return if ( ($addressfamily == 2) && (! Net::DNS::Resolver::Base::_ip_is_ipv6($address) || $prefix > 128 ));
 		return if ( $addressfamily > 2 );
 
 		$self->address($address);
 		$self->addressfamily($addressfamily);
 		$self->prefix($prefix);
 		$self->negation($negation);
-		 
+
 		return $self;
 	}
 	#Pattern match failed.
@@ -176,7 +176,7 @@ sub rdata {
 	return unless ((exists $self->{'addressfamily'}) &&
 		       (exists $self->{'address'}) &&
 		       (exists $self->{'prefix'}));
-	
+
 	if ($self->{'addressfamily'}==1){
 		$rdata=pack ("n",0x0001);
 		$rdata.=pack ("C",$self->prefix());
@@ -194,7 +194,7 @@ sub rdata {
 		#NOT Defined, return empty A data
 		return;
 	}
-	
+
 	return $rdata;
 }
 
@@ -215,7 +215,7 @@ sub new_from_wire {
 	my $caller = shift;
 	my $class = ref($caller) || $caller;
 	my ($data, $offset) = @_;
-	
+
 	my $orgoffset=$offset;
 	my $self={
 		  address => '',
@@ -236,7 +236,7 @@ sub new_from_wire {
 	return if (length($data)< $offset+$length);
 	if ($self->addressfamily==1){
 		# pack(Cy,unpack("C*",$foo)) is a hack to pad with trailing 0s.
-		$self->{"address"} = 
+		$self->{"address"} =
 		  inet_ntoa(  pack("C4",unpack("C*",substr($data, $offset,$length) )));
 	}elsif($self->addressfamily==2){
 		my $extracted=substr($data, $offset,$length);

@@ -39,7 +39,7 @@ C<use Net::DNS::RR>;
 
 =head1 DESCRIPTION
 
-Class for DNS Key Exchanger (MX) resource record (RFC 2230). 
+Class for DNS Key Exchanger (MX) resource record (RFC 2230).
 
 This class inherets most of its functionality directly from the MX RR.
 

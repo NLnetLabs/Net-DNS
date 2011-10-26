@@ -3,9 +3,9 @@ package Net::DNS::RR::HINFO;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 use vars qw(@ISA $VERSION);
 use Net::DNS::RR::TXT;
 
@@ -37,27 +37,27 @@ sub new {
 
 sub new_from_string {
 	my ( $class, $self, $rdata_string ) = @_ ;
-	
+
 	bless $self, $class;
         return $self unless $rdata_string;
 	$self->_build_char_str_list($rdata_string);
 	my @elements= $self->char_str_list();
 	if (@elements==2){
-		
-		
+
+
 		$self->{"cpu"} = $elements[0];
 		$self->{"os"}  = $elements[1];
 	}else{
 		return;
 	}
-	
-	
+
+
 	return $self;
 }
 
 sub rdatastr {
 	my $self = shift;
-	
+
 	return $self->{"cpu"}
 	  ? qq("$self->{cpu}" "$self->{os}")
 	    : '';
@@ -109,7 +109,7 @@ Returns the operating system type for this RR.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 Portions Copyright (c) 2002-2004 Chris Reinhardt
 Portions Copyright (c) 2007 NLnet Labs
 

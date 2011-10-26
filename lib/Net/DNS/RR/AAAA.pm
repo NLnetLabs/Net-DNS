@@ -3,9 +3,9 @@ package Net::DNS::RR::AAAA;
 # $Id$
 #
 use strict;
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 
 use vars qw(@ISA $VERSION);
 
@@ -54,7 +54,7 @@ sub _normalize_AAAA{
 	my $self=shift();
 	return $self unless exists $self->{"address"};
 	return $self->{"address"} if $self->{normalized};
-	
+
 	my $string=$self->{"address"};
 	if ($string) {
 		my @addr;
@@ -81,16 +81,16 @@ sub _normalize_AAAA{
 				@addr = ((0) x (8 - @addr), @addr);
 			}
 		}
-		
+
 		$self->{"address"} = sprintf("%x:%x:%x:%x:%x:%x:%x:%x",
 					     map { hex $_ } @addr);
 	}
 	$self->{"normalized"}=1;
 	return $self;
-	 
-	
-	
-	
+
+
+
+
 }
 
 1;
@@ -124,7 +124,7 @@ Section 2.2, Para 1).
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 

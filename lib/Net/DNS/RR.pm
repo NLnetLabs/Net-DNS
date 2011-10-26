@@ -4,9 +4,9 @@ package Net::DNS::RR;
 #
 use strict;
 
-BEGIN { 
+BEGIN {
     eval { require bytes; }
-} 
+}
 
 
 use vars qw($VERSION $AUTOLOAD %rrsortfunct );
@@ -40,7 +40,7 @@ warning message and C<Net::DNS::RR> will return C<undef> to the caller.
 =cut
 
 # %RR needs to be available within the scope of the BEGIN block.
-# $RR_REGEX is a global just to be on the safe side.  
+# $RR_REGEX is a global just to be on the safe side.
 # %_LOADED is used internally for autoloading the RR subclasses.
 use vars qw(%RR %_LOADED $RR_REGEX);
 
@@ -90,38 +90,38 @@ BEGIN {
 
 	#  Only load DNSSEC if available
 
-	eval { 	    
+	eval {
 	    local $SIG{'__DIE__'} = 'DEFAULT';
-	    require Net::DNS::RR::SIG; 
+	    require Net::DNS::RR::SIG;
 	};
 
 	unless ($@) {
 		$RR{'SIG'} = 1;
-		eval { 	    
+		eval {
 		    local $SIG{'__DIE__'} = 'DEFAULT';
-		    require Net::DNS::RR::NXT; 
+		    require Net::DNS::RR::NXT;
 		};
-		
+
 		unless ($@) {
 		    $RR{'NXT'}	= 1;
 		} else {
 		    die $@;
 		}
-		
-		eval { 
+
+		eval {
 		    local $SIG{'__DIE__'} = 'DEFAULT';
-		    require Net::DNS::RR::KEY; 
+		    require Net::DNS::RR::KEY;
 		};
-		
+
 		unless ($@) {
 		    $RR{'KEY'} = 1;
 		} else {
 		    die $@;
 		}
 
-	 	eval { 
+	 	eval {
 		    local $SIG{'__DIE__'} = 'DEFAULT';
-		    require Net::DNS::RR::DS; 
+		    require Net::DNS::RR::DS;
 		};
 
 	 	unless ($@) {
@@ -131,26 +131,26 @@ BEGIN {
 		    die $@;
 		}
 
-	 	eval { 
+	 	eval {
 		    local $SIG{'__DIE__'} = 'DEFAULT';
-		    require Net::DNS::RR::RRSIG; 
+		    require Net::DNS::RR::RRSIG;
 		};
 
 	 	unless ($@) {
 		    $RR{'RRSIG'} = 1;
 		    # If RRSIG is available so should the other DNSSEC types
-		    eval {		    
+		    eval {
 			local $SIG{'__DIE__'} = 'DEFAULT';
-			require Net::DNS::RR::NSEC; 
+			require Net::DNS::RR::NSEC;
 		    };
 		    unless ($@) {
 		      $RR{'NSEC'} = 1;
 		    } else {
 		    die $@;
 		  }
-		    eval { 
+		    eval {
 			local $SIG{'__DIE__'} = 'DEFAULT';
-			require Net::DNS::RR::DNSKEY; 
+			require Net::DNS::RR::DNSKEY;
 		    };
 
 		    unless ($@) {
@@ -158,45 +158,45 @@ BEGIN {
 		    } else {
 		      die $@;
 		    }
-		} 
+		}
 
-	 	eval { 
+	 	eval {
 		  local $SIG{'__DIE__'} = 'DEFAULT';
-		  require Net::DNS::RR::DLV; 
+		  require Net::DNS::RR::DLV;
 		};
 
 		unless ($@) {
 		  $RR{'DLV'} =1;
 		} else {
-		  # Die only if we are dealing with a version for which DLV is 
-		  # available 
+		  # Die only if we are dealing with a version for which DLV is
+		  # available
 		  die $@ if defined ($Net::DNS::SEC::HAS_DLV) ;
 
 		}
 
-	 	eval { 
+	 	eval {
 		  local $SIG{'__DIE__'} = 'DEFAULT';
-		  require Net::DNS::RR::NSEC3; 
+		  require Net::DNS::RR::NSEC3;
 		};
 
 		unless ($@) {
 		  $RR{'NSEC3'} =1;
 		} else {
-		  # Die only if we are dealing with a version for which NSEC3 is		  # available 
+		  # Die only if we are dealing with a version for which NSEC3 is		  # available
 		  die $@ if defined ($Net::DNS::SEC::HAS_NSEC3);
 		}
-		
-		
-	 	eval { 
+
+
+	 	eval {
 		  local $SIG{'__DIE__'} = 'DEFAULT';
-		  require Net::DNS::RR::NSEC3PARAM; 
+		  require Net::DNS::RR::NSEC3PARAM;
 		};
 
 		unless ($@) {
 		  $RR{'NSEC3PARAM'} =1;
 		} else {
-		  # Die only if we are dealing with a version for which NSEC3 is 
-		  # available 
+		  # Die only if we are dealing with a version for which NSEC3 is
+		  # available
 
 		  die $@ if defined($Net::DNS::SEC::SVNVERSION) &&  $Net::DNS::SEC::SVNVERSION > 619;   # In the code since. (for users of the SVN trunk)
 		}
@@ -213,12 +213,12 @@ sub build_regex {
 	my $types   = join('|', sort { length $b <=> length $a } keys %Net::DNS::typesbyname);
 
 	$types .= '|TYPE\\d+';
-				
-	$RR_REGEX   = " ^ 
+
+	$RR_REGEX   = " ^
 					\\s*
-    	            (\\S+) # name anything non-space will do 
-    	            \\s*                
-    	            (\\d+)?           
+    	            (\\S+) # name anything non-space will do
+    	            \\s*
+    	            (\\d+)?
     	            \\s*
     	            ($classes)?
     	            \\s*
@@ -260,7 +260,7 @@ All names must be fully qualified.  The trailing dot (.) is optional.
 	 type    => "A",
 	 address => "10.1.2.3",
  );
- 
+
  $rr = Net::DNS::RR->new(
 	 name => "foo.example.com",
 	 type => "A",
@@ -329,7 +329,7 @@ sub new_from_string {
 		if ($rrstring=~s/^(\\.)//o){             # Escaped special character
 			$cleanstring.=$1;
 		}
-		
+
 		if ($rrstring=~s/^((['"]).*(?<!\\)\2)//o){ # Anything within a matching string block. (non escaped terminator)
 			$cleanstring.=$1;
 
@@ -340,22 +340,22 @@ sub new_from_string {
 		}elsif ($rrstring=~s/^((['"]).*((?<!\\);)?)//o){
 			$cleanstring.=$1;
 		}
-		
+
 		$rrstring=~s/^(;.*\n)//o;  # comment till newline
 		$rrstring=~s/^(;.*$)//o;   # comment till end of string
 		#print STDERR ".";
 
-		confess "Failed stripping:loop will not terminate. Please report this info: ". $cleanstring ."---". $rrstring."\n" 
+		confess "Failed stripping:loop will not terminate. Please report this info: ". $cleanstring ."---". $rrstring."\n"
 		  if ($loopdetection==length($rrstring));
 		$loopdetection=length($rrstring);
 
 
 	}
-	  
-	
-	
 
-	($cleanstring =~ m/$RR_REGEX/xso) || 
+
+
+
+	($cleanstring =~ m/$RR_REGEX/xso) ||
 		confess qq|Internal Error: "$rrstring" did not match RR pat.\nPlease report this to the author!\n|;
 
 	my $name    = $1;
@@ -386,11 +386,11 @@ sub new_from_string {
 	}
 
 	$rrtype ||= 'ANY';
-	
+
 
 	if ($update_type) {
 		$update_type = lc $update_type;
-		
+
 		if ($update_type eq 'yxrrset') {
 			$ttl     = 0;
 			$rrclass = 'ANY' unless $rdata;
@@ -435,33 +435,10 @@ sub new_from_string {
 		$rdata =~ m/\\\#\s+(\d+)\s+(.*)$/o;
 
 		my $rdlength = $1;
-		my $hexdump  = $2;		
+		my $hexdump  = $2;
 		$hexdump =~ s/\s*//og;
 
-		die "$rdata is inconsistent; length does not match content" 
-			if length($hexdump) != $rdlength*2;
-
-		$rdata = pack('H*', $hexdump);
-	
-		return Net::DNS::RR->new_from_data(
-			$name, 
-			$rrtype, 
-			$rrclass, 
-			$ttl, 
-			$rdlength, 
-			\$rdata, 
-			length($rdata) - $rdlength
-		);
-	} elsif ($rdata=~/\s*\\\#\s+\d+\s+/o) {   
-		#We are now dealing with the truly unknown.
-		die 'Expected RFC3597 representation of RDATA' 
-			unless $rdata =~ m/\\\#\s+(\d+)\s+(.*)$/o;
-
-		my $rdlength = $1;
-		my $hexdump  = $2;		
-		$hexdump =~ s/\s*//og;
-
-		die "$rdata is inconsistent; length does not match content" 
+		die "$rdata is inconsistent; length does not match content"
 			if length($hexdump) != $rdlength*2;
 
 		$rdata = pack('H*', $hexdump);
@@ -475,12 +452,35 @@ sub new_from_string {
 			\$rdata,
 			length($rdata) - $rdlength
 		);
-	} else {  
+	} elsif ($rdata=~/\s*\\\#\s+\d+\s+/o) {
+		#We are now dealing with the truly unknown.
+		die 'Expected RFC3597 representation of RDATA'
+			unless $rdata =~ m/\\\#\s+(\d+)\s+(.*)$/o;
+
+		my $rdlength = $1;
+		my $hexdump  = $2;
+		$hexdump =~ s/\s*//og;
+
+		die "$rdata is inconsistent; length does not match content"
+			if length($hexdump) != $rdlength*2;
+
+		$rdata = pack('H*', $hexdump);
+
+		return Net::DNS::RR->new_from_data(
+			$name,
+			$rrtype,
+			$rrclass,
+			$ttl,
+			$rdlength,
+			\$rdata,
+			length($rdata) - $rdlength
+		);
+	} else {
 		#God knows how to handle these... bless them in the RR class.
 		bless $self, $class;
 		return $self
 	}
-	
+
 }
 
 sub new_from_hash {
@@ -510,9 +510,9 @@ sub new_from_hash {
 			$self->_normalize_dnames();
 			return _normalize_rdata($self);
 
-	    } else {  
+	    } else {
 			# Special processing of OPT. Since TTL and CLASS are
-			# set by other variables. See Net::DNS::RR::OPT 
+			# set by other variables. See Net::DNS::RR::OPT
 			# documentation
 			return $subclass->new_from_hash($self);
 	    }
@@ -548,7 +548,7 @@ sub _normalize_rdata {
 			answer		=> [],
 			authority	=> [],
 			additional	=> []	};
-	
+
 	bless $pkt, "Net::DNS::Packet";
 	$pkt->push( answer => $self );
 	my $pkt2 = Net::DNS::Packet->new( \$pkt->data );
@@ -569,7 +569,7 @@ sub _normalize_dnames {
 
 
 sub _normalize_ownername {
-	my $self=shift;	
+	my $self=shift;
 	return $self->{'name'}=stripdot($self->{'name'});
 }
 
@@ -659,7 +659,7 @@ B<name>, which will not return the trailing dot.
 sub string {
 	my $self = shift;
 	my $data = $self->rdatastr || '; no data';
-  
+
 	join "\t", "$self->{name}.", $self->{ttl}, $self->{class}, $self->{type}, $data;
 }
 
@@ -714,7 +714,7 @@ sub class {
 	}
 	return $self->{'class'};
 }
-	
+
 
 =head2 ttl
 
@@ -785,7 +785,7 @@ sub data {
 		$data = $tmp_packet->dn_comp('', 0);
 	} else {
 		$data  = $packet->dn_comp($self->{'name'}, $offset);
-		return undef unless defined $data;	
+		return undef unless defined $data;
 	}
 
 	my $qtype     = uc($self->{'type'});
@@ -796,7 +796,7 @@ sub data {
 	my $qclass_val = ($qclass =~ m/^\d+$/o) ? $qclass : Net::DNS::classesbyname($qclass);
 	$qclass_val    = 0 if !defined($qclass_val);
 	$data .= pack('n', $qtype_val);
-	
+
 	# If the type is OPT then class will need to contain a decimal number
 	# containing the UDP payload size. (RFC2671 section 4.3)
 	if (uc($self->{'type'}) ne 'OPT') {
@@ -804,7 +804,7 @@ sub data {
 	} else {
 	    $data .= pack('n', $self->{'class'});
 	}
-	
+
 	$data .= pack('N', $self->{'ttl'});
 
 	$offset += length($data) + &Net::DNS::INT16SZ;	# allow for rdlength
@@ -822,7 +822,7 @@ sub data {
 
 
 #------------------------------------------------------------------------------
-#  This method is called by SIG objects verify method. 
+#  This method is called by SIG objects verify method.
 #  It is almost the same as data but needed to get an representation of the
 #  packets in wire format withoud domain name compression.
 #  It is essential to DNSSEC RFC 2535 section 8
@@ -833,7 +833,7 @@ sub canonical {&_canonicaldata}
 sub _canonicaldata {
 	my $self = shift;
 	my $data='';
-	{   
+	{
 	    my $name=$self->{'name'};
 	    my @dname=Net::DNS::name2labels($name);
 	    for (my $i=0;$i<@dname;$i++){
@@ -845,10 +845,10 @@ sub _canonicaldata {
 	$data .= pack('n', Net::DNS::typesbyname(uc($self->{'type'})));
 	$data .= pack('n', Net::DNS::classesbyname(uc($self->{'class'})));
 	$data .= pack('N', $self->{'ttl'});
-	
-	
+
+
 	my $rdata = $self->_canonicalRdata;
-	
+
 	$data .= pack('n', length $rdata);
 	$data .= $rdata;
 	return $data;
@@ -875,7 +875,7 @@ sub _canonicalRdata {
 
 
 
-sub _name2wire   {   
+sub _name2wire   {
     my ($self, $name) = @_;
 
     my $rdata="";
@@ -887,7 +887,7 @@ sub _name2wire   {
 		$rdata .= pack('C', length $_);
 		$rdata .= $_ ;
     }
-    
+
     $rdata .= pack('C', '0');
     return $rdata;
 }
@@ -905,11 +905,11 @@ sub AUTOLOAD {
 	if ($name =~ /get_rrsort_func/){
 	    return Net::DNS::RR::get_rrsort_func(@_);
 	}
-	# XXX -- We should test that we do in fact carp on unknown methods.	
+	# XXX -- We should test that we do in fact carp on unknown methods.
 	unless (exists $self->{$name}) {
 	    my $rr_string = $self->string;
 	    Carp::carp(<<"AMEN");
-	    
+
 ***
 ***  WARNING!!!  The program has attempted to call the method
 ***  "$name" for the following RR object:
@@ -923,25 +923,25 @@ sub AUTOLOAD {
 ***  calling any of its methods.
 ***
 ***  Net::DNS has returned undef to the caller.
-*** 
+***
 
 AMEN
 return;
 	}
-	
+
 	no strict q/refs/;
-	
+
 	# Build a method in the class.
 	*{$AUTOLOAD} = sub {
 	    my ($self, $new_val) = @_;
-	    
+
 	    if (defined $new_val) {
 		$self->{$name} = $new_val;
 	    }
-	    
+
 	    return $self->{$name};
 	};
-	
+
 	# And jump over to it.
 	goto &{$AUTOLOAD};
 }
@@ -955,19 +955,19 @@ return;
 #
 sub _get_subclass {
 	my ($class, $type) = @_;
-	
+
 	return unless $type and $RR{$type};
-	
+
 	my $subclass = join('::', $class, $type);
-	
+
 	unless ($_LOADED{$subclass}) {
 		eval "require $subclass";
 		die $@ if $@;
 		$_LOADED{$subclass}++;
 	}
-	
+
 	return $subclass;
-}	
+}
 
 
 
@@ -1012,7 +1012,7 @@ objects from the class you called the set_prop_sort from. In other
 words, you can rest assured that the above sorting function will only
 get Net::DNS::RR::SRV objects.
 
-The above example is the sorting function that actually is implemented in 
+The above example is the sorting function that actually is implemented in
 SRV.
 
 =cut
@@ -1028,9 +1028,9 @@ sub set_rrsort_func{
     my ($type) = $class =~ m/^.*::(.*)$/o;
     $Net::DNS::RR::rrsortfunct{$type}{$attribute}=$funct;
 }
-		
+
 sub get_rrsort_func {
-    my $class=shift;    
+    my $class=shift;
     my $attribute=shift;  #can be undefined.
     my $sortsub;
     my ($type) = $class =~ m/^.*::(.*)$/o;
@@ -1055,10 +1055,10 @@ sub get_rrsort_func {
 	return $Net::DNS::RR::rrsortfunct{$type}{'default_sort'};
     }
     elsif( defined($attribute) ){
-	
+
 	return sub{
 	    my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
-	    ( exists($a->{$attribute}) &&   
+	    ( exists($a->{$attribute}) &&
 	      $a->{$attribute} <=> $b->{$attribute})
 		||
 		$a->_canonicaldata() cmp $b->_canonicaldata()
@@ -1068,7 +1068,7 @@ sub get_rrsort_func {
 	    my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
 	    $a->_canonicaldata() cmp $b->_canonicaldata()
 	};
-    }    
+    }
 
     return $sortsub;
 }
@@ -1077,12 +1077,12 @@ sub get_rrsort_func {
 
 
 
-	
+
 sub STORABLE_freeze {
 	my ($self, $cloning) = @_;
 
 	return if $cloning;
-	
+
 	return ('', {%$self});
 }
 
@@ -1090,9 +1090,9 @@ sub STORABLE_thaw {
 	my ($self, $cloning, undef, $data) = @_;
 
 	%{$self}  = %{$data};
-	
+
 	__PACKAGE__->_get_subclass($self->{'type'});
-	
+
 	return $self;
 }
 
@@ -1118,13 +1118,13 @@ RR objects.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2005-2007 Olaf Kolkman 
+Portions Copyright (c) 2005-2007 Olaf Kolkman
 
-Portions Copyright (c) 2007 Dick Franks 
+Portions Copyright (c) 2007 Dick Franks
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

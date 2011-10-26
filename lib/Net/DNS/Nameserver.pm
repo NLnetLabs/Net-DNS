@@ -68,7 +68,7 @@ sub new {
 	my $port = $self{LocalPort} || DEFAULT_PORT;
 	$self{Truncate}=1 unless defined ($self{Truncate});
 	$self{IdleTimeout}=120 unless defined ($self{IdleTimeout});
-	
+
 	my @sock_tcp;	# All the TCP sockets we will listen to.
 	my @sock_udp;	# All the UDP sockets we will listen to.
 
@@ -80,7 +80,7 @@ sub new {
  	    #--------------------------------------------------------------------------
  	    # Create the TCP socket.
  	    #--------------------------------------------------------------------------
- 		
+
  	    print "\nCreating TCP socket $addr#$port - " if $self{Verbose};
 
 	    my $sock_tcp = inet_new(
@@ -97,19 +97,19 @@ sub new {
 	    } else {
 		cluck "Couldn't create TCP socket: $!";
 	    }
- 	    
+
  	    #--------------------------------------------------------------------------
  	    # Create the UDP Socket.
  	    #--------------------------------------------------------------------------
- 	    
+
  	    print "Creating UDP socket $addr#$port - " if $self{Verbose};
- 	    
+
  	    my $sock_udp = inet_new(
  						   LocalAddr => $addr,
  						   LocalPort => $port,
  						   Proto => "udp",
  						   );
- 		
+
 	    if ( $sock_udp ) {
 		push @sock_udp, $sock_udp;
 		print "done.\n" if $self{Verbose};
@@ -118,7 +118,7 @@ sub new {
 	    }
 
  	}
- 	
+
 	#--------------------------------------------------------------------------
 	# Create the Select object.
 	#--------------------------------------------------------------------------
@@ -148,25 +148,25 @@ sub inet_new {
 	    return IO::Socket::INET->new(@_);
 	}
 }
-  
+
 #------------------------------------------------------------------------------
 # make_reply - Make a reply packet.
 #------------------------------------------------------------------------------
 
 sub make_reply {
 	my ($self, $query, $peerhost,$conn) = @_;
-	
+
 	my $reply = Net::DNS::Packet->new();	# create empty reply packet
 	$reply->header->qr(1);
 
 	my $headermask;
-	
+
 	unless ($query) {
 		print "ERROR: invalid packet\n" if $self->{"Verbose"};
 		$reply->header->rcode("FORMERR");
 		return $reply;
 	}
-	
+
 	if ($query->header->qr()) {
 		print "ERROR: invalid packet (qr was set, dropping)\n" if $self->{"Verbose"};
 		return;
@@ -190,9 +190,9 @@ sub make_reply {
 
 			print "query ", $query->header->id,
 			": ($qname, $qclass, $qtype) - " if $self->{"Verbose"};
-			
+
 			my ($rcode, $ans, $auth, $add);
-			
+
 			if  ($query->header->opcode eq "QUERY"){
 			  ($rcode, $ans, $auth, $add, $headermask) =
 			      &{$self->{"ReplyHandler"}}($qname, $qclass, $qtype, $peerhost, $query, $conn);
@@ -212,9 +212,9 @@ sub make_reply {
 				return undef;
 			}
 			print "$rcode\n" if $self->{"Verbose"};
-			
+
 			$reply->header->rcode($rcode);
-			
+
 			$reply->push("answer",	   @$ans)  if $ans;
 			$reply->push("authority",  @$auth) if $auth;
 			$reply->push("additional", @$add)  if $add;
@@ -229,8 +229,8 @@ sub make_reply {
 		$reply->header->rcode("FORMERR");
 	}
 
-	
-	
+
+
 	if (!defined ($headermask)) {
 		$reply->header->ra(1);
 		$reply->header->ad(0);
@@ -242,12 +242,12 @@ sub make_reply {
 		  ($headermask->{'opcode'} &&
 		   defined $Net::DNS::opcodesbyname{$headermask->{'opcode'}});
 	}
-	
-	
+
+
 	$reply->header->cd($query->header->cd);
-	$reply->header->rd($query->header->rd);	
+	$reply->header->rd($query->header->rd);
 	$reply->header->id($query->header->id);
-	
+
 	$reply->header->print if $self->{"Verbose"} && defined $headermask;
 
 	return $reply;
@@ -284,7 +284,7 @@ sub readfromtcp {
 
 sub tcp_connection {
 	my ($self, $sock) = @_;
-	
+
 	if (not $self->{"_tcp"}{$sock}) {
 		# We go here if we are called with a listener socket.
 		my $client = $sock->accept;
@@ -302,7 +302,7 @@ sub tcp_connection {
 		$self->{"_tcp"}{$client}{"socket"} = $client;
 		$self->{"_tcp"}{$client}{"timeout"} = time()+$self->{IdleTimeout};
  		$self->{"select"}->add($client);
-		# After we accepted we will look at the socket again 
+		# After we accepted we will look at the socket again
 		# to see if there is any data there. ---Olaf
 		$self->loop_once(0);
 	} else {
@@ -371,7 +371,7 @@ sub udp_connection {
 		print "the Peer host and sock host appear to be undefined: bailing out of handling the UDP connection" if $self->{"Verbose"};
 		return;
 	}
-	
+
 
 
  	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{"Verbose"};
@@ -394,7 +394,7 @@ sub udp_connection {
 	local $| = 1 if $self->{"Verbose"};
 	print "Writing response - " if $self->{"Verbose"};
 
-	if ($sock->send($reply->data)) { # 
+	if ($sock->send($reply->data)) { #
 	  print "done\n" if $self->{"Verbose"};
 	}
 	else {
@@ -441,20 +441,20 @@ sub loop_once {
       $timeout = 0.1 if $self->{"_tcp"}{$sock}{"outbuffer"};
   }
   my @ready = $self->{"select"}->can_read($timeout);
-  
+
   foreach my $sock (@ready) {
       my $protonum = $sock->protocol;
       # This is a weird and nasty hack. Although not incorrect,
       # I just don't know why ->protocol won't tell me the protocol
       # on a connected socket. --robert
       $protonum = getprotobyname('tcp') if not defined $protonum and $self->{"_tcp"}{$sock};
-      
+
       my $proto = getprotobynumber($protonum);
       if (!$proto) {
 	  print "ERROR: connection with unknown protocol\n"
 	      if $self->{"Verbose"};
       } elsif (lc($proto) eq "tcp") {
-	  
+
 	  $self->readfromtcp($sock) &&
 	      $self->tcp_connection($sock);
       } elsif (lc($proto) eq "udp") {
@@ -518,7 +518,7 @@ sub loop_once {
 
 sub main_loop {
     my $self = shift;
-    
+
     while (1) {
 	print "Waiting for connections...\n" if $self->{"Verbose"};
 	# You really need an argument otherwise you'll be burning
@@ -569,12 +569,12 @@ Creates a nameserver object.  Attributes are:
 
   LocalAddr		IP address on which to listen.	Defaults to INADDR_ANY.
   LocalPort		Port on which to listen.  	Defaults to 53.
-  ReplyHandler		Reference to reply-handling 
+  ReplyHandler		Reference to reply-handling
 			subroutine			Required.
   NotifyHandler         Reference to reply-handling
                         subroutine for queries with
                         opdcode NS_NOTIFY (RFC1996)
-  Verbose		Print info about received 
+  Verbose		Print info about received
 			queries.			Defaults to 0 (off).
   Truncate              Truncates UDP packets that
                         are to big for the reply        Defaults to 1 (on)
@@ -583,7 +583,7 @@ Creates a nameserver object.  Attributes are:
                         this duration.                  Defaults to 120 (secs)
 
 The LocalAddr attribute may alternatively be specified as a list of IP
-addresses to listen to. 
+addresses to listen to.
 
 If IO::Socket::INET6 and Socket6 are available on the system you can
 also list IPv6 addresses and the default is '0' (listen on all interfaces on
@@ -593,7 +593,7 @@ IPv6 and IPv4);
 The ReplyHandler subroutine is passed the query name, query class,
 query type and optionally an argument containing the peerhost, the
 incoming query, and the name of the incoming socket (sockethost). It
-must either return the response code and references to the answer, 
+must either return the response code and references to the answer,
 authority, and additional sections of the response, or undef to leave
 the query unanswered.  Common response codes are:
 
@@ -605,9 +605,9 @@ the query unanswered.  Common response codes are:
   REFUSED	Query refused
 
 For advanced usage it may also contain a headermask containing an
-hashref with the settings for the C<aa>, C<ra>, and C<ad> 
-header bits. The argument is of the form 
-C<< { ad => 1, aa => 0, ra => 1 } >>. 
+hashref with the settings for the C<aa>, C<ra>, and C<ad>
+header bits. The argument is of the form
+C<< { ad => 1, aa => 0, ra => 1 } >>.
 
 
 See RFC 1035 and the IANA dns-parameters file for more information:
@@ -631,7 +631,7 @@ method on the reply packet in the code you use for the ReplyHandler.
 Returns a Net::DNS::Nameserver object, or undef if the object
 couldn't be created.
 
-See L</EXAMPLE> for an example.	 
+See L</EXAMPLE> for an example.
 
 =head2 main_loop
 
@@ -672,7 +672,7 @@ A code fragment like:
 	}
 
 Would wait for 10 seconds for the initial connection and would then
-process all TCP sockets until none is left. 
+process all TCP sockets until none is left.
 
 =head2 get_open_tcp
 
@@ -688,12 +688,12 @@ answered with NXDOMAIN.	 Authority and additional sections are left empty.
 The $peerhost variable catches the IP address of the peer host, so that
 additional filtering on its basis may be applied.
 
- #!/usr/bin/perl 
- 
+ #!/usr/bin/perl
+
  use Net::DNS::Nameserver;
  use strict;
  use warnings;
- 
+
  sub reply_handler {
 	 my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
 	 my ($rcode, @ans, @auth, @add);
@@ -701,7 +701,7 @@ additional filtering on its basis may be applied.
 	 print "Received query from $peerhost to ". $conn->{"sockhost"}. "\n";
 	 $query->print;
 
-	 
+
 	 if ($qtype eq "A" && $qname eq "foo.example.com" ) {
 		 my ($ttl, $rdata) = (3600, "10.1.2.3");
 		 push @ans, Net::DNS::RR->new("$qname $ttl $qclass $qtype $rdata");
@@ -712,12 +712,12 @@ additional filtering on its basis may be applied.
 	 }else{
   	          $rcode = "NXDOMAIN";
 	 }
-	 
+
 
 	 # mark the answer as authoritive (by setting the 'aa' flag
 	 return ($rcode, \@ans, \@auth, \@add, { aa => 1 });
  }
- 
+
  my $ns = Net::DNS::Nameserver->new(
      LocalPort    => 5353,
      ReplyHandler => \&reply_handler,
@@ -745,12 +745,12 @@ sockets will then be created for each IP-address.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
 
 Portions Copyright (c) 2005-2009 O.M, Kolkman, RIPE NCC.
- 
+
 Portions Copyright (c) 2005 Robert Martin-Legene.
 
 All rights reserved.  This program is free software; you may redistribute
