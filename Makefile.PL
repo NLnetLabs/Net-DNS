@@ -38,26 +38,30 @@ my $help = 0;
 my $IPv6_tests;
 my $online_tests = 2;	# 2 = non-fatal, 1 = on, 0 = off
 my $use_xs;
+my $iphelper = 2; # only relevant for Cygwin
+		  # 2 = use when installed, 1 = use, 0 = don't use
+my @options = (
+    'xs!'           => \$use_xs,
+    'pm'            => sub { 
+	    warn qq/\n\tWARNING: Use of "--pm" is deprecated.  Use "--noxs" instead.\n\n/;
+	    $use_xs = 0;
+	},
+    'online-tests!' => \$online_tests,
+    'non-fatal-online-tests' => sub { $online_tests = 2; },
+    'IPv6-tests!'   => \$IPv6_tests,
+    'help|?'        => \$help,
+);
+if ($^O eq 'cygwin') {
+    push @options, ('iphelper!' => \$iphelper);
+};
 
-unless (GetOptions(
-	'xs!'           => \$use_xs,
-	'pm'            => sub { 
-		warn qq/\n\tWARNING: Use of "--pm" is deprecated.  Use "--noxs" instead.\n\n/;
-		$use_xs = 0;
-	},
-	'online-tests!' => \$online_tests,
-	'non-fatal-online-tests' => sub {
-		$online_tests = 2;
-	},
-	'IPv6-tests!'   => \$IPv6_tests,
-	'help|?'        => \$help,
-)) {
+unless (GetOptions(@options)) {
 	print "Error: Unrecognized option.\n"; print "Try perl Makefile.PL --help for more information\n";
 	exit 1;	
 };
 
 if ($help) {
-	print <<EOT;
+    print <<EOT;
 
 Usage: perl Makefile.PL [OPTION...]
 
@@ -78,10 +82,55 @@ Prepare Makefile for building and installing Net::DNS
 				make test.  This is the default.
 
 EOT
+    if ($^O eq 'cygwin') {
+        print <<EOT;
+  --iphelper --noiphelper	Use the Win32::IPHelper module to determine
+				network parameters like which nameservers to
+				use. Default is to not use Win32::IPHelper and
+				read those values from /proc/registry, unless
+				you are updating from a version of Net::DNS that
+				did use Win32::IPHelper.  In that case this 
+				version will still use Win32::IPHelper unless 
+				you explicitely disable it with --noiphelper.
 
+EOT
+    }
 	exit 0;
 };
-
+if ($^O eq 'cygwin') {
+    eval {
+	# Just testing if Net::DNS::Resolver::Win32 is installed, but
+	# Net::DNS::Resolver needs to be required first for it to load
+	# succesfully (if available).
+	require Net::DNS::Resolver;
+	require Net::DNS::Resolver::Win32; 
+    };
+    if (! $@ && $iphelper == 0) {
+	if ($Net::DNS::Resolver::Win32::VERSION < 932) {
+	    print "Explicitely removing Win32::IPHelper usage.\n\n";
+	} else {
+	    my $win32loc = $INC{'Net/DNS/Resolver/Win32.pm'};
+	    die <<EOT;
+You have indicated want to remove Win32::IPHelper usage. However, you are
+either doing a reinstall or a downgrade of an installation with Win32::IPHelper
+usage.  In your case, you have to delete the file:
+	$INC{'Net/DNS/Resolver/Win32.pm'}
+    by hand first, to build an install Net::DNS in this way.
+EOT
+	}
+	$iphelper = 0;
+    } else {
+	if ($iphelper == 2) {
+	    if ($@) {
+		$iphelper = 0;
+	    } else {
+		$iphelper = 1;
+	    }
+	}
+	print "Building with" . ($iphelper ? "" : "out")
+	    . " Win32::IPHelper.\n\n";
+    }
+}
 
 #
 # Get our makefile started...
@@ -339,6 +388,9 @@ netdns$(LIB_EXT): netdns$(OBJ_EXT)
 
 sub MY::libscan {
     my $path = $_[1];
-    return '' if $path =~ /\B\.svn\b/;
+    return '' if $path =~ /\B\.svn\b/
+		 ||    $^O eq 'cygwin'
+		    && ! $iphelper
+		    && $path =~ /\bNet[^\w]DNS[^\w]Resolver[^\w]Win32\.pm$/;
     return $path;
 }

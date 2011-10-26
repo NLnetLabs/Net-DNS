@@ -13,8 +13,13 @@ $VERSION = (qw$LastChangedRevision$)[1];
 		require Net::DNS::Resolver::Win32;
 		@ISA = qw(Net::DNS::Resolver::Win32);
 	} elsif ($^O eq 'cygwin') {
-		require Net::DNS::Resolver::Cygwin;
-		@ISA = qw(Net::DNS::Resolver::Cygwin);
+		eval { require Net::DNS::Resolver::Win32; };
+		if ($@ || $Net::DNS::Resolver::Win32::VERSION < 932) {
+		    require Net::DNS::Resolver::Cygwin;
+		    @ISA = qw(Net::DNS::Resolver::Cygwin);
+		} else {
+		    @ISA = qw(Net::DNS::Resolver::Win32);
+		}
 	} else {
 		require Net::DNS::Resolver::UNIX;
 		@ISA = qw(Net::DNS::Resolver::UNIX);
