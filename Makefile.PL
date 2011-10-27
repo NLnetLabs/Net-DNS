@@ -86,13 +86,12 @@ EOT
         print <<EOT;
   --iphelper --noiphelper	Use the Win32::IPHelper module to determine
 				network parameters like which nameservers to
-				use. Default is to not use Win32::IPHelper and
-				read those values from /proc/registry, unless
-				you are updating from a version of Net::DNS that
-				did use Win32::IPHelper.  In that case this 
-				version will still use Win32::IPHelper unless 
-				you explicitely disable it with --noiphelper.
-
+				use. When freshly installing Net::DNS, the
+				default is to not use Win32::IPHelper and
+				read those values from /proc/registry.
+				When updating, the default is to copy what the
+				installed version did.
+				
 EOT
     }
 	exit 0;
@@ -106,15 +105,18 @@ if ($^O eq 'cygwin') {
 	require Net::DNS::Resolver::Win32; 
     };
     if (! $@ && $iphelper == 0) {
-	if ($Net::DNS::Resolver::Win32::VERSION < 932) {
+	if ($Net::DNS::Resolver::Win32::VERSION <
+		MM->parse_version('lib/Net/DNS/Resolver/Win32.pm')) {
 	    print "Explicitely removing Win32::IPHelper usage.\n\n";
 	} else {
 	    my $win32loc = $INC{'Net/DNS/Resolver/Win32.pm'};
 	    die <<EOT;
 You have indicated want to remove Win32::IPHelper usage. However, you are
-either doing a reinstall or a downgrade of an installation with Win32::IPHelper
-usage.  In your case, you have to delete the file:
+either doing a reinstall or a downgrade of an installation which *did use
+Win32::IPHelper.  In your case, you have to delete the file:
+
 	$INC{'Net/DNS/Resolver/Win32.pm'}
+
     by hand first, to build an install Net::DNS in this way.
 EOT
 	}
@@ -127,8 +129,8 @@ EOT
 		$iphelper = 1;
 	    }
 	}
-	print "Building with" . ($iphelper ? "" : "out")
-	    . " Win32::IPHelper.\n\n";
+	print "Build will" . ($iphelper ? "" : " not")
+	    . " use Win32::IPHelper.\n\n";
     }
 }
 
@@ -153,16 +155,16 @@ my %Makefile = (
 
 
 
-if ($^O eq 'MSWin32') {
-    unless(    eval {require WIN32::API; }	   ){
+if ($^O eq 'MSWin32' || $^O eq "cygwin" && $iphelper ) {
+    unless( eval { local $SIG{__WARN__} = sub {}; require WIN32::API; }	){
 	warn <<AMEN; 
 I can not find WIN32::API version 0.55 or higher.
 I will add WIN32::API to the list of prerequisites.
 AMEN
 
 
-if ( $^O eq "MSWin32" ){
-    warn <<AMEN2;
+	if ( $^O eq "MSWin32" ){
+	    warn <<AMEN2;
 Note that, WIN32::API is included in recent versions
 of ActivePerl (5.10 since build 1003) and recent
 versions of Strawberry perl (at least in the October
@@ -170,7 +172,7 @@ version of 5.10.0.3) and the module has not be
 tested with other versions. In case of failure please
 consider upgrading.
 AMEN2
-}
+	}
 
 
     }
@@ -178,28 +180,6 @@ AMEN2
     $Makefile{'PREREQ_PM'}->{'Win32::IPHelper'} = 0.07;
     $Makefile{'PREREQ_PM'}->{'Win32::API'} = 0.55;
     $Makefile{'PREREQ_PM'}->{'Win32::TieRegistry'} = 0;
-
-    # On 64 bit versions of windows Win32::IPHelper <= 0.06 is known not to 
-    # work.
-    # 
-    if ( $INC{'Win32/IPHelper.pm'} || eval {
-		    	local $SIG{__WARN__} = sub {};
-		    	require Win32::IPHelper;
-		} && ($ENV{'PROCESSOR_ARCHITECTURE'} =~ /64/
-		  ||  $ENV{'PROCESSOR_ARCHITEW6432'} =~ /64/)
-		  && $Win32::IPHelper::VERSION < 0.07 ) {
-	    warn <<IPHelper64bitWarning;
-
-WARNING!
-========
-You have a Win32::IPHelper version $Win32::IPHelper::VERSION.  On 64bit machines Net::DNS::Resolver
-will not work with a Win32::IPHelper before version 0.07.  Please upgrade your
-Win32::IPHelper module.
-
-
-IPHelper64bitWarning
-
-    }
 }
 
 

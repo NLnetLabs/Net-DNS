@@ -14,7 +14,14 @@ $VERSION = (qw$LastChangedRevision$)[1];
 		@ISA = qw(Net::DNS::Resolver::Win32);
 	} elsif ($^O eq 'cygwin') {
 		eval { require Net::DNS::Resolver::Win32; };
-		if ($@ || $Net::DNS::Resolver::Win32::VERSION < 932) {
+
+		# Keep $win32version up to date with the value of
+		# $Net::DNS::Resolver::Win32::VERSION
+		#
+		my $win32version = 932; # WIN32VERSION - do not remove!
+					#              - used in t/00-version.t
+
+		if ($@ || $Net::DNS::Resolver::Win32::VERSION < $win32version) {
 		    require Net::DNS::Resolver::Cygwin;
 		    @ISA = qw(Net::DNS::Resolver::Cygwin);
 		} else {
