@@ -3,9 +3,24 @@ $Id$                       -*-text-*-
 
 **** 0.67 Oct ??, 2011
 
+Enhancement  rt.cpan.org #60726
+
+        On Cygwin Net::DNS now builds without Win32::IPHelper, unless a 
+        previous version is updated that did use it. 
+        The choice may also be set by the --iphelper or --noiphelper option
+        to Makefile.PL.
+
+Fix to supress IO::Socket::INET(6)::peerhost usage with TCP. On some systems
+        It doesn't work after receiving data.
+
+Enhancement rt.cpan.org #43142
+
+        Allow ReplyHandlers to indicate that no answer should be returned
+        by the Net::DNS::Nameserver.
+
 Fix rt.cpan.org #71796
 
-	Prevent TCP accepts from blocking on unfinished 3-way handi shakes.
+	Prevent TCP accepts from blocking on unfinished 3-way hand shakes.
 
 Fix rt.cpan.org #65607
 

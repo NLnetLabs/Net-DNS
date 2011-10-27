@@ -67,9 +67,9 @@ Usage: perl Makefile.PL [OPTION...]
 
 Prepare Makefile for building and installing Net::DNS
 
-  --xs | --noxs			Enable or disable linkage to the libresolv 
-				library Default the libresolv library is 
-				linked when a compiler is found.
+  --xs | --noxs			Enable or disable the C module.
+				Default the C module is build when
+                                a compiler is found.
 
   --online-tests		Perform tests by communicating with the
 				outside world.  Beware that their success is
@@ -86,8 +86,8 @@ EOT
         print <<EOT;
   --iphelper --noiphelper	Use the Win32::IPHelper module to determine
 				network parameters like which nameservers to
-				use. When freshly installing Net::DNS, the
-				default is to not use Win32::IPHelper and
+				use.  When freshly installing Net::DNS, the
+				default is to *not* use Win32::IPHelper and
 				read those values from /proc/registry.
 				When updating, the default is to copy what the
 				installed version did.

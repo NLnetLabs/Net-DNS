@@ -34,8 +34,8 @@ out about known bugs and to see what's planned for future versions,
 see the TODO file.
 
 Net::DNS does not depend on any C libraries.  However, if possible
-Net::DNS tries to link against a C-library that is supplied with the
-code.  This provides a notable speed increase.
+Net::DNS tries to link against a C-module (library) that is supplied 
+with the code.  This provides a notable speed increase.
 
 The author invites feedback on Net::DNS.  If there's something you'd
 like to have added, please let me know.  If you find a bug, please
@@ -85,7 +85,6 @@ available.
      MIME::Base64     
      Digest::MD5  
      Digest::HMAC_MD5
-     Net::IP
 
 
 For IPv6 support you will need Socket6 and IO::Socket::INET6.  The availability
@@ -122,9 +121,9 @@ To build this module, run the following commands:
     make test
     make install
 
-Net::DNS can optionally link to the libresolv library.  This speeds
+Net::DNS can optionally link with a included C module.  This speeds
 up parts of the packet parsing process.  The Makefile.PL script will
-attempt to determine if the library can be used.  To override 
+attempt to determine if the C module can be used.  To override 
 Makefile.PL's guess, use the '--xs' option to force linking the library:
 
 	perl Makefile.PL --xs
@@ -136,7 +135,8 @@ Use the '--noxs' option to use the pure perl version:
 
 If you wish to not run the online tests, the '--no-online-tests'
 option can be used.  Similarly, '--online-tests' will enable the 
-online tests.
+online tests.  Online tests will be run by default, but the result
+will not negatively affect the outcome of test suite.
 
 Also, if you wish to not run the IPv6 tests, the '--no-IPv6-tests'
 option can be used.  Similarly, '--IPv6-tests' will enable the 
@@ -232,7 +232,7 @@ is distributed as a separate package.
 10. BUGS
 --------
 
-Net::DNS, while over four years old, is still under development and is
+Net::DNS, while over fourteen years old, is still under development and is
 sure to contain a few bugs.  Please see the TODO and Changes files for
 more information.
 
