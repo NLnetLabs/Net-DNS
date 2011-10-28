@@ -2,7 +2,7 @@
 
 use strict;
 use diagnostics;
-use Test::More;
+use Test::More "no_plan";
 
 
 BEGIN {
@@ -65,5 +65,5 @@ foreach my $rr (@rrs) {
 
 
 ##############
-done_testing()
+#done_testing()
 ##############
