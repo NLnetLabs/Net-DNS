@@ -42,7 +42,7 @@ SKIP : {
     while (<$fh>) {
 	chomp;
 	if ( m/[^\d](\d+)\s*;?\s*#\s*WIN32VERSION\b/ ) {
-	    ok($win32version == $1, 'win32version in Resolver.pm matches '
+	    ok($1 <= $win32version, 'win32version in Resolver.pm <= '
 				  . '$Net::DNS::Resolver::Win32::VERSION' );
 	    last;
 	}
