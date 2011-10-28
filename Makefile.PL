@@ -325,6 +325,11 @@ EOF
 	close(F) or return;
 
 	my $ret = system("$Config{'cc'}  -c compile.c -o compile$Config{obj_ext}");
+	if ($ret == 0) {
+	    $ret = system("$Config{'ar'} "
+		. ($^O eq 'MSWin32' && $Config{'cc'} eq 'cl'?'/OUT:':'cr ')
+		. " compile$Config{lib_ext} compile$Config{obj_ext}");
+	}
 	
 	foreach my $file (glob('compile*')) {
 		unlink($file) || warn "Could not delete $file: $!\n";
