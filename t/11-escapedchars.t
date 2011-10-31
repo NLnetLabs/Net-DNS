@@ -16,7 +16,7 @@ if ( $] < 5.006 ){
 }
 else
 { 
-    plan tests => 141;
+    plan tests => 134;
 }
 #
 # We test al sorts of escaped non-ascii characters. 
@@ -71,14 +71,6 @@ my @testcombos=(
 	 "04626c61ff03666f6f036f726700" 
 	],
 
-	[
-	 'bla.f\xa9oo.org', 
-	 'bla.f\169oo.org',
-	 3,
-	 [3,4,3] ,
-#Wire:            3 b l a 4 f 0xa9 o o 3 o r g 0		  
-	 "03626c610466a96f6f036f726700" 		 
-	],   # Note hex to decimal
 	['bla.fo\.o.org',
 	 'bla.fo\.o.org',
 	 3,
