@@ -483,8 +483,6 @@ sub presentation2wire {
             #backslash found
             if ($presentation =~ /\G(\d\d\d)/gc) {
                 $wire.=pack("C",$1);
-            } elsif ($presentation =~ /\Gx([0..9a..fA..F][0..9a..fA..F])/gc){
-                $wire.=pack("H*",$1);
             } elsif ($presentation =~ /\G([@().\\])/gc){
                 $wire .= $1;
             }
