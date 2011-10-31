@@ -22,7 +22,7 @@ sub freeport {
     my @sockets = map { IO::Socket::INET->new(Listen => 1) } (1..shift);
     return map { $_->sockport } @sockets;
 }
-my ($TestPort1, $TestPort2, $TestPort3, $TestPort4) = freeport(4);
+($TestPort1, $TestPort2, $TestPort3, $TestPort4) = freeport(4);
 
 package MyNameserver;
 
