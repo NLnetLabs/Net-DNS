@@ -17,11 +17,12 @@ use vars qw(
             $lameloop
 	    );
 
-$TestPort1 = 53000 + int(rand(250));
-$TestPort2 = 53250 + int(rand(250));
-$TestPort3 = 53500 + int(rand(250));
-$TestPort4 = 53750 + int(rand(250));
 $address   = "127.0.0.1";
+sub freeport {
+    my @sockets = map { IO::Socket::INET->new(Listen => 1) } (1..shift);
+    return map { $_->sockport } @sockets;
+}
+my ($TestPort1, $TestPort2, $TestPort3, $TestPort4) = freeport(4);
 
 package MyNameserver;
 
