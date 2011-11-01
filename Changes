@@ -10,8 +10,8 @@ Enhancement  rt.cpan.org #60726
         The choice may also be set by the --iphelper or --noiphelper option
         to Makefile.PL.
 
-Fix to supress IO::Socket::INET(6)::peerhost usage with TCP. On some systems
-        It doesn't work after receiving data.
+Fix to suppress IO::Socket::INET(6)::peerhost usage with TCP. On some systems
+        it doesn't work after receiving data.
 
 Enhancement rt.cpan.org #43142
 
@@ -20,7 +20,7 @@ Enhancement rt.cpan.org #43142
 
 Fix rt.cpan.org #71796
 
-	Prevent TCP accepts from blocking on unfinished 3-way hand shakes.
+	Prevent TCP accepts from blocking on unfinished 3-way handshakes.
 
 Fix rt.cpan.org #65607
 
@@ -32,7 +32,7 @@ Fix rt.cpan.org #66470
 	Named nameserver should be reachable by IPv6 too.
 
 Fix to make tests work in jailed environments where a reply might come
-	from a different address then that of the loopback interface.
+	from a different address than that of the loopback interface.
 
 Feature to use a class method ReplyHandler for classes inheriting from
 	Net::DNS::Nameserver.
@@ -50,7 +50,7 @@ Fix rt.cpan.org #68731
 
 New improved version of the check_soa script in the contrib section.
 	
-	A contribtion from Dick Franks.
+	A contribution from Dick Franks.
 
 Fix rt.cpan.org #70830
 
@@ -62,7 +62,7 @@ Fix rt.cpan.org #24525
 	Removed dependency on Net::IP
 
 Fix online tests to use the library as documented and not use knowledge of the
-	internal workings of the classses that should be hidden..
+	internal workings of the classes that should be hidden.
 
 	A contribution from Dick Franks
 
@@ -89,21 +89,21 @@ Fix rt.cpan.org #68338
 
 Enhancement rt.cpan.org #67418
 
-	A contribution from Wolfsage to more efficiently perform presentation
-	to wire format conversion.
+	A contribution from Wolfsage to perform presentation to wire format
+	conversion more efficiently.
 
 Fix rt.cpan.org #67133
 
 	Gracefully handle corrupted incoming packets in Net::DNS::Nameserver.
 
-Feature to manage serial numbers in SOA records in a modular and extendible way.
+Feature to manage serial numbers in SOA records in a modular and extensible way.
 
-	Three modules are provided. Strictly sequential, Data Encoded and 
+	Three modules are provided. Strictly sequential, Date Encoded and 
 	Time Encoded.  A contribution from Dick Franks.
 
 Fix rt.cpan.org #53325
 
-	Make Net::DNS::Resolver load even is /etc/resolve.conf is unreadable.
+	Make Net::DNS::Resolver load even if /etc/resolv.conf is unreadable.
 
 Fix rt.cpan.org #63486
 
@@ -147,7 +147,7 @@ Fix rt.cpan.org #61725
 
 Fix rt.cpan.org #63321
 
-	A Net::DNS::Nameserver without a NotifyHanler now responds NOTIMP
+	A Net::DNS::Nameserver without a NotifyHandler now responds NOTIMP
  	to NOTIFY requests.
 
 Fix rt.cpan.org #53595
@@ -179,8 +179,8 @@ Feature Truncation for Nameserver
 
 
 Feature: Added Net::DNS::Domain
-    Net::DNS::Domain is an attemt to consistently approach the various
-    ways we interface with what RFC 1035 calls <domain-name>. 
+    Net::DNS::Domain is an attempt to introduce a consistent model
+    for representation of RFC 1035 <domain-name>s.
 
     The class and its test script t/02-domain.t are included to be
     exposed to various architectures.
@@ -198,7 +198,7 @@ Fix improved fuzzy matching of CLASS and TYPE in the Question
 Fix rt.cpan.org #43770
 
     Update->rr_del() was reported broken for AAAA after 0.65.
-    The same bug also occured in HINFO RR.
+    The same bug also occurred in HINFO RR.
 
 
 Fix rt.cpan.org #43765
@@ -222,7 +222,7 @@ Fix rt.cpan.org #47265 (partial)
 Feature KX RR
     
     Added support for the KX RR, RFC2230
-    The implementation is trivial since the KX inherets almost all of
+    The implementation is trivial since the KX inherits almost all of
     its functionality by inheritance from the MX RR.
 
 
@@ -238,7 +238,7 @@ Fix rt.cpan.org #52307 AAAA v4compat parsing bug
 Fix AAAA dynamic update
 
     Dynamic update of AAAA caused FORMERR on the prerequisite caused
-    by AAAA creating rdata even when an address whas never specified.
+    by AAAA creating rdata even when an address was never specified.
     This fix may cause difference in behavior for people who expect a
 
     NULL address ("::") when creating a AAAA without an address
@@ -275,7 +275,7 @@ Fix rt.cpan.org #43393
     Typo in 01-resolver.t
 
 Fix rt.cpan.org #43273
-    Added check for unitialized opcode in headermask in
+    Added check for uninitialized opcode in headermask in
     Nameserver.pm
 
 Fix rt.cpan.org #46635
@@ -288,7 +288,7 @@ Fix rt.cpan.org #51009
 Fix rt.cpan.org #49035
 
     Comment parsing fixed: Semicolon in character string blocks (such
-    as in TXT and NPTR) were only recognized when escaped.
+    as in TXT and NAPTR) were only recognized when escaped.
     Also fixed the NAPTR regular expression to not interpret 
     "bla' 'foo" as two strings bla and foo, but as one: bla' 'foo
 
@@ -343,13 +343,13 @@ Fix rt.cpan.org #21757 and Feature: Connectivity during test
     Makefile instead of one.
 
     Besides the test suites are constructed so that all the connectivity testing
-    happen in 001-connectivity.t and inavailability of connectivity over a certain
-    transport is signalled over files t/online.disabled and t/IPv6.disabled respectivly.
+    happen in 001-connectivity.t and nonavailability of connectivity over a certain
+    transport is signaled over files t/online.disabled and t/IPv6.disabled respectively.
     Both files are removed by t/99-cleanup
 
 Fix rt.cpan.org #34511
     Priming query logic contained unneeded recursion. 
-    Now also fals back to hardcoded hints if there are no nameservers whatsoever.
+    Now also falls back to hardcoded hints if there are no nameservers whatsoever.
 
 Fix rt.cpan.org #38390 and 37089
     Added CD and AD bit control to the resolver.
@@ -365,9 +365,9 @@ Fix rt.cpan.org #37282
 NOTE rt.cpan.org # 40249
 
    Release 0.62 introduced a feature to parse data inside a packet only 
-   when needed. This can the following to happen:
+   when needed. This can cause the following to happen:
 
-   Eception: corrupt or incomplete data at
+   Exception: corrupt or incomplete data at
                      /usr/lib/perl5/Net/DNS/RR.pm line 510.  
    caught at -e line 1
 
@@ -377,7 +377,7 @@ NOTE rt.cpan.org # 40249
    $packet = Net::DNS::Packet->new(\$data);
    undef($data);
 
-   The workaround is to force parcing by calling the methods that 
+   The workaround is to force parsing by calling the methods that 
    parse the data. e.g.
 
    $packet = Net::DNS::Packet->new(\$data);
@@ -399,7 +399,7 @@ Fix rt.cpan.org # 41296
 
 Fix rt.cpan.org # 35752
 
-  Perl 5.10.0 gave a number of issues on several platforms, prefering
+  Perl 5.10.0 gave a number of issues on several platforms, preferring
   XSLoader over Dynaloader seemed to fix those.
  
 
@@ -408,7 +408,7 @@ Bug rt.cpan.org #34510
   
 Feature (rt.cpan.org #39284)
 
-  The ReplyHandler now also receives a variable with an annonymous has with the connection details. Variables
+  The ReplyHandler now also receives a variable with an anonymous hash with the connection details. Variables
   supplied to the Reply handler are:  $qname, $qclass, $qtype, $peerhost, $query, $conn	
   The hash referenced by $conn contains the following buckets: sockhost, sockport,  peerhost, and peerport.
   
@@ -426,7 +426,7 @@ Feature t/08-online.t and t/10-recurse.t
 Feature/Bug rt.cpan.org #22019 
 
   The initial fix for rt 22019 was to strip a trailing dot from all
-  attributes that where povided as argument for the
+  attributes that were provided as argument for the
   Net::DNS::RR::new_from_hash function.  We have introduced
   Net::DNS::stripdot, a function that will strip the dots of domain
   names, taking into account possible escapes (e.g. labels like
@@ -569,7 +569,7 @@ Fix rt.cpan.org #29531
 Fix rt.cpan.org #27970 better netdns.o
 
     Marek Rouchal provided two minor improvements for linking the C
-    code sniplets
+    code snippets
 
 
 Fix rt.cpan 28345
