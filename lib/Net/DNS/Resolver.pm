@@ -8,7 +8,7 @@ use vars qw($VERSION @ISA);
 
 $VERSION = (qw$LastChangedRevision$)[1];
 
-#BEGIN {
+BEGIN {
 	if ($^O eq 'MSWin32') {
 		require Net::DNS::Resolver::Win32;
 		@ISA = qw(Net::DNS::Resolver::Win32);
@@ -27,7 +27,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 		require Net::DNS::Resolver::UNIX;
 		@ISA = qw(Net::DNS::Resolver::UNIX);
 	}
-#}
+}
 
 __PACKAGE__->init();
 
