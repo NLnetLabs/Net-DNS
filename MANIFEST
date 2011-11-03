@@ -81,7 +81,6 @@ t/.resolv.conf
 t/00-load.t
 t/00-pod.t
 t/00-version.t
-t/001-connection-checks.t
 t/01-resolver-env.t
 t/01-resolver-file.t
 t/01-resolver-flags.t
