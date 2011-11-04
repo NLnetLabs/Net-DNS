@@ -48,7 +48,7 @@ BEGIN {
 
 
 
-    $VERSION = '0.67';
+    $VERSION = '0.67_01';
     $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
