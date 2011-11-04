@@ -127,6 +127,9 @@ EOT
 my %Makefile = (
 	NAME	     => 'Net::DNS',
 	VERSION_FROM => 'lib/Net/DNS.pm',
+	ABSTRACT     => 'Perl DNS resolver module',
+	AUTHOR	     => 'Olaf Kolkman <olaf@net-dns.org>',
+	LICENSE	     => 'perl',
 	PREREQ_PM    => {
 		'Test::More'	   => 0.18,
 		'IO::Socket'	   => 0,
@@ -176,17 +179,6 @@ AMEN2
 }
 
 
-# Not relevant with netdnslib.
-#if ($^O eq 'darwin' and $Config{'osvers'} =~ m/^[78]\./) {
-#	$Makefile{'DEFINE'} = '-DBIND_8_COMPAT';
-#}
-
-if ( $] >= 5.005 ) {
-	$Makefile{'AUTHOR'}   = 'Olaf Kolkman <olaf@net-dns.org>';
-	$Makefile{'ABSTRACT'} = 'Perl DNS resolver module';
-}
-
-
 #
 # Check if we have a C compiler
 
@@ -197,6 +189,7 @@ unless ( defined $use_xs ) {
 		$Makefile{'MYEXTLIB'} = 'netdns$(LIB_EXT)';
 	} else {
 		$use_xs = 0;
+		$Makefile{'MYEXTLIB'} = '';
 		print <<END;
 	
 I cannot determine if you have a C compiler. I will install the 
@@ -206,10 +199,9 @@ You can force installation of the XS version with:
 
 	perl Makefile.PL --xs
 END
-		$Makefile{'MYEXTLIB'} = '',
-
 	}
 }
+
 
 if ($use_xs) {
 
@@ -248,6 +240,7 @@ EOT
 
 }
 
+
 if ($online_tests) {
 	if ( $online_tests == 2 ) {
 		print "\nActivating Non Fatal Online Tests...\n\n";
@@ -257,7 +250,7 @@ if ($online_tests) {
 	print <<EOT;
 Warning!
 ========
-Online tests depend on conditions out of the control of Net::DNS. The tests 
+Online tests depend on conditions beyond the control of Net::DNS. The tests 
 check for the expected results when both Net::DNS and the outside world are
 functioning properly. In case of failure it is often undecidable if the error
 lies with Net::DNS or elsewhere.
@@ -324,9 +317,10 @@ EOF
 
 	my $ret = system("$Config{'cc'}	 -c compile.c -o compile$Config{obj_ext}");
 
+	my $ar = exists $Config{'full_ar'} ? $Config{'full_ar'} : $Config{'ar'};
 	my $cr = ( $^O eq 'MSWin32' && $Config{'cc'} eq 'cl' ? '/OUT:' : 'cr ' );    # ar action
 
-	$ret = system( "$Config{'ar'} " . $cr . " compile$Config{lib_ext} compile$Config{obj_ext}" )
+	$ret = system( "$ar $cr compile$Config{lib_ext} compile$Config{obj_ext}" )
 			unless $ret;
 
 	foreach my $file ( glob('compile*') ) {
@@ -338,14 +332,6 @@ EOF
 
 
 package MY;
-
-sub metafile {
-	my $self = shift;
-	my $meta = $self->SUPER::metafile_target(@_);
-	my ($extra) = $self->echo( 'license: perl', 'META.yml', 1 );
-	return "$meta\t$extra\n";
-}
-
 
 use Config qw(%Config);
 
@@ -359,20 +345,18 @@ test_cover : pure_all
 	cover
 
 netdns$(LIB_EXT): netdns$(OBJ_EXT)
-	$(AR) ' . $cr . 'netdns$(LIB_EXT) netdns$(OBJ_EXT)
-	$(RANLIB) netdns$(LIB_EXT)
+	$(FULL_AR) ' . $cr . '$@ netdns$(OBJ_EXT)
+	$(RANLIB) $@
 
 ';
 
-#	print "$content";
 	return $content;
-
 }
 
 
 sub MY::libscan {
 	my $path = $_[1];
 	return '' if $path =~ /\B\.svn\b/;
-	return '' if $^O eq 'cygwin' && !$iphelper && $path =~ /\bNet[^\w]DNS[^\w]Resolver[^\w]Win32\.pm$/;
+	return '' if $^O eq 'cygwin' && !$iphelper && $path =~ /Resolver[^\w]Win32\.pm$/;
 	return $path;
 }
