@@ -58,7 +58,7 @@ BEGIN{
     my @full_response;
     my $ns = Net::DNS::Nameserver->new(
         LocalPort    => $TestPort,
-	LocalAddres  => $Address,
+	LocalAddr    => $Address,
         ReplyHandler => sub { NOERROR => @full_response },
     );
     for (trad_query(), edns_query(1024), edns_query(2048)) {

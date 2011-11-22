@@ -59,7 +59,9 @@ sub new {
 	}
 
 	# local server addresses must also be accepted by a resolver
-	my @LocalAddr = ref $self{LocalAddr} ? @{$self{LocalAddr}} : ($self{LocalAddr});
+	my @LocalAddr = ref $self{LocalAddr} 
+		? @{$self{LocalAddr}} 
+		: ($self{LocalAddr} || DEFAULT_ADDR);
 	my $resolver = Net::DNS::Resolver->new;
 	$resolver->force_v4(1) unless $has_inet6;
 	$resolver->nameservers(undef);
@@ -75,7 +77,7 @@ sub new {
 	# while we are here, print incomplete lines as they come along.
 	local $| = 1 if $self{Verbose};
 
-	foreach my $addr ( @localaddresses ? @localaddresses : DEFAULT_ADDR ){
+	foreach my $addr ( @localaddresses ){
 
  	    #--------------------------------------------------------------------------
  	    # Create the TCP socket.
