@@ -41,20 +41,20 @@ use integer;
 use Carp;
 
 
-use constant UTF8 => eval {
+use constant ASCII => eval {
 	require Encode;
+	Encode::find_encoding('ASCII');				# return encoding object
+} || 0;
+
+use constant UTF8 => eval {
 	die if Encode::decode_utf8( chr(91) ) ne '[';		# specifically not UTF-EBCDIC
 	Encode::find_encoding('UTF8');				# return encoding object
-} || undef;
-
-use constant ASCII => eval {
-	Encode::find_encoding('ASCII');				# return encoding object
-} || undef;
+} || 0;
 
 use constant LIBIDN => eval {
 	require Net::LibIDN;					# tested and working
 	UTF8 && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
-} || undef;
+} || 0;
 
 
 =head1 METHODS

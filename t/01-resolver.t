@@ -1,36 +1,37 @@
-# $Id$  -*-perl-*-
+# $Id$	-*-perl-*-
 
-use Test::More tests => 49;
 use strict;
-use File::Spec;
+use Test::More tests => 47;
 use t::NonFatal;
 
-BEGIN { use_ok('Net::DNS'); }
+use Net::DNS;
 
 my $res = Net::DNS::Resolver->new();
 
-ok($res,                           'new() returned something');
-isa_ok($res, 'Net::DNS::Resolver', 'new() returns an object of the correct class.');
-ok(scalar $res->nameservers,       'nameservers() works');
+for (qw[Cygwin Win32]) {
+	diag $_ if eval { $res->SUPER::isa("Net::DNS::Resolver::$_") };
+}
+
+isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );
 
 
-
+ok( scalar $res->nameservers, 'nameservers() works' );
 
 
 
 my $searchlist = [qw(t.net-dns.org t2.net-dns.org)];
 
 is_deeply([$res->searchlist(@$searchlist)], $searchlist, 'setting searchlist returns correctly.');
-is_deeply([$res->searchlist],               $searchlist, 'setting searchlist stickts.');
+is_deeply([$res->searchlist],               $searchlist, 'setting searchlist sticks.');
 
 my %good_input = (
-	port		   => 54,
+	port	       => 54,
 	srcaddr        => '10.1.0.1',
 	srcport        => 53,
 	domain	       => 'net-dns.org',
 	retrans	       => 6,
-	retry		   => 5,
-	usevc		   => 1,
+	retry	       => 5,
+	usevc	       => 1,
 	stayopen       => 1,
 	igntc          => 1,
 	recurse        => 0,

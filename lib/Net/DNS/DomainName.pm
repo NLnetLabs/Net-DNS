@@ -182,14 +182,14 @@ sub encode {
 	while (@labels) {
 		my $name = join( '.', @labels );
 
-		return $data . pack( 'n', $hash->{$name} ) if defined $hash->{$name};
+		return $data . pack( 'n', 0xC000 | $hash->{$name} ) if defined $hash->{$name};
 
 		my $label  = shift @labels;
 		my $length = length $label;
 		$data .= pack( 'C a*', $length, $label );
 
 		next unless $offset < 0x4000;
-		$hash->{$name} = 0xC000 | $offset;
+		$hash->{$name} = $offset;
 		$offset += 1 + $length;
 	}
 	$data .= chr(0);

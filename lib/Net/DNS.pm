@@ -503,11 +503,11 @@ sub presentation2wire {
 #	$successor = $soa->serial(YYYYMMDDxx);
 #
 
-sub SEQUENTIAL() { undef }
+sub SEQUENTIAL { undef }
 
-sub UNIXTIME() { return CORE::time; }
+sub UNIXTIME { return CORE::time; }
 
-sub YYYYMMDDxx() {
+sub YYYYMMDDxx {
 	my ( $dd, $mm, $yy ) = ( localtime )[3 .. 5];
 	return 1900010000 + sprintf '%d%0.2d%0.2d00', $yy, $mm, $dd;
 }
