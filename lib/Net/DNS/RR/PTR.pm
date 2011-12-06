@@ -42,7 +42,7 @@ sub rr_rdata {
 	my $rdata = "";
 
 	if (exists $self->{"ptrdname"}) {
-		$rdata .= $packet->dn_comp(lc($self->{"ptrdname"}), $offset);
+		$rdata .= $packet->dn_comp($self->{"ptrdname"}, $offset);
 	}
 
 	return $rdata;
@@ -62,7 +62,7 @@ sub  _canonicalRdata {
 	my $rdata = "";
 
 	if (exists $self->{"ptrdname"}) {
-		$rdata .= $self->_name2wire($self->{"ptrdname"});
+		$rdata .= $self->_name2wire(lc($self->{"ptrdname"}));
 	}
 
 	return $rdata;

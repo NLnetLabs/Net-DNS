@@ -132,7 +132,7 @@ $resolver->usevc(1);
 sleep 1;
 
 my $answer = $resolver->query("example.", "TXT"); 
-is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"MyReplyHandler"), "ReplyHandler as parameter");
+like($answer && $answer->answer > 0 && ($answer->answer)[0]->string, '/MyReplyHandler/', "ReplyHandler as parameter");
 
 wait;
 
@@ -147,7 +147,7 @@ $resolver->port($TestPort2);
 sleep 1;
 
 $answer = $resolver->query("example.", "TXT"); 
-is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"MyNameserver"), "ReplyHandler as method");
+like($answer && $answer->answer > 0 && ($answer->answer)[0]->string, '/MyNameserver/', "ReplyHandler as method");
 
 wait;
 
@@ -162,7 +162,7 @@ $resolver->port($TestPort3);
 sleep 1;
 
 $answer = $resolver->query("example.", "TXT"); 
-is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"AnotherNameserver"), "ReplyHandler as method in the super class");
+like($answer && $answer->answer > 0 && ($answer->answer)[0]->string, '/AnotherNameserver/', "ReplyHandler as method in the super class");
 
 wait;
 
@@ -177,6 +177,6 @@ $resolver->port($TestPort4);
 sleep 1;
 
 $answer = $resolver->query("example.", "TXT"); 
-is($answer && $answer->answer > 0 && ($answer->answer)[0]->string, q(example.	3600	IN	TXT	"YetAnotherNameserver"), "Overloaded ReplyHandler");
+like($answer && $answer->answer > 0 && ($answer->answer)[0]->string, '/YetAnotherNameserver/', "Overloaded ReplyHandler");
 
 
