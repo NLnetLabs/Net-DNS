@@ -121,10 +121,12 @@ Parsing is aborted if the question object cannot be created (e.g., corrupt or in
 
 use constant PACKED_LENGTH => length pack 'n2', (0)x2;
 
+sub decode { &parse; }			## facilitate architecture transition
+
 sub parse {
 	my ($class, $data, $offset) = @_;
 
-	my ($qname, $index) = Net::DNS::Packet::dn_expand($data, $offset);
+	my ($qname, $index) = Net::DNS::Packet::dn_expand($data, $offset || 0);
 	die 'Exception: corrupt or incomplete data' unless $index;
 
 	my $next = $index + PACKED_LENGTH;
@@ -230,6 +232,12 @@ be stored.  This information is necessary for using compressed
 domain names.
 
 =cut
+
+sub encode {			## facilitate architecture transition
+	my ( $self, $offset, $hash, $packet ) = @_;
+	$packet->{compnames} = $hash || {};
+	return $self->data( $packet, $offset || 0 );
+}
 
 sub data {
 	my ($self, $packet, $offset) = @_;

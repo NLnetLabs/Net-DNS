@@ -138,6 +138,9 @@ a nameserver.
 
 sub data {
 	my $self = shift;
+
+	return ${$self->{buffer}} if $self->{buffer};	# retransmit raw packet
+
 	my $data = '';
 	my $header = $self->{header};
 

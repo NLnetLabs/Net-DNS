@@ -88,9 +88,8 @@ t/01-resolver-opt.t
 t/01-resolver.t
 t/02-domain.t
 t/02-domainname.t
-t/02-header.t
+t/03-header.t
 t/03-question.t
-t/04-packet-unique-push.t
 t/04-packet.t
 t/05-apl.t
 t/05-rr-opt.t
@@ -100,6 +99,7 @@ t/05-rr-txt.t
 t/05-rr-unknown.t
 t/05-rr.t
 t/05-rr-various.t
+t/06-packet-unique-push.t
 t/06-update.t
 t/07-misc.t
 t/08-online.t
@@ -109,7 +109,6 @@ t/11-escapedchars.t
 t/11-inet6.t
 t/12-compression.t
 t/13-udp-trunc.t
-t/17-pure-virtual-replyhandler.t 
 t/99-cleanup.t
 t/NonFatal.pm
 t/TestData.pm

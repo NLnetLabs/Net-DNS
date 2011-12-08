@@ -39,18 +39,17 @@ foreach my $method ( qw(question answer authority additional) ) {
 	ok(@result == 0,	"$method() returns empty list");
 }
 
-#	Default question added to empty packet
-my $default = Net::DNS::Question->new(qw(. ANY ANY));
-ok($empty->data,	'packet->data() method works');
-my ($implicit) = $empty->question;
-is($implicit->string,	$default->string,	'implicit question in empty packet' );
+
+#	data() method returns non-empty scalar
+my $packet_data = $packet->data;
+ok($packet_data,	'packet->data() method works');
 
 
 #	new(\$data) class constructor method returns object of appropriate class
-my $packet_data = $packet->data;
 my $packet2 = Net::DNS::Packet->new(\$packet_data);
 isa_ok($packet2,	'Net::DNS::Packet',	'new(\$data) object');
 is($packet2->string, $packet->string, 'decoded packet matches original');
+is(unpack('H*', $packet2->data), unpack('H*', $packet_data), 'retransmitted packet matches original');
 
 
 #	new(\$data) class constructor raises exception when data truncated
