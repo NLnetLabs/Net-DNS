@@ -1,65 +1,71 @@
 package Net::DNS::Packet;
+
 #
 # $Id$
 #
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
+
+
+=head1 NAME
+
+Net::DNS::Packet - DNS protocol packet
+
+=head1 SYNOPSIS
+
+    use Net::DNS::Packet;
+
+    $packet = new Net::DNS::Packet('example.com', 'MX', 'IN');
+
+    $resolver->send($packet);
+
+
+=head1 DESCRIPTION
+
+A C<Net::DNS::Packet> object represents a DNS protocol packet.
+
+=cut
+
+
 use strict;
-
-BEGIN {
-    eval { require bytes; }
-}
-
-use vars qw(@ISA @EXPORT_OK $VERSION $AUTOLOAD);
-
+use integer;
 use Carp;
-use Net::DNS ;
+use Net::DNS;
 use Net::DNS::Question;
 use Net::DNS::RR;
-use Data::Dumper;
 
 
+use vars qw(@ISA @EXPORT_OK);
 require Exporter;
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(dn_expand);
 
 
-$VERSION = (qw$LastChangedRevision$)[1];
-
-
-
-=head1 NAME
-
-Net::DNS::Packet - DNS packet object class
-
-=head1 SYNOPSIS
-
-C<use Net::DNS::Packet;>
-
-=head1 DESCRIPTION
-
-A C<Net::DNS::Packet> object represents a DNS packet.
-
 =head1 METHODS
 
 =head2 new
 
-    $packet = Net::DNS::Packet->new("example.com");
-    $packet = Net::DNS::Packet->new("example.com", "MX", "IN");
+    $packet = new Net::DNS::Packet('example.com');
+    $packet = new Net::DNS::Packet('example.com', 'MX', 'IN');
 
-    $packet = Net::DNS::Packet->new(\$data);
-    $packet = Net::DNS::Packet->new(\$data, 1);  # set debugging
-
-    ($packet, $err) = Net::DNS::Packet->new(\$data);
-
-    $packet = Net::DNS::Packet->new();
+    $packet = new Net::DNS::Packet();
 
 If passed a domain, type, and class, C<new> creates a packet
 object appropriate for making a DNS query for the requested
 information.  The type and class can be omitted; they default
 to A and IN.
 
+If called with an empty argument list, C<new> creates an empty packet.
+
+
+    $packet = new Net::DNS::Packet(\$data);
+    $packet = new Net::DNS::Packet(\$data, 1);		# set debugging
+
+    ($packet, $err) = new Net::DNS::Packet(\$data);
+
 If passed a reference to a scalar containing DNS packet data,
-C<new> creates a packet object from that data.  A second argument
-can be passed to turn on debugging output for packet parsing.
+C<new> creates a packet object by decoding the data.  The optional
+second argument can be passed to turn on debugging output.
 
 If called in array context, returns a packet object and an
 error string.  The content of the error string is unspecified
@@ -68,63 +74,61 @@ if the packet object was successfully created.
 Returns B<undef> if unable to create a packet object (e.g., if
 the packet data is truncated).
 
-If called with an empty argument list, C<new> creates an empty packet.
-
 =cut
 
 sub new {
+	return &decode if ref $_[1];
 	my $class = shift;
-	my ($data) = @_;
-	return $class->parse(@_) if ref $data;
 
-	my %self = (	header		=> Net::DNS::Header->new,
-			question	=> [],
-			answer		=> [],
-			authority	=> [],
-			additional	=> []	);
+	my $self = bless {
+		header	   => Net::DNS::Header->new,
+		question   => [],
+		answer	   => [],
+		authority  => [],
+		additional => []}, $class;
 
-	push @{$self{question}}, Net::DNS::Question->new(@_) if @_;
+	$self->{question} = [Net::DNS::Question->new(@_)] if @_;
 
-	bless \%self, $class;
+	return $self;
 }
 
 
-
-sub parse {
+sub decode {
 	my $class = shift;
 	my $data  = shift;
 	my $debug = shift || 0;
 
-	my %self = (	question	=> [],
-			answer		=> [],
-			authority	=> [],
-			additional	=> [],
-			answersize	=> length $$data,
-			buffer		=> $data	);
-
 	my $self = eval {
+		my %self = (
+			question   => [],
+			answer	   => [],
+			authority  => [],
+			additional => [],
+			answersize => length $$data,
+			buffer	   => $data
+			);
+
 		# Parse header section
-		my ($header, $offset) = Net::DNS::Header->parse($data);
+		my ( $header, $offset ) = decode Net::DNS::Header($data);
 		$self{header} = $header;
 
 		# Parse question/zone section
 		for ( 1 .. $header->qdcount ) {
 			my $qd;
-			($qd, $offset) = Net::DNS::Question->parse($data, $offset);
-			push(@{$self{question}}, $qd);
+			( $qd, $offset ) = decode Net::DNS::Question( $data, $offset );
+			CORE::push( @{$self{question}}, $qd );
 		}
 
-		# Retain offset for on-demand parse of remaining data
+		# Retain offset for on-demand decoding of remaining data
 		$self{offset} = $offset;
 
 		bless \%self, $class;
 	};
 
-	($self || die $@)->print if $debug;
+	( $self || die $@ )->print if $debug;
 
-	return wantarray ? ($self, $@) : $self;
+	return wantarray ? ( $self, $@ ) : $self;
 }
-
 
 
 =head2 data
@@ -136,21 +140,17 @@ a nameserver.
 
 =cut
 
+sub encode {&data}
+
 sub data {
 	my $self = shift;
 
-	return ${$self->{buffer}} if $self->{buffer};	# retransmit raw packet
-
-	my $data = '';
-	my $header = $self->{header};
-
-	# Default question for empty packet
-	$self->push('question', Net::DNS::Question->new('','ANY','ANY'))
-						unless @{$self->{question}};
+	return ${$self->{buffer}} if $self->{buffer};		# retransmit raw packet
 
 	#----------------------------------------------------------------------
 	# Set record counts in packet header
 	#----------------------------------------------------------------------
+	my $header = $self->{header};
 	$header->qdcount( scalar @{$self->{question}} );
 	$header->ancount( scalar @{$self->{answer}} );
 	$header->nscount( scalar @{$self->{authority}} );
@@ -159,13 +159,14 @@ sub data {
 	#----------------------------------------------------------------------
 	# Get the data for each section in the packet
 	#----------------------------------------------------------------------
-	$self->{compnames} = {};
-	foreach my $component ( $header,
-				@{$self->{question}},
+	use bytes;
+	my $data = $header->encode;
+	my $hash = {};
+	foreach my $component ( @{$self->{question}},
 				@{$self->{answer}},
 				@{$self->{authority}},
 				@{$self->{additional}}	) {
-		$data .= $component->data($self, length $data);
+		$data .= $component->encode( length $data, $hash, $self );
 	}
 
 	return $data;
@@ -185,6 +186,7 @@ sub header {
 	return shift->{header};
 }
 
+
 =head2 question, zone
 
     @question = $packet->question;
@@ -201,7 +203,8 @@ sub question {
 	return @{shift->{question}};
 }
 
-sub zone { &question }
+sub zone {&question}
+
 
 =head2 answer, pre, prerequisite
 
@@ -217,32 +220,38 @@ must not preexist.
 =cut
 
 sub answer {
-	my @rr = eval { &_answer };
-	carp "$@ caught" if $@;
+	my ($self) = @_;
+	my $rrlist = $self->{answer};
+	return @$rrlist if @$rrlist;
+	@$rrlist = $self->_section( $self->{header}->ancount );
+}
+
+sub pre		 {&answer}
+sub prerequisite {&answer}
+
+sub _section {
+	my $self = shift;
+	my $count = shift || return ();
+
+	my $offset = $self->{offset} || return ();
+	my $data   = $self->{buffer} || return ();
+	my $hash   = {};
+	my $byte   = $offset;
+	my @rr;
+	eval {
+		my $rr;
+		undef $self->{offset};
+		while ( $count-- ) {
+			$byte = $offset;
+			( $rr, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			CORE::push( @rr, $rr );
+		}
+		$self->{offset} = $offset;
+	};
+	carp "$@ RR at octet $byte corrupt/incomplete" if $@;
 	return @rr;
 }
 
-sub _answer {
-	my ($self) = @_;
-
-	my @rr = @{$self->{answer}};
-	return @rr if @rr;				# return if already parsed
-
-	my $data = $self->{buffer};			# parse answer data
-	my $offset = $self->{offset} || return;
-	undef $self->{offset};
-	my $ancount = $self->{header}->ancount;
-	my $rr;
-	while ( $ancount-- ) {
-		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
-		push(@rr, $rr);
-	}
-	$self->{offset} = $offset;			# index next section
-	@{$self->{answer}} = @rr;
-}
-
-sub pre		{ &answer }
-sub prerequisite { &answer }
 
 =head2 authority, update
 
@@ -257,33 +266,15 @@ specifies the RRs or RRsets to be added or deleted.
 =cut
 
 sub authority {
-	my @rr = eval { &_authority };
-	carp "$@ caught" if $@;
-	return @rr;
-}
-
-sub _authority {
 	my ($self) = @_;
-
-	my @rr = @{$self->{authority}};
-	return @rr if @rr;				# return if already parsed
-
-	&_answer unless @{$self->{answer}};		# parse answer data
-
-	my $data = $self->{buffer};			# parse authority data
-	my $offset = $self->{offset} || return;
-	undef $self->{offset};
-	my $nscount = $self->{header}->nscount;
-	my $rr;
-	while ( $nscount-- ) {
-		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
-		push(@rr, $rr);
-	}
-	$self->{offset} = $offset;			# index next section
-	@{$self->{authority}} = @rr;
+	my $rrlist = $self->{authority};
+	return @$rrlist if @$rrlist;
+	&answer;
+	@$rrlist = $self->_section( $self->{header}->nscount );
 }
 
-sub update { &authority }
+sub update {&authority}
+
 
 =head2 additional
 
@@ -295,30 +286,13 @@ section of the packet.
 =cut
 
 sub additional {
-	my @rr = eval { &_additional };
-	carp "$@ caught" if $@;
-	return @rr;
-}
-
-sub _additional {
 	my ($self) = @_;
-
-	my @rr = @{$self->{additional}};
-	return @rr if @rr;				# return if already parsed
-
-	&_authority unless @{$self->{authority}};	# parse authority data
-
-	my $data = $self->{buffer};			# parse additional data
-	undef $self->{buffer};				# discard raw data after use
-	my $offset = $self->{offset} || return;
-	undef $self->{offset};
-	my $arcount = $self->{header}->arcount;
-	my $rr;
-	while ( $arcount-- ) {
-		($rr, $offset) = Net::DNS::RR->parse($data, $offset);
-		push(@rr, $rr);
-	}
-	@{$self->{additional}} = @rr;
+	my $rrlist = $self->{additional};
+	return @$rrlist if @$rrlist;
+	&authority;
+	@$rrlist = $self->_section( $self->{header}->arcount );
+	undef $self->{buffer};
+	return @$rrlist;
 }
 
 
@@ -331,7 +305,8 @@ similar to that used in DNS zone files.
 
 =cut
 
-sub print {	print &string; }
+sub print { print &string; }
+
 
 =head2 string
 
@@ -378,6 +353,7 @@ sub string {
 	return $string."\n\n";
 }
 
+
 =head2 answerfrom
 
     print "packet received from ", $packet->answerfrom, "\n";
@@ -395,6 +371,7 @@ sub answerfrom {
 	return $self->{answerfrom};
 }
 
+
 =head2 answersize
 
     print "packet size: ", $packet->answersize, " bytes\n";
@@ -409,6 +386,7 @@ sub answersize {
 	return shift->{answersize};
 }
 
+
 =head2 push
 
     $ancount = $packet->push(pre        => $rr);
@@ -422,33 +400,32 @@ Adds RRs to the specified section of the packet.
 
 Returns the number of resource records in the specified section.
 
-
 =cut
 
 sub push {
-	my $self = shift;
+	my $self    = shift;
 	my $section = lc shift || '';
-	my @rr = map{ref $_ ? $_ : ()} @_;
+	my @rr	    = grep ref($_), @_;
 
 	my $hdr = $self->{header};
-	for ( $section ) {
-		return $hdr->qdcount(push(@{$self->{question}}, @rr)) if /^question/;
+	for ($section) {
+		return $hdr->qdcount( CORE::push( @{$self->{question}}, @rr ) ) if /^question/;
 
 		if ( $hdr->opcode eq 'UPDATE' ) {
 			my ($zone) = $self->zone;
 			my $zclass = $zone->zclass;
-			foreach ( @rr ) {
+			foreach (@rr) {
 				$_->class($zclass) unless $_->class =~ /ANY|NONE/;
 			}
 		}
 
-		return $hdr->ancount(push(@{$self->{answer}}, @rr)) if /^ans|^pre/;
-		return $hdr->nscount(push(@{$self->{authority}}, @rr)) if /^auth|^upd/;
-		return $hdr->adcount(push(@{$self->{additional}}, @rr)) if /^add/;
+		return $hdr->ancount( CORE::push( @{$self->{answer}},	  @rr ) ) if /^ans|^pre/;
+		return $hdr->nscount( CORE::push( @{$self->{authority}},  @rr ) ) if /^auth|^upd/;
+		return $hdr->adcount( CORE::push( @{$self->{additional}}, @rr ) ) if /^add/;
 	}
 
 	carp qq(invalid section "$section");
-	return undef;	# undefined record count
+	return undef;
 }
 
 
@@ -469,23 +446,17 @@ Returns the number of resource records in the specified section.
 =cut
 
 sub unique_push {
-	my $self = shift;
+	my $self    = shift;
 	my $section = shift;
-	my @rr = map{ref $_ ? $_ : ()} @_;
+	my @rr	    = grep ref($_), @_;
 
-	my @unique = map{$self->{seen}->{ (lc $_->name) . $_->class . $_->type  . $_->rdatastr }++ ? () : $_} @rr;
+	my @unique = grep !$self->{seen}->{lc( $_->name ) . $_->class . $_->type . $_->rdatastr}++, @rr;
 
-	return $self->push($section, @unique);
+	return $self->push( $section, @unique );
 }
 
-=head2 safe_push
-
-A deprecated name for C<unique_push()>.
-
-=cut
-
 sub safe_push {
-	carp('safe_push() is deprecated, use unique_push() instead,');
+	carp('safe_push() is deprecated, please use unique_push() instead,');
 	&unique_push;
 }
 
@@ -505,14 +476,14 @@ sub pop {
 	my $self = shift;
 	my $section = lc shift || '';
 
-	for ( $section ) {
-		return pop(@{$self->{answer}}) if /^ans|^pre/;
-		return pop(@{$self->{question}}) if /^question/;
+	for ($section) {
+		return CORE::pop( @{$self->{question}} ) if /^question/;
 
-		$self->additional if $self->{buffer};	# parse remaining data
+		$self->additional if $self->{buffer};		# decode remaining data
 
-		return pop(@{$self->{authority}}) if /^auth|^upd/;
-		return pop(@{$self->{additional}}) if /^add/;
+		return CORE::pop( @{$self->{answer}} )	   if /^ans|^pre/;
+		return CORE::pop( @{$self->{authority}} )  if /^auth|^upd/;
+		return CORE::pop( @{$self->{additional}} ) if /^add/;
 	}
 
 	carp qq(invalid section "$section");
@@ -532,6 +503,7 @@ future use.
 =cut
 
 sub dn_comp {
+	use bytes;
 	my ($self, $name, $offset) = @_;
 	# The Exporter module does not seem to catch this baby...
 	my @names=Net::DNS::name2labels($name);
@@ -620,6 +592,7 @@ sub dn_expand_PP {
 	return undef;
 }
 
+
 =head2 sign_tsig
 
     $key_name = "tsig-key";
@@ -672,7 +645,6 @@ sub sign_tsig {
 }
 
 
-
 =head2 sign_sig0
 
 SIG0 support is provided through the Net::DNS::RR::SIG class. This class is not part
@@ -686,7 +658,6 @@ of the default Net::DNS distribution but resides in the Net::DNS::SEC distributi
 SIG0 support is experimental see Net::DNS::RR::SIG for details.
 
 The method will call C<Carp::croak()> if Net::DNS::RR::SIG cannot be found.
-
 
 =cut
 
@@ -721,6 +692,7 @@ sub sign_sig0 {
 	$self->push('additional', $sig0) if $sig0;
 	return $sig0;
 }
+
 
 =head2 truncate
 
@@ -802,21 +774,24 @@ sub truncate {
 }
 
 
+1;
+__END__
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-2002 Michael Fuhr.
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2002-2009 Olaf Kolkman
+Portions Copyright (c)2002-2009 Olaf Kolkman
 
-Portions Copyright (c) 2007-2008 Dick Franks
+Portions Copyright (c)2007-2008 Dick Franks
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
 
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
 
 
 =head1 SEE ALSO
@@ -827,4 +802,3 @@ RFC 1035 Section 4.1, RFC 2136 Section 2, RFC 2845
 
 =cut
 
-1;
