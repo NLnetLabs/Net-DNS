@@ -1,54 +1,65 @@
 package Net::DNS::Question;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use vars qw($VERSION $AUTOLOAD);
-
-use Carp;
-use Net::DNS;
-
-$VERSION = (qw$LastChangedRevision: 800$)[1];
 
 =head1 NAME
 
-Net::DNS::Question - DNS question class
+Net::DNS::Question - DNS question record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::Question>
+    use Net::DNS::Question;
+
+    $question = new Net::DNS::Question('example.com', 'A', 'IN');
 
 =head1 DESCRIPTION
 
-A C<Net::DNS::Question> object represents a record in the
-question section of a DNS packet.
+A Net::DNS::Question object represents a record in the question
+section of a DNS packet.
+
+=cut
+
+
+use strict;
+use integer;
+use Carp;
+
+use Net::DNS;
+use Net::DNS::DomainName;
+
 
 =head1 METHODS
 
 =head2 new
 
-    $question = Net::DNS::Question->new("example.com", "MX", "IN");
+    $question = new Net::DNS::Question('example.com', 'A', 'IN');
+    $question = new Net::DNS::Question('example.com');
 
-Creates a question object from the domain, type, and class passed
-as arguments.
+    $question = new Net::DNS::Question('192.0.32.10', 'PTR', 'IN');
+    $question = new Net::DNS::Question('192.0.32.10');
+
+Creates a question object from the domain, type, and class passed as
+arguments. One or both type and class arguments may be omitted and
+will assume the default values shown above.
 
 RFC4291 and RFC4632 IP address/prefix notation is supported for
-queries in in-addr.arpa and ip6.arpa subdomains.
+queries in both in-addr.arpa and ip6.arpa namespaces.
 
 =cut
 
 sub new {
 	my $self   = bless {}, shift;
 	my $qname  = shift;
-	my $qtype  = uc (shift || '');
-	my $qclass = uc (shift || '');
+	my $qtype  = uc( shift || '' );
+	my $qclass = uc( shift || '' );
 
-	$qname = '' unless defined $qname;	# || ''; is NOT same!
-	$qname =~ s/\.+$//o;			# strip gratuitous trailing dot
+	$qname = '' unless defined $qname;			# || ''; is NOT same!
+	$qname =~ s/\.+$//o;					# strip gratuitous trailing dot
 
 	# tolerate (possibly unknown) type and class in zone file order
 	unless ( exists $Net::DNS::classesbyname{$qclass} ) {
@@ -63,152 +74,160 @@ sub new {
 	}
 
 	# if argument is an IP address, do appropriate reverse lookup
-	my $reverse = _dns_addr($qname) if $qname =~ m/:|\d$/o;
-	if ( $reverse ) {
-		$qname = $reverse;
-		$qtype ||= 'PTR';
+	if ( defined $qname and $qname =~ m/:|\d$/ ) {
+		if ( my $reverse = _dns_addr($qname) ) {
+			$qname = $reverse;
+			$qtype ||= 'PTR';
+		}
 	}
 
-	$self->{qname}  = $qname;
-	$self->{qtype}  = ( $qtype || 'A' );
-	$self->{qclass} = ( $qclass || 'IN' );
+	$self->{name}  = $qname;
+	$self->{type}  = Net::DNS::typesbyname( $qtype || 'A' );
+	$self->{class} = Net::DNS::classesbyname( $qclass || 'IN' );
 
 	return $self;
 }
 
 
-sub _dns_addr {
-	my $arg = shift;	# name or IP address
+=head2 decode
 
-	# IP address must contain address characters only
-	return undef if $arg =~ m#[^a-fA-F0-9:./]#o;
+    $question = decode Net::DNS::Question(\$data, $offset);
 
-	# if arg looks like IPv4 address then map to in-addr.arpa space
-	if ( $arg =~ m#(^|:.*:)((^|\d+\.)+\d+)(/(\d+))?$#o ) {
-		my @parse = split /\./, $2;
-		my $prefx = $5 || @parse<<3;
-		my $last = $prefx > 24 ? 3 : ($prefx-1)>>3;
-		return join '.', reverse( (@parse,(0)x3)[0 .. $last] ), 'in-addr.arpa';
-	}
+    ($question, $offset) = decode Net::DNS::Question(\$data, $offset);
 
-	# if arg looks like IPv6 address then map to ip6.arpa space
-	if ( $arg =~ m#^((\w*:)+)(\w*)(/(\d+))?$#o ) {
-		my @parse = split /:/, (reverse "0${1}0${3}"), 9;
-		my @xpand = map{/./ ? $_ : ('0')x(9-@parse)} @parse;	# expand ::
-		my $prefx = $5 || @xpand<<4;		# implicit length if unspecified
-		my $hex = pack 'A4'x8, map{$_.'000'} ('0')x(8-@xpand), @xpand;
-		my $len = $prefx > 124 ? 32 : ($prefx+3)>>2;
-		return join '.', split(//, substr($hex,-$len) ), 'ip6.arpa';
-	}
+Decodes the question record at the specified location within a DNS
+wire-format packet.  The first argument is a reference to the buffer
+containing the packet data.  The second argument is the offset of
+the start of the question record.
 
-	return undef;
-}
+Returns a Net::DNS::Question object and the offset of the next
+location in the packet.
 
-
-=head2 parse
-
-    ($question, $offset) = Net::DNS::Question->parse(\$data, $offset);
-
-Parses a question section record at the specified location within a DNS packet.
-The first argument is a reference to the packet data.
-The second argument is the offset within the packet where the question record begins.
-
-Returns a Net::DNS::Question object and the offset of the next location in the packet.
-
-Parsing is aborted if the question object cannot be created (e.g., corrupt or insufficient data).
+An exception is raised if the object cannot be created
+(e.g., corrupt or insufficient data).
 
 =cut
 
-use constant PACKED_LENGTH => length pack 'n2', (0)x2;
+use constant QFIXEDSZ => length pack 'n2', (0) x 2;
 
-sub decode { &parse; }			## facilitate architecture transition
+sub decode {
+	my $self = bless {}, shift;
+	my ( $data, $offset ) = @_;
 
-sub parse {
-	my ($class, $data, $offset) = @_;
+	( $self->{name}, $offset ) = Net::DNS::Packet::dn_expand( $data, $offset || 0 );
+	die 'corrupt wire-format data' unless $offset;
 
-	my ($qname, $index) = Net::DNS::Packet::dn_expand($data, $offset || 0);
-	die 'Exception: corrupt or incomplete data' unless $index;
+	my $next = $offset + QFIXEDSZ;
+	die 'corrupt wire-format data' if length $$data < $next;
+	@{$self}{qw(type class)} = unpack "\@$offset n2", $$data;
 
-	my $next = $index + PACKED_LENGTH;
-	die 'Exception: incomplete data' if length $$data < $next;
-	my ($qtype, $qclass) = unpack("\@$index n2", $$data);
-
-	my $self = {	qname	=> $qname,
-			qtype	=> Net::DNS::typesbyval($qtype),
-			qclass	=> Net::DNS::classesbyval($qclass)
-			};
-
-	bless $self, $class;
-
-	return wantarray ? ($self, $next) : $self;
+	return wantarray ? ( $self, $next ) : $self;
 }
 
 
-#
-# Some people have reported that Net::DNS dies because AUTOLOAD picks up
-# calls to DESTROY.
-#
-sub DESTROY {}
+=head2 encode
+
+    $data = $question->encode( $offset, $hash );
+
+Returns the Net::DNS::Question in binary format suitable for
+inclusion in a DNS packet buffer.
+
+The optional arguments are the offset within the packet data where
+the Net::DNS::Question is to be stored and a reference to a hash
+table used to index compressed names within the packet.
+
+=cut
+
+sub encode {
+	my ( $self, $offset, $hash, $packet ) = @_;
+	$packet ||= bless {}, qw(Net::DNS::Packet);
+	$packet->{compnames} = $hash || {};
+
+	my $name = $packet->dn_comp( $self->{name}, $offset || 0 );
+
+	return pack 'a* n2', $name, @{$self}{qw(type class)};
+}
+
 
 =head2 qname, zname
 
-    print "qname = ", $question->qname, "\n";
-    print "zname = ", $question->zname, "\n";
+    $qname = $question->qname;
+    $zname = $question->zname;
 
-Returns the domain name.  In dynamic update packets, this field is
-known as C<zname> and refers to the zone name.
+Returns the question name attribute.  In dynamic update packets,
+this attribute is known as zname() and refers to the zone name.
+
+=cut
+
+sub qname {
+	my $self = shift;
+
+	return $self->{name} unless @_;
+	croak 'method invoked with unexpected argument';
+}
+
+sub zname { &qname; }
+
 
 =head2 qtype, ztype
 
-    print "qtype = ", $question->qtype, "\n";
-    print "ztype = ", $question->ztype, "\n";
+    $qtype = $question->qtype;
+    $ztype = $question->ztype;
 
-Returns the record type.  In dymamic update packets, this field is
-known as C<ztype> and refers to the zone type (must be SOA).
+Returns the question type attribute.  In dynamic update packets,
+this attribute is known as ztype() and refers to the zone type.
+
+=cut
+
+sub type {
+	my $self = shift;
+
+	return Net::DNS::typesbyval( $self->{type} ) unless @_;
+	croak 'method invoked with unexpected argument';
+}
+
+sub qtype { &type; }
+sub ztype { &type; }
+
 
 =head2 qclass, zclass
 
-    print "qclass = ", $question->qclass, "\n";
-    print "zclass = ", $question->zclass, "\n";
+    $qclass = $question->qclass;
+    $zclass = $question->zclass;
 
-Returns the record class.  In dynamic update packets, this field is
-known as C<zclass> and refers to the zone's class.
+Returns the question class attribute.  In dynamic update packets,
+this attribute is known as zclass() and refers to the zone class.
 
 =cut
 
-sub zname  { &qname;  }
-sub ztype  { &qtype;  }
-sub zclass { &qclass; }
-
-
-sub AUTOLOAD {
+sub class {
 	my $self = shift;
 
-	my $name = $AUTOLOAD;
-	$name =~ s/.*://o;
-
-	croak "$AUTOLOAD: no such method" unless exists $self->{$name};
-
-	return $self->{$name} unless @_;
-
-	my $value = shift;
-	$value =~ s/\.+$//o if defined $value;	# strip gratuitous trailing dot
-	$self->{$name} = $value;
+	return Net::DNS::classesbyval( $self->{class} ) unless @_;
+	croak 'method invoked with unexpected argument';
 }
+
+sub qclass { &class; }
+sub zclass { &class; }
+
 
 =head2 print
 
-    $question->print;
+    $object->print;
 
-Prints the question record on the standard output.
+Prints the record to the standard output.  Calls the string() method
+to get the string representation.
 
 =cut
 
-sub print {	print &string, "\n"; }
+sub print {
+	print shift->string, "\n";
+}
+
 
 =head2 string
 
-    print $qr->string, "\n";
+    print "string = ", $question->string, "\n";
 
 Returns a string representation of the question record.
 
@@ -216,63 +235,74 @@ Returns a string representation of the question record.
 
 sub string {
 	my $self = shift;
-	return "$self->{qname}.\t$self->{qclass}\t$self->{qtype}";
+
+	return join "\t", "$self->{name}.", $self->qclass, $self->qtype;
 }
 
-=head2 data
 
-    $qdata = $question->data($packet, $offset);
+########################################
 
-Returns the question record in binary format suitable for inclusion
-in a DNS packet.
+use vars qw($AUTOLOAD);
 
-Arguments are a C<Net::DNS::Packet> object and the offset within
-that packet's data where the C<Net::DNS::Question> record is to
-be stored.  This information is necessary for using compressed
-domain names.
-
-=cut
-
-sub encode {			## facilitate architecture transition
-	my ( $self, $offset, $hash, $packet ) = @_;
-	$packet->{compnames} = $hash || {};
-	return $self->data( $packet, $offset || 0 );
+sub AUTOLOAD {				## Default method
+	no strict;
+	@_ = ("method $AUTOLOAD undefined");
+	goto &{'Carp::confess'};
 }
 
-sub data {
-	my ($self, $packet, $offset) = @_;
 
-	my $data = $packet->dn_comp($self->{qname}, $offset);
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
-	$data .= pack('n2',	Net::DNS::typesbyname(uc $self->{qtype}),
-				Net::DNS::classesbyname(uc $self->{qclass})
-				);
-	return $data;
+
+sub _dns_addr {				## Map IP address into reverse lookup namespace
+	local $_ = shift;
+
+	# IP address must contain address characters only
+	return undef unless m#^[a-fA-F0-9:./]+$#;
+
+	# arg looks like IPv4 address: map to in-addr.arpa space
+	if (m#(^|:.*:)((^|\d+\.)+\d+)(/(\d+))?$#) {
+		my @parse = split /\./, $2;
+		my $prefx = $5 || @parse << 3;
+		my $last = $prefx > 24 ? 3 : ( $prefx - 1 ) >> 3;
+		return join '.', reverse( ( @parse, (0) x 3 )[0 .. $last] ), 'in-addr.arpa';
+	}
+
+	# arg looks like IPv6 address: map to ip6.arpa space
+	if (m#^((\w*:)+)(\w*)(/(\d+))?$#) {
+		my @parse = split /:/, ( reverse "0${1}0${3}" ), 9;
+		my @xpand = map { /./ ? $_ : ('0') x ( 9 - @parse ) } @parse;	 # expand ::
+		my $prefx = $5 || @xpand << 4;			# implicit length if unspecified
+		my $hex = pack 'A4' x 8, map { $_ . '000' } ('0') x ( 8 - @xpand ), @xpand;
+		my $len = $prefx > 124 ? 32 : ( $prefx + 3 ) >> 2;
+		return join '.', split( //, substr( $hex, -$len ) ), 'ip6.arpa';
+	}
+
+	return undef;
 }
 
 
 1;
 __END__
 
+########################################
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2003,2006-2009 Dick Franks.
+Portions Copyright (c)2003,2006-2011 Dick Franks.
 
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
 
+
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Update>, L<Net::DNS::Header>, L<Net::DNS::RR>,
+L<perl>, L<Net::DNS>, L<Net::DNS::DomainName>, L<Net::DNS::Packet>,
 RFC 1035 Section 4.1.2
-
-=cut
 

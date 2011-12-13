@@ -71,7 +71,7 @@ If called in array context, returns a packet object and an
 error string.  The content of the error string is unspecified
 if the packet object was successfully created.
 
-Returns B<undef> if unable to create a packet object (e.g., if
+Returns undef if unable to create a packet object (e.g., if
 the packet data is truncated).
 
 =cut
@@ -159,7 +159,6 @@ sub data {
 	#----------------------------------------------------------------------
 	# Get the data for each section in the packet
 	#----------------------------------------------------------------------
-	use bytes;
 	my $data = $header->encode;
 	my $hash = {};
 	foreach my $component ( @{$self->{question}},
@@ -328,24 +327,24 @@ sub string {
 	$string .= ";; HEADER SECTION\n".$header->string;
 
 	my $question = $update ? 'ZONE' : 'QUESTION';
-	my @question = map{$_->string} $self->question;
+	my @question = map $_->string, $self->question;
 	my $qdcount = @question;
 	my $qds = $qdcount != 1 ? 's' : '';
 	$string .= join "\n;; ", "\n;; $question SECTION ($qdcount record$qds)", @question;
 
 	my $answer = $update ? 'PREREQUISITE' : 'ANSWER';
-	my @answer = map{$_->string} $self->answer;
+	my @answer = map $_->string, $self->answer;
 	my $ancount = @answer;
 	my $ans = $ancount != 1 ? 's' : '';
 	$string .= join "\n", "\n\n;; $answer SECTION ($ancount record$ans)", @answer;
 
 	my $authority = $update ? 'UPDATE' : 'AUTHORITY';
-	my @authority = map{$_->string} $self->authority;
+	my @authority = map $_->string, $self->authority;
 	my $nscount = @authority;
 	my $nss = $nscount != 1 ? 's' : '';
 	$string .= join "\n", "\n\n;; $authority SECTION ($nscount record$nss)", @authority;
 
-	my @additional = map{$_->string} $self->additional;
+	my @additional = map $_->string, $self->additional;
 	my $arcount = @additional;
 	my $ars = $arcount != 1 ? 's' : '';
 	$string .= join "\n", "\n\n;; ADDITIONAL SECTION ($arcount record$ars)", @additional;
@@ -503,37 +502,32 @@ future use.
 =cut
 
 sub dn_comp {
-	use bytes;
-	my ($self, $name, $offset) = @_;
-	# The Exporter module does not seem to catch this baby...
-	my @names=Net::DNS::name2labels($name);
-	my $namehash = $self->{compnames};
-	my $compname='';
+	my ($self, $fqdn, $offset) = @_;
 
-	while (@names) {
-		my $dname = join('.', @names);
+	my @labels = Net::DNS::name2labels($fqdn);
+	my $hash   = $self->{compnames};
+	my $data   = '';
+	while (@labels) {
+		my $name = join( '.', @labels );
 
-		if ( my $pointer = $namehash->{$dname} ) {
-			$compname .= pack('n', 0xc000 | $pointer);
-			last;
-		}
-		$namehash->{$dname} = $offset if ($offset < 0x4000);
+		return $data . pack( 'n', 0xC000 | $hash->{$name} ) if defined $hash->{$name};
 
-		my $label  = shift @names;
-		my $length = length $label || next;	# skip if null
+		my $label = shift @labels;
+		my $length = length($label) || next;		   # skip if null
 		if ( $length > 63 ) {
 			$length = 63;
-			$label = substr($label, 0, $length);
+			$label = substr( $label, 0, $length );
 			carp "\n$label...\ntruncated to $length octets (RFC1035 2.3.1)";
 		}
-		$compname .= pack('C a*', $length, $label);
-		$offset   += $length + 1;
+		$data .= pack( 'C a*', $length, $label );
+
+		next unless $offset < 0x4000;
+		$hash->{$name} = $offset;
+		$offset += 1 + $length;
 	}
-
-	$compname .= pack('C', 0) unless @names;
-
-	return $compname;
+	$data .= chr(0);
 }
+
 
 =head2 dn_expand
 
@@ -550,10 +544,10 @@ packet where the (possibly compressed) domain name is stored.
 Returns the domain name and the offset of the next location in the
 packet.
 
-Returns B<(undef)> if the domain name couldn't be expanded.
+Returns undef if the domain name could not be expanded.
 
 =cut
-# '
+
 
 # This is very hot code, so we try to keep things fast.  This makes for
 # odd style sometimes.
@@ -796,7 +790,7 @@ modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Update>,
+L<perl>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Update>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
 RFC 1035 Section 4.1, RFC 2136 Section 2, RFC 2845
 

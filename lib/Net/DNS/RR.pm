@@ -1,43 +1,43 @@
 package Net::DNS::RR;
+
 #
 # $Id$
 #
-use strict;
-
-BEGIN {
-    eval { require bytes; }
-}
-
-
-use vars qw($VERSION $AUTOLOAD %rrsortfunct );
-use Carp;
-use Net::DNS qw (wire2presentation name2labels stripdot);
-use Net::DNS::RR::Unknown;
-
-
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
+
 
 =head1 NAME
 
-Net::DNS::RR - DNS Resource Record class
+Net::DNS::RR - DNS Resource Record base class
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>
+use Net::DNS;
+
+    $rr = new Net::DNS::RR('example.com IN A 192.0.2.99');
+
+    $rr = new Net::DNS::RR(
+	    name    => 'example.com'
+	    type    => 'A',
+	    address => '192.0.2.99'
+	    );
+
 
 =head1 DESCRIPTION
 
 C<Net::DNS::RR> is the base class for DNS Resource Record (RR) objects.
 See also the manual pages for each RR type.
 
-=head1 METHODS
-
-B<WARNING!!!>  Don't assume the RR objects you receive from a query
-are of a particular type -- always check an object's type before calling
-any of its methods.  If you call an unknown method, you'll get a nasty
-warning message and C<Net::DNS::RR> will return C<undef> to the caller.
-
 =cut
+
+
+use strict;
+use integer;
+use Carp;
+use Net::DNS qw (wire2presentation name2labels stripdot);
+use Net::DNS::RR::Unknown;
+
 
 # %RR needs to be available within the scope of the BEGIN block.
 # $RR_REGEX is a global just to be on the safe side.
@@ -229,6 +229,14 @@ sub build_regex {
 
 #	print STDERR "Regex: $RR_REGEX\n";
 }
+
+
+=head1 METHODS
+
+B<WARNING!!!>  Do not assume the RR objects you receive from a query
+are of a particular type -- always check the object type before calling
+any of its methods.  If you call an unknown method, you will get an
+error message and execution will be terminated.
 
 
 =head2 new (from string)
@@ -574,34 +582,29 @@ sub _normalize_ownername {
 }
 
 
-=head2 parse
+=head2 decode
 
-    ($rrobj, $offset) = Net::DNS::RR->parse(\$data, $offset);
+    ($rrobj, $offset) = Net::DNS::RR->decode(\$data, $offset);
 
-Parses a DNS resource record at the specified location within a DNS packet.
+Decodes a DNS resource record at the specified location within a DNS packet.
 The first argument is a reference to the packet data.
 The second argument is the offset within the packet where the resource record begins.
 
 Returns a Net::DNS::RR object and the offset of the next location in the packet.
 
-Parsing is aborted if the object could not be created (e.g., corrupt or insufficient data).
+Decoding is aborted if the object could not be created (e.g., corrupt or insufficient data).
 
 =cut
 
-use constant PACKED_LENGTH => length pack 'n2 N n', (0)x4;
+use constant RRFIXEDSZ => length pack 'n2 N n', (0) x 4;
 
-sub decode {			## make "new" test scripts work with existing architecture
-	my ( $class, $data, $offset ) = @_;
-	return $class->parse( $data, $offset || 0 );
-}
-
-sub parse {
+sub decode {
 	my ($objclass, $data, $offset) = @_;
 
-	my ($name, $index) = Net::DNS::Packet::dn_expand($data, $offset);
+	my ($name, $index) = Net::DNS::Packet::dn_expand($data, $offset || 0);
 	die 'Exception: corrupt or incomplete data' unless $index;
 
-	my $rdindex = $index + PACKED_LENGTH;
+	my $rdindex = $index + RRFIXEDSZ;
 	die 'Exception: incomplete data' if length $$data < $rdindex;
 	my ($type, $class, $ttl, $rdlength) = unpack("\@$index n2 N n", $$data);
 
@@ -623,12 +626,6 @@ sub parse {
 	return wantarray ? ($self, $next) : $self;
 }
 
-
-#
-# Some people have reported that Net::DNS dies because AUTOLOAD picks up
-# calls to DESTROY.
-#
-sub DESTROY {}
 
 =head2 print
 
@@ -756,26 +753,22 @@ sub rr_rdata {
 	return exists $self->{'rdata'} ? $self->{'rdata'} : '';
 }
 
+
 #------------------------------------------------------------------------------
-# sub data
+# sub encode
 #
 # This method is called by Net::DNS::Packet->data to get the binary
 # representation of an RR.
 #------------------------------------------------------------------------------
 
-sub encode {			## make "new" test scripts work with existing architecture
+sub encode {
 	my ( $self, $offset, $hash, $packet ) = @_;
-	$packet ||= new Net::DNS::Packet();
+	$offset ||= 0;
+	$packet ||= bless {}, qw(Net::DNS::Packet);
 	$packet->{compnames} = $hash || {};
-	return $self->data( $packet, $offset || 0 );
-}
-
-sub data {
-	my ($self, $packet, $offset) = @_;
-	my $data;
-
 
 	# Don't compress TSIG or TKEY names and don't mess with EDNS0 packets
+	my $data;
 	if (uc($self->{'type'}) eq 'TSIG' || uc($self->{'type'}) eq 'TKEY') {
 		my $tmp_packet = Net::DNS::Packet->new();
 		$data = $tmp_packet->dn_comp($self->{'name'}, 0);
@@ -895,6 +888,7 @@ sub _name2wire   {
 
 
 
+use vars qw($AUTOLOAD);
 
 sub AUTOLOAD {
 	my ($self) = @_;  # If we do shift here, it will mess up the goto below.
@@ -946,6 +940,7 @@ return;
 	goto &{$AUTOLOAD};
 }
 
+sub DESTROY {}
 
 
 #
@@ -1019,6 +1014,7 @@ SRV.
 
 
 
+use vars qw(%rrsortfunct);
 
 sub set_rrsort_func{
     my $class=shift;
@@ -1118,22 +1114,24 @@ RR objects.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-2002 Michael Fuhr.
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2005-2007 Olaf Kolkman
+Portions Copyright (c)2005-2007 Olaf Kolkman
 
-Portions Copyright (c) 2007 Dick Franks
+Portions Copyright (c)2007 Dick Franks
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
 
 EDNS0 extensions by Olaf Kolkman.
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
+L<perl>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
 L<Net::DNS::Update>, L<Net::DNS::Header>, L<Net::DNS::Question>,
 RFC 1035 Section 4.1.3
 
