@@ -1011,7 +1011,7 @@ Stay tuned and syncicate:
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>, L<Net::DNS::Update>,
+L<perl>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>, L<Net::DNS::Update>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>, RFC 1035,
 I<DNS and BIND> by Paul Albitz & Cricket Liu
 

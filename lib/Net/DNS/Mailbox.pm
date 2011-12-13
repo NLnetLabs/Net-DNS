@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-    Net::DNS::Mailbox - DNS mailbox representation
+Net::DNS::Mailbox - DNS mailbox representation
 
 =head1 SYNOPSIS
 
