@@ -58,9 +58,6 @@ sub new {
 	my $qtype  = uc( shift || '' );
 	my $qclass = uc( shift || '' );
 
-	$qname = '' unless defined $qname;			# || ''; is NOT same!
-	$qname =~ s/\.+$//o;					# strip gratuitous trailing dot
-
 	# tolerate (possibly unknown) type and class in zone file order
 	unless ( exists $Net::DNS::classesbyname{$qclass} ) {
 		( $qtype, $qclass ) = ( $qclass, $qtype )
@@ -81,7 +78,7 @@ sub new {
 		}
 	}
 
-	$self->{name}  = $qname;
+	$self->{name}  = new Net::DNS::DomainName1035($qname);
 	$self->{type}  = Net::DNS::typesbyname( $qtype || 'A' );
 	$self->{class} = Net::DNS::classesbyname( $qclass || 'IN' );
 
@@ -114,8 +111,7 @@ sub decode {
 	my $self = bless {}, shift;
 	my ( $data, $offset ) = @_;
 
-	( $self->{name}, $offset ) = Net::DNS::Packet::dn_expand( $data, $offset || 0 );
-	die 'corrupt wire-format data' unless $offset;
+	( $self->{name}, $offset ) = decode Net::DNS::DomainName1035(@_);
 
 	my $next = $offset + QFIXEDSZ;
 	die 'corrupt wire-format data' if length $$data < $next;
@@ -139,13 +135,9 @@ table used to index compressed names within the packet.
 =cut
 
 sub encode {
-	my ( $self, $offset, $hash, $packet ) = @_;
-	$packet ||= bless {}, qw(Net::DNS::Packet);
-	$packet->{compnames} = $hash || {};
+	my $self = shift;
 
-	my $name = $packet->dn_comp( $self->{name}, $offset || 0 );
-
-	return pack 'a* n2', $name, @{$self}{qw(type class)};
+	return pack 'a* n2', $self->{name}->encode(@_), @{$self}{qw(type class)};
 }
 
 
@@ -162,7 +154,7 @@ this attribute is known as zname() and refers to the zone name.
 sub qname {
 	my $self = shift;
 
-	return $self->{name} unless @_;
+	return $self->{name}->identifier unless @_;
 	croak 'method invoked with unexpected argument';
 }
 
@@ -236,7 +228,7 @@ Returns a string representation of the question record.
 sub string {
 	my $self = shift;
 
-	return join "\t", "$self->{name}.", $self->qclass, $self->qtype;
+	return join "\t", $self->{name}->string, $self->qclass, $self->qtype;
 }
 
 
