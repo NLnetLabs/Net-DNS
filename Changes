@@ -1,9 +1,53 @@
 $Id$                       -*-text-*-
 
+**** 0.68 Jan ??, 2012
+
+Fix rt.cpan.org #72314
+	
+	Let a Net::DNS::Nameserver bind on Net::DNS::Nameserver::DEFAULT_ADDR
+	as a last resort.
+
+Fix to suppress false warnings about subroutine profiles on various (older)
+	versions of perl. 
+
+	A contribution from Dick Franks.
+
+Fix to give constants a value of 0 in stead of undef to prevent them from being
+	optimized away om older versions of perl.
+	
+	A contribution from Dick Franks.
+
+Fix to canonicalize at right moment in PTR.pm.
+	
+	A contribution from Dick Franks.
+
+Enhancement to clarify the function of parse and data method, by renaming them
+	to decode and encode respectively.
+
+	A contribution from Dick Franks.
+
+Feature IDN support.
+	
+	The decode methods (previously named parse), now translate to IDN names
+	when UTF8 text is passed. Net::DNS::Domain, Net::DNS::DomainName and
+	Net::DNS::DomainName1035 are utilized to perform this task.
+	A contribution from Dick Franks.
+
+Introduction of the Net::DNS::Mailbox, Net::DNS::Mailbox1035 and
+	Net::DNS::Mailbox2535 classes that will be used in the future to 
+	represent DNS coded form of RFC822 mailbox addresses (RDATA fields).
+
+	A contribution from Dick Franks.
+
+Introduction of the Net::DNS::Text class that will be used in the future to
+	represent DNS coded text pieces (RDATA fields).
+
+	A contribution from Dick Franks.
+
 
 **** 0.67 Nov 4, 2011
 
-Enhancement  rt.cpan.org #60726
+Enhancement rt.cpan.org #60726
 
         On Cygwin Net::DNS now builds without Win32::IPHelper, unless a 
         previous version is updated that did use it. 
