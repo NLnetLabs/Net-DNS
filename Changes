@@ -7,42 +7,29 @@ Fix rt.cpan.org #72314
 	Let a Net::DNS::Nameserver bind on Net::DNS::Nameserver::DEFAULT_ADDR
 	as a last resort.
 
-Fix to suppress false warnings about subroutine profiles on various (older)
-	versions of perl. 
+Fix to suppress false warnings about subroutine profiles on ancient
+	versions of perl.
 
-	A contribution from Dick Franks.
+Fix to avoid constants with value undef which prevents unwanted code from being
+	optimized away on ancient versions of perl.
 
-Fix to give constants a value of 0 in stead of undef to prevent them from being
-	optimized away om older versions of perl.
-	
-	A contribution from Dick Franks.
+Fix code error in PTR.pm, canonical RDATA not downcased.
 
-Fix to canonicalize at right moment in PTR.pm.
-	
-	A contribution from Dick Franks.
-
-Enhancement to clarify the function of parse and data method, by renaming them
+Enhancement to clarify the function of parse and data methods, by renaming them
 	to decode and encode respectively.
 
-	A contribution from Dick Franks.
+Feature IDN query support.
 
-Feature IDN support.
-	
-	The decode methods (previously named parse), now translate to IDN names
-	when UTF8 text is passed. Net::DNS::Domain, Net::DNS::DomainName and
-	Net::DNS::DomainName1035 are utilized to perform this task.
-	A contribution from Dick Franks.
+	Question.pm modified to use the recently introduced DomainName.pm
+	module to represent DNS names.  Queries for domain names containing
+	non-ASCII characters are now possible on Unicode platforms with CPAN 
+	Net::LibIDN installed.
 
-Introduction of the Net::DNS::Mailbox, Net::DNS::Mailbox1035 and
-	Net::DNS::Mailbox2535 classes that will be used in the future to 
-	represent DNS coded form of RFC822 mailbox addresses (RDATA fields).
+Introduction of Mailbox.pm module that will be used in the future to represent 
+	RDATA components containing DNS coded RFC822 mailbox addresses.
 
-	A contribution from Dick Franks.
-
-Introduction of the Net::DNS::Text class that will be used in the future to
-	represent DNS coded text pieces (RDATA fields).
-
-	A contribution from Dick Franks.
+Introduction of Text.pm module that will be used in the future to represent
+	RDATA components containing text.
 
 
 **** 0.67 Nov 4, 2011
