@@ -1,5 +1,12 @@
 $Id$                       -*-text-*-
 
+**** 0.69 ??? ??, 2012
+
+Fix rt.cpan.org #74493
+
+	Read correct resolver configuration in OS/2.
+
+
 **** 0.68 Jan 30, 2012
 
 Fix rt.cpan.org #72314

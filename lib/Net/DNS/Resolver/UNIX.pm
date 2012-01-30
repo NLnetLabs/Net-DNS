@@ -11,7 +11,7 @@ use Net::DNS::Resolver::Base ();
 @ISA     = qw(Net::DNS::Resolver::Base);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-my $resolv_conf = '/etc/resolv.conf';
+my $resolv_conf = $^O eq 'os2' ? $ENV{'ETC'}.'/resolv' : '/etc/resolv.conf';
 my $dotfile     = '.resolv.conf';
 
 my @config_path;
