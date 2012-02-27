@@ -2,6 +2,11 @@ $Id$                       -*-text-*-
 
 **** 0.69 ??? ??, 2012
 
+Enhancement rt.cpan.org #67570
+
+	Make wire2presentation two till eighteen times faster.
+	A contribution from Matthew Horsfall
+
 Fix rt.cpan.org #73366
 
 	Remove existing TSIG when resigning with a new TSIG and give warning.

@@ -417,43 +417,15 @@ sub name2labels {
 
 
 sub wire2presentation {
-    my  $wire=shift;
-    my  $presentation="";
-    my $length=length($wire);
-    # There must be a nice regexp to do this.. but since I failed to
-    # find one I scan the name string until I find a '\', at that time
-    # I start looking forward and do the magic.
+    my $presentation=shift; # Really wire...
 
-    my $i=0;
+    # Prepend these with a backslash
+    $presentation =~ s/(["$();@.\\])/\\$1/g;
 
-    while ($i < $length ){
-	my $char=unpack("x".$i."C1",$wire);
-	if ( $char < 33 || $char > 126 ){
-	    $presentation.= sprintf ("\\%03u" ,$char);
-	}elsif ( $char == ord( "\"" )) {
-	    $presentation.= "\\\"";
-	}elsif ( $char == ord( "\$" )) {
-	    $presentation.= "\\\$";
-	}elsif ( $char == ord( "(" )) {
-	    $presentation.= "\\(";
-	}elsif ( $char == ord( ")" )) {
-	    $presentation.= "\\)";
-	}elsif ( $char == ord( ";" )) {
-	    $presentation.= "\\;";
-	}elsif ( $char == ord( "@" )) {
-	    $presentation.= "\\@";
-	}elsif ( $char == ord( "\\" )) {
-	    $presentation.= "\\\\" ;
-	}elsif ( $char==ord (".") ){
-	    $presentation.= "\\." ;
-	}else{
-	    $presentation.=chr($char) 	;
-	}
-	$i++;
-    }
+    # Convert < 33 and > 126 to \x<\d\d\d>
+    $presentation =~ s/([^\x21-\x7E])/sprintf("\\%03u", ord($1))/eg; 
 
     return $presentation;
-
 }
 
 
