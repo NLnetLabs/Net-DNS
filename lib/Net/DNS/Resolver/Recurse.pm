@@ -346,7 +346,21 @@ sub _dorecursion {
      }
    }
  }
-
+  # None of the authorities with IP worked. Are there still some without IP?
+  foreach my $ns (keys %{ $known_authorities }) {
+    if (scalar @{ $known_authorities->{$ns} }) {
+      delete $known_authorities->{$ns};
+    }
+  }
+  if (%{ $known_authorities }) {
+    print ";; _dorecursion() None of the authorities with IP worked, "
+                          . "retry with the others...\n" if $self->{'debug'};
+    return $self->_dorecursion( $query_packet
+                              , $known_zone
+			      , $known_authorities
+			      , $depth+1
+			      );
+  }
   return undef;
 }
 

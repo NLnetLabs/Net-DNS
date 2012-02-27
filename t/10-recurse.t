@@ -120,7 +120,7 @@ SKIP: {
 	
 	$res->query_dorecursion('a.t.net-dns.org', 'A');
 	
-	is($count, 3);
+	ok($count >= 3, "Lookup took $count queries which is at least 3.");
     }
 } 
 
