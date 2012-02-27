@@ -2,6 +2,10 @@ $Id$                       -*-text-*-
 
 **** 0.69 ??? ??, 2012
 
+Fix rt.cpan.org #73366
+
+	Remove existing TSIG when resigning with a new TSIG and give warning.
+
 Fix rt.cpan.org #75330
 
 	Also try nameserver without glue (as a last resort) when recursing.

@@ -138,8 +138,8 @@ sub sig_data {
 	bless($newpacket->{"header"} = {},"Net::DNS::Header");
 	$newpacket->{"additional"} = [];
 	%{$newpacket->{"header"}} = %{$packet->{"header"}};
-    @{$newpacket->{"additional"}} =
-        grep { $_ != $self } @{$packet->{"additional"}};
+	@{$newpacket->{"additional"}}
+		= grep { $_ != $self } @{$packet->{"additional"}};
 	$newpacket->{"header"}{"arcount"}--;
 	$newpacket->{"compnames"} = {};
 

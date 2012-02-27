@@ -629,6 +629,12 @@ sub sign_tsig {
 	my $self = shift;
 	my $tsig = shift || return undef;
 
+	if (grep { $_->type eq "TSIG" } @{$self->{"additional"}}) {
+		carp("A TSIG RR is already present, removing...");
+		@{$self->{"additional"}}
+			= grep { $_->type ne "TSIG" } @{$self->{"additional"}};
+	}
+
 	unless ( ref $tsig && ($tsig->type eq "TSIG") ) {
 		my $key = shift || return undef;
 		$tsig = Net::DNS::RR->new("$tsig TSIG $key");
