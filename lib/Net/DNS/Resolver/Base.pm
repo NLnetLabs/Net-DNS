@@ -313,6 +313,12 @@ sub searchlist {
 	return @{$self->{'searchlist'}};
 }
 
+sub empty_searchlist {
+	my $self = shift;
+	$self->{'searchlist'} = [];
+	return $self->searchlist();
+}
+
 sub nameservers {
     my $self   = shift;
 
@@ -375,6 +381,12 @@ sub nameservers {
     }
 
     return @returnval;
+}
+
+sub empty_nameservers {
+	my $self = shift;
+	$self->{'nameservers'} = [];
+	return $self->nameservers();
 }
 
 sub nameserver { &nameservers }

@@ -10,28 +10,21 @@ use vars qw($VERSION @ISA);
 $VERSION = (qw$LastChangedRevision$)[1];
 @ISA = qw(Net::DNS::Resolver);
 
-
-my @hardcodedhints = qw (
-198.41.0.4
-192.58.128.30
-192.112.36.4
-202.12.27.33
-192.5.5.241
-128.63.2.53
-192.36.148.17
-192.33.4.12
-192.228.79.201
-199.7.83.42
-128.8.10.90
-193.0.14.129
-192.203.230.10
-2001:503:ba3e::2:30
-2001:500:2f::f
-2001:500:1::803f:235
-2001:503:c27::2:30
-2001:500:3::42
-2001:dc3::35
-);
+my %hardcodedhints
+	 = ( 'a.root-servers.net' => ['198.41.0.4'    , '2001:503:ba3e::2:30' ]
+	   , 'b.root-servers.net' => ['192.228.79.201']
+	   , 'c.root-servers.net' => ['192.33.4.12'   ]
+	   , 'd.root-servers.net' => ['128.8.10.90'   , '2001:500:2d::d'      ]
+	   , 'e.root-servers.net' => ['192.203.230.10']
+	   , 'f.root-servers.net' => ['192.5.5.241'   , '2001:500:2f::f'      ]
+	   , 'g.root-servers.net' => ['192.112.36.4'  ]
+	   , 'h.root-servers.net' => ['128.63.2.53'   , '2001:500:1::803f:235']
+	   , 'i.root-servers.net' => ['192.36.148.17' , '2001:7fe::53'        ]
+	   , 'j.root-servers.net' => ['192.58.128.30' , '2001:503:c27::2:30'  ]
+	   , 'k.root-servers.net' => ['193.0.14.129'  , '2001:7fd::1'         ]
+	   , 'l.root-servers.net' => ['199.7.83.42'   , '2001:500:3::42'      ]
+	   , 'm.root-servers.net' => ['202.12.27.33'  , '2001:dc3::35'        ]
+	   );
 
 sub hints {
   my $self = shift;
@@ -39,7 +32,7 @@ sub hints {
   print ";; hints(@hints)\n" if $self->{'debug'};
 
   if (!@hints && !$self->nameservers){
-	  return $self->hints( @hardcodedhints )
+	  return $self->hints( map { @{ $_ } } values %hardcodedhints )
   }elsif (!@hints && $self->nameservers) {
 	  return $self->hints($self->nameservers);
   } else {
@@ -91,8 +84,13 @@ sub hints {
     }
     foreach my $server (keys %hints) {
       if (!@{ $hints{$server} }) {
-	# Wipe the servers without lookups
-	delete $hints{$server};
+      	if (exists $hardcodedhints{ lc $server }) {
+	  # Not all root servers provide glue and we know the answers.
+	  $hints{$server} = $hardcodedhints{ lc $server };
+	} else {
+          # Wipe the servers without lookups
+          delete $hints{$server};
+	}
       }
     }
     $self->{'hints'} = \%hints;
@@ -111,7 +109,7 @@ sub hints {
   } else {
     warn "Servers [". join " ",($self->nameservers),"] did not give answers";
     print ";; Unsetting hints and nameservers, trying with hardcoded nameservers\n" if  $self->{'debug'};
-    print $self->nameservers([]);
+    print $self->empty_nameservers();
     return $self->hints();
   }
 

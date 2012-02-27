@@ -332,6 +332,12 @@ Gets or sets the nameservers to be queried.
 
 Also see the IPv6 transport notes below
 
+=head2 empty_nameservers
+
+    $res->empty_nameservers();
+
+Empties the list of nameservers.
+ 
 =head2 print
 
     $res->print;
@@ -351,6 +357,12 @@ Returns a string representation of the resolver state.
 
 Gets or sets the resolver search list.
 
+=head2 empty_searchlist
+
+    $res->empty_searchlist();
+
+Empties the searchlist.
+ 
 =head2 port
 
     print 'sending queries to port ', $res->port, "\n";
