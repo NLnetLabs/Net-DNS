@@ -2,6 +2,10 @@ $Id$                       -*-text-*-
 
 **** 0.69 ??? ??, 2012
 
+Fix rt.cpan.org #77304
+
+	Fix resolver searchlist from registry setup on Win32.
+
 Enhancement rt.cpan.org #67570
 
 	Make wire2presentation two till eighteen times faster.

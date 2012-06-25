@@ -76,7 +76,7 @@ sub init {
 
 	if (defined $reg_tcpip){
 		$searchlist .= "," if $searchlist; # $domain already in there
-		$searchlist .= $reg_tcpip->GetValue('SearchList');
+		$searchlist .= ($reg_tcpip->GetValue('SearchList') || "");
 		my ($value, $type) = $reg_tcpip->GetValue('UseDomainNameDevolution');
 		$usedevolution = defined $value && $type == REG_DWORD ? hex $value : 0;
 	}
