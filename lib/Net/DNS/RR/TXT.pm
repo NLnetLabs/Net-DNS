@@ -68,14 +68,25 @@ sub _build_char_str_list {
 
 	my @words;
 
-	@words= shellwords($rdata_string) if $rdata_string;
+	@words= quotewords('\s+', 1, $rdata_string) if $rdata_string;
 
 	$self->{'char_str_list'} = [];
 
 	if (@words) {
 		foreach my $string (@words) {
-		    $string =~ s/\\"/"/g;
-		    push(@{$self->{'char_str_list'}}, $string);
+		    $string =~ s/^'(.*)'$/$1/ unless $string =~ s/^"(.*)"$/$1/;
+		    my $wire = "";
+		    while ($string =~ /\G([^\\]*)([\\]?)/g) {
+			$wire .= $1 if defined $1;
+			if ($2) {
+			    if ($string =~ /\G(\d\d\d)/gc) {
+				$wire.=pack("C",$1);
+			    } elsif ($string =~ /\G(.)/gc) {
+				$wire .= $1;
+			    }
+			}
+		    }
+		    push(@{$self->{'char_str_list'}}, $wire);
 		}
 	}
 }

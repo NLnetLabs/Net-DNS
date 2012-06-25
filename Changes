@@ -2,6 +2,10 @@ $Id$                       -*-text-*-
 
 **** 0.69 ??? ??, 2012
 
+Fix rt.cpan.org #77444
+
+	Support escaped characters according to RFC1035 in TXT rdata.
+
 Fix rt.cpan.org #77304
 
 	Fix resolver searchlist from registry setup on Win32.
