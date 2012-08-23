@@ -90,7 +90,7 @@ use constant PACKED_LENGTH => length pack 'n C2 n4', (0) x 7;
 sub decode {
 	my ( $class, $data ) = @_;
 
-	die 'Exception: incomplete data' if length($$data) < PACKED_LENGTH;
+	die 'corrupt wire-format data' if length($$data) < PACKED_LENGTH;
 
 	my ( $id, $b2, $b3, $qd, $an, $ns, $ar ) = unpack( 'n C2 n4', $$data );
 
@@ -167,16 +167,16 @@ Returns a string representation of the header object.
 =cut
 
 sub string {
-	my $self   = shift;
-	my $retval = "";
+	my $self = shift;
 
-	$retval .= ";; id = $self->{id}\n";
+	my $retval = ";; id = $self->{id}\n";
 
 	if ( $self->{"opcode"} eq "UPDATE" ) {
-		$retval .= ";; qr = $self->{qr}	   " . "opcode = $self->{opcode}    " . "rcode = $self->{rcode}\n";
-
 		$retval .=
-				  ";; zocount = $self->{qdcount}  "
+				  ";; qr = $self->{qr}	   "
+				. "opcode = $self->{opcode}    "
+				. "rcode = $self->{rcode}\n"
+				. ";; zocount = $self->{qdcount}  "
 				. "prcount = $self->{ancount}  "
 				. "upcount = $self->{nscount}  "
 				. "adcount = $self->{arcount}\n";

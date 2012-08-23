@@ -15,9 +15,9 @@ Net::DNS::Packet - DNS protocol packet
 
     use Net::DNS::Packet;
 
-    $packet = new Net::DNS::Packet('example.com', 'MX', 'IN');
+    $query = new Net::DNS::Packet('example.com', 'MX', 'IN');
 
-    $resolver->send($packet);
+    $reply = $resolver->send($query);
 
 
 =head1 DESCRIPTION
@@ -30,7 +30,7 @@ A C<Net::DNS::Packet> object represents a DNS protocol packet.
 use strict;
 use integer;
 use Carp;
-use Net::DNS;
+use Net::DNS::Header;
 use Net::DNS::Question;
 use Net::DNS::RR;
 
@@ -61,18 +61,20 @@ If called with an empty argument list, C<new> creates an empty packet.
     $packet = new Net::DNS::Packet(\$data);
     $packet = new Net::DNS::Packet(\$data, 1);		# set debugging
 
-    ($packet, $err) = new Net::DNS::Packet(\$data);
-
 If passed a reference to a scalar containing DNS packet data,
 C<new> creates a packet object by decoding the data.  The optional
-second argument can be passed to turn on debugging output.
+second boolean argument is used to enable debugging output.
 
-If called in array context, returns a packet object and an
-error string.  The content of the error string is unspecified
-if the packet object was successfully created.
+Returns undef if unable to create a packet object.
 
-Returns undef if unable to create a packet object (e.g., if
-the packet data is truncated).
+Decoding errors, including data corruption and truncation,
+are collected in the $@ ($EVAL_ERROR) variable.
+
+
+    ($packet, $length) = new Net::DNS::Packet(\$data);
+
+If called in array context, returns a packet object and the
+number of octets sucessfully decoded.
 
 =cut
 
@@ -98,36 +100,57 @@ sub decode {
 	my $data  = shift;
 	my $debug = shift || 0;
 
-	my $self = eval {
-		my %self = (
-			question   => [],
+	my $offset = 0;
+	my $self;
+	eval {
+		# Parse header section
+		my $header;
+		( $header, $offset ) = decode Net::DNS::Header($data);
+
+		# Parse question/zone section
+		my $count = $header->qdcount;
+		my $hash = {};
+		my @question;
+		my $record;
+		while ($count--) {
+			( $record, $offset ) = decode Net::DNS::Question( $data, $offset, $hash );
+			CORE::push( @question, $record );
+		}
+
+		$self = bless {
+			header	   => $header,
+			question   => [@question],
 			answer	   => [],
 			authority  => [],
 			additional => [],
-			answersize => length $$data,
-			buffer	   => $data
-			);
+			answersize => length $$data }, $class;
 
-		# Parse header section
-		my ( $header, $offset ) = decode Net::DNS::Header($data);
-		$self{header} = $header;
-
-		# Parse question/zone section
-		for ( 1 .. $header->qdcount ) {
-			my $qd;
-			( $qd, $offset ) = decode Net::DNS::Question( $data, $offset );
-			CORE::push( @{$self{question}}, $qd );
+		# Parse RR sections
+		$count = $header->ancount;
+		while ($count--) {
+			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			CORE::push( @{$self->{answer}}, $record );
 		}
 
-		# Retain offset for on-demand decoding of remaining data
-		$self{offset} = $offset;
+		$count = $header->nscount;
+		while ($count--) {
+			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			CORE::push( @{$self->{authority}}, $record );
+		}
 
-		bless \%self, $class;
+		$count = $header->arcount;
+		while ($count--) {
+			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			CORE::push( @{$self->{additional}}, $record );
+		}
 	};
 
-	( $self || die $@ )->print if $debug;
+	if ( $debug && $self ) {
+		local $@;
+		$self->print;
+	}
 
-	return wantarray ? ( $self, $@ ) : $self;
+	return wantarray ? ( $self, $offset ) : $self;
 }
 
 
@@ -144,8 +167,6 @@ sub encode {&data}
 
 sub data {
 	my $self = shift;
-
-	return ${$self->{buffer}} if $self->{buffer};		# retransmit raw packet
 
 	#----------------------------------------------------------------------
 	# Set record counts in packet header
@@ -219,37 +240,11 @@ must not preexist.
 =cut
 
 sub answer {
-	my ($self) = @_;
-	my $rrlist = $self->{answer};
-	return @$rrlist if @$rrlist;
-	@$rrlist = $self->_section( $self->{header}->ancount );
+	return @{shift->{answer}};
 }
 
 sub pre		 {&answer}
 sub prerequisite {&answer}
-
-sub _section {
-	my $self = shift;
-	my $count = shift || return ();
-
-	my $offset = $self->{offset} || return ();
-	my $data   = $self->{buffer} || return ();
-	my $hash   = {};
-	my $byte   = $offset;
-	my @rr;
-	eval {
-		my $rr;
-		undef $self->{offset};
-		while ( $count-- ) {
-			$byte = $offset;
-			( $rr, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
-			CORE::push( @rr, $rr );
-		}
-		$self->{offset} = $offset;
-	};
-	carp "$@ RR at octet $byte corrupt/incomplete" if $@;
-	return @rr;
-}
 
 
 =head2 authority, update
@@ -265,11 +260,7 @@ specifies the RRs or RRsets to be added or deleted.
 =cut
 
 sub authority {
-	my ($self) = @_;
-	my $rrlist = $self->{authority};
-	return @$rrlist if @$rrlist;
-	&answer;
-	@$rrlist = $self->_section( $self->{header}->nscount );
+	return @{shift->{authority}};
 }
 
 sub update {&authority}
@@ -285,13 +276,7 @@ section of the packet.
 =cut
 
 sub additional {
-	my ($self) = @_;
-	my $rrlist = $self->{additional};
-	return @$rrlist if @$rrlist;
-	&authority;
-	@$rrlist = $self->_section( $self->{header}->arcount );
-	undef $self->{buffer};
-	return @$rrlist;
+	return @{shift->{additional}};
 }
 
 

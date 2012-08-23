@@ -52,15 +52,16 @@ is($packet2->string, $packet->string, 'decoded packet matches original');
 is(unpack('H*', $packet2->data), unpack('H*', $packet_data), 'retransmitted packet matches original');
 
 
-#	new(\$data) class constructor raises exception when data truncated
+#	new(\$data) class constructor captures exception text when data truncated
 my @data = unpack 'C*', $packet->data;
 while ( @data ) {
 	pop(@data);
 	my $truncated = pack 'C*', @data;
-	my ($object,$error) = eval{ Net::DNS::Packet->new(\$truncated) };
 	my $length = length $truncated;
-	chomp $error;
-	ok($error,	"truncated ($length octets):\t$error");
+	my $object = Net::DNS::Packet->new(\$truncated);
+	my $exception = $@;
+	$exception =~ s/\n.*$//g;
+	ok($exception,	"truncated ($length octets):\t[$exception]");
 }
 
 
@@ -139,5 +140,5 @@ is($bind->header->adcount, 1, 'check additional count in synthetic packet header
 my ($rr) = $bind->additional;
 
 is($rr->type,	'OPT',	'Additional section packet is EDNS0 type');
-is($rr->class,	'4096',	'EDNS0 packet size correct');
+is($rr->size,	'4096',	'EDNS0 packet size correct');
 

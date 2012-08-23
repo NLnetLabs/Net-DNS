@@ -618,9 +618,10 @@ sub send_tcp {
 				next;
 			}
 
-			my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
+			my $ans = Net::DNS::Packet->new(\$buf, $self->{debug});
+			$self->errorstring($@);
+
 			if (defined $ans) {
-				$self->errorstring($ans->header->rcode);
 				$ans->answerfrom($self->answerfrom);
 
 				if ($ans->header->rcode ne "NOERROR" &&
@@ -633,10 +634,6 @@ sub send_tcp {
 				}
 
 			}
-			elsif (defined $err) {
-				$self->errorstring($err);
-			}
-
 			return $ans;
 		}
 		else {
@@ -884,12 +881,12 @@ sub send_udp {
 				  length($buf), " bytes\n"
 				      if $self->{'debug'};
 
-				  my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
+				  my $ans = Net::DNS::Packet->new(\$buf, $self->{debug});
+				  $self->errorstring($@);
 
 				  if (defined $ans) {
 				      next SELECTOR unless ( $ans->header->qr || $self->{'ignqrid'});
 				      next SELECTOR unless  ( ($ans->header->id == $packet->header->id) || $self->{'ignqrid'} );
-				      $self->errorstring($ans->header->rcode);
 				      $ans->answerfrom($self->answerfrom);
 				      if ($ans->header->rcode ne "NOERROR" &&
 					  $ans->header->rcode ne "NXDOMAIN"){
@@ -902,10 +899,9 @@ sub send_udp {
 					  next NAMESERVER ;
 
 				      }
-				  } elsif (defined $err) {
-				      $self->errorstring($err);
 				  }
 				  return $ans;
+
 			      } else {
 				  $self->errorstring($!);
       				  print ';; recv ERROR(',
@@ -1068,16 +1064,12 @@ sub bgread {
 		      $sock->peerport, ' : ', length($buf), " bytes\n"
 			if $self->{'debug'};
 
-		my ($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
+		my $ans = Net::DNS::Packet->new(\$buf, $self->{debug});
+		$self->errorstring($@);
 
-		if (defined $ans) {
-			$self->errorstring($ans->header->rcode);
-			$ans->answerfrom($sock->peerhost);
-		} elsif (defined $err) {
-			$self->errorstring($err);
-		}
-
+		$ans->answerfrom($sock->peerhost) if defined $ans;
 		return $ans;
+
 	} else {
 		$self->errorstring($!);
 		return;
@@ -1314,8 +1306,8 @@ sub axfr_next {
 			return wantarray ? (undef, $err) : undef;
 		}
 
-		my $ans;
-		($ans, $err) = Net::DNS::Packet->new(\$buf, $self->{'debug'});
+		my $ans = Net::DNS::Packet->new(\$buf, $self->{debug});
+		my $err = $@;
 
 		if ($ans) {
 			if ($ans->header->rcode ne 'NOERROR') {
@@ -1350,7 +1342,7 @@ sub axfr_next {
 
 		if ($self->{'axfr_soa_count'} >= 2) {
 			$self->{'axfr_sel'} = undef;
-			# we need to mark the transfer as over if the responce was in
+			# we need to mark the transfer as over if the response was in
 			# many answers.  Otherwise, the user will call axfr_next again
 			# and that will cause a 'no transfer in progress' error.
 			push(@{$self->{'axfr_rr'}}, undef);
