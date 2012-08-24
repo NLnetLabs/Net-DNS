@@ -2,7 +2,7 @@
 
 use strict;
 use diagnostics;
-use Test::More tests => 46;
+use Test::More tests => 50;
 
 
 use constant UTF8 => eval {
@@ -105,36 +105,51 @@ t10: {
 }
 
 
-{
+t13: {
 	my $name   = 'simple-name';
 	my $suffix = 'example.com';
+	my $create = origin Net::DNS::Domain($suffix);
 	my $domain = new Net::DNS::Domain($name);
 	is( $domain->name, $name, "$name absolute by default" );
 
-	my $create = origin Net::DNS::Domain($suffix);
 	my $result = &$create( sub{ new Net::DNS::Domain($name); } );
 	my $expect = new Net::DNS::Domain("$name.$suffix");
-	is( $result->name, $expect->name, "suffix appended to $name" );
+	is( $result->name, $expect->name, "origin appended to $name" );
+
+	my $root   = new Net::DNS::Domain('@');
+	is( $root->name, '.', 'bare @ represents root by default' );
+
+	my $origin = &$create( sub{ new Net::DNS::Domain('@'); } );
+	is( $origin->name, $suffix, 'bare @ represents defined origin' );
 }
 
 
-t15: {
+{
 	foreach my $char ( qw($ ' " ; @) ) {
-		my $string = $char . 'example.com.';
-		my $domain = new Net::DNS::Domain($string);
-		is( $domain->string, ESC . $string, "escape leading $char in string" );
+		my $name = $char . 'example.com.';
+		my $domain = new Net::DNS::Domain($name);
+		is( $domain->string, ESC . $name, "escape leading $char in string" );
 	}
 }
 
 
-t20: {
-	eval { my $domain = new Net::DNS::Domain('.example.com') };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "null domain label\t[$exception]" );
+t22: {
+	foreach my $part ( qw(_rvp._tcp *) ) {
+		my $name = "$part.example.com.";
+		my $domain = new Net::DNS::Domain($name);
+		is( $domain->string, $name, "permit leading $part" );
+	}
 }
 
 
 {
+	my $ldh	      = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-0123456789';
+	my $domain    = new Net::DNS::Domain($ldh);
+	is( $domain->name, $ldh, '63 octet LDH character label' );
+}
+
+
+t25: {
 	my @warnings;
 	local $SIG{__WARN__} = sub { push( @warnings, "@_" ); };
 	my $name      = 'LO-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-NG!';
@@ -146,9 +161,9 @@ t20: {
 
 
 {
-	my $ldh	      = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-0123456789';
-	my $domain    = new Net::DNS::Domain($ldh);
-	is( $domain->name, $ldh, '63 octet LDH character label' );
+	eval { my $domain = new Net::DNS::Domain('.example.com') };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "null domain label\t[$exception]" );
 }
 
 
@@ -158,19 +173,19 @@ SKIP: {
 	skip( 'IDN test - Net::LibIDN not working', 8 ) unless LIBIDNOK;
 	my $a_label = 'xn--fiqs8s';
 	my $u_label = eval{ pack( 'U*', 20013, 22269 ); };
-	is( new Net::DNS::Domain($a_label)->identifier, $a_label, 'IDN A-label domain->identifier' );
+	is( new Net::DNS::Domain($a_label)->name, $a_label, 'IDN A-label domain->name' );
+	is( new Net::DNS::Domain($a_label)->xname, $u_label, 'IDN A-label domain->xname' );
+	is( new Net::DNS::Domain($a_label)->fqdn, "$a_label.", 'IDN A-label domain->fqdn' );
 	is( new Net::DNS::Domain($a_label)->string, "$a_label.", 'IDN A-label domain->string' );
-	is( new Net::DNS::Domain($a_label)->name, $u_label, 'IDN A-label domain->name' );
-	is( new Net::DNS::Domain($a_label)->fqdn, "$u_label.", 'IDN A-label domain->fqdn' );
 
-	is( new Net::DNS::Domain($u_label)->identifier, $a_label, 'IDN U-label domain->identifier' );
+	is( new Net::DNS::Domain($u_label)->name, $a_label, 'IDN U-label domain->name' );
+	is( new Net::DNS::Domain($u_label)->xname, $u_label, 'IDN U-label domain->xname' );
+	is( new Net::DNS::Domain($u_label)->fqdn, "$a_label.", 'IDN U-label domain->fqdn' );
 	is( new Net::DNS::Domain($u_label)->string, "$a_label.", 'IDN U-label domain->string' );
-	is( new Net::DNS::Domain($u_label)->name, $u_label, 'IDN U-label domain->name' );
-	is( new Net::DNS::Domain($u_label)->fqdn, "$u_label.", 'IDN U-label domain->fqdn' );
 }
 
 
-t31:{
+t35:{
 	foreach my $case (
 		'\000\001\002\003\004\005\006\007\008\009\010\011\012\013\014\015',
 		'\016\017\018\019\020\021\022\023\024\025\026\027\028\029\030\031'
@@ -196,7 +211,7 @@ t31:{
 }
 
 
-t39: {
+t43: {
 	foreach my $case (
 		'\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143',
 		'\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159',

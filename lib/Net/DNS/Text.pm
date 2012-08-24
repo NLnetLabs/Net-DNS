@@ -46,7 +46,7 @@ use constant ASCII => eval {
 } || 0;
 
 use constant UTF8 => eval {
-	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 §3.6]
+	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
 	Encode::find_encoding('UTF8');				# return encoding object
 } || 0;
 
@@ -77,13 +77,11 @@ sub new {
 
 	local $_ = &_encode_utf8;
 
-	s/^([\042\047])(.*)\1$/$2/;				# strip quotes
+	s/^([\042\047])(.*)\1$/$2/;				# strip paired quotes
 
 	s/\134\134/\134\066\066\066/g;				# disguise escaped escape
 
-	while (/\134([\060-\062][\060-\071]{2})/) {		# numeric escape
-		s/\134($1)/$unescape{$1}/eg;
-	}
+	s/\134([\060-\062][\060-\071]{2})/$unescape{$1}/eg;	# numeric escape
 
 	s/\134\066\066\066/\134\134/g;				# reveal escaped escape
 	s/\134(.)/$1/g;						# character escape
@@ -151,9 +149,11 @@ sub encode {
 
     $value = $text->value;
 
-Returns the character representation of the text object.
+Character string representation of the text object.
 
 =cut
+
+my %escape;							# precalculated ASCII/UTF-8 escape table
 
 sub value {
 	my $self = shift;
@@ -165,25 +165,22 @@ sub value {
 
     $string = $text->string;
 
-Returns the escaped string representation of the text object.
+Conditionally quoted zone file representation of the text object.
 
 =cut
 
-my %escape;							# precalculated ASCII/UTF-8 escape table
 my $QQ = _decode_utf8( pack 'C', 34 );
 
 sub string {
 	my $self = shift;
 
-	local $_ = join '', @$self;
-	s/([^\040\060-\132\141-\172])/$escape{$1}/eg;		# escape special and unprintable
-
-	$_ = _decode_utf8($_);
+	my @utf8 = map { s/([^\040\060-\132\141-\172])/$escape{$1}/eg; $_ } @$self;
+	my $string = _decode_utf8( join '', @utf8 );
 
 	# Note: Script-specific rules determine which Unicode characters match \s
-	return $_ unless /^$|\s|["\$'():;@`]/;			# unquoted contiguous
+	return $string unless $string =~ /^$|\s|["\$'();@]/;	# unquoted contiguous
 
-	return join '', $QQ, $_, $QQ;				# quoted string
+	join '', $QQ, $string, $QQ;				# quoted string
 }
 
 
@@ -207,14 +204,16 @@ sub _decode_utf8 {
 
 	return ASCII->decode(shift) if ASCII && not UTF8;
 
-	# partial transliteration for single octet character encodings
-	local $_ = shift;
+	unless (ASCII) {
+		my $s = shift;
 
-	tr
-	[\055\011\040-\054\056-\176\302-\364\000-\377]
-	[-	 !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~???????????????????????????????????????????????????]d
-			unless ASCII;
-	return $_;						# native 8-bit code
+		# partial transliteration for non-ASCII character encodings
+		$s =~ tr
+		[\055\040-\054\056-\176\000-\377]
+		[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?];
+
+		return $s;					# native 8-bit code
+	}
 }
 
 
@@ -224,36 +223,34 @@ sub _encode_utf8 {
 
 	return ASCII->encode(shift) if ASCII && not UTF8;
 
-	# partial transliteration for single octet character encodings
-	local $_ = shift;
+	unless (ASCII) {
+		my $s = shift;
 
-	tr
-	[-	 !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
-	[\055\011\040-\054\056-\176]d
-			unless ASCII;
-	return $_;						# ASCII
+		# partial transliteration for non-ASCII character encodings
+		$s =~ tr
+		[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
+		[\055\040-\054\056-\176\077];
+
+		return $s;					# ASCII
+	}
 }
 
 
 %escape = eval {				## precalculated ASCII/UTF-8 escape table
 	my %table;
-	my @C0 = ( 0 .. 8, 10 .. 31 );				# except tab character
-	my @NA = UTF8 ? () : ( 128 .. 255 );
+	my @C0 = ( 0 .. 31 );					# control characters
+	my @NA = UTF8 ? ( 192, 193, 245 .. 255 ) : ( 128 .. 255 );
 
 	foreach ( 0 .. 255 ) {					# transparent
-		my $char = pack 'C', $_;
-		$table{$char} = $char;
+		$table{pack( 'C', $_ )} = pack 'C', $_;
 	}
 
-	# minimal character escapes
-	foreach ( 34, 92 ) {					# \" \\
-		my $char = pack 'C', $_;
-		$table{$char} = pack 'C*', 92, $_;
+	foreach ( 34, 92 ) {					# escape character
+		$table{pack( 'C', $_ )} = pack 'C*', 92, $_;
 	}
 
 	foreach ( @C0, 127, @NA ) {				# \ddd
-		my $char = pack 'C', $_;
-		$table{$char} = sprintf '\\%03u', $_;
+		$table{pack( 'C', $_ )} = _encode_utf8 sprintf( '\\%03u', $_ );
 	}
 
 	return %table;
@@ -264,10 +261,10 @@ sub _encode_utf8 {
 	my %table;
 
 	foreach ( 0 .. 255 ) {
-		my $aseq = _encode_utf8 sprintf( '%03u', $_ );
-		$table{$aseq} = pack 'C', $_;
-		$table{$aseq} = pack 'Ca*', $_, _encode_utf8 '666' if $_ == 92;
+		$table{_encode_utf8 sprintf( '%03u', $_ )} = pack 'C', $_;
 	}
+
+	$table{_encode_utf8('092')} = pack 'Ca*', 92, _encode_utf8 '666';
 
 	return %table;
 };

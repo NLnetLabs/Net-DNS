@@ -2,7 +2,7 @@
 
 use strict;
 use diagnostics;
-use Test::More tests => 35;
+use Test::More tests => 42;
 
 
 BEGIN {
@@ -13,6 +13,7 @@ BEGIN {
 {
 	my %testcase = (
 		'.'				    => '<>',
+		'<>'				    => '<>',
 		'a'				    => 'a',
 		'a.b'				    => 'a@b',
 		'a.b.c'				    => 'a@b.c',
@@ -22,12 +23,32 @@ BEGIN {
 		'a@b.c.d'			    => 'a@b.c.d',
 		'a\.b.c.d'			    => 'a.b@c.d',
 		'a\.b@c.d'			    => 'a.b@c.d',
-		'a\@b.c.d'			    => 'a\@b@c.d',
-		'a\@b@c.d'			    => 'a\@b@c.d',
 		'empty <>'			    => '<>',
 		'fore <a.b@c.d> aft'		    => 'a.b@c.d',
 		'nested <<address>>'		    => 'address',
 		'obscure <<left><<<deep>>><right>>' => 'right',
+		);
+
+	foreach my $test ( sort keys %testcase ) {
+		my $expect  = $testcase{$test};
+		my $mailbox = new Net::DNS::Mailbox($test);
+		my $data    = $mailbox->encode;
+		my $decoded = decode Net::DNS::Mailbox( \$data );
+		is( $decoded->address, $expect, "encode/decode mailbox	$test" );
+	}
+}
+
+
+{
+	my %testcase = (
+		'"a b"@c.d'  => '"a b"@c.d',
+		'"a,b"@c.d'  => '"a,b"@c.d',
+		'"a.b"@c.d'  => 'a.b@c.d',
+		'"a@b"@c.d'  => '"a@b"@c.d',
+		'a\ b@c.d'   => '"a b"@c.d',
+		'a\032b@c.d' => '"a b"@c.d',
+		'a\@b.c.d'   => '"a@b"@c.d',
+		'a\@b@c.d'   => '"a@b"@c.d',
 		);
 
 	foreach my $test ( sort keys %testcase ) {
@@ -68,9 +89,9 @@ BEGIN {
 	isa_ok( $domain,  'Net::DNS::Mailbox1035', 'object returned by new() constructor' );
 	isa_ok( $decoded, 'Net::DNS::Mailbox1035', 'object returned by decode() constructor' );
 	isnt( length $compress, length $data, 'Net::DNS::Mailbox1035 encoding is compressible' );
-	isnt( $data, $downcased, 'Net::DNS::Mailbox1035 encoding preserves case' );
+	isnt( $data,		$downcased,   'Net::DNS::Mailbox1035 encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::Mailbox1035 canonical form is uncompressed' );
-	is( $canonical, $downcased, 'Net::DNS::Mailbox1035 canonical form is lower case' );
+	is( $canonical,	       $downcased,   'Net::DNS::Mailbox1035 canonical form is lower case' );
 }
 
 
@@ -87,7 +108,7 @@ BEGIN {
 	is( length $compress, length $data, 'Net::DNS::Mailbox2535 encoding is uncompressed' );
 	isnt( $data, $downcased, 'Net::DNS::Mailbox2535 encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::Mailbox2535 canonical form is uncompressed' );
-	is( $canonical, $downcased, 'Net::DNS::Mailbox2535 canonical form is lower case' );
+	is( $canonical,	       $downcased,   'Net::DNS::Mailbox2535 canonical form is lower case' );
 }
 
 

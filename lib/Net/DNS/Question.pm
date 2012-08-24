@@ -29,8 +29,8 @@ use strict;
 use integer;
 use Carp;
 
-use Net::DNS;
-use Net::DNS::DomainName;
+require Net::DNS;
+require Net::DNS::DomainName;
 
 
 =head1 METHODS
@@ -117,7 +117,7 @@ sub decode {
 	die 'corrupt wire-format data' if length $$data < $next;
 	@{$self}{qw(type class)} = unpack "\@$offset n2", $$data;
 
-	return wantarray ? ( $self, $next ) : $self;
+	wantarray ? ( $self, $next ) : $self;
 }
 
 
@@ -137,7 +137,35 @@ table used to index compressed names within the packet.
 sub encode {
 	my $self = shift;
 
-	return pack 'a* n2', $self->{name}->encode(@_), @{$self}{qw(type class)};
+	pack 'a* n2', $self->{name}->encode(@_), @{$self}{qw(type class)};
+}
+
+
+=head2 name
+
+    $name = $question->name;
+
+Internationalised domain name corresponding to the qname attribute.
+
+Decoding non-ASCII domain names is computationally expensive and
+undesirable for names which are likely to be used to construct
+further queries.
+
+When required to communicate with humans, the 'proper' domain name
+should be extracted from a query or reply packet.
+
+    $query = new Net::DNS::Packet( $example, 'ANY' );
+    $reply = $resolver->send($query) or die;
+    ($question) = $reply->question;
+    $name = $question->name;
+
+=cut
+
+sub name {
+	my $self = shift;
+
+	croak 'method invoked with unexpected argument' if @_;
+	$self->{name}->xname;
 }
 
 
@@ -146,16 +174,17 @@ sub encode {
     $qname = $question->qname;
     $zname = $question->zname;
 
-Returns the question name attribute.  In dynamic update packets,
-this attribute is known as zname() and refers to the zone name.
+Canonical ASCII domain name as required for the query subject
+transmitted to a nameserver.  In dynamic update packets, this
+attribute is known as zname() and refers to the zone name.
 
 =cut
 
 sub qname {
 	my $self = shift;
 
-	return $self->{name}->identifier unless @_;
-	croak 'method invoked with unexpected argument';
+	croak 'method invoked with unexpected argument' if @_;
+	$self->{name}->name;
 }
 
 sub zname { &qname; }
@@ -174,8 +203,8 @@ this attribute is known as ztype() and refers to the zone type.
 sub type {
 	my $self = shift;
 
-	return Net::DNS::typesbyval( $self->{type} ) unless @_;
-	croak 'method invoked with unexpected argument';
+	croak 'method invoked with unexpected argument' if @_;
+	Net::DNS::typesbyval( $self->{type} );
 }
 
 sub qtype { &type; }
@@ -195,8 +224,8 @@ this attribute is known as zclass() and refers to the zone class.
 sub class {
 	my $self = shift;
 
-	return Net::DNS::classesbyval( $self->{class} ) unless @_;
-	croak 'method invoked with unexpected argument';
+	croak 'method invoked with unexpected argument' if @_;
+	Net::DNS::classesbyval( $self->{class} );
 }
 
 sub qclass { &class; }
@@ -228,7 +257,7 @@ Returns a string representation of the question record.
 sub string {
 	my $self = shift;
 
-	return join "\t", $self->{name}->string, $self->qclass, $self->qtype;
+	join "\t", $self->{name}->string, $self->qclass, $self->qtype;
 }
 
 

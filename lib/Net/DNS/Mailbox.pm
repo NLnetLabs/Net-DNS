@@ -54,12 +54,14 @@ sub new {
 	s/^.*<//g;						# strip excess on left
 	s/>.*$//g;						# strip excess on right
 
-	s/\\\./\\046/g;						# disguise escaped .
 	s/\\\@/\\064/g;						# disguise escaped @
+	s/^(".*)\@(.*")/$1\\064$2/g;				# disguise quoted @
 
 	my ( $mbox, @host ) = split /\@/;			# split on @ if present
 	$mbox ||= '';
-	$mbox =~ s/\./\\046/g if @host;				# escape dots
+	$mbox =~ s/^"(.*)"$/$1/;				# strip quotes
+	$mbox =~ s/\\\./\\046/g;				# disguise escaped dot
+	$mbox =~ s/\./\\046/g if @host;				# escape dots in local part
 
 	bless __PACKAGE__->SUPER::new( join '.', $mbox, @host ), $class;
 }
@@ -69,11 +71,9 @@ sub new {
 
     $address = $mailbox->address;
 
-Returns a character string corresponding to the RFC822 form of
-mailbox address of the domain as described in RFC1035 section 8.
-
-The string consists of printable characters from the 7-bit ASCII
-repertoire.
+Returns a character string containing the RFC822 mailbox address
+corresponding to the encoded domain name representation described
+in RFC1035 section 8.
 
 =cut
 
@@ -81,7 +81,8 @@ sub address {
 	my @label = shift->label;
 	local $_ = shift(@label) || return '<>';
 	s/\\\./\./g;						# unescape dots
-	s/\@/\\@/g;						# escape @
+	s/\\032/ /g;						# unescape space
+	s/^(.+)$/"$1"/ if /[ ",@\[\\\]]/;			# quote local part
 	return join '@', $_, join( '.', @label ) || ();
 }
 
@@ -120,7 +121,7 @@ __END__
 
 =head1 COPYRIGHT
 
-Copyright (c)2009,2010 Dick Franks.
+Copyright (c)2009,2012 Dick Franks.
 
 All rights reserved.
 

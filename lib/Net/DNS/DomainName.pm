@@ -197,9 +197,9 @@ sub encode {
 
 
 sub _lc {
-	local $_ = shift;
-	tr [\101-\132] [\141-\172];
-	return $_;
+	my $s = shift;
+	$s =~ tr [\101-\132] [\141-\172];
+	return $s;
 }
 
 
@@ -247,9 +247,9 @@ sub encode {
 
 
 sub _lc {
-	local $_ = shift;
-	tr [\101-\132] [\141-\172];
-	return $_;
+	my $s = shift;
+	$s =~ tr [\101-\132] [\141-\172];
+	return $s;
 }
 
 

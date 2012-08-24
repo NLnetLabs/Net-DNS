@@ -47,7 +47,7 @@ use constant ASCII => eval {
 } || 0;
 
 use constant UTF8 => eval {
-	die if Encode::decode_utf8( chr(91) ) ne '[';		# specifically not UTF-EBCDIC
+	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
 	Encode::find_encoding('UTF8');				# return encoding object
 } || 0;
 
@@ -121,21 +121,23 @@ Returns the domain name as a character string corresponding to the
 Character escape sequences are used to represent a dot inside a
 domain name label and the escape character itself.
 
-Domain names containing Unicode characters are supported if the
-Net::LibIDN module is installed.
-
 Any non-printable code point is represented using the appropriate
 numerical escape sequence.
 
 =cut
 
-sub name {
-	local $_ = &identifier;
-	return $_ unless LIBIDN;
-	return $_ unless /xn--/;
+my $dot = _decode_ascii( pack 'C', 46 );
 
+sub name {
 	my $self = shift;
-	return $self->{name} ||= UTF8->decode( Net::LibIDN::idn_to_unicode( $_, 'utf-8' ) || return $_ );
+
+	return $self->{name} if $self->{name};
+
+	my @label = map _decode_ascii( _escape($_) ), @{$self->{label}};
+
+	return $self->{name} = join( $dot, @label, $self->{origin}->name ) if $self->{origin};
+
+	return $self->{name} = join( $dot, @label ) || $dot;
 }
 
 
@@ -148,33 +150,32 @@ name, including the trailing dot.
 
 =cut
 
-my $dot = _decode_ascii( pack 'C', 46 );
-
 sub fqdn {
-	local $_ = &name;
-	return /[$dot]$/o ? $_ : $_ . $dot;			# append trailing dot
+	my $name = &name;
+	return $name =~ /[$dot]$/o ? $name : $name . $dot;	# append trailing dot
 }
 
 
-=head2 identifier
+=head2 xname
 
-    $identifier = $domain->identifier;
+    $xname = $domain->xname;
 
-Identifies the domain by means of its uninterpreted A-label form of
-domain name.
+Interprets an extended name containing Unicode domain name labels
+encoded as Punycode A-labels.
+
+Domain names containing Unicode characters are supported if the
+Net::LibIDN module is installed.
 
 =cut
 
-sub identifier {
+sub xname {
+	return &name unless LIBIDN;
+
+	my $name = &name;
+	return $name unless $name =~ /xn--/;
+
 	my $self = shift;
-
-	return $self->{ident} if $self->{ident};
-
-	my @label = map _decode_ascii( _escape($_) ), @{$self->{label}} if $self->{label};
-
-	return $self->{ident} = join( $dot, @label, $self->{origin}->identifier ) if $self->{origin};
-
-	return $self->{ident} = join( $dot, @label ) || $dot;
+	return $self->{xname} ||= UTF8->decode( Net::LibIDN::idn_to_unicode( $name, 'utf-8' ) || $name );
 }
 
 
@@ -189,10 +190,12 @@ Identifies the domain by means of a list of domain labels.
 sub label {
 	my $self = shift;
 
-	my @label = map _decode_ascii( _escape($_) ), @{$self->{label}} if $self->{label};
+	my @label = map _decode_ascii( _escape($_) ), @{$self->{label}} unless LIBIDN;
+	my @xlabel = map UTF8->decode( Net::LibIDN::idn_to_unicode( _escape($_), 'utf-8' ) ), @{$self->{label}}
+			if LIBIDN;
 
-	return @label unless $self->{origin};
-	return ( @label, $self->{origin}->label );
+	return ( @label, @xlabel ) unless $self->{origin};
+	return ( @label, @xlabel, $self->{origin}->label );
 }
 
 
@@ -209,9 +212,9 @@ represented by the appropriate escape sequence.
 =cut
 
 sub string {
-	local $_ = &identifier;
-	s/^([\$'";@])/\\$1/;					# escape leading special char
-	return /[$dot]$/o ? $_ : $_ . $dot;			# append trailing dot
+	my $name = &name;
+	$name =~ s/^(['"\$;@])/\\$1/;				# escape leading special char
+	return $name =~ /[$dot]$/o ? $name : $name . $dot;	# append trailing dot
 }
 
 
@@ -221,9 +224,9 @@ sub string {
     $result = &$create( sub{ new Net::DNS::RR( 'mx MX 10 a' ); } );
     $expect = new Net::DNS::RR( "mx.$ORIGIN. MX 10 a.$ORIGIN." );
 
-Class method which returns a reference to a subroutine wrapper which
-will execute a given constructor in a context within which $ORIGIN is
-defined.
+Class method which returns a reference to a subroutine wrapper
+which executes a given constructor in a dynamically scoped context
+where relative names are rooted at the specified $ORIGIN.
 
 =cut
 
@@ -231,7 +234,7 @@ sub origin {
 	my $class = shift;
 	my $name = shift || '';
 
-	return sub { my $constructor = shift; &$constructor; }	# all names absolute
+	return sub { my $constructor = shift; &$constructor; }	# absolute names
 			unless $name =~ /[^.]/;
 
 	my $domain = new Net::DNS::Domain($name);
@@ -261,14 +264,16 @@ sub _decode_ascii {
 
 	return ASCII->decode(shift) if ASCII;
 
-	# partial transliteration for single octet character encodings
-	local $_ = shift;
+	unless (ASCII) {
+		my $s = shift;
 
-	tr
-	[\055\041-\054\056-\176\000-\377]
-	[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~]d
-			unless ASCII;
-	return $_;						# native 8-bit code
+		# partial transliteration for non-ASCII character encodings
+		$s =~ tr
+		[\055\041-\054\056-\176\000-\377]
+		[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?];
+
+		return $s;					# native 8-bit code
+	}
 }
 
 
@@ -279,34 +284,33 @@ sub _encode_ascii {
 
 	return ASCII->encode(shift) if ASCII;
 
-	# partial transliteration for single octet character encodings
-	local $_ = shift;
+	unless (ASCII) {
+		my $s = shift;
 
-	tr
-	[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
-	[\055\041-\054\056-\176]d
-			unless ASCII;
-	return $_;						# ASCII
+		# partial transliteration for non-ASCII character encodings
+		$s =~ tr
+		[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
+		[\055\041-\054\056-\176\077];
+
+		return $s;					# ASCII
+	}
 }
 
 
-my %escape = eval {				## precalculated ASCII escape table
+my %esc = eval {				## precalculated ASCII escape table
 	my %table;
 
-	foreach ( 0 .. 127 ) {					# ASCII
-		my $char = pack 'C', $_;
-		$table{$char} = $char;
+	foreach ( 33 .. 126 ) {					# ASCII printable
+		$table{pack( 'C', $_ )} = pack 'C', $_;
 	}
 
 	# minimal character escapes
 	foreach ( 46, 92 ) {					# \. \\
-		my $char = pack 'C', $_;
-		$table{$char} = pack 'C*', 92, $_;
+		$table{pack( 'C', $_ )} = pack 'C*', 92, $_;
 	}
 
 	foreach ( 0 .. 32, 127 .. 255 ) {			# \ddd
-		my $char = pack 'C', $_;
-		$table{$char} = sprintf '\\%03u', $_;
+		$table{pack( 'C', $_ )} = sprintf '\\%03u', $_;
 	}
 
 	return %table;
@@ -314,35 +318,31 @@ my %escape = eval {				## precalculated ASCII escape table
 
 
 sub _escape {				## Insert escape sequences in string
-	local $_ = shift;
-	s/([^\055\101-\132\141-\172\060-\071])/$escape{$1}/eg;
-	return $_;
+	my $s = shift;
+	$s =~ s/([^\055\101-\132\141-\172\060-\071])/$esc{$1}/eg;
+	return $s;
 }
 
 
-my %unescape = eval {				## precalculated numeric escape table
+my %unesc = eval {				## precalculated numeric escape table
 	my %table;
 
 	foreach ( 0 .. 255 ) {
-		my $aseq = _encode_ascii sprintf( '%03u', $_ );
-		$table{$aseq} = pack 'C', $_;
-		$table{$aseq} = pack 'Ca*', $_, _encode_ascii '666' if $_ == 92;
+		$table{_encode_ascii sprintf( '%03u', $_ )} = pack 'C', $_;
 	}
+
+	$table{_encode_ascii('092')} = pack 'Ca*', 92, _encode_ascii '666';
 
 	return %table;
 };
 
 
 sub _unescape {				## Remove escape sequences in string
-	local $_ = shift;
-
-	while (/\134([\060-\062][\060-\071]{2})/) {		# numeric escape
-		s/\134($1)/$unescape{$1}/eg;
-	}
-
-	s/\134\066\066\066/\134\134/g;				# reveal escaped escape
-	s/\134(.)/$1/g;						# character escape
-	return $_;
+	my $s = shift;
+	$s =~ s/\134([\060-\062][\060-\071]{2})/$unesc{$1}/eg;	# numeric escape
+	$s =~ s/\134\066\066\066/\134\134/g;			# reveal escaped escape
+	$s =~ s/\134(.)/$1/g;					# character escape
+	return $s;
 }
 
 
