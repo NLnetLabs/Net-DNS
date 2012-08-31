@@ -44,23 +44,19 @@ sub new_from_string {
 
 sub txtdata {
 	my $self = shift;
+	$self->_build_char_str_list(@_) if @_;
 	return join(' ',  $self->char_str_list());
 }
 
 sub rdatastr {
 	my $self = shift;
 
-	if ($self->char_str_list) {
-		return join(' ', map {
+	return join( ' ', map {
 			my $str = $_;
+			$str =~ s/\\/\\\\/g;
 			$str =~ s/"/\\"/g;
-			$str =~ s/;/\\;/g;
-			#$str =~ s/([\x00-\x1F\x7F-\xFF])/sprintf"\\%.3d",ord($1)/eg;
-			qq("$str");
-		} @{$self->{'char_str_list'}});
-	}
-
-	return '';
+			$str =~ /^$|\s|["\$'();@]/ ? qq("$str") : $str;
+		} $self->char_str_list );
 }
 
 sub _build_char_str_list {
@@ -94,9 +90,10 @@ sub _build_char_str_list {
 sub char_str_list {
 	my $self = shift;
 
-	if (not $self->{'char_str_list'}) {
-		$self->_build_char_str_list( $self->{'txtdata'} );
-	}
+	$self->_build_char_str_list($self->{txtdata}) if defined $self->{txtdata};
+	delete $self->{txtdata};	# RR built from hash
+
+	$self->{'char_str_list'} ||= [];
 
 	return @{$self->{'char_str_list'}}; # unquoted strings
 }

@@ -95,11 +95,11 @@ t/02-text.t
 t/03-header.t
 t/03-question.t
 t/04-packet.t
+t/05-TXT.t
 t/05-apl.t
 t/05-rr-opt.t
 t/05-rr-rrsort.t
 t/05-rr-sshfp.t
-t/05-rr-txt.t
 t/05-rr-unknown.t
 t/05-rr.t
 t/05-rr-various.t
