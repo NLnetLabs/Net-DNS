@@ -174,7 +174,8 @@ use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
     'DHCID'     => 49,      # RFC4701
     'NSEC3'     => 50,      # RFC5155
     'NSEC3PARAM' => 51,     # RFC5155
-# 52-54 are unassigned
+    'TLSA'	=> 52,      # RFC6698
+# 53-54 are unassigned
     'HIP'       => 55,      # RFC5205
     'NINFO'     => 56,      # non-standard					NOT IMPLEMENTED
     'RKEY'      => 57,      # non-standard					NOT IMPLEMENTED

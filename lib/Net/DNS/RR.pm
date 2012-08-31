@@ -76,6 +76,7 @@ BEGIN {
 		SOA
 		SRV
 		TKEY
+		TLSA
 		TSIG
 		TXT
 		X25
