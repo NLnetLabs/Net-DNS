@@ -1,243 +1,275 @@
 package Net::DNS::RR::IPSECKEY;
-
+use base Net::DNS::RR;
 
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION );
-use Socket;
-
-use MIME::Base64;
-
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
-
-@ISA = qw(Net::DNS::RR);
-
-
-#my %gatetype = (
-#    0 => "No gateway is present.",
-#    1 => "A 4-byte IPv4 address is present.",
-#    2 => "A 16-byte IPv6 address is present.",
-#    3 => "A wire-encoded domain name is present.",
-#    );
-
-#my %algtype = (
-#	RSA => 1,
-#	DSA => 2,
-#);
-
-#my %fingerprinttype = (
-#	'SHA-1' => 1,
-#);
-
-#my %fingerprinttypebyval = reverse %fingerprinttype;
-#my %gatetypebyval= reverse %gatetype;
-#my %algtypebyval	     = reverse %algtype;
-
-
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-
-    my $offsettoprec    = $offset;
-    my $offsettogatetype = $offset+1;
-    my $offsettoalgor    = $offset+2;
-    my $offsettogateway  = $offset+3;
-    my $offsettopubkey;
-
-    $self->{'precedence'} = unpack('C', substr($$data, $offsettoprec, 1));
-    $self->{'gatetype'}    = unpack('C', substr($$data, $offsettogatetype, 1));
-    $self->{'algorithm'}    = unpack('C', substr($$data, $offsettoalgor, 1));
-
-    if ($self->{'gatetype'}==0){
-	$self->{'gateway'}='.';
-	$offsettopubkey= $offsettogateway;
-    }elsif($self->{'gatetype'}==1){
-	$self->{'gateway'} = inet_ntoa(substr($$data, $offsettogateway, 4));
-	$offsettopubkey= $offsettogateway+4;
-    }elsif($self->{'gatetype'}==2){
-	$offsettopubkey= $offsettogateway+16;
-	my @addr = unpack("\@$offsettogateway n8", $$data);
-	$self->{'gateway'} = sprintf("%x:%x:%x:%x:%x:%x:%x:%x", @addr);
-    }elsif($self->{'gatetype'}==3){
-	($self->{'gateway'}, $offsettopubkey) = Net::DNS::Packet::dn_expand($data, $offsettogateway);
-
-    }else{
-	die "Could not parse packet, no known gateway type (".$self->{'gatetype'}.")";
-    }
-    my($pubmaterial)=substr($$data, $offsettopubkey,
-			    ($self->{"rdlength"}-$offsettopubkey+$offset));
-
-    $self->{"pubbin"}=$pubmaterial;
-
-    return bless $self, $class;
-}
-
-
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-	if ($string && ($string =~ /^(\d+)\s+(\d)\s+(\d)\s+(\S+)\s+(\S+)$/)) {
-		$self->{"precedence"} = $1;
-		$self->{"gatetype"} = $2;
-		$self->{"algorithm"} = $3;
-		if ($self->{"gatetype"}==2){
-			# Using the AAAA.pm parsing functionality.
-			my $AAAA=Net::DNS::RR->new("FOO AAAA ".$4);
-			$self->{"gateway"}=$AAAA->rdatastr;
-		}elsif ($self->{"gatetype"}==3){
-			$self->{"gateway"}= Net::DNS::stripdot($4);
-		}else{
-			$self->{"gateway"}= $4;
-		}
-		$self->{"pubkey"}= $5;
-	}
-
-
-	return bless $self, $class;
-}
-
-
-sub pubkey {
-  my $self=shift;
-
-  $self->{"pubkey"}= encode_base64($self->{"pubbin"},"") unless defined $self->{"pubkey"};
-
-  return $self->{"pubkey"};
-}
-
-
-sub pubbin {
-  my $self=shift;
-  $self->{"pubbin"}= decode_base64($self->{"pubkey"}) unless defined $self->{"pubbin"};
-
-  return $self->{"pubbin"};
-}
-
-
-sub rdatastr {
-	my $self     = shift;
-	my $rdatastr = '';
-	return "" unless defined $self->{precedence};
-	$rdatastr .= $self->{"precedence"} . " ". $self->{"gatetype"} . " " .
-	  $self->{"algorithm"}. " ";
-	if ($self->{"gatetype"}==0){
-	  $rdatastr .= ". ";
-	}else{
-	  $rdatastr .= $self->{"gateway"}. " ";
-	}
-	$rdatastr .= $self->pubkey();
-
-	return $rdatastr;
-}
-
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'gateway'}=Net::DNS::stripdot($self->{'gateway'}) if defined $self->{'gateway'};
-}
-
-
-
-sub rr_rdata {
-	my $self=shift;
-	my $rdata = "";
-	if (exists $self->{"precedence"}) {
-		$rdata .= pack("C", $self->{"precedence"});
-		$rdata .= pack("C", $self->{"gatetype"});
-		$rdata .= pack("C", $self->{"algorithm"});
-		if ($self->{"gatetype"}==1 ){
-			$rdata .= inet_aton($self->{"gateway"});
-		}elsif($self->{"gatetype"}==2){
-			my @addr = split(/:/, $self->{"gateway"});
-			$rdata .= pack("n8", map { hex $_ } @addr);
-		}elsif($self->{"gatetype"}==3){
-			# No Compression _name2wire will do.
-			$rdata .= $self->_name2wire($self->{"gateway"});
-		}
-		$rdata .= $self->pubbin();
-	}
-}
-
-
-
-1;
 
 
 =head1 NAME
 
 Net::DNS::RR::IPSECKEY - DNS IPSECKEY resource record
 
-=head1 SYNOPSIS
-
-C<use Net::DNS::RR>;
-
-=head1 DESCRIPTION
-
-CLASS for the IPSECKEY RR.
-
-=head1 METHODS
-
-In addition to the regular methods
-
-
-=head2 algorithm
-
-Returns the RR's algorithm field in decimal representation
-
-    1 = RSA
-    2 = DSA
-
-=head2 precedence
-
-Returns the presedence
-
-=head2 	gatetype
-
-Returns the gatetype.
-
-   0  "No gateway is present.",
-   1  "A 4-byte IPv4 address is present.",
-   2  "A 16-byte IPv6 address is present.",
-   3  "A wire-encoded domain name is present.",
-
-=head2 gateway
-
-Returns the gateway in the relevant string notation.
-
-=head2 pubkey
-
-Returns the public key in base64 notation
-
-=head2 pubbin
-
-Returns the binary public key material in a string.
-
-=head1 TODO
-
-Check on validity of algorithm and gatetype.
-
-=head1 COPYRIGHT
-
-Copyright (c) 2007 NLnet LAbs, Olaf Kolkman.
-
-"All rights reserved, This program is free software; you may redistribute it
-and/or modify it under the same terms as Perl itself.
-
-=head1 SEE ALSO
-
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC4025
-
 =cut
 
 
+use strict;
+use integer;
+
+use Carp;
+use MIME::Base64;
+use Net::DNS::DomainName;
+
+use Text::ParseWords;
 
 
+sub new {				## decode rdata from wire-format octet string
+	my $class = shift;
+	my $self = bless shift, $class;
+	my ( $data, $offset ) = @_;
 
+	my $next = $offset + $self->{rdlength};
+
+	@{$self}{qw(precedence gatetype algorithm)} = unpack "\@$offset C3", $$data;
+	$offset += 3;
+
+	for ( $self->{gatetype} ) {
+		unless ($_) {
+			$self->{gateway} = '.';			# no gateway
+
+		} elsif ( $_ == 1 ) {
+			$self->{gateway} = join '.', unpack "\@$offset C4", $$data;
+			$offset += 4;
+
+		} elsif ( $_ == 2 ) {
+			$self->{gateway} = sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack "\@$offset n8", $$data;
+			$offset += 16;
+
+		} elsif ( $_ == 3 ) {
+			my $name;
+			( $name, $offset ) = decode Net::DNS::DomainName($data,$offset );
+			$self->{gateway} = $name->name;
+
+		} else {
+			croak "unknown gateway type ($_)";
+		}
+	}
+
+	my $keybin = substr $$data, $offset, $next - $offset;
+	$self->{pubkey} = encode_base64( $keybin, '' );
+
+	return $self;
+}
+
+
+sub rr_rdata {				## encode rdata as wire-format octet string
+	my $self = shift;
+	my $pkt	 = shift;
+	$self->encode_rdata(@_);
+}
+
+sub encode_rdata {				## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless defined $self->{gateway};
+	my $precedence = $self->precedence;
+	my $algorithm  = $self->algorithm;
+	my $keybin     = decode_base64( $self->{pubkey} ) if $self->{pubkey};
+	for ( $self->{gateway} || '.' ) {
+		if ( $_ eq '.' ) {
+			return pack 'C3 a*', $precedence, 0, $algorithm, $keybin;
+
+		} elsif (/\.\d+/) {
+			my @parse = split /\./;
+			return pack 'C3 C4 @7 a*', $precedence, 1, $algorithm, @parse, $keybin;
+
+		} elsif (/:.*:/) {
+			s/^:/0:/;
+			my @parse = split /:/;
+			my @canon = map { /./ ? hex($_) : (0) x ( 9 - @parse ) } @parse;
+			return pack 'C3 n8 @19 a*', $precedence, 2, $algorithm, @canon, $keybin;
+
+		} elsif (/\..+/) {
+			my $name = new Net::DNS::DomainName($_)->encode;
+			return pack 'C3 a* a*', $precedence, 3, $algorithm, $name, $keybin;
+		}
+	}
+}
+
+
+sub rdatastr {				## format rdata portion of RR string.
+	my $self = shift;
+
+	my $precedence = $self->precedence;
+	my $gatetype   = $self->gatetype;
+	my $algorithm  = $self->algorithm;
+	my $gateway    = $self->gateway;
+	my $publickey  = $self->publickey;
+
+	return join ' ', $precedence, $gatetype, $algorithm, '.', $publickey if $gatetype == 0;
+	return join ' ', $precedence, $gatetype, $algorithm, $gateway, $publickey if $gatetype == 1;
+	return join ' ', $precedence, $gatetype, $algorithm, $gateway, $publickey if $gatetype == 2;
+	my $name = new Net::DNS::DomainName($gateway)->string;
+	return join ' ', $precedence, $gatetype, $algorithm, $name, $publickey if $gatetype == 3;
+}
+
+
+sub new_from_string {				## populate RR from rdata string
+	my $class = shift;
+	my $self  = bless shift, $class;
+	my @parse = grep {/[^()]/} quotewords( qw(\s+), 1, shift || "" );
+	$self->parse_rdata(@parse) if @parse;
+	return $self;
+}
+
+sub parse_rdata {				## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->precedence(shift);
+	$self->gatetype(shift);
+	$self->algorithm(shift);
+	$self->gateway(shift);
+	$self->publickey(@_);
+}
+
+
+sub defaults() {				## specify RR attribute default values
+	my $self = shift;
+
+	$self->precedence(10);
+	$self->gateway('');
+}
+
+
+sub precedence {
+	my $self = shift;
+
+	$self->{precedence} = shift if @_;
+	return 0 + ( $self->{precedence} || 0 );
+}
+
+sub gatetype {
+	my $self = shift;
+	for ( $self->{gateway} ||= '.' ) {
+		return 0 if $_ eq '.';
+		return 1 if /\.\d+$/;
+		return 2 if /:.*:/;
+		return 3 if /\..+/;
+	}
+}
+
+sub algorithm {
+	my $self = shift;
+
+	$self->{algorithm} = shift if @_;
+	return 0 + ( $self->{algorithm} || 0 );
+}
+
+sub gateway {
+	my $self = shift;
+
+	$self->{gateway} = shift if @_;
+	$self->{gateway} || "";
+}
+
+sub pubkey {
+	my $self = shift;
+
+	$self->{pubkey} = shift if @_;
+	$self->{pubkey} || "";
+}
+
+sub publickey {&pubkey}
+
+# sort RRs in numerically ascending order.
+__PACKAGE__->set_rrsort_func(
+	'precedence',
+	sub {
+		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
+		$a->{precedence} <=> $b->{precedence};
+	} );
+
+
+__PACKAGE__->set_rrsort_func(
+	'default_sort',
+	__PACKAGE__->get_rrsort_func('precedence')
+
+	);
+
+
+1;
+__END__
+
+
+=head1 SYNOPSIS
+
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name IPSECKEY precedence gatetype algorithm gateway publickey');
+
+=head1 DESCRIPTION
+
+DNS IPSEC Key Storage (IPSECKEY) resource records.
+
+=head1 METHODS
+
+The available methods are those inherited from the base class
+augmented by the type-specific methods defined in this package.
+
+Use of undocumented features or direct access to internal data
+structures is discouraged and may result in program termination
+or unexpected behaviour.
+
+
+=head2 precedence
+
+    $precedence = $object->precedence;
+
+This is an 8-bit precedence for this record.  Gateways listed in
+IPSECKEY records with lower precedence are to be attempted first.
+
+=head2 gatetype
+
+    $gatetype = $rr->gatetype;
+
+The gateway type field indicates the format of the information
+that is stored in the gateway field.
+
+=head2 algorithm
+
+    $algorithm = $object->algorithm;
+
+The algorithm type field identifies the public keys cryptographic
+algorithm and determines the format of the public key field.
+
+=head2 gateway
+
+    $gateway = $object->gateway;
+
+The gateway field indicates a gateway to which an IPsec tunnel
+may be created in order to reach the entity named by this
+resource record.
+
+=head2 pubkey
+
+    $pubkey = $object->pubkey;
+
+Optional base64 encoded public key block for the resource record.
+
+
+=head1 COPYRIGHT
+
+Copyright (c)2007 Olaf Kolkman, NLnet Labs.
+
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
+
+=head1 SEE ALSO
+
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4025
+
+=cut

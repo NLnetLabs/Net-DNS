@@ -1,313 +1,232 @@
 package Net::DNS::RR::HIP;
+use base Net::DNS::RR;
+
 #
 # $Id$
 #
-# See RFC 5205 for the specification of this record.
-
-use strict;
-use MIME::Base64;
-use Data::Dumper;
-
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision: 718 $)[1];
-
-
-
-
-
-
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-        if ($self->{'rdlength'} > 0) {
-                my $offset_pkalgorithm  = $offset+1;
-                my $offset_pklength     = $offset+2;
-                my $offset_hit          = $offset+4;
-
-                $self->{'_hitlength'} = unpack('C', substr($$data, $offset, 1));
-		my $offset_pubkey    = $offset_hit + $self->{'_hitlength'};
-
-                $self->{'pkalgorithm'}    = unpack('C', substr($$data, $offset_pkalgorithm, 1));
-                $self->{'_pklength'}    = unpack('n', substr($$data, $offset_pklength, 2));
-		my $offset_rendezvous    = $offset_pubkey + $self->{'_pklength'};
-
-                $self->{'hitbin'}    = substr($$data, $offset_hit, $self->{'_hitlength'});
-		$self->{'hit'}=unpack("H*",$self->{'hitbin'});
-
-		$self->{'pubkeybin'}= substr($$data,$offset_pubkey, $self->{'_pklength'});
-		$self->{'pubkey'}=encode_base64($self->{'pubkeybin'},"");
-                my $rsoffset    = $offset_pubkey + $self->{'_pklength'};
-		$self->{'rendezvousservers'}= [];
-
-
-
-		my $i=10;
-		while( ($rsoffset-$offset)<$self->{'rdlength'}){
-			exit unless $i--;
-			my ($name, $nextoffset) = Net::DNS::Packet::dn_expand($data, $rsoffset);
-			push (@{$self->{'rendezvousservers'}},$name);
-			$rsoffset=$nextoffset;
-
-		}
-	}
-
-	return bless $self, $class;
-}
-
-
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-	# first turn multiline into single line
-	$string =~ tr/()//d if $string;
-	$string =~ s/\n//mg if $string;
-
-	if ($string && ($string =~ /^\s*(\d+)\s+(\S+)\s+(.*)$/)) {
-		@{$self}{qw(pkalgorithm hit)} = ($1, $2);
-		$self->{'hitbin'}=pack("H*",$self->{'hit'});
-		my $reststring=$3;
-		# rest string are the space separated components of the base64 encoded public key
-		# appended by fully qualified domain names.
-		# We'll chop off the FQDNs
-		$self->{'rendezvousservers'}=[];
-		while ($reststring =~ s/^(.*)(\s+((\S+\.)(\S+\.?)*))\s*$/$1/s){
-			unshift (@{$self->{'rendezvousservers'}},$3);
-		}
-		$reststring=~s/\s//g;
-		return () if (length($reststring) % 4); #base64 length should be mulitple of 4
-		$self->{'pubkey'}=$reststring;
-		$self->{'pubkeybin'} =  decode_base64( $self->{'pubkey'} );
-      	}
-
-	return bless $self, $class;
-}
-
-
-
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
-	if (exists $self->{"pubkey"}) {
-		# This is for consistency.
-		my $hitbin=$self->hitbin();
-		my $pubkeybin=$self->pubkeybin();
-		$rdata = pack("C", $self->{'_hitlength'});
-		$rdata .= pack("C", $self->{'pkalgorithm'});
-		$rdata .= pack("n", $self->{'_pklength'});
-		$rdata .= $hitbin;
-		$rdata .= $pubkeybin;
-		foreach my $dname (@{$self->{'rendezvousservers'}}){
-			$rdata .= $self->_name2wire ($dname);
-		}
-	}
-
-	return $rdata;
-}
-
-
-
-sub rdatastr {
-	my $self = shift;
-	my $rdatastr='';
-
-	if (exists $self->{"pubkey"}) {
-		$rdatastr = $self->pkalgorithm       . ' '   .
-		            $self->hit  . ' '  .
-		            $self->pubkey       . ' ';
-
-		foreach my $dname ( @{$self->rendezvousservers()} ) {
-			$rdatastr .= $dname.". ";
-		}
-		chop $rdatastr;
-
-	}
-
-	return $rdatastr;
-}
-
-
-sub hitbin {
-	my ($self, $new_val) = @_;
-	if (defined $new_val) {
-		$self->{'hitbin'} = $new_val;
-		$self->{'hit'}=unpack("H*",$new_val);
-	}
-	$self->{'hitbin'}=pack("H*",$self->{'hit'}) unless defined ($self->{'hitbin'});
-	$self->{'_hitlength'} =length($self->{'hitbin'});
-	return ($self->{'hitbin'});
-}
-
-
-sub hit {
-	my ($self, $new_val) = @_;
-	if (defined $new_val) {
-		$self->{'hitbin'} = $new_val;
-		$self->{'hitbin'}=pack("H*",$new_val);
-	}
-	$self->{'hit'}=unpack("H*",$self->{'hitbin'}) unless defined ($self->{'hit'});
-	$self->{'_hitlength'} =length($self->{'hitbin'});
-	return ($self->{'hit'});
-}
-
-
-
-
-sub pubkeybin {
-	my ($self, $new_val) = @_;
-	if (defined $new_val) {
-		$self->{'pubkeybin'} = $new_val;
-		$self->{'pubkey'}=encode_base64($self->{'pubkeybin'},"");
-
-	}
-	$self->{'pubkeybin'}= decode_base64($self->{'pubkey'}) unless defined ($self->{'pubkeybin'});
-	$self->{'_pklength'} =length($self->{'pubkeybin'});
-	return ($self->{'pubkeybin'});
-}
-
-
-
-
-
-
-sub pubkey {
-	my ($self, $new_val) = @_;
-	if (defined $new_val) {
-		$self->{'pubkey'} = $new_val;
-		$self->{'pubkeybin'}=decode_base64($self->{'pubkey'});
-
-	}
-	$self->{'pubkey'}= encode_base64($self->{'pubkeybin'},"") unless defined ($self->{'pubkey'});
-	$self->{'_pklength'} =length($self->{'pubkeybin'});
-	return ($self->{'pubkey'});
-}
-
-
-
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'rendezvousservers'} ||= [];
-	my @dnames = @{$self->{'rendezvousservers'}};
-	$self->{'rendezvousservers'}=[];
-	foreach my $dname (@dnames){
-		push (   @{$self->{'rendezvousservers'}},   Net::DNS::stripdot($dname) )
-	}
-
-
-}
-
-
-sub rendezvousservers {
-	my ($self, $new_val) = @_;
-
-	if ($new_val) {
-		$self->{'rendezvousservers'}= $new_val;
-	}
-
-	$self->_normalize_dnames();
-	return $self->{'rendezvousservers'};
-
-}
-
-
-
-
-
-
-
-
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
 
 Net::DNS::RR::HIP - DNS HIP resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use Net::DNS::DomainName;
+use MIME::Base64;
+
+use Text::ParseWords;
+
+
+sub new {					## decode rdata from wire-format octet string
+	my $class = shift;
+	my $self = bless shift, $class;
+	my ( $data, $offset ) = @_;
+
+	my ( $hitlen, $pklen ) = unpack "\@$offset Cxn", $$data;
+	@{$self}{qw(pkalgorithm hitbin pubkeybin)} = unpack "\@$offset xCxx a$hitlen a$pklen", $$data;
+
+	my $limit = $offset + $self->{rdlength};
+	$offset += 4 + $hitlen + $pklen;
+	$self->{svrlist} = [];
+	while ( $offset < $limit ) {
+		my $item;
+		( $item, $offset ) = decode Net::DNS::DomainName($data,$offset );
+		push @{$self->{svrlist}}, $item;
+	}
+	croak('corrupt HIP data') unless $offset == $limit;	# more or less FUBAR
+
+	return $self;
+}
+
+
+sub rr_rdata {					## encode rdata as wire-format octet string
+	my $self = shift;
+	my $pkt	 = shift;
+	$self->encode_rdata(@_);
+}
+
+sub encode_rdata {				## encode rdata as wire-format octet string
+	my $self = shift;
+
+	my $hit	  = $self->hitbin || return '';
+	my $key	  = $self->pubkeybin;
+	my @svr	  = $self->servers;
+	my $rdata = pack 'C2n a* a*', length($hit), $self->pkalgorithm, length($key), $hit, $key;
+	foreach ( @{$self->{svrlist}} ) { $rdata .= $_->encode }
+	return $rdata;
+}
+
+
+sub rdatastr {					## format rdata portion of RR string.
+	my $self = shift;
+
+	my $algorithm = $self->pkalgorithm || return '';
+	my $hit	      = $self->hit;
+	my $pubkey    = MIME::Base64::encode( $self->pubkeybin, "\n" );
+	my @servers   = map $_->string, @{$self->{svrlist}};
+	return "( $algorithm $hit\n$pubkey\t@servers )";
+}
+
+
+sub new_from_string {				## populate RR from rdata string
+	my $class = shift;
+	my $self  = bless shift, $class;
+	my @parse = grep {/[^()]/} quotewords( qw(\s+), 1, shift || "" );
+	$self->parse_rdata(@parse) if @parse;
+	return $self;
+}
+
+sub parse_rdata {				## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->pkalgorithm(shift);
+	$self->hit(shift);
+	$self->pubkey( grep { $_ !~ /[.]/ } @_ );
+	$self->servers( grep { $_ =~ /[.]/ } @_ );
+}
+
+
+sub pkalgorithm {
+	my $self = shift;
+
+	$self->{pkalgorithm} = shift if @_;
+	return 0 + ( $self->{pkalgorithm} || 0 );
+}
+
+sub hit {
+	my $self = shift;
+
+	$self->hitbin( pack 'H*', shift ) if @_;
+	return unpack 'H*', $self->hitbin if defined wantarray;
+}
+
+sub hitbin {
+	my $self = shift;
+
+	$self->{hitbin} = pack( "H*", $self->{hit} ) if defined $self->{hit};	 # new from hash
+	delete $self->{hit};
+
+	$self->{hitbin} = shift if @_;
+	return $self->{hitbin};
+}
+
+sub pubkey {
+	my $self = shift;
+
+	$self->pubkeybin( MIME::Base64::decode( join '', @_ ) ) if @_;
+	return MIME::Base64::encode( $self->pubkeybin, '' ) if defined wantarray;
+}
+
+sub pubkeybin {
+	my $self = shift;
+
+	$self->{pubkeybin} = MIME::Base64::decode( $self->{pubkey} ) if defined $self->{pubkey};    # new from hash
+	delete $self->{pubkey};
+
+	$self->{pubkeybin} = shift if @_;
+	return $self->{pubkeybin};
+}
+
+sub servers {
+	my $self = shift;
+
+	my $svrlist = $self->{svrlist} ||= [];
+	my $newlist = $self->{rendezvousservers} || [];		# new from hash
+	$newlist = [$self->{servers}] if $self->{servers};	# 100% bug compatible!
+	$newlist = $self->{servers}   if ref $self->{servers};
+	@$svrlist = map Net::DNS::DomainName->new($_), @$newlist if @$newlist;
+	delete @{$self}{qw(rendezvousservers servers)};
+	@$svrlist = map Net::DNS::DomainName->new($_), @_ if @_;
+	return map $_->name, @$svrlist if defined wantarray;
+}
+
+sub rendezvousservers {						# historical
+	my @servers = &servers;
+	\@servers;
+}
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name IN HIP algorithm hit publickey servers');
 
 =head1 DESCRIPTION
 
-This class implements the HIP RR (RFC5205)
-
+Class for DNS Host Identity Protocol (HIP) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class
+augmented by the type-specific methods defined in this package.
+
+Use of undocumented features or direct access to internal data
+structures is discouraged and may result in program termination
+or unexpected behaviour.
+
+
 =head2 pkalgorithm
 
-Returns or sets the public key algorithm field
+    $pkalgorithm = $object->pkalgorithm;
+
+The PK algorithm field indicates the public key cryptographic
+algorithm and the implied public key field format.
+The values are those defined for the IPSECKEY algorithm type [RFC4025].
 
 =head2 hit
 
-Returns or sets the hit in base16 representation.
+    $hit = $rr->hit;
+
+The hexadecimal representation of the host identity tag.
 
 =head2 hitbin
 
-Returns or sets the binary representation of the the hit.
+    $hitbin = $rr->hitbin;
 
-Using hit or hitbin to set the one of these attributes will update both attributes.
-
-=head2 pubkey
-
-Returns or sets the publick key in base64 representation.
+The binary representation of the host identity tag.
 
 =head2 pubkey
 
-Returns or sets the binary representation of the the public key.
+    $publickey = $rr->pubkey;
 
-Using pubkey or pubkeybin to set the one of these attributes will update both attributes.
+The base64 representation of the public key.
 
+=head2 pubkeybin
 
+    $pubkeybin = $rr->pubkeybin;
 
-=head2 rendezvousservers
+The binary representation of the public key.
 
+=head2 servers
 
-      my $rendezvousservers=$hip->rendezvousservers();
+    @servers = $rr->servers;
 
-Returns a reference to an array of rendezvous servers. The representation is in
-Perl's internal storage format i.e. without trailing dot.
-
-     $hip->rendezvousservers( [ qw|example.com  example.net| ] )
-
-With a reference to an array as the argument this method will set the rendezvousservers.
-
-
-
-=head1 NOTES
-
-Since (multiline) base64 encoded publik keys may contain spaces string
-parsing of the HIP RR depends on rendevous server names containing at
-least one . (dot) in their domain name. Failure of string parsing will
-return an 'undef'.
-
-The rdatastr method (and hence the string and print methods) return the
-rendezvousservers as fully qualified domain names.
-
+Optional list of domain names of rendezvous servers.
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 Olaf Kolkman (NLnet Labs)
+Copyright (c)2009 Olaf Kolkman, NLnet Labs
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 5205
-
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC5205
 
 =cut
-
-
-
-
-1;
