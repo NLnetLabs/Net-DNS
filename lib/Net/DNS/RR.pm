@@ -552,16 +552,9 @@ sub _normalize_rdata {
 			);
 
 
-	my $pkt = {	header		=> Net::DNS::Header->new,
-			question	=> [],
-			answer		=> [],
-			authority	=> [],
-			additional	=> []	};
-
-	bless $pkt, "Net::DNS::Packet";
+	my $pkt = new Net::DNS::Packet();
 	$pkt->push( answer => $self );
 	my $pkt2 = Net::DNS::Packet->new( \$pkt->data );
-	undef ($self);
 	return ($pkt2->answer)[0];
 }
 
@@ -1104,6 +1097,8 @@ sub STORABLE_thaw {
 
 sub dump {				## print internal data structure
 	use Data::Dumper;
+	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
+	return Dumper(shift) if defined wantarray;
 	print Dumper(shift);
 }
 
