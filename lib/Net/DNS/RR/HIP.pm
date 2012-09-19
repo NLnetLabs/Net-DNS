@@ -1,5 +1,4 @@
 package Net::DNS::RR::HIP;
-use base Net::DNS::RR;
 
 #
 # $Id$
@@ -7,6 +6,7 @@ use base Net::DNS::RR;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
+use base Net::DNS::RR;
 
 =head1 NAME
 
@@ -18,13 +18,14 @@ Net::DNS::RR::HIP - DNS HIP resource record
 use strict;
 use integer;
 
+use Carp;
 use Net::DNS::DomainName;
 use MIME::Base64;
 
 use Text::ParseWords;
 
 
-sub new {					## decode rdata from wire-format octet string
+sub new {				## decode rdata from wire-format octet string
 	my $class = shift;
 	my $self = bless shift, $class;
 	my ( $data, $offset ) = @_;
@@ -34,11 +35,11 @@ sub new {					## decode rdata from wire-format octet string
 
 	my $limit = $offset + $self->{rdlength};
 	$offset += 4 + $hitlen + $pklen;
-	$self->{svrlist} = [];
+	$self->{servers} = [];
 	while ( $offset < $limit ) {
 		my $item;
 		( $item, $offset ) = decode Net::DNS::DomainName($data,$offset );
-		push @{$self->{svrlist}}, $item;
+		push @{$self}{servers}, $item;
 	}
 	croak('corrupt HIP data') unless $offset == $limit;	# more or less FUBAR
 
@@ -46,44 +47,42 @@ sub new {					## decode rdata from wire-format octet string
 }
 
 
-sub rr_rdata {					## encode rdata as wire-format octet string
+sub rr_rdata {				## encode rdata as wire-format octet string
 	my $self = shift;
 	my $pkt	 = shift;
 	$self->encode_rdata(@_);
 }
 
-sub encode_rdata {				## encode rdata as wire-format octet string
+sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $hit	  = $self->hitbin || return '';
-	my $key	  = $self->pubkeybin;
-	my @svr	  = $self->servers;
-	my $rdata = pack 'C2n a* a*', length($hit), $self->pkalgorithm, length($key), $hit, $key;
-	foreach ( @{$self->{svrlist}} ) { $rdata .= $_->encode }
-	return $rdata;
+	my $hit = $self->hitbin || return '';
+	my $key = $self->pubkeybin;
+	my $nos = pack 'C2n a* a*', length($hit), $self->pkalgorithm, length($key), $hit, $key;
+	join '', $nos, map $_->encode, @{$self->{servers}};
 }
 
 
-sub rdatastr {					## format rdata portion of RR string.
+sub rdatastr {				## format rdata portion of RR string.
 	my $self = shift;
 
 	my $algorithm = $self->pkalgorithm || return '';
 	my $hit	      = $self->hit;
-	my $pubkey    = MIME::Base64::encode( $self->pubkeybin, "\n" );
-	my @servers   = map $_->string, @{$self->{svrlist}};
-	return "( $algorithm $hit\n$pubkey\t@servers )";
+	my $pubkey    = MIME::Base64::encode( $self->pubkeybin, "\n\t" );
+	my @servers   = map $_->string, @{$self->{servers}};
+	return "( $algorithm $hit\n\t$pubkey@servers )";
 }
 
 
-sub new_from_string {				## populate RR from rdata string
+sub new_from_string {			## populate RR from rdata string
 	my $class = shift;
 	my $self  = bless shift, $class;
-	my @parse = grep {/[^()]/} quotewords( qw(\s+), 1, shift || "" );
+	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
 	$self->parse_rdata(@parse) if @parse;
 	return $self;
 }
 
-sub parse_rdata {				## populate RR from rdata in argument list
+sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->pkalgorithm(shift);
@@ -110,11 +109,8 @@ sub hit {
 sub hitbin {
 	my $self = shift;
 
-	$self->{hitbin} = pack( "H*", $self->{hit} ) if defined $self->{hit};	 # new from hash
-	delete $self->{hit};
-
 	$self->{hitbin} = shift if @_;
-	return $self->{hitbin};
+	$self->{hitbin} || "";
 }
 
 sub pubkey {
@@ -127,24 +123,16 @@ sub pubkey {
 sub pubkeybin {
 	my $self = shift;
 
-	$self->{pubkeybin} = MIME::Base64::decode( $self->{pubkey} ) if defined $self->{pubkey};    # new from hash
-	delete $self->{pubkey};
-
 	$self->{pubkeybin} = shift if @_;
-	return $self->{pubkeybin};
+	$self->{pubkeybin} || "";
 }
 
 sub servers {
 	my $self = shift;
 
-	my $svrlist = $self->{svrlist} ||= [];
-	my $newlist = $self->{rendezvousservers} || [];		# new from hash
-	$newlist = [$self->{servers}] if $self->{servers};	# 100% bug compatible!
-	$newlist = $self->{servers}   if ref $self->{servers};
-	@$svrlist = map Net::DNS::DomainName->new($_), @$newlist if @$newlist;
-	delete @{$self}{qw(rendezvousservers servers)};
-	@$svrlist = map Net::DNS::DomainName->new($_), @_ if @_;
-	return map $_->name, @$svrlist if defined wantarray;
+	my $servers = $self->{servers} ||= [];
+	@$servers = map Net::DNS::DomainName->new($_), @_ if @_;
+	return map $_->name, @$servers if defined wantarray;
 }
 
 sub rendezvousservers {						# historical
@@ -168,12 +156,12 @@ Class for DNS Host Identity Protocol (HIP) resource records.
 
 =head1 METHODS
 
-The available methods are those inherited from the base class
-augmented by the type-specific methods defined in this package.
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
 
-Use of undocumented features or direct access to internal data
-structures is discouraged and may result in program termination
-or unexpected behaviour.
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
 
 
 =head2 pkalgorithm
@@ -192,7 +180,7 @@ The hexadecimal representation of the host identity tag.
 
 =head2 hitbin
 
-    $hitbin = $rr->hitbin;
+    $hitbin = $object->hitbin;
 
 The binary representation of the host identity tag.
 
@@ -204,7 +192,7 @@ The base64 representation of the public key.
 
 =head2 pubkeybin
 
-    $pubkeybin = $rr->pubkeybin;
+    $pubkeybin = $object->pubkeybin;
 
 The binary representation of the public key.
 

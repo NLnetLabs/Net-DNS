@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 9;
 
 
 use Net::DNS;
 
 
-my $name = '38.1.0.192.in-addr.arpa';
-my $type = 'IPSECKEY';
-my $code = 45;
-my @attr = qw( precedence gatetype algorithm gateway pubkey );
-my @data = qw( 10 3 2 gateway.example.com AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== );
-my @also = qw( );
+my $name = 'DHCID.example';
+my $type = 'DHCID';
+my $code = 49;
+my @attr = qw( identifiertype digesttype digest );
+my @data = qw( 2 1 Y2/AuCccgoJbsaxcQc9TUapptP69lOjxfNuVAA2kjEA= );
+my @also = qw( digestbin );
 
-my $wire = '0A03020767617465776179076578616D706C6503636F6D00010351537986ED35533B6064478EEEB27B5BD74DAE149B6E81BA3A0521AF82AB7801';
+my $wire = '000201636FC0B8271C82825BB1AC5C41CF5351AA69B4FEBD94E8F17CDB95000DA48C40';
 
 
 {
@@ -53,18 +53,6 @@ my $wire = '0A03020767617465776179076578616D706C6503636F6D00010351537986ED35533B
 	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
 	is( $hex1, $hex2, 'encode/decode transparent' );
 	is( $hex3, $wire, 'encoded RDATA matches example' );
-}
-
-
-{
-	my $lc		= new Net::DNS::RR( lc ". $type @data" );
-	my $rr		= new Net::DNS::RR( uc ". $type @data" );
-	my $hash	= {};
-	my $predecessor = $rr->encode( 0, $hash );
-	my $compressed	= $rr->encode( length $predecessor, $hash );
-	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
-	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
-	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
 }
 
 

@@ -96,6 +96,7 @@ t/02-text.t
 t/03-header.t
 t/03-question.t
 t/04-packet.t
+t/05-DHCID.t
 t/05-HIP.t
 t/05-IPSECKEY.t
 t/05-SOA.t

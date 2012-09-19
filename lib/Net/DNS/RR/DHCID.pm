@@ -1,24 +1,77 @@
 package Net::DNS::RR::DHCID;
-use Data::Dumper;
-
 
 #
 # $Id$
 #
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
+
+use base Net::DNS::RR;
+
+=head1 NAME
+
+Net::DNS::RR::DHCID - DNS DHCID resource record
+
+=cut
+
+
 use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION );
-use Socket;
+use integer;
+
 use MIME::Base64;
-use Digest::SHA  qw( sha256 );
 
-$VERSION = (qw$LastChangedRevision: 718 $)[1];
-
-@ISA = qw(Net::DNS::RR);
+use Text::ParseWords;
 
 
+sub new {				## decode rdata from wire-format octet string
+	my $class = shift;
+	my $self = bless shift, $class;
+	my ( $data, $offset ) = @_;
+
+	my $dlen = $self->{rdlength} - 3;
+	@{$self}{qw(identifiertype digesttype digestbin)} = unpack "\@$offset nC a$dlen", $$data;
+
+	return $self;
+}
+
+
+sub rr_rdata {				## encode rdata as wire-format octet string
+	my $self = shift;
+	my $pkt	 = shift;
+	$self->encode_rdata(@_);
+}
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless defined $self->{digestbin};
+	pack 'nC a*', map { $self->$_ } qw(identifiertype digesttype digestbin);
+}
+
+
+sub rdatastr {				## format rdata portion of RR string.
+	my $self = shift;
+
+	my $base64 = MIME::Base64::encode $self->encode_rdata, "\n\t";
+	join ' ', "(\n\t", $base64, ')';
+}
+
+
+sub new_from_string {			## populate RR from rdata string
+	my $class = shift;
+	my $self  = bless shift, $class;
+	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
+	$self->parse_rdata(@parse) if @parse;
+	return $self;
+}
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	my $data = MIME::Base64::decode( join '', @_ );
+	my $dlen = length($data) - 3;
+	@{$self}{qw(identifiertype digesttype digestbin)} = unpack "nC a$dlen", $data;
+}
 
 
 #   +------------------+------------------------------------------------+
@@ -39,156 +92,97 @@ $VERSION = (qw$LastChangedRevision: 718 $)[1];
 #   |      0xffff      | Undefined; RESERVED.                           |
 #   +------------------+------------------------------------------------+
 
+sub identifiertype {
+	my $self = shift;
 
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-    my $offsettoidentifiertype    = $offset;
-    my $offsettodigesttype = $offset+2;
-    my $offsettodigest    = $offset+3;
-
-    bless $self, $class;
-
-    $self->{'identifiertype'}=(unpack('n', substr($$data, $offsettoidentifiertype, 2)));
-    $self->{'digesttype'}=(unpack('C', substr($$data, $offsettodigesttype, 1)));
-    $self->{'digestbin'}=(substr($$data, $offsettodigest, $self->{'rdlength'}-3));
-    $self->digest();
-    $self->{'rdatastr'}=encode_base64 (substr($$data,$offset, $self->{'rdlength'}),"");
-    return $self;
-
+	$self->{identifiertype} = shift if @_;
+	return 0 + ( $self->{identifiertype} || 0 );
 }
 
+sub digesttype {
+	my $self = shift;
 
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-	# first turn multiline into single line
-	$string =~ tr/()//d if $string;
-	$string =~ s/\n//mg if $string;
-	$string=~s/\s//g if $string;
-	bless $self, $class;
-	return $self unless $string;
-	$self->{'rdatastr'}= $string;
-	my $data=$self->rr_rdata();
-	$self->{'identifiertype'} = unpack('n', substr($data, 0 , 2));
-	$self->{'digesttype'}    = unpack('C', substr($data, 2, 1));
-	$self->{'digestbin'}    =  substr($data, 3, length($data) - 3 );
-	return $self;
+	$self->{digesttype} = shift if @_;
+	return 0 + ( $self->{digesttype} || 0 );
 }
-
-
-
-sub rdatastr {
-	my $self     = shift;
-
-	return $self->{'rdatastr'};
-}
-
-
-
-# Overwrite the AUTOLOAD methods, we only want to read and not set.
-
-
-sub digestbin {
-	my ($self, $new_val) = @_;
-	if (defined $new_val) {
-		$self->{'digestbin'} = $new_val;
-		$self->{'digest'}=encode_base64($self->{'digestbin'},"");
-
-	}
-	$self->{'digestbin'}= decode_base64($self->{'digest'}) unless defined $self->{'digestbin'};
-	return ($self->{'digestbin'});
-}
-
 
 sub digest {
-	my ($self, $new_val) = @_;
-	if (defined $new_val) {
-		$self->{'digest'} = $new_val;
-		$self->{'digestbin'}=decode_base64($self->{'digest'});
+	my $self = shift;
 
-	}
-	$self->{'digest'}= encode_base64($self->{'digestbin'},"") unless defined ($self->{'digest'});
-	return ($self->{'digest'});
-
+	$self->{digestbin} = MIME::Base64::decode( join '', map { s/\s+//g; $_ } @_ ) if @_;
+	MIME::Base64::encode( $self->{digestbin}, '' ) if defined wantarray;
 }
 
+sub digestbin {
+	my $self = shift;
 
-
-
-
-sub rr_rdata {
-	my $self=shift;
-	my $rdata='';
-	if ($self->{'digesttype'}) {
-		$rdata = pack("n", $self->identifiertype);
-		$rdata .= pack("C", $self->digesttype);
-		$rdata .= $self->digestbin;
-	}elsif(exists $self->{"rdatastr"}){
-		$rdata .= decode_base64($self->{'rdatastr'});
-	}
-	return $rdata;
-
+	$self->{digestbin} = shift if @_;
+	$self->{digestbin} || "";
 }
-
 
 
 1;
+__END__
 
-
-=head1 NAME
-
-Net::DNS::RR::IPSECKEY - DNS DHCID resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name DHCID algorithm fptype fingerprint');
 
 =head1 DESCRIPTION
 
-CLASS for the DHCID RR.
+DNS RR for Encoding DHCP Information (DHCID)
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 identifiertype
 
-Returns the value of the identifiertype field.
+    $identifiertype = $object->identifiertype;
 
-=head2 identifiertype
+The 16-bit identifier type describes the form of host identifier
+used to construct the DHCP identity information.
 
-Returns the value of the digesttype field.
+=head2 digesttype
+
+    $digesttype = $object->digesttype;
+
+The 8-bit digest type number describes the message-digest
+algorithm used to obfuscate the DHCP identity information.
 
 =head2 digest
 
-Returns the value of the digest in base64 encoding.
+    $digest = $rr->digest;
+
+Returns the digest data using base64 format.
 
 =head2 digestbin
 
-Returns the value of the digest.
+    $digestbin = $object->digestbin;
 
-=head1 TODO/NOTES
+Returns opaque octet string representing the digest.
 
-While the various accessor methods can be used to read and set values the setting
-of values is discouraged as those are not properly tested.
-
-There should be a creator method that takes the identifier and fqnds as input and generates
-all fields with some knowledge of RFC4703.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2009 NLnet LAbs, Olaf Kolkman.
+Copyright (c)2009 Olaf Kolkman, NLnet Labs.
 
-"All rights reserved, This program is free software; you may redistribute it
-and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC4701
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4701
 
 =cut
-
-
-
-
-

@@ -492,46 +492,39 @@ sub new_from_string {
 
 }
 
+
 sub new_from_hash {
-	my $class    = shift;
-	my %keyval   = @_;
-	my $self     = {};
-
-
-
-	while ( my ($key, $val) = each %keyval ) {
-	        $self->{lc $key} = $val ;
+	my $class = shift;
+	my %attribute = ( name => '.', class => 'IN', ttl => 0 );
+	while (@_) {
+		my $key = lc shift;
+		$attribute{$key} = shift;
 	}
+	croak('RR type not specified') unless defined $attribute{type};
 
-	croak('RR name not specified') unless defined $self->{name};
-	croak('RR type not specified') unless defined $self->{type};
+	my $self = {};
 
-	$self->{'ttl'}   ||= 0;
-	$self->{'class'} ||= 'IN';
+	if ($RR{$attribute{type}}) {
+		bless $self, $class->_get_subclass($attribute{type});
+		$self->type($attribute{type});
 
-	$self->{'rdlength'} = length $self->{'rdata'}
-		if $self->{'rdata'};
-
-	if ($RR{$self->{'type'}}) {
-		my $subclass = $class->_get_subclass($self->{'type'});
-	    if (uc $self->{'type'} ne 'OPT') {
-		        bless $self, $subclass;
-			$self->_normalize_dnames();
-			return _normalize_rdata($self);
-
-	    } else {
-			# Special processing of OPT. Since TTL and CLASS are
-			# set by other variables. See Net::DNS::RR::OPT
-			# documentation
-			return $subclass->new_from_hash($self);
-	    }
-	} elsif ($self->{'type'} =~ /TYPE\d+/o) {
+	} elsif ( $attribute{type} =~ /TYPE\d+/ ) {
 		bless $self, 'Net::DNS::RR::Unknown';
-		return $self;
+
 	} else {
-	 	bless $self, $class;
-	 	return $self;
+		bless $self, $class;
 	}
+
+	while ( my ( $method, $argument ) = each %attribute ) {
+		if ( UNIVERSAL::isa( $argument, 'ARRAY' ) ) {
+			$self->$method(@$argument);		# name => [ ... ]
+		} else {
+			$self->$method($argument);		# name => value
+		}
+	}
+
+	$self->_normalize_dnames() if $self->type ne 'OPT';
+	return $self;
 }
 
 
@@ -626,12 +619,12 @@ sub decode {
     $rr->print;
 
 Prints the record to the standard output.  Calls the B<string> method
-to get the RR's string representation.
+to get the string representation of the RR.
 
 =cut
-#' someone said that emacs gets screwy here.  Who am I to claim otherwise...
 
-sub print {	print &string, "\n"; }
+sub print { print shift->string, "\n"; }
+
 
 =head2 string
 
@@ -881,61 +874,41 @@ sub _name2wire   {
 
 
 
-
+  
 use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {
-	my ($self) = @_;  # If we do shift here, it will mess up the goto below.
-	my ($name) = $AUTOLOAD =~ m/^.*::(.*)$/o;
-	if ($name =~ /set_rrsort_func/){
-	    return Net::DNS::RR::set_rrsort_func(@_);
-	}
-	if ($name =~ /get_rrsort_func/){
-	    return Net::DNS::RR::get_rrsort_func(@_);
-	}
-	# XXX -- We should test that we do in fact carp on unknown methods.
-	unless (exists $self->{$name}) {
-	    my $rr_string = $self->string;
-	    Carp::carp(<<"AMEN");
-
+  
+sub AUTOLOAD {				## Default method
+	my $self = shift;
+	confess "method '$AUTOLOAD' undefined" unless ref $self;
+  
+	my $method = $1 if $AUTOLOAD =~ m/^.*::(.*)$/;
+  
+	return Net::DNS::RR::set_rrsort_func(@_) if $method =~ /set_rrsort_func/;
+	return Net::DNS::RR::get_rrsort_func(@_) if $method =~ /get_rrsort_func/;
+  
+	return $self->{$method} = shift if @_;
+	return $self->{$method} if exists $self->{$method};
+  
+	my $object = $self->string;
+  
+	@_ = (<<"END");
+***  FATAL PROGRAM ERROR!!      Unknown method '$method'
+***  which the program has attempted to call for the object:
 ***
-***  WARNING!!!  The program has attempted to call the method
-***  "$name" for the following RR object:
+***  $object
 ***
-***  $rr_string
-***
-***  This object does not have a method "$name".  THIS IS A BUG
-***  IN THE CALLING SOFTWARE, which has incorrectly assumed that
-***  the object would be of a particular type.  The calling
-***  software should check the type of each RR object before
-***  calling any of its methods.
-***
-***  Net::DNS has returned undef to the caller.
-***
-
-AMEN
-return;
-	}
-
-	no strict q/refs/;
-
-	# Build a method in the class.
-	*{$AUTOLOAD} = sub {
-	    my ($self, $new_val) = @_;
-
-	    if (defined $new_val) {
-		$self->{$name} = $new_val;
-	    }
-
-	    return $self->{$name};
-	};
-
-	# And jump over to it.
-	goto &{$AUTOLOAD};
+***  This object does not have a method '$method'.  THIS IS A BUG
+***  IN THE CALLING SOFTWARE, which incorrectly assumes that the
+***  object would be of a particular type.  The type of an object
+***  should be checked before calling any of its methods.
+END
+	no strict;
+	goto &{'Carp::confess'};
 }
 
-sub DESTROY {}
 
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+  
 
 #
 #  Net::DNS::RR->_get_subclass($type)
