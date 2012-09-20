@@ -1,125 +1,111 @@
 package Net::DNS::RR::TXT;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-use Text::ParseWords;
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
+use base Net::DNS::RR;
 
-	my $rdlength = $self->{'rdlength'} or return bless $self, $class;
-	my $end      = $offset + $rdlength;
-
-	while ($offset < $end) {
-		my $strlen = unpack("\@$offset C", $$data);
-		++$offset;
-
-		my $char_str = substr($$data, $offset, $strlen);
-		$offset += $strlen;
-
-		push(@{$self->{'char_str_list'}}, $char_str);
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-    my ( $class, $self, $rdata_string ) = @_ ;
-
-    bless $self, $class;
-
-    $self->_build_char_str_list($rdata_string);
-
-    return $self;
-}
-
-sub txtdata {
-	my $self = shift;
-	$self->_build_char_str_list(@_) if @_;
-	return join(' ',  $self->char_str_list());
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return join( ' ', map {
-			my $str = $_;
-			$str =~ s/\\/\\\\/g;
-			$str =~ s/"/\\"/g;
-			$str =~ /^$|\s|["\$'();@]/ ? qq("$str") : $str;
-		} $self->char_str_list );
-}
-
-sub _build_char_str_list {
-	my ($self, $rdata_string) = @_;
-
-	my @words;
-
-	@words= quotewords('\s+', 1, $rdata_string) if $rdata_string;
-
-	$self->{'char_str_list'} = [];
-
-	if (@words) {
-		foreach my $string (@words) {
-		    $string =~ s/^'(.*)'$/$1/ unless $string =~ s/^"(.*)"$/$1/;
-		    my $wire = "";
-		    while ($string =~ /\G([^\\]*)([\\]?)/g) {
-			$wire .= $1 if defined $1;
-			if ($2) {
-			    if ($string =~ /\G(\d\d\d)/gc) {
-				$wire.=pack("C",$1);
-			    } elsif ($string =~ /\G(.)/gc) {
-				$wire .= $1;
-			    }
-			}
-		    }
-		    push(@{$self->{'char_str_list'}}, $wire);
-		}
-	}
-}
-
-sub char_str_list {
-	my $self = shift;
-
-	$self->_build_char_str_list($self->{txtdata}) if defined $self->{txtdata};
-	delete $self->{txtdata};	# RR built from hash
-
-	$self->{'char_str_list'} ||= [];
-
-	return @{$self->{'char_str_list'}}; # unquoted strings
-}
-
-sub rr_rdata {
-	my $self  = shift;
-	my $rdata = '';
-
-	foreach my $string ($self->char_str_list) {
-	    $rdata .= pack("C", length $string );
-	    $rdata .= $string;
-	}
-
-	return $rdata;
-}
-
-1;
-__END__
+=encoding utf8
 
 =head1 NAME
 
 Net::DNS::RR::TXT - DNS TXT resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use Net::DNS::Text;
+
+use Text::ParseWords;
+
+
+sub new {				## decode rdata from wire-format octet string
+	my $class = shift;
+	my $self = bless shift, $class;
+	my ( $data, $offset ) = @_;
+
+	my $limit = $offset + $self->{rdlength};
+	my $text;
+	$self->{txtdata} = [];
+	while ( $offset < $limit ) {
+		( $text, $offset ) = decode Net::DNS::Text( $data, $offset );
+		push @{$self}{txtdata}, $text;
+	}
+
+	croak('corrupt TXT data') unless $offset == $limit;	# more or less FUBAR
+
+	return $self;
+}
+
+
+sub rr_rdata {				## encode rdata as wire-format octet string
+	my $self = shift;
+	my $pkt	 = shift;
+
+	my $txtdata = $self->{txtdata} || [];
+	join '', map $_->encode, @$txtdata;
+}
+
+
+sub rdatastr {				## format rdata portion of RR string.
+	my $self = shift;
+
+	my $txtdata = $self->{txtdata} || [];
+	join ' ', map $_->string, @$txtdata;
+}
+
+
+sub new_from_string {			## populate RR from rdata string
+	my $class = shift;
+	my $self  = bless shift, $class;
+	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
+	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @parse];
+	return $self;
+}
+
+
+sub txtdata {
+	my $self = shift;
+
+	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @_] if @_;
+
+	my $txtdata = $self->{txtdata} || [];
+
+	return ( map $_->value, @$txtdata ) if wantarray;
+
+	join ' ', map $_->value, @$txtdata if defined wantarray;
+}
+
+
+sub char_str_list {				## historical
+	return (&txtdata);
+}
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR( 'name TXT    txtdata ...' );
+
+    $rr = new Net::DNS::RR(
+	...
+	txtdata => 'single text string'
+	  or
+	txtdata => [ 'multiple', 'strings', ... ]
+	);
+
+    use encoding 'utf8';
+    $rr = new Net::DNS::RR( 'jp  TXT     古池や　蛙飛込む　水の音' );
 
 =head1 DESCRIPTION
 
@@ -127,70 +113,37 @@ Class for DNS Text (TXT) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 txtdata
 
-    print "txtdata = ", $rr->txtdata, "\n";
+    $string = $rr->txtdata;
+    @list   = $rr->txtdata;
 
-Returns the descriptive text as a single string, regardless of actual
-number of <character-string> elements.  Of questionable value.  Should
-be deprecated.
+When invoked in scalar context, txtdata() returns the descriptive text
+as a single string, regardless of the number of elements.
 
-Use C<< $txt->rdatastr() >> or C<< $txt->char_str_list() >> instead.
-
-
-=head2 char_str_list
-
- print "Individual <character-string> list: \n\t",
-       join("\n\t", $rr->char_str_list());
-
-Returns a list of the individual <character-string> elements,
-as unquoted strings.  Used by TXT->rdatastr and TXT->rr_rdata.
-
-NB: rdatastr will return quoted strings.
-
-
-=head1 FEATURES
-
-The RR.pm module accepts semi-colons as a start of a comment. This is
-to allow the RR.pm to deal with RFC1035 specified zonefile format.
-
-For some applications of the TXT RR the semicolon is relevant, you
-will need to escape it on input.
-
-Also note that you should specify the several character strings
-separately. The easiest way to do so is to include the whole argument
-in single quotes and the several character strings in double
-quotes. Double quotes inside the character strings will need to be
-escaped.
-
-my $TXTrr=Net::DNS::RR->new('txt2.t.net-dns.org.	60	IN
-	TXT  "Test1 \" \; more stuff"  "Test2"');
-
-would result in
-$TXTrr->char_str_list())[0] containing 'Test1 " ; more stuff'
-and
-$TXTrr->char_str_list())[1] containing 'Test2'
-
-Note that the rdatastr method (and therefore the print, and string
-method) returns the escaped format.
-
-
+In a list context, txtdata() returns a list of the text elements.
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)2011 Dick Franks.
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
-Portions Copyright (c) 2005 Olaf Kolkman (NLnet Labs)
+All rights reserved.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.14
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.3.14, RFC3629
 
 =cut

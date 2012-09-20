@@ -1,7 +1,6 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use diagnostics;
 use Test::More tests => 44;
 
 
@@ -54,7 +53,7 @@ my $wire = '0E6172626974726172795F74657874';
 
 {
 	foreach my $testcase (
-		q|contiguous|,	q|unquoted contiguous strings|,
+		q|contiguous|,	q|three unquoted strings|,
 		q|"in quotes"|, q|"two separate" "quoted strings"|,
 		q|"" empty|,	q|" " space|,
 		q|!|,		q|"\""|,
@@ -74,7 +73,7 @@ my $wire = '0E6172626974726172795F74657874';
 		q|{|,		q(|),
 		q|}|,		q|~|,
 		) {
-		my $string = "example.com.	TXT	$testcase";
+		my $string = "$name.	TXT	$testcase";
 		my $expect = new Net::DNS::RR($string)->string;	# test for consistent parsing
 		my $result = new Net::DNS::RR($expect)->string;
 		is( $result, $expect, $string );
