@@ -1,125 +1,136 @@
 package Net::DNS::RR::HINFO;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-use Net::DNS::RR::TXT;
-
-@ISA     = qw(Net::DNS::RR Net::DNS::RR::TXT);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		my ($cpu, $os, $len);
-
-		($len) = unpack("\@$offset C", $$data);
-		++$offset;
-		$cpu = substr($$data, $offset, $len);
-		$offset += $len;
-
-		($len) = unpack("\@$offset C", $$data);
-		++$offset;
-		$os = substr($$data, $offset, $len);
-		$offset += $len;
-
-		$self->{"cpu"} = $cpu;
-		$self->{"os"}  = $os;
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ( $class, $self, $rdata_string ) = @_ ;
-
-	bless $self, $class;
-        return $self unless $rdata_string;
-	$self->_build_char_str_list($rdata_string);
-	my @elements= $self->char_str_list();
-	if (@elements==2){
-
-
-		$self->{"cpu"} = $elements[0];
-		$self->{"os"}  = $elements[1];
-	}else{
-		return;
-	}
-
-
-	return $self;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return $self->{"cpu"}
-	  ? qq("$self->{cpu}" "$self->{os}")
-	    : '';
-}
-
-sub rr_rdata {
-	my $self = shift;
-	my $rdata = "";
-
-	if (exists $self->{"cpu"}) {
-		$rdata .= pack("C", length $self->{"cpu"});
-		$rdata .= $self->{"cpu"};
-
-		$rdata .= pack("C", length $self->{"os"});
-		$rdata .= $self->{"os"};
-	}
-
-	return $rdata;
-}
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::HINFO - DNS HINFO resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use Net::DNS::Text;
+
+use Text::ParseWords;
+
+
+sub new {				## decode rdata from wire-format octet string
+	my $class = shift;
+	my $self = bless shift, $class;
+	my ( $data, $offset ) = @_;
+
+	( $self->{cpu}, $offset ) = decode Net::DNS::Text( $data, $offset );
+	( $self->{os},	$offset ) = decode Net::DNS::Text( $data, $offset );
+
+	return $self;
+}
+
+
+sub rr_rdata {				## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless defined $self->{os};
+	join '', $self->{cpu}->encode, $self->{os}->encode;
+}
+
+
+sub rdatastr {				## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless defined $self->{os};
+	join ' ', $self->{cpu}->string, $self->{os}->string;
+}
+
+
+sub new_from_string {			## populate RR from rdata string
+	my $class = shift;
+	my $self  = bless shift, $class;
+	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
+	$self->parse_rdata(@parse) if @parse;
+	return $self;
+}
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->cpu(shift);
+	$self->os(shift);
+	die 'too many arguments for HINFO' if @_;
+}
+
+
+sub cpu {
+	my $self = shift;
+
+	$self->{cpu} = new Net::DNS::Text(shift) if @_;
+	$self->{cpu}->value if defined wantarray;
+}
+
+sub os {
+	my $self = shift;
+
+	$self->{os} = new Net::DNS::Text(shift) if @_;
+	$self->{os}->value if defined wantarray;
+}
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name HINFO cpu os');
 
 =head1 DESCRIPTION
 
-Class for DNS Host Information (HINFO) resource records.
+Class for DNS Hardware Information (HINFO) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 cpu
 
-    print "cpu = ", $rr->cpu, "\n";
+    $cpu = $rr->cpu;
 
 Returns the CPU type for this RR.
 
 =head2 os
 
-    print "os = ", $rr->os, "\n";
+    $os = $rr->os;
 
 Returns the operating system type for this RR.
 
+
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
-Portions Copyright (c) 2002-2004 Chris Reinhardt
-Portions Copyright (c) 2007 NLnet Labs
+Copyright (c)1997-1998 Michael Fuhr. 
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.2
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.3.2
 
 =cut
