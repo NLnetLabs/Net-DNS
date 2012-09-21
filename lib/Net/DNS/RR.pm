@@ -312,7 +312,9 @@ sub new_from_data {
 
 	if ($RR{$rrtype}) {
 		my $subclass = $class->_get_subclass($rrtype);
-		return $subclass->new($self, $data, $offset);
+		return $subclass->new($self, $data, $offset) if $self->{rdlength};
+		return $subclass->new($self, $data, $offset) if $self->{type} eq 'OPT';
+		return bless $self, $subclass;
 	} else {
 		return Net::DNS::RR::Unknown->new($self, $data, $offset);
 	}
