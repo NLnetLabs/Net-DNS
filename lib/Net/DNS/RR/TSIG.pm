@@ -1,216 +1,231 @@
 package Net::DNS::RR::TSIG;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-use Digest::HMAC_MD5;
-use MIME::Base64;
-
-use constant DEFAULT_ALGORITHM => "HMAC-MD5.SIG-ALG.REG.INT";
-use constant DEFAULT_FUDGE     => 300;
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-# a signing function for the HMAC-MD5 algorithm. This can be overridden using
-# the sign_func element
-sub sign_hmac {
-	my ($key, $data) = @_;
-
-	$key =~ s/ //g;
-	$key = decode_base64($key);
-
-	my $hmac = Digest::HMAC_MD5->new($key);
-	$hmac->add($data);
-
-	return $hmac->digest;
-}
-
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		($self->{"algorithm"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-
-		my ($time_high, $time_low) = unpack("\@$offset nN", $$data);
-		$self->{"time_signed"} = $time_low;	# bug
-		$offset += Net::DNS::INT16SZ() + Net::DNS::INT32SZ();
-
-		@{$self}{qw(fudge mac_size)} = unpack("\@$offset nn", $$data);
-		$offset += Net::DNS::INT16SZ() + Net::DNS::INT16SZ();
-
-		$self->{"mac"} = substr($$data, $offset, $self->{'mac_size'});
-		$offset += $self->{'mac_size'};
-
-		@{$self}{qw(original_id error other_len)} = unpack("\@$offset nnn", $$data);
-		$offset += Net::DNS::INT16SZ() * 3;
-
-		my $odata = substr($$data, $offset, $self->{'other_len'});
-		my ($odata_high, $odata_low) = unpack("nN", $odata);
-		$self->{"other_data"} = $odata_low;
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string && ($string =~ /^(.*)$/)) {
-		$self->{"key"}     = $1;
-	}
-
-	$self->{"algorithm"}   = DEFAULT_ALGORITHM;
-	$self->{"time_signed"} = time;
-	$self->{"fudge"}       = DEFAULT_FUDGE;
-	$self->{"mac_size"}    = 0;
-	$self->{"mac"}         = "";
-	$self->{"original_id"} = 0;
-	$self->{"error"}       = 0;
-	$self->{"other_len"}   = 0;
-	$self->{"other_data"}  = "";
-	$self->{"sign_func"}   = \&sign_hmac;
-
-	# RFC 2845 Section 2.3
-	$self->{"class"} = "ANY";
-
-	return bless $self, $class;
-}
-
-sub error {
-	my $self = shift;
-
-	my $rcode;
-	my $error = $self->{"error"};
-
-	if (defined($error)) {
-		$rcode = $Net::DNS::rcodesbyval{$error} || $error;
-	}
-
-	return $rcode;
-}
-
-sub mac_size {
-	my $self = shift;
-	return length(defined($self->{"mac"}) ? $self->{"mac"} : "");
-}
-
-sub mac {
-	my $self = shift;
-	my $mac = unpack("H*", $self->{"mac"}) if defined($self->{"mac"});
-	return $mac;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	my $error = $self->error;
-	$error = "UNDEFINED" unless defined $error;
-
-	my $rdatastr;
-
-	if (exists $self->{"algorithm"}) {
-		$rdatastr = "$self->{algorithm}. $error";
-		if ($self->{"other_len"} && defined($self->{"other_data"})) {
-			$rdatastr .= " $self->{other_data}";
-		}
-	} else {
-		$rdatastr = "";
-	}
-
-	return $rdatastr;
-}
-
-# return the data that needs to be signed/verified. This is useful for
-# external TSIG verification routines
-sub sig_data {
-	my ($self, $packet) = @_;
-	my ($newpacket, $sigdata);
-
-	# XXX this is horrible.  $pkt = Net::DNS::Packet->clone($packet); maybe?
-	bless($newpacket = {},"Net::DNS::Packet");
-	%{$newpacket} = %{$packet};
-	bless($newpacket->{"header"} = {},"Net::DNS::Header");
-	$newpacket->{"additional"} = [];
-	%{$newpacket->{"header"}} = %{$packet->{"header"}};
-	@{$newpacket->{"additional"}}
-		= grep { $_ != $self } @{$packet->{"additional"}};
-	$newpacket->{"header"}{"arcount"}--;
-	$newpacket->{"compnames"} = {};
-
-	# Add the request MAC if present (used to validate responses).
-	$sigdata .= pack("H*", $self->{"request_mac"})
-	    if $self->{"request_mac"};
-
-	$sigdata .= $newpacket->data;
-
-	# Don't compress the record (key) name.
-	my $tmppacket = Net::DNS::Packet->new("");
-	$sigdata .= $tmppacket->dn_comp(lc($self->{"name"}), 0);
-
-	$sigdata .= pack("n", $Net::DNS::classesbyname{uc($self->{"class"})});
-	$sigdata .= pack("N", $self->{"ttl"});
-
-	# Don't compress the algorithm name.
-	$tmppacket->{"compnames"} = {};
-	$sigdata .= $tmppacket->dn_comp(lc($self->{"algorithm"}), 0);
-
-	$sigdata .= pack("nN", 0, $self->{"time_signed"});	# bug
-	$sigdata .= pack("n", $self->{"fudge"});
-	$sigdata .= pack("nn", $self->{"error"}, $self->{"other_len"});
-
-	$sigdata .= pack("nN", 0, $self->{"other_data"})
-	    if $self->{"other_data"};
-
-	return $sigdata;
-}
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
-	if (exists $self->{"key"}) {
-		# form the data to be signed
-		my $sigdata = $self->sig_data($packet);
-
-		# and call the signing function
-		$self->{"mac"} = &{$self->{"sign_func"}}($self->{"key"}, $sigdata);
-		$self->{"mac_size"} = length($self->{"mac"});
-
-		# construct the signed TSIG record
-		$packet->{"compnames"} = {};
-		$rdata .= $packet->dn_comp($self->{"algorithm"}, 0);
-
-		$rdata .= pack("nN", 0, $self->{"time_signed"});	# bug
-		$rdata .= pack("nn", $self->{"fudge"}, $self->{"mac_size"});
-		$rdata .= $self->{"mac"};
-
-		$rdata .= pack("nnn",($packet->{"header"}->{"id"},
-		                      $self->{"error"},
-		                      $self->{"other_len"}));
-
-		$rdata .= pack("nN", 0, $self->{"other_data"})
-		    if $self->{"other_data"};
-	}
-
-	return $rdata;
-}
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::TSIG - DNS TSIG resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use Net::DNS::Parameters;
+use Net::DNS::DomainName;
+
+use constant ANY  => classbyname qw(ANY);
+use constant TSIG => typebyname qw(TSIG);
+
+use Digest::HMAC_MD5;
+use MIME::Base64;
+
+use constant DEFAULT_ALGORITHM => 'HMAC-MD5.SIG-ALG.REG.INT';
+use constant DEFAULT_FUDGE     => 300;
+
+
+sub new {				## decode rdata from wire-format octet string
+	my $class = shift;
+	my $self = bless shift, $class;
+	my ( $data, $offset ) = @_;
+
+	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
+
+	# Design decision: Use 32 bits, which will work until the end of time()!
+	@{$self}{qw(time_signed fudge)} = unpack "\@$offset xxN n", $$data;
+	$offset += 8;
+
+	my $mac_size = unpack "\@$offset n", $$data;
+	$self->{macbin} = unpack "\@$offset xx a$mac_size", $$data;
+	$offset += $mac_size + 2;
+
+	@{$self}{qw(original_id error)} = unpack "\@$offset nn", $$data;
+	$offset += 4;
+
+	my $other_size = unpack "\@$offset n", $$data;
+	$self->{other} = unpack "\@$offset xx a$other_size", $$data;
+
+	return $self;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	my ( $offset, $hash, $packet ) = @_;
+
+	my $macbin = $self->macbin;
+	unless ($macbin) {
+		my $key	     = $self->key || return '';
+		my $sig_time = $self->time_signed;
+		my $function = $self->sign_func;
+		my $sigdata  = $self->sig_data($packet);	# form data to be signed
+		$macbin = $self->macbin( &$function( $key, $sigdata ) );
+		$self->original_id( $packet->header->id );
+	}
+
+	my $rdata = $self->{algorithm}->encode(0);
+
+	# Design decision: Use 32 bits, which will work until the end of time()!
+	$rdata .= pack 'xxN n', $self->time_signed, $self->fudge;
+
+	$rdata .= pack 'na*', length($macbin), $macbin;
+
+	$rdata .= pack 'nn', $self->original_id, $self->{error} || 0;
+
+	my $other = $self->other || '';
+	$rdata .= pack 'na*', length($other), $other;
+	return $rdata;
+}
+
+
+sub rdatastr {				## format rdata portion of RR string.
+	my $self = shift;
+
+	join ' ', $self->algorithm, $self->error, $self->other || '';
+}
+
+
+sub new_from_string {			## populate RR from rdata string
+	my $class = shift;
+	my $self = bless shift, $class;
+
+	$self->key(@_) if @_;
+
+	return $self;
+}
+
+
+sub encode {				## overide RR method
+	my $self = shift;
+
+	my $kname = new Net::DNS::DomainName($self->name )->encode(0);  # uncompressed key name
+	my $rdata = eval { $self->encode_rdata(@_) } || '';
+	return pack 'a* n2 N n a*', $kname, TSIG, ANY, 0, length $rdata, $rdata;
+}
+
+sub algorithm {
+	my $self = shift;
+
+	$self->{algorithm} = new Net::DNS::DomainName(shift) if @_;
+	$self->{algorithm} ||= new Net::DNS::DomainName(DEFAULT_ALGORITHM);
+	$self->{algorithm}->name if defined wantarray;
+}
+
+sub key {
+	my $self = shift;
+
+	$self->{key} = shift if @_;
+	$self->{key} || "";
+}
+
+sub time_signed {
+	my $self = shift;
+
+	$self->{time_signed} = shift if @_;
+	return 0 + ( $self->{time_signed} || time() );
+}
+
+sub fudge {
+	my $self = shift;
+
+	$self->{fudge} = shift if @_;
+	return 0 + ( $self->{fudge} || DEFAULT_FUDGE );
+}
+
+sub mac {
+	unpack "H*", shift->macbin;
+}
+
+sub macbin {
+	my $self = shift;
+
+	$self->{macbin} = shift if @_;
+	$self->{macbin} || "";
+}
+
+sub original_id {
+	my $self = shift;
+
+	$self->{original_id} = shift if @_;
+	return 0 + ( $self->{original_id} || 0 );
+}
+
+sub error {
+	my $self = shift;
+	$self->{error} = rcodebyname(shift) if @_;
+	rcodebyval( $self->{error} || 0 );
+}
+
+sub other {
+	my $self = shift;
+
+	$self->{other} = shift if @_;
+	return 0 + ( $self->{other} || 0 );
+}
+
+sub other_data {&other}
+
+sub sign_func {
+	my $self = shift;
+
+	$self->{sign_func} = shift if @_;
+	$self->{sign_func} || \&_sign_hmac;
+}
+
+sub sig_data {
+	my ( $self, $packet ) = @_;
+
+	my @additional = grep { $_->type ne 'TSIG' } @{$packet->{additional}};
+	$packet->{additional} = [@additional];
+
+	# Add the request MAC if present (used to validate responses).
+	my $sigdata = '';
+	$sigdata = pack 'H*', $self->{request_mac} if $self->{request_mac};
+
+	$sigdata .= $packet->data;
+	push @{$packet}{additional}, $self;
+
+	my $kname = new Net::DNS::DomainName($self->name )->encode(0);	# uncompressed key name
+	$sigdata .= pack 'a* n N', $kname, ANY, 0;
+
+	$sigdata .= $self->{algorithm}->encode();		# uncompressed algorithm name
+
+	# Design decision: Use 32 bits, which will work until the end of time()!
+	$sigdata .= pack 'xxN n', $self->{time_signed}, $self->fudge;
+
+	$sigdata .= pack 'n', $self->{error} || 0;
+
+	my $other = $self->other || '';
+	$sigdata .= pack 'na*', length($other), $other;
+
+	return $sigdata;
+}
+
+
+# Default signing function using the HMAC-MD5 algorithm.
+# This can be overridden using the sign_func attribute.
+
+sub _sign_hmac {
+	my $hmac = new Digest::HMAC_MD5( decode_base64(shift) );
+	$hmac->add(shift);
+	$hmac->digest;
+}
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
 
 =head1 DESCRIPTION
 
@@ -218,136 +233,157 @@ Class for DNS Transaction Signature (TSIG) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 algorithm
 
-    $rr->algorithm($algorithm_name);
-    print "algorithm = ", $rr->algorithm, "\n";
+    $algorithm = $rr->algorithm;
 
-Gets or sets the domain name that specifies the name of the algorithm.
-The only algorithm currently supported is HMAC-MD5.SIG-ALG.REG.INT.
+A domain name which specifies the name of the algorithm.
+
+=head2 key
+
+    $key = $rr->key;
+
+Base64 encoded key.
 
 =head2 time_signed
 
-    $rr->time_signed(time);
-    print "time signed = ", $rr->time_signed, "\n";
+    $time_signed = $rr->time_signed;
 
-Gets or sets the signing time as the number of seconds since 1 Jan 1970
-00:00:00 UTC.
-
+Signing time as the number of seconds since 1 Jan 1970 00:00:00 UTC.
 The default signing time is the current time.
 
 =head2 fudge
 
-    $rr->fudge(60);
-    print "fudge = ", $rr->fudge, "\n";
+    $fudge = $rr->fudge;
 
-Gets or sets the "fudge", i.e., the seconds of error permitted in the
-signing time.
-
+"fudge" represents the permitted error in the signing time.
 The default fudge is 300 seconds.
-
-=head2 mac_size
-
-    print "MAC size = ", $rr->mac_size, "\n";
-
-Returns the number of octets in the message authentication code (MAC).
-The programmer must call a Net::DNS::Packet object's data method
-before this will return anything meaningful.
 
 =head2 mac
 
-    print "MAC = ", $rr->mac, "\n";
-
 Returns the message authentication code (MAC) as a string of hex
-characters.  The programmer must call a Net::DNS::Packet object's
-data method before this will return anything meaningful.
+characters.  The programmer must call the Net::DNS::Packet data()
+object method before this will return anything meaningful.
+
+=cut
+
+
+=head2 macbin
+
+    $macbin = $rr->macbin;
+
+Binary message authentication code (MAC).
 
 =head2 original_id
 
-    $rr->original_id(12345);
-    print "original ID = ", $rr->original_id, "\n";
+    $original_id = $rr->original_id;
 
-Gets or sets the original message ID.
+The message ID from the header of the original packet.
 
 =head2 error
 
-    print "error = ", $rr->error, "\n";
+     $rcode = $tsig->error;
 
 Returns the RCODE covering TSIG processing.  Common values are
 NOERROR, BADSIG, BADKEY, and BADTIME.  See RFC 2845 for details.
 
-=head2 other_len
 
-    print "other len = ", $rr->other_len, "\n";
+=head2 other
 
-Returns the length of the Other Data.  Should be zero unless the
-error is BADTIME.
+    $other = $rr->other;
 
-=head2 other_data
+This field should be empty unless the error is BADTIME, in which
+case it will contain the server time as the number of seconds since
+1 Jan 1970 00:00:00 UTC.
 
-    print "other data = ", $rr->other_data, "\n";
+=head2 sign_func
 
-Returns the Other Data.  This field should be empty unless the
-error is BADTIME, in which case it will contain the server's
-time as the number of seconds since 1 Jan 1970 00:00:00 UTC.
+    $sign_func = $rr->sign_func;
+
+This sets the signing function to be used for this TSIG record.
+The default signing function is HMAC-MD5.
 
 =head2 sig_data
 
-     my $sigdata = $tsig->sig_data($packet);
+     $sigdata = $tsig->sig_data($packet);
 
 Returns the packet packed according to RFC2845 in a form for signing. This
 is only needed if you want to supply an external signing function, such as is
 needed for TSIG-GSS.
 
-=head2 sign_func
 
-     sub my_sign_fn($$) {
-	     my ($key, $data) = @_;
 
-	     return some_digest_algorithm($key, $data);
-     }
+=head1 TSIG Keys
 
-     $tsig->sign_func(\&my_sign_fn);
+TSIG keys are symmetric HMAC-MD5 keys generated using the following command:
 
-This sets the signing function to be used for this TSIG record.
+	$ dnssec-keygen -a HMAC-MD5 -b 512 -n HOST <keyname>
 
-The default signing function is HMAC-MD5.
+	The key will be stored in the file K<keyname>+157+<keyid>.private
 
-=head1 BUGS
+    where
+	<keyname> is the DNS name of the key.
 
-This code is still under development.  Use with caution on production
-systems.
+	<keyid> is the (generated) numerical identifier used to distinguish this key.
 
-The time_signed and other_data fields should be 48-bit unsigned
-integers (RFC 2845, Sections 2.3 and 4.5.2).  The current implementation
-ignores the upper 16 bits; this will cause problems for times later
-than 19 Jan 2038 03:14:07 UTC.
+It is recommended that the keyname be the fully qualified domain name of the relevant host.
 
-The only builtin algorithm currently supported is
-HMAC-MD5.SIG-ALG.REG.INT. You can use other algorithms by supplying an
-appropriate sign_func.
 
-=head1 COPYRIGHT
+=head1 Configuring BIND Nameserver
 
-Copyright (c) 2002 Michael Fuhr.
+The following lines must be added to the /etc/named.conf file:
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+    key <keyname> {
+	algorithm HMAC-MD5;
+	secret "<keydata>";
+    };
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+<keyname> is the name of the key chosen when the key was generated.
+
+<keydata> is the string found on the Key: line in the generated key file.
+
+
 
 =head1 ACKNOWLEDGMENT
 
 Most of the code in the Net::DNS::RR::TSIG module was contributed
-by Chris Turbeville.
+by Chris Turbeville. 
 
 Support for external signing functions was added by Andrew Tridgell.
 
+
+=head1 BUGS
+
+A 32-bit representation of time is used, contrary to RFC2845 which
+demands 48 bits.  This design decision will need to be reviewed
+before the code stops working on 7 February 2106.
+
+HMAC-MD5.SIG-ALG.REG.INT is the only algorithm currently supported.
+You can use other algorithms by supplying an appropriate sign_func.
+
+
+=head1 COPYRIGHT
+
+Copyright (c)2002 Michael Fuhr. 
+
+Portions Copyright (c)2002-2004 Chris Reinhardt.
+
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
+
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 2845
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC2845
 
 =cut
-

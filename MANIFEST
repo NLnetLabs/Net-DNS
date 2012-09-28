@@ -76,7 +76,6 @@ lib/Net/DNS/Text.pm
 lib/Net/DNS/Update.pm
 Makefile.PL
 MANIFEST			This list of files
-META.yml
 netdns.c
 netdns.h
 README
@@ -101,9 +100,10 @@ t/05-HINFO.t
 t/05-HIP.t
 t/05-IPSECKEY.t
 t/05-SOA.t
+t/05-TKEY.t
+t/05-TSIG.t
 t/05-TXT.t
 t/05-apl.t
-t/05-rr-opt.t
 t/05-rr-rrsort.t
 t/05-rr-sshfp.t
 t/05-rr-unknown.t
@@ -113,7 +113,6 @@ t/06-packet-unique-push.t
 t/06-update.t
 t/07-misc.t
 t/08-online.t
-t/09-tkey.t
 t/10-recurse.t
 t/11-escapedchars.t
 t/11-inet6.t
