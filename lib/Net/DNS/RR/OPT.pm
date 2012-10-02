@@ -26,8 +26,6 @@ use constant CLASS_TTL_RDLENGTH => length pack 'n N n', (0) x 3;
 
 use constant OPT => typebyname qw(OPT);
 
-use Text::ParseWords;
-
 
 sub new {				## decode rdata from wire-format octet string
 	my $class = shift;
@@ -74,9 +72,11 @@ sub rdatastr {				## format rdata portion of RR string.
 
 sub new_from_string {			## populate RR from rdata string
 	my $class = shift;
-	my $self  = bless shift, $class;
+	my $self = bless shift, $class;
 
-	croak 'zone file representation not defined for OPT';
+	croak 'zone file representation not defined for OPT' if shift;
+
+	return $self;
 }
 
 
@@ -86,7 +86,7 @@ sub encode {				## overide RR method
 	my $data = $self->encode_rdata;
 	my $size = $self->size;
 	my @xttl = ( $self->rcode >> 4, $self->version, $self->flags );
-	pack 'C n2 C2 n2 a*', 0, OPT, $size, @xttl, length($data), $data;
+	pack 'C n n C2n n a*', 0, OPT, $size, @xttl, length($data), $data;
 }
 
 sub string {				## overide RR method
@@ -142,7 +142,7 @@ sub size {
 	my $self = shift;
 	for ( $self->{size} ) {
 		my $UDP_size = 0;
-		( $UDP_size, $_ ) = (shift) if @_;
+		( $UDP_size, $_ ) = ( shift || 0 ) if @_;
 		return $UDP_size > 512 ? ( $_ = $UDP_size ) : 512 unless $_;
 		return $_ > 512 ? $_ : 512;
 	}

@@ -756,45 +756,18 @@ sub encode {
 	$packet ||= bless {}, qw(Net::DNS::Packet);
 	$packet->{compnames} = $hash || {};
 
-	# Don't compress TSIG or TKEY names and don't mess with EDNS0 packets
-	my $data;
-	if (uc($self->{'type'}) eq 'TSIG' || uc($self->{'type'}) eq 'TKEY') {
-		my $tmp_packet = Net::DNS::Packet->new();
-		$data = $tmp_packet->dn_comp($self->{'name'}, 0);
-		return undef unless defined $data;
-	} elsif (uc($self->{'type'}) eq 'OPT') {
-		my $tmp_packet = Net::DNS::Packet->new();
-		$data = $tmp_packet->dn_comp('', 0);
-	} else {
-		$data  = $packet->dn_comp($self->{'name'}, $offset);
-		return undef unless defined $data;
-	}
+	my $data = $packet->dn_comp($self->{'name'}, $offset);
+	return undef unless defined $data;
 
-	my $qtype     = uc($self->{'type'});
-	my $qtype_val = ($qtype =~ m/^\d+$/o) ? $qtype : Net::DNS::typesbyname($qtype);
-	$qtype_val    = 0 if !defined($qtype_val);
-
-	my $qclass     = uc($self->{'class'});
-	my $qclass_val = ($qclass =~ m/^\d+$/o) ? $qclass : Net::DNS::classesbyname($qclass);
-	$qclass_val    = 0 if !defined($qclass_val);
-	$data .= pack('n', $qtype_val);
-
-	# If the type is OPT then class will need to contain a decimal number
-	# containing the UDP payload size. (RFC2671 section 4.3)
-	if (uc($self->{'type'}) ne 'OPT') {
-	    $data .= pack('n', $qclass_val);
-	} else {
-	    $data .= pack('n', $self->{'class'});
-	}
-
+	$data .= pack('n', Net::DNS::typesbyname(uc($self->{'type'})));
+	$data .= pack('n', Net::DNS::classesbyname(uc($self->{'class'})));
 	$data .= pack('N', $self->{'ttl'});
 
 	$offset += length($data) + &Net::DNS::INT16SZ;	# allow for rdlength
 
-	my $rdata = $self->rdata($packet, $offset);
+	my $rdata = $self->rdata($packet, $offset) || '';
 
-	$data .= pack('n', length $rdata);
-	$data.=$rdata;
+	$data .= pack('n a*', length $rdata, $rdata );
 
 	return $data;
 }
