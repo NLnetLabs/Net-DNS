@@ -1,4 +1,4 @@
-package Net::DNS::Resolver::UNIX;
+package Net::DNS::Resolver::os2;
 use base Net::DNS::Resolver::Base;
 
 #
@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Resolver::UNIX - UNIX Resolver Class
+Net::DNS::Resolver::os2 - OS2 Resolver Class
 
 =cut
 
@@ -17,7 +17,8 @@ Net::DNS::Resolver::UNIX - UNIX Resolver Class
 use strict;
 
 
-my $resolv_conf = "/etc/resolv.conf";
+my $etc		= $ENV{ETC} || '/etc';
+my $resolv_conf = "$etc/resolv";
 my $dotfile	= '.resolv.conf';
 
 my @config_path;
