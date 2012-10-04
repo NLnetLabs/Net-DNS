@@ -30,15 +30,14 @@ A C<Net::DNS::Packet> object represents a DNS protocol packet.
 use strict;
 use integer;
 use Carp;
+
+use Exporter 'import';
+use vars qw(@EXPORT_OK);
+@EXPORT_OK = qw(dn_expand);
+
 use Net::DNS::Header;
 use Net::DNS::Question;
 use Net::DNS::RR;
-
-
-use vars qw(@ISA @EXPORT_OK);
-require Exporter;
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(dn_expand);
 
 
 =head1 METHODS
@@ -57,12 +56,34 @@ to A and IN.
 
 If called with an empty argument list, C<new> creates an empty packet.
 
+=cut
+
+sub new {
+	return &decode if ref $_[1];
+	my $class = shift;
+
+	my $self = bless {
+		question   => [],
+		answer	   => [],
+		authority  => [],
+		additional => []}, $class;
+
+	$self->{question} = [Net::DNS::Question->new(@_)] if @_;
+
+	$self->header->rd(1);
+	return $self;
+}
+
+
+#=head2 decode
+
+=pod
 
     $packet = new Net::DNS::Packet(\$data);
     $packet = new Net::DNS::Packet(\$data, 1);		# set debugging
 
 If passed a reference to a scalar containing DNS packet data,
-C<new> creates a packet object by decoding the data.  The optional
+a new packet object is created by decoding the data.  The optional
 second boolean argument is used to enable debugging output.
 
 Returns undef if unable to create a packet object.
@@ -74,26 +95,11 @@ are collected in the $@ ($EVAL_ERROR) variable.
     ($packet, $length) = new Net::DNS::Packet(\$data);
 
 If called in array context, returns a packet object and the
-number of octets sucessfully decoded.
+number of octets successfully decoded.
 
 =cut
 
-sub new {
-	return &decode if ref $_[1];
-	my $class = shift;
-
-	my $self = bless {
-		header	   => Net::DNS::Header->new,
-		question   => [],
-		answer	   => [],
-		authority  => [],
-		additional => []}, $class;
-
-	$self->{question} = [Net::DNS::Question->new(@_)] if @_;
-
-	return $self;
-}
-
+use constant HEADER_LENGTH => length pack 'n6', (0) x 6;
 
 sub decode {
 	my $class = shift;
@@ -103,45 +109,44 @@ sub decode {
 	my $offset = 0;
 	my $self;
 	eval {
-		# Parse header section
-		my $header;
-		( $header, $offset ) = decode Net::DNS::Header($data);
-
-		# Parse question/zone section
-		my $count = $header->qdcount;
-		my $hash = {};
-		my @question;
-		my $record;
-		while ($count--) {
-			( $record, $offset ) = decode Net::DNS::Question( $data, $offset, $hash );
-			CORE::push( @question, $record );
-		}
+		die 'corrupt wire-format data' if length($$data) < HEADER_LENGTH;
 
 		$self = bless {
-			header	   => $header,
-			question   => [@question],
+			question   => [],
 			answer	   => [],
 			authority  => [],
 			additional => [],
-			answersize => length $$data }, $class;
+			answersize => length $$data
+			}, $class;
 
-		# Parse RR sections
-		$count = $header->ancount;
-		while ($count--) {
-			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
-			CORE::push( @{$self->{answer}}, $record );
+		# header section
+		my $header = $self->header;
+		$header->decode($data);
+		my ( $qd, $an, $ns, $ar ) = map { $header->$_ } qw(qdcount ancount nscount arcount);
+		$offset = HEADER_LENGTH;
+
+		# question/zone section
+		my $hash = {};
+		my $record;
+		while ( $qd-- ) {
+			( $record, $offset ) = decode Net::DNS::Question( $data, $offset, $hash );
+			CORE::push( @{$self}{question}, $record );
 		}
 
-		$count = $header->nscount;
-		while ($count--) {
+		# RR sections
+		while ( $an-- ) {
 			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
-			CORE::push( @{$self->{authority}}, $record );
+			CORE::push( @{$self}{answer}, $record );
 		}
 
-		$count = $header->arcount;
-		while ($count--) {
+		while ( $ns-- ) {
 			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
-			CORE::push( @{$self->{additional}}, $record );
+			CORE::push( @{$self}{authority}, $record );
+		}
+
+		while ( $ar-- ) {
+			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			CORE::push( @{$self}{additional}, $record );
 		}
 	};
 
@@ -157,31 +162,27 @@ sub decode {
 =head2 data
 
     $data = $packet->data;
+    $data = $packet->data($limit);
 
 Returns the packet data in binary format, suitable for sending to
 a nameserver.
 
 =cut
 
+
 sub encode {&data}
 
 sub data {
 	my $self = shift;
 
-	#----------------------------------------------------------------------
-	# Set record counts in packet header
-	#----------------------------------------------------------------------
-	my $header = $self->{header};
-	$header->qdcount( scalar @{$self->{question}} );
-	$header->ancount( scalar @{$self->{answer}} );
-	$header->nscount( scalar @{$self->{authority}} );
-	$header->arcount( scalar @{$self->{additional}} );
+	for ( my $edns = $self->edns ) {			# EDNS support
+		my @xopt = grep { $_->type ne 'OPT' } @{$self->{additional}};
+		$self->{additional} = $edns->default ? [@xopt] : [$edns, @xopt];
+	}
 
-	#----------------------------------------------------------------------
-	# Get the data for each section in the packet
-	#----------------------------------------------------------------------
-	my $data = $header->encode;
-	my $hash = {};
+	my $data = $self->header->encode;			# packet header
+
+	my $hash = {};						# packet body
 	foreach my $component ( @{$self->{question}},
 				@{$self->{answer}},
 				@{$self->{authority}},
@@ -197,13 +198,59 @@ sub data {
 
     $header = $packet->header;
 
-Returns a C<Net::DNS::Header> object representing the header section
+Constructor method which returns a reference to the unique
+C<Net::DNS::Header> object which represents the header section
 of the packet.
 
 =cut
 
 sub header {
-	return shift->{header};
+	my $self = shift;
+	$self->{header} ||= new Net::DNS::Header($self);
+}
+
+
+=head2 EDNS extended header
+
+    $edns    = $packet->edns;
+    $version = $edns->version;
+    $size    = $edns->size;
+
+Auxilliary function edns() provides access to EDNS extensions.
+
+=cut
+
+sub edns {
+	shift->header->edns;
+}
+
+
+=head2 reply
+
+    $reply = $query->reply;
+
+Constructor method which returns a new reply packet.
+
+=cut
+
+sub reply {
+	my $query  = shift;
+	my $UDPmax = shift;
+	die 'erroneous qr flag in query packet' if $query->header->qr;
+
+	my $reply = new Net::DNS::Packet();
+	my $header = $reply->header;
+	$header->qr(1);						# reply with same id, opcode and question
+	$header->id($query->header->id);
+	$header->opcode($query->header->opcode);
+	$reply->{question} = [$query->question];
+
+	$header->rcode('FORMERR');				# failure to provide RCODE is sinful!
+	$reply->edns->size($UDPmax) unless $query->edns->default;
+
+	$header->rd( $query->header->rd );			# copy these flags into reply
+	$header->cd( $query->header->cd );
+	return $reply;
 }
 
 
@@ -303,38 +350,38 @@ Returns a string representation of the packet.
 sub string {
 	my $self = shift;
 
-	my $header = $self->{header};
+	my $header = $self->header;
 	my $update = $header->opcode eq 'UPDATE';
 
 	my $server = $self->{answerfrom};
 	my $string = $server ? ";; Answer received from $server ($self->{answersize} bytes)\n" : "";
 
-	$string .= ";; HEADER SECTION\n".$header->string;
+	$string .= ";; HEADER SECTION\n" . $header->string;
 
 	my $question = $update ? 'ZONE' : 'QUESTION';
 	my @question = map $_->string, $self->question;
-	my $qdcount = @question;
-	my $qds = $qdcount != 1 ? 's' : '';
+	my $qdcount  = scalar @question;
+	my $qds	     = $qdcount != 1 ? 's' : '';
 	$string .= join "\n;; ", "\n;; $question SECTION ($qdcount record$qds)", @question;
 
 	my $answer = $update ? 'PREREQUISITE' : 'ANSWER';
-	my @answer = map $_->string, $self->answer;
-	my $ancount = @answer;
-	my $ans = $ancount != 1 ? 's' : '';
+	my @answer  = map $_->string, $self->answer;
+	my $ancount = scalar @answer;
+	my $ans	    = $ancount != 1 ? 's' : '';
 	$string .= join "\n", "\n\n;; $answer SECTION ($ancount record$ans)", @answer;
 
 	my $authority = $update ? 'UPDATE' : 'AUTHORITY';
 	my @authority = map $_->string, $self->authority;
-	my $nscount = @authority;
-	my $nss = $nscount != 1 ? 's' : '';
+	my $nscount   = scalar @authority;
+	my $nss	      = $nscount != 1 ? 's' : '';
 	$string .= join "\n", "\n\n;; $authority SECTION ($nscount record$nss)", @authority;
 
 	my @additional = map $_->string, $self->additional;
-	my $arcount = @additional;
-	my $ars = $arcount != 1 ? 's' : '';
+	my $arcount    = scalar @additional;
+	my $ars	       = $arcount != 1 ? 's' : '';
 	$string .= join "\n", "\n\n;; ADDITIONAL SECTION ($arcount record$ars)", @additional;
 
-	return $string."\n\n";
+	return "$string\n\n";
 }
 
 
@@ -373,8 +420,8 @@ sub answersize {
 
 =head2 push
 
-    $ancount = $packet->push(pre        => $rr);
-    $nscount = $packet->push(update     => $rr);
+    $ancount = $packet->push(prereq => $rr);
+    $nscount = $packet->push(update => $rr);
     $arcount = $packet->push(additional => $rr);
 
     $nscount = $packet->push(update => $rr1, $rr2, $rr3);
@@ -391,11 +438,10 @@ sub push {
 	my $section = lc shift || '';
 	my @rr	    = grep ref($_), @_;
 
-	my $hdr = $self->{header};
 	for ($section) {
-		return $hdr->qdcount( CORE::push( @{$self->{question}}, @rr ) ) if /^question/;
+		return CORE::push( @{$self}{question}, @rr ) if /^question/;
 
-		if ( $hdr->opcode eq 'UPDATE' ) {
+		if ( $self->header->opcode eq 'UPDATE' ) {
 			my ($zone) = $self->zone;
 			my $zclass = $zone->zclass;
 			foreach (@rr) {
@@ -403,9 +449,9 @@ sub push {
 			}
 		}
 
-		return $hdr->ancount( CORE::push( @{$self->{answer}},	  @rr ) ) if /^ans|^pre/;
-		return $hdr->nscount( CORE::push( @{$self->{authority}},  @rr ) ) if /^auth|^upd/;
-		return $hdr->adcount( CORE::push( @{$self->{additional}}, @rr ) ) if /^add/;
+		return CORE::push( @{$self}{answer},	 @rr ) if /^ans|^pre/;
+		return CORE::push( @{$self}{authority},	 @rr ) if /^auth|^upd/;
+		return CORE::push( @{$self}{additional}, @rr ) if /^add/;
 	}
 
 	carp qq(invalid section "$section");
@@ -415,8 +461,8 @@ sub push {
 
 =head2 unique_push
 
-    $ancount = $packet->unique_push(pre        => $rr);
-    $nscount = $packet->unique_push(update     => $rr);
+    $ancount = $packet->unique_push(prereq => $rr);
+    $nscount = $packet->unique_push(update => $rr);
     $arcount = $packet->unique_push(additional => $rr);
 
     $nscount = $packet->unique_push(update => $rr1, $rr2, $rr3);
@@ -461,18 +507,16 @@ sub pop {
 	my $section = lc shift || '';
 
 	for ($section) {
-		return CORE::pop( @{$self->{question}} ) if /^question/;
-
-		$self->additional if $self->{buffer};		# decode remaining data
-
-		return CORE::pop( @{$self->{answer}} )	   if /^ans|^pre/;
-		return CORE::pop( @{$self->{authority}} )  if /^auth|^upd/;
-		return CORE::pop( @{$self->{additional}} ) if /^add/;
+		return CORE::pop( @{$self}{additional} ) if /^add/;
+		return CORE::pop( @{$self}{answer} )	 if /^ans|^pre/;
+		return CORE::pop( @{$self}{authority} )	 if /^auth|^upd/;
+		return CORE::pop( @{$self}{question} )	 if /^question/;
 	}
 
 	carp qq(invalid section "$section");
 	return undef;
 }
+
 
 
 =head2 dn_comp
@@ -585,7 +629,7 @@ sub dn_expand_PP {
     $response = $res->send($update);
 
 Attaches a TSIG resource record object containing a key, which will
-be used to signs a packet with a TSIG resource record (see RFC 2845).
+be used to sign a packet with a TSIG resource record (see RFC 2845).
 Uses the following defaults:
 
     algorithm   = HMAC-MD5.SIG-ALG.REG.INT
@@ -614,18 +658,17 @@ sub sign_tsig {
 	my $self = shift;
 	my $tsig = shift || return undef;
 
-	if (grep { $_->type eq "TSIG" } @{$self->{"additional"}}) {
-		carp("A TSIG RR is already present, removing...");
-		@{$self->{"additional"}}
-			= grep { $_->type ne "TSIG" } @{$self->{"additional"}};
-	}
-
 	unless ( ref $tsig && ($tsig->type eq "TSIG") ) {
 		my $key = shift || return undef;
 		$tsig = Net::DNS::RR->new("$tsig TSIG $key");
 	}
 
-	$self->push('additional', $tsig) if $tsig;
+	my @additional = grep { $_->type ne 'TSIG' } @{$self->{additional}};
+	my $arcount = scalar @{$self->{additional}};
+	carp("A TSIG RR is already present, removing...") if scalar @additional < $arcount;
+
+	CORE::push( @additional, $tsig ) if $tsig;
+	@{$self}{additional} = [@additional];
 	return $tsig;
 }
 
@@ -756,6 +799,15 @@ sub truncate {
 		}
 	}
 	return $self;
+}
+
+
+sub dump {				## print internal data structure
+	use Data::Dumper;
+	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
+	my $self = shift;
+	return Dumper($self) if defined wantarray;
+	print Dumper($self);
 }
 
 

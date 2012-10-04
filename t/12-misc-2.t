@@ -66,16 +66,16 @@ sub reply_handler {
 
 sub notify_handler{
     my ($qname, $qclass, $qtype, $peerhost, $query,$conn) = @_;
-    #print "NOTIFY: QNAME: $qname QTYPE: $qtype\n";
+    print "NOTIFY: QNAME: $qname QTYPE: $qtype\n";
     # mark the answer as authoritive (by setting the 'aa' flag
 
-    return ("NXDOMAIN",[],[],[],{ opcode => "NS_NOTIFY_OP" } );
+    return ("NXDOMAIN",[],[],[],{ opcode => "NOTIFY" } );
 }
 
 
 
 my $notify_packet=Net::DNS::Packet->new("example.com", "SOA", "IN");
-$notify_packet->header->opcode("NS_NOTIFY_OP");
+$notify_packet->header->opcode("NOTIFY");
 
 #
 # For each nameserver fork-off seperate process
@@ -100,7 +100,7 @@ my $pid;
 	 # to loop_once.
 	 #
 	 my $answer=$resolver->send($notify_packet);
-	 is($answer->header->opcode,"NS_NOTIFY_OP", "OPCODE set in reply");
+	 is($answer->header->opcode,"NOTIFY", "OPCODE set in reply");
 
 	 # The (nameserving) child process should now exit. But, because we
 	 # do not know if the previous two queries took two or three loop_once

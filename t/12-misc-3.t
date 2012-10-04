@@ -51,7 +51,7 @@ sub reply_handler {
 }
 
 my $notify_packet=Net::DNS::Packet->new("example.com", "SOA", "IN");
-$notify_packet->header->opcode("NS_NOTIFY_OP");
+$notify_packet->header->opcode("NOTIFY");
 
 #
 # For each nameserver fork-off seperate process
@@ -71,7 +71,7 @@ my $pid;
 	 #$resolver->send("bla.foo","A");
 	 my $answer=$resolver->send($notify_packet);
 	 if (ok(defined($answer), "Nameserver without NotifyHandler at least replies")) {
-		 is($answer->header->opcode,"NS_NOTIFY_OP", "OPCODE set in reply");
+		 is($answer->header->opcode,"NOTIFY", "OPCODE set in reply");
 		 is($answer->header->rcode,"NOTIMP", "NOTIMP set in reply");
 	 }
 
