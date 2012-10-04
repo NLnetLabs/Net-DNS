@@ -109,9 +109,8 @@ sub trad_query {
 
 sub edns_query {
     my $size = shift;
-    my $edns_rr = Net::DNS::RR->new(type => 'OPT', class => $size, name => '');
     my $query = Net::DNS::Packet->new($ZONE);
-    $query->push(additional => $edns_rr);
+    $query->edns->size($size);
     return [$query, $size];
 }
 

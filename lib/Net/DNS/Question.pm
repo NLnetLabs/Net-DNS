@@ -29,7 +29,8 @@ use strict;
 use integer;
 use Carp;
 
-require Net::DNS;
+use Net::DNS::Parameters;
+
 require Net::DNS::DomainName;
 
 
@@ -59,14 +60,12 @@ sub new {
 	my $qclass = uc( shift || '' );
 
 	# tolerate (possibly unknown) type and class in zone file order
-	unless ( exists $Net::DNS::classesbyname{$qclass} ) {
-		( $qtype, $qclass ) = ( $qclass, $qtype )
-				if exists $Net::DNS::classesbyname{$qtype};
+	unless ( exists $classbyname{$qclass} ) {
+		( $qtype, $qclass ) = ( $qclass, $qtype ) if exists $classbyname{$qtype};
 		( $qtype, $qclass ) = ( $qclass, $qtype ) if $qtype =~ /CLASS/;
 	}
-	unless ( exists $Net::DNS::typesbyname{$qtype} ) {
-		( $qtype, $qclass ) = ( $qclass, $qtype )
-				if exists $Net::DNS::typesbyname{$qclass};
+	unless ( exists $typebyname{$qtype} ) {
+		( $qtype, $qclass ) = ( $qclass, $qtype ) if exists $typebyname{$qclass};
 		( $qtype, $qclass ) = ( $qclass, $qtype ) if $qclass =~ /TYPE/;
 	}
 
@@ -78,9 +77,9 @@ sub new {
 		}
 	}
 
-	$self->{name}  = new Net::DNS::DomainName1035($qname);
-	$self->{type}  = Net::DNS::typesbyname( $qtype || 'A' );
-	$self->{class} = Net::DNS::classesbyname( $qclass || 'IN' );
+	$self->{owner} = new Net::DNS::DomainName1035($qname);
+	$self->{type}  = typebyname( $qtype || 'A' );
+	$self->{class} = classbyname( $qclass || 'IN' );
 
 	return $self;
 }
@@ -111,7 +110,7 @@ sub decode {
 	my $self = bless {}, shift;
 	my ( $data, $offset ) = @_;
 
-	( $self->{name}, $offset ) = decode Net::DNS::DomainName1035(@_);
+	( $self->{owner}, $offset ) = decode Net::DNS::DomainName1035(@_);
 
 	my $next = $offset + QFIXEDSZ;
 	die 'corrupt wire-format data' if length $$data < $next;
@@ -137,7 +136,7 @@ table used to index compressed names within the packet.
 sub encode {
 	my $self = shift;
 
-	pack 'a* n2', $self->{name}->encode(@_), @{$self}{qw(type class)};
+	pack 'a* n2', $self->{owner}->encode(@_), @{$self}{qw(type class)};
 }
 
 
@@ -164,8 +163,8 @@ should be extracted from a query or reply packet.
 sub name {
 	my $self = shift;
 
-	croak 'method invoked with unexpected argument' if @_;
-	$self->{name}->xname;
+	croak 'immutable object: argument invalid' if @_;
+	$self->{owner}->xname;
 }
 
 
@@ -183,8 +182,8 @@ attribute is known as zname() and refers to the zone name.
 sub qname {
 	my $self = shift;
 
-	croak 'method invoked with unexpected argument' if @_;
-	$self->{name}->name;
+	croak 'immutable object: argument invalid' if @_;
+	$self->{owner}->name;
 }
 
 sub zname { &qname; }
@@ -203,8 +202,8 @@ this attribute is known as ztype() and refers to the zone type.
 sub type {
 	my $self = shift;
 
-	croak 'method invoked with unexpected argument' if @_;
-	Net::DNS::typesbyval( $self->{type} );
+	croak 'immutable object: argument invalid' if @_;
+	typebyval( $self->{type} );
 }
 
 sub qtype { &type; }
@@ -224,8 +223,8 @@ this attribute is known as zclass() and refers to the zone class.
 sub class {
 	my $self = shift;
 
-	croak 'method invoked with unexpected argument' if @_;
-	Net::DNS::classesbyval( $self->{class} );
+	croak 'immutable object: argument invalid' if @_;
+	classbyval( $self->{class} );
 }
 
 sub qclass { &class; }
@@ -257,7 +256,7 @@ Returns a string representation of the question record.
 sub string {
 	my $self = shift;
 
-	join "\t", $self->{name}->string, $self->qclass, $self->qtype;
+	join "\t", $self->{owner}->string, $self->qclass, $self->qtype;
 }
 
 
