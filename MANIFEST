@@ -26,10 +26,11 @@ lib/Net/DNS/Packet.pm
 lib/Net/DNS/Question.pm
 lib/Net/DNS/Resolver.pm
 lib/Net/DNS/Resolver/Base.pm
-lib/Net/DNS/Resolver/Cygwin.pm
+lib/Net/DNS/Resolver/cygwin.pm
+lib/Net/DNS/Resolver/MSWin32.pm
+lib/Net/DNS/Resolver/os2.pm
 lib/Net/DNS/Resolver/Recurse.pm
 lib/Net/DNS/Resolver/UNIX.pm
-lib/Net/DNS/Resolver/Win32.pm
 lib/Net/DNS/RR.pm
 lib/Net/DNS/RR/A.pm
 lib/Net/DNS/RR/AAAA.pm

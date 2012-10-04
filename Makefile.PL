@@ -103,16 +103,21 @@ if ( $^O eq 'cygwin' ) {
 	# Just testing if Net::DNS::Resolver::Win32 is installed, but
 	# Net::DNS::Resolver needs to be required first for it to load
 	# successfully (if available).
+	my $iphelper_present = '';
 	eval { require Net::DNS::Resolver; require Net::DNS::Resolver::Win32; };
 
-	$iphelper = ( $@ ? 0 : 1 ) if $iphelper == 2;
+	$iphelper_present ||= $INC{'Net/DNS/Resolver/Win32.pm'} unless $@;
+	eval { require Net::DNS::Resolver; require Net::DNS::Resolver::MSWin32; };
+	$iphelper_present ||= $INC{'Net/DNS/Resolver/MSWin32.pm'} unless $@;
 
-	die <<EOT unless $@ || $iphelper;
+	$iphelper = ( $iphelper_present ? 1 : 0 ) if $iphelper == 2;
+
+	die <<EOT if $iphelper_present && ! $iphelper;
 You have indicated a wish to remove Win32::IPHelper usage. However, you are
 either doing a reinstall or an upgrade of an installation which *did* use
 Win32::IPHelper.  In your case, you have to delete the file:
 
-	$INC{'Net/DNS/Resolver/Win32.pm'}
+	$iphelper_present
 
 by hand first, to build and install Net::DNS in this way.
 EOT
@@ -142,7 +147,7 @@ my %Makefile = (
 	C     => [],
 	clean => {
 		FILES =>
-'t/IPv6.enabled t/online.enabled t/online.nonfatal compile.* DNS.o DNS.c DNS.bs lib/Net/DNS/Resolver/Win32'
+'t/IPv6.enabled t/online.enabled t/online.nonfatal compile.* DNS.o DNS.c DNS.bs lib/Net/DNS/Resolver/MSWin32'
 				},
 			);
 
@@ -357,6 +362,6 @@ netdns$(LIB_EXT): netdns$(OBJ_EXT)
 sub MY::libscan {
 	my $path = $_[1];
 	return '' if $path =~ /\B\.svn\b/;
-	return '' if $^O eq 'cygwin' && !$iphelper && $path =~ /Resolver[^\w]Win32\.pm$/;
+	return '' if $^O eq 'cygwin' && !$iphelper && $path =~ /Resolver[^\w]MSWin32\.pm$/;
 	return $path;
 }

@@ -9,9 +9,6 @@ BEGIN {
 	use_ok('Net::DNS');
 	use_ok('Net::DNS::Resolver::Recurse');
 	use_ok('Net::DNS::Nameserver');
-	use_ok('Net::DNS::Resolver::Cygwin');
-
-	# can't test windows, has registry stuff
 }
 
 
