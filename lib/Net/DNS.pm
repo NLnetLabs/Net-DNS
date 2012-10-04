@@ -313,7 +313,7 @@ sub classesbyval {
     'QUERY'        => 0,        # RFC 1035
     'IQUERY'       => 1,        # RFC 1035
     'STATUS'       => 2,        # RFC 1035
-    'NS_NOTIFY_OP' => 4,        # RFC 1996
+    'NOTIFY'       => 4,        # RFC 1996
     'UPDATE'       => 5,        # RFC 2136
 );
 %opcodesbyval = reverse %opcodesbyname;

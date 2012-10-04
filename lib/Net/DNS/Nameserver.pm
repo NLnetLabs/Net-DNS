@@ -186,13 +186,10 @@ sub inet_new {
 sub make_reply {
 	my ( $self, $query, $peerhost, $conn ) = @_;
 
-	my $reply = new Net::DNS::Packet();			# create empty reply packet
-	$reply->header->qr(1);
-
-	my $headermask;
-
 	unless ($query) {
 		print "ERROR: invalid packet\n" if $self->{Verbose};
+		my $empty = new Net::DNS::Packet();		# create empty reply packet
+		my $reply = $empty->reply();
 		$reply->header->rcode("FORMERR");
 		return $reply;
 	}
@@ -202,23 +199,23 @@ sub make_reply {
 		return;
 	}
 
-	# question section returned to caller
-	my @q = $query->question;
 
-	$reply->push( "question", @q );
+	my $reply  = $query->reply();
+	my $header = $reply->header;
+	my $headermask;
 
 	my $opcode  = $query->header->opcode;
 	my $qdcount = $query->header->qdcount;
 
 	unless ($qdcount) {
-		$reply->header->rcode("NOERROR");
+		$header->rcode("NOERROR");
 
 	} elsif ( $qdcount > 1 ) {
 		print "ERROR: qdcount $qdcount unsupported\n" if $self->{Verbose};
-		$reply->header->rcode("FORMERR");
+		$header->rcode("FORMERR");
 
 	} else {
-		my ($qr)   = @q;
+		my ($qr)   = $query->question;
 		my $qname  = $qr->qname;
 		my $qtype  = $qr->qtype;
 		my $qclass = $qr->qclass;
@@ -232,13 +229,12 @@ sub make_reply {
 			( $rcode, $ans, $auth, $add, $headermask ) =
 				&{$self->{ReplyHandler}}( $qname, $qclass, $qtype, $peerhost, $query, $conn );
 
-		} elsif ( $opcode eq "NS_NOTIFY_OP" ) {		#RFC1996
+		} elsif ( $opcode eq "NOTIFY" ) {		#RFC1996
 			if ( ref $self->{NotifyHandler} eq "CODE" ) {
 				( $rcode, $ans, $auth, $add, $headermask ) =
 					&{$self->{NotifyHandler}}( $qname, $qclass, $qtype, $peerhost, $query, $conn );
 			} else {
 				$rcode = "NOTIMP";
-				$headermask = {opcode => "NS_NOTIFY_OP"};
 			}
 
 		} else {
@@ -252,33 +248,29 @@ sub make_reply {
 		}
 		print "$rcode\n" if $self->{Verbose};
 
-		$reply->header->rcode($rcode);
+		$header->rcode($rcode);
 
-		$reply->push( "answer",	    @$ans )  if $ans;
-		$reply->push( "authority",  @$auth ) if $auth;
-		$reply->push( "additional", @$add )  if $add;
+		$reply->{answer}     = [@$ans]	if $ans;
+		$reply->{authority}  = [@$auth] if $auth;
+		$reply->{additional} = [@$add]	if $add;
 	}
 
 	if ( !defined($headermask) ) {
-		$reply->header->ra(1);
-		$reply->header->ad(0);
+		$header->ra(1);
+		$header->ad(0);
 	} else {
-		my $op = $headermask->{opcode};
-		$reply->header->opcode($op) if $op && defined $Net::DNS::opcodesbyname{$op};
+		$header->opcode( $headermask->{opcode} ) if $headermask->{opcode};
 
-		$reply->header->aa(1) if $headermask->{aa};
-		$reply->header->ra(1) if $headermask->{ra};
-		$reply->header->ad(1) if $headermask->{ad};
+		$header->aa(1) if $headermask->{aa};
+		$header->ra(1) if $headermask->{ra};
+		$header->ad(1) if $headermask->{ad};
 	}
 
-	$reply->header->cd( $query->header->cd );
-	$reply->header->rd( $query->header->rd );
-	$reply->header->id( $query->header->id );
-
-	$reply->header->print if $self->{Verbose} && defined $headermask;
+	$header->print if $self->{Verbose} && defined $headermask;
 
 	return $reply;
 }
+
 
 #------------------------------------------------------------------------------
 # readfromtcp - read from a TCP client
@@ -597,7 +589,7 @@ Creates a nameserver object.  Attributes are:
 			subroutine			Required.
     NotifyHandler	Reference to reply-handling
 			subroutine for queries with
-			opcode NS_NOTIFY (RFC1996)
+			opcode NOTIFY (RFC1996)
     Verbose		Print info about received
 			queries.			Defaults to 0 (off).
     Truncate		Truncates UDP packets that
@@ -759,7 +751,7 @@ multiple IP-addresses and causes violation of RFC2181 section 4.
 Thus a UDP socket created listening to INADDR_ANY (all available
 IP-addresses) will reply not necessarily with the source address being
 the one to which the request was sent, but rather with the address that
-the operating system choses. This is also often called "the closest
+the operating system chooses. This is also often called "the closest
 address". This should really only be a problem on a server which has
 more than one IP-address (besides localhost - any experience with IPv6
 complications here, would be nice). If this is a problem for you, a

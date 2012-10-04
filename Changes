@@ -1,6 +1,10 @@
 $Id$                       -*-text-*-
 
 **** 0.69 ??? ??, 2012
+Feature integrate OPT as a header extension
+
+	Treat extended rcodes and the DO flag like they are part of
+	the packet header.
 
 Fix rt.cpan.org #77444
 

@@ -66,7 +66,7 @@ sub reply_handler {
 
 sub notify_handler{
     my ($qname, $qclass, $qtype, $peerhost, $query,$conn) = @_;
-    print "NOTIFY: QNAME: $qname QTYPE: $qtype\n";
+    #print "NOTIFY: QNAME: $qname QTYPE: $qtype\n";
     # mark the answer as authoritive (by setting the 'aa' flag
 
     return ("NXDOMAIN",[],[],[],{ opcode => "NOTIFY" } );
