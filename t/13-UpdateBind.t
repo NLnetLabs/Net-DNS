@@ -194,9 +194,8 @@ sub runtests {
 	undef($reply);
 	$data->{'name'} =~ s/foo/bla/;
 	$data->{'name'} =~ s/-2/-1/;
-	# CHEATING by modifying attributes
-	$RR->{'name'} =~ s/foo/bla/;
-	$RR->{'name'} =~ s/-2/-1/;
+	$RR->name( $data->{'name'} );
+
 	$query=Net::DNS::Packet->new($data->{'name'},$data->{'type'});
 	$reply=$res->send($query);
 

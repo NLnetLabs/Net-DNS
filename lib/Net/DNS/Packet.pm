@@ -227,9 +227,13 @@ sub edns {
 
 =head2 reply
 
-    $reply = $query->reply;
+    $reply = $query->reply( $UDPmax );
 
 Constructor method which returns a new reply packet.
+
+The optional UDPsize argument is the maximum UDP packet size which
+can be reassembled by the local network stack, and is advertised in
+response to an EDNS query.
 
 =cut
 
@@ -238,18 +242,19 @@ sub reply {
 	my $UDPmax = shift;
 	die 'erroneous qr flag in query packet' if $query->header->qr;
 
-	my $reply = new Net::DNS::Packet();
+	my $reply  = new Net::DNS::Packet();
 	my $header = $reply->header;
 	$header->qr(1);						# reply with same id, opcode and question
-	$header->id($query->header->id);
-	$header->opcode($query->header->opcode);
+	$header->id( $query->header->id );
+	$header->opcode( $query->header->opcode );
 	$reply->{question} = [$query->question];
 
 	$header->rcode('FORMERR');				# failure to provide RCODE is sinful!
-	$reply->edns->size($UDPmax) unless $query->edns->default;
 
 	$header->rd( $query->header->rd );			# copy these flags into reply
 	$header->cd( $query->header->cd );
+
+	$reply->edns->size($UDPmax) unless $query->edns->default;
 	return $reply;
 }
 

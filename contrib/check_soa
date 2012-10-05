@@ -1,6 +1,5 @@
 #!/usr/bin/perl
-$VERSION = (qw$LastChangedRevision$)[1] || 0.34;
-
+$VERSION = (qw$LastChangedRevision$)[1] || 0.35;
 
 =head1 NAME
 
@@ -154,18 +153,19 @@ eval { require Getopt::Std; Getopt::Std::getopts( $options, \%option ) };
 warn "Can't locate Getopt::Std\n" if $@;
 
 my @arg = qw( domain [nameserver] );				# arguments
-my ( $domain, @nameserver ) = @ARGV;
-
 
 my @flag = map {"[-$_]"} split( //, $options );			# documentation
-die eval { system("perldoc -F $self"); "" }, <<END unless @ARGV;
+die eval { system("perldoc -F $self"); "" }, <<END unless scalar @ARGV;
 	Synopsis:  $self @flag @arg
 END
 
 
+my ( $domain, @nameserver ) = @ARGV;
+
+
 require Net::DNS;
 
-no warnings;
+no warnings;				## Sometimes cheating is the only way to be portable!
 
 
 my @conf = (
@@ -295,7 +295,7 @@ sub checkNS0 {				## initial status vector for checkNS
 
 sub checkNS {				## query nameservers (concurrently) and report status
 	my $zone    = shift;
-	my $index   = @_;					# index last element
+	my $index   = scalar @_;				# index last element
 	my $element = pop @_ or return checkNS0;		# pop element, terminate if undef
 	my ( $ns, $if ) = split / /, lc $element;		# name + optional interface IP
 
@@ -327,7 +327,7 @@ sub checkNS {				## query nameservers (concurrently) and report status
 	my %nsaddr = ( $ip => 1 ) if $ip;			# special handling for multihomed server
 	foreach my $xip (@xip) {				# iterate over remaining interfaces
 		next if $nsaddr{$xip}++;			# silently ignore duplicate address record
-		my ( $f, $x, $h ) = checkNS( $zone, (undef) x @_, "$ns $xip" );
+		my ( $f, $x, $h ) = checkNS( $zone, (undef) x scalar(@_), "$ns $xip" );
 		%$hash = ( %$hash, %$h );			# merge address hashes
 		@pass = @fail if $f;				# propagate failure to caller
 	}
@@ -440,6 +440,9 @@ sub displayRR {				## print specified RRs or error code
 	my $rcode      = $header->rcode;			# response code
 	my ($question) = $packet->question;
 	my $qtype      = $question->qtype;
+	my $qname      = $question->qname;
+	my $name       = eval { $question->name } if $qname =~ /^xn--/;
+	my @annotation = (";\t$name\n") if $name;
 	my @answer     = $packet->answer;
 	my @authority  = $packet->authority;
 	my @ncache     = grep { $_->type eq 'SOA' } @authority; # per RFC2308
@@ -452,16 +455,16 @@ sub displayRR {				## print specified RRs or error code
 
 		next if $qtype eq 'ANY' && $rr->type =~ /^(SOA|NS)$/;
 
+		print @annotation if $rr->name eq $qname;	# annotate IDN
+
 		for ( $rr->string ) {
 			my $l = $verbose ? length($_) : 108;	# abbreviate long RR
-			my $name = $rr->name;
-			print ";\t$name\n" unless /^$name/;	# annotate IDN
 			substr( $_, $l ) = ' ...' if length($_) > $l && $rr->type ne 'SOA';
 			print "$_\n";
 		}
 	}
 
-	report( @remark, "$rcode:", $question->string ) if $rcode ne 'NOERROR';
+	report( @remark, "$rcode:", $question->string, @annotation ) if $rcode ne 'NOERROR';
 	return @answer;
 }
 

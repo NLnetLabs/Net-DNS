@@ -35,6 +35,7 @@ See also the manual pages for each RR type.
 use strict;
 use integer;
 use Carp;
+use Net::DNS::Parameters;
 use Net::DNS qw (wire2presentation name2labels stripdot);
 use Net::DNS::RR::Unknown;
 
@@ -208,12 +209,11 @@ BEGIN {
 }
 
 sub build_regex {
-	my $classes = join('|', keys %Net::DNS::classesbyname, 'CLASS\\d+');
+	my $classes = join '|', keys %classbyname, 'CLASS\\d+';
 
 	# Longest ones go first, so the regex engine will match AAAA before A.
-	my $types   = join('|', sort { length $b <=> length $a } keys %Net::DNS::typesbyname);
-
-	$types .= '|TYPE\\d+';
+	my @types = grep { $_ ne '*' } keys %typebyname;
+	my $types = join '|', sort( { length $b <=> length $a } @types ), 'TYPE\\d+';
 
 	$RR_REGEX   = " ^
 					\\s*
@@ -385,8 +385,8 @@ sub new_from_string {
 
 	# RFC3597 tweaks
 	# This converts to known class and type if specified as TYPE###
-	$rrtype  = Net::DNS::typesbyval(Net::DNS::typesbyname($rrtype))      if $rrtype  =~ m/^TYPE\d+/o;
-	$rrclass = Net::DNS::classesbyval(Net::DNS::classesbyname($rrclass)) if $rrclass =~ m/^CLASS\d+/o;
+	$rrtype  = typebyval(typebyname($rrtype))    if $rrtype  =~ m/^TYPE\d+/o;
+	$rrclass = classbyval(classbyname($rrclass)) if $rrclass =~ m/^CLASS\d+/o;
 
 
 	if (!$rrtype && $rrclass && $rrclass eq 'ANY') {
@@ -600,13 +600,11 @@ sub decode {
 	my $next = $rdindex + $rdlength;
 	die 'Exception: incomplete data' if length $$data < $next;
 
-	$type = Net::DNS::typesbyval($type) || $type;
+	$type = typebyval($type);
 
 	# Special case for OPT RR where CLASS should be
 	# interpreted as 16 bit unsigned (RFC2671, 4.3)
-	if ($type ne 'OPT') {
-		$class = Net::DNS::classesbyval($class) || $class;
-	}
+	$class = classbyval($class) if $type ne 'OPT';
 	# else just retain numerical value
 
 	my $self = $objclass->new_from_data($name, $type, $class, $ttl, $rdlength, $data, $rdindex);
@@ -759,8 +757,8 @@ sub encode {
 	my $data = $packet->dn_comp($self->{'name'}, $offset);
 	return undef unless defined $data;
 
-	$data .= pack('n', Net::DNS::typesbyname(uc($self->{'type'})));
-	$data .= pack('n', Net::DNS::classesbyname(uc($self->{'class'})));
+	$data .= pack('n', typebyname(uc($self->{'type'})));
+	$data .= pack('n', classbyname(uc($self->{'class'})));
 	$data .= pack('N', $self->{'ttl'});
 
 	$offset += length($data) + &Net::DNS::INT16SZ;	# allow for rdlength
@@ -797,8 +795,8 @@ sub _canonicaldata {
 	    }
 	    $data .= pack ('C','0');
 	}
-	$data .= pack('n', Net::DNS::typesbyname(uc($self->{'type'})));
-	$data .= pack('n', Net::DNS::classesbyname(uc($self->{'class'})));
+	$data .= pack('n', typebyname(uc($self->{'type'})));
+	$data .= pack('n', classbyname(uc($self->{'class'})));
 	$data .= pack('N', $self->{'ttl'});
 
 

@@ -1,57 +1,54 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use diagnostics;
-use Test::More;
 
+use Net::DNS::Parameters;
+use Test::More tests => 99 + keys(%classbyname) + keys(%typebyname);
 
-BEGIN {
-	use Net::DNS;
-
-	plan tests => 98 + keys(%Net::DNS::classesbyname) + keys(%Net::DNS::typesbyname);
-}
+BEGIN { use_ok('Net::DNS'); }
 
 
 {	# check type conversion functions
-	my ($anon) = grep { not defined $Net::DNS::typesbyval{$_} } ( 1  .. 1 << 16 );
+	my ($anon) = grep { not defined $Net::DNS::Parameters::typebyval{$_} } ( 1  .. 1 << 16 );
 
-	is( Net::DNS::typesbyval(1),		 'A',	      "Net::DNS::typesbyval(1)" );
-	is( Net::DNS::typesbyval($anon),	 "TYPE$anon", "Net::DNS::typesbyval($anon)" );
-	is( Net::DNS::typesbyname("TYPE$anon"),	 $anon,	      "Net::DNS::typesbyname('TYPE$anon')" );
-	is( Net::DNS::typesbyname("TYPE0$anon"), $anon,	      "Net::DNS::typesbyname('TYPE0$anon')" );
+	is( typebyval(1),	      'A',	   "typebyval(1)" );
+	is( typebyval($anon),	      "TYPE$anon", "typebyval($anon)" );
+	is( typebyname("TYPE$anon"),  $anon,	   "typebyname('TYPE$anon')" );
+	is( typebyname("TYPE0$anon"), $anon,	   "typebyname('TYPE0$anon')" );
 
 	my $large = 1 << 16;
-	eval { Net::DNS::typesbyval($large); };
+	eval { typebyval($large); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "Net::DNS::typesbyval($large)\t[$exception]" );
+	ok( $exception ||= '', "typebyval($large)\t[$exception]" );
 
-	foreach ( sort keys %Net::DNS::typesbyname ) {
-		my $code      = Net::DNS::typesbyname($_);
-		my $name      = eval { Net::DNS::typesbyval($code) };
+	foreach ( sort keys %typebyname ) {
+		my $code      = typebyname($_);
+		my $name      = eval { typebyval($code) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
-		is( $name, $_, "Net::DNS::typesbyname('$_')\t$exception" );
+		$name = $_ if $_ eq '*';
+		is( $name, $_, "typebyname('$_')\t$exception" );
 	}
 }
 
 
 {	# check class conversion functions
-	my ($anon) = grep { not defined $Net::DNS::classesbyval{$_} } ( 1  .. 1 << 16 );
+	my ($anon) = grep { not defined $Net::DNS::Parameters::classbyval{$_} } ( 1  .. 1 << 16 );
 
-	is( Net::DNS::classesbyval(1),		    'IN',	  "Net::DNS::classesbyval(1)" );
-	is( Net::DNS::classesbyval($anon),	    "CLASS$anon", "Net::DNS::classesbyval($anon)" );
-	is( Net::DNS::classesbyname("CLASS$anon"),  $anon,	  "Net::DNS::classesbyname('CLASS$anon')" );
-	is( Net::DNS::classesbyname("CLASS0$anon"), $anon,	  "Net::DNS::classesbyname('CLASS0$anon')" );
+	is( classbyval(1),		'IN',	      "classbyval(1)" );
+	is( classbyval($anon),		"CLASS$anon", "classbyval($anon)" );
+	is( classbyname("CLASS$anon"),	$anon,	      "classbyname('CLASS$anon')" );
+	is( classbyname("CLASS0$anon"), $anon,	      "classbyname('CLASS0$anon')" );
 
 	my $large = 1 << 16;
-	eval { Net::DNS::classesbyval($large); };
+	eval { classbyval($large); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "Net::DNS::classesbyval($large)\t[$exception]" );
+	ok( $exception ||= '', "classbyval($large)\t[$exception]" );
 
-	foreach ( sort keys %Net::DNS::classesbyname ) {
-		my $code      = Net::DNS::classesbyname($_);
-		my $name      = eval { Net::DNS::classesbyval($code) };
+	foreach ( sort keys %classbyname ) {
+		my $code      = classbyname($_);
+		my $name      = eval { classbyval($code) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
-		is( $name, $_, "Net::DNS::classesbyname('$_')\t$exception" );
+		is( $name, $_, "classbyname('$_')\t$exception" );
 	}
 }
 

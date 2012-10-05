@@ -23,6 +23,7 @@ lib/Net/DNS/Header.pm
 lib/Net/DNS/Mailbox.pm
 lib/Net/DNS/Nameserver.pm
 lib/Net/DNS/Packet.pm
+lib/Net/DNS/Parameters.pm
 lib/Net/DNS/Question.pm
 lib/Net/DNS/Resolver.pm
 lib/Net/DNS/Resolver/Base.pm
@@ -100,6 +101,7 @@ t/05-DHCID.t
 t/05-HINFO.t
 t/05-HIP.t
 t/05-IPSECKEY.t
+t/05-OPT.t
 t/05-SOA.t
 t/05-TKEY.t
 t/05-TSIG.t
@@ -107,7 +109,6 @@ t/05-TXT.t
 t/05-apl.t
 t/05-rr-rrsort.t
 t/05-rr-sshfp.t
-t/05-rr-unknown.t
 t/05-rr.t
 t/05-rr-various.t
 t/06-packet-unique-push.t
