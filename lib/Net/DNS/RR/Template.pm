@@ -1,180 +1,177 @@
-package Net::DNS::RR::Template;
-#
-# $Id: Template.pm 817 2009-11-29 19:16:11Z olaf $
-#
-# This is a template for specifiying new RR classes.
-#
-# After completing the template make sure the the RR code is specified
-# in DNS.pm %typesbyname, it is added to the %RR hash in RR.pm, and
-# the RR is added to MANIFEST
+package Net::DNS::RR::XXXX;
 
+#
+# $Id$
+#
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
+
+use base Net::DNS::RR;
+
+=head1 NAME
+
+Net::DNS::RR::XXXX - DNS XXXX resource record
+
+=cut
 
 
 use strict;
+use integer;
 
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision: 718 $)[1];
-
-
-
-# The new method parses wire data and populates the various attributes, it returns the blessed object
-
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-        if ($self->{'rdlength'} > 0) {
-		#example attribute foo is a domain name.
-		§($self->{"foo"}) = Net::DNS::Packet::dn_expand($data, $offset);
-		# more reading here.
-
-	}
-
-	return bless $self, $class;
-}
+#use Net::DNS::DomainName;
+#use Net::DNS::Mailbox;
+#use Net::DNS::Text;
 
 
-
-# The new_from_string method parses the wire data.
-# Make sure the new from string method allows for emtpy strings as input.
-# As this is critical for dynamic update (rr_del).
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	# first turn multiline into single line
-	$string =~ tr/()//d if $string;
-	$string =~ s/\n//mg if $string;
-
-	# Regulare expression parsing goes here.
-
-	if ($string) {
-		# Always pass domain names through stripdot.
-		$self->{"foo"} = Net::DNS::stripdot($string);
-	}
-	return bless $self, $class;
-}
-
-
-
-
-# The rr_data creates the wire format.
-# it returns the rdata.
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
- 	if (exists $self->{"foo"}) {
-		# For all new RR types  DO NOT USE dn_comp. Use _name2wire
-		$rdata=$self->_name2wire($self->{"foo"});
-	}
-
-	return $rdata;
-}
-
-
-
-# rdatastr method returns the string representation of the 'rdata' section of the RR. It is used in the
-# RR print and RR string methods.
-
-sub rdatastr {
+sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
-	my $rdatastr;
+	my ( $data, $offset ) = @_;
 
-	if (exists $self->{"foo"}) {
-		$rdatastr  = $self->{"foo"}.".";
-	}
-	else {
-		$rdatastr = '';
-	}
+	##		$data		reference to a wire-format packet buffer
+	##		$offset		location of rdata within packet buffer
+	##
+	## Scalar attribute
+	##	$self->{preference} = unpack( "\@$offset n", $$data );
+	##
+	## Domain name attribute
+	##	( $self->{foo}, $next ) = decode Net::DNS::DomainName( $data, $offset + 2 );
+	##
+}
 
-	return $rdatastr;
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	## Scalar attribute
+	##	my $rdata = pack( 'n', $self->{preference} );
+	##
+	## Domain name attribute
+	##	$rdata .= $self->{foo}->encode;
+	##
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	## Concatenate rdata attributes. Note use of string() instead of name().
+	##
+	##	my $foo = $self->{foo}->string;
+	##
+	##	join ' ', $self->{preference}, $foo;
+	##
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	##	my @rdata = @_;			# non-empty list parsed from RR string
+	##
+	## Scalar attribute
+	##	$self->{preference} = shift;
+	##
+	## Domain name attribute
+	##	$self->{foo} = new Net::DNS::DomainName(shift);
+	##
+}
+
+
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	## Note that this code is executed once only after module is loaded.
+	##
+	##	$self->preference(0);
+	##
+}
+
+
+sub preference {
+	my $self = shift;
+
+	$self->{preference} = shift if @_;
+	return 0 + ( $self->{preference} || 0 );
+}
+
+sub foo {
+	my $self = shift;
+
+	$self->{foo} = new Net::DNS::DomainName(shift) if @_;
+	$self->{foo}->name if defined wantarray;
 }
 
 
 
+## If you wish to offer users a sorted order then you will need to
+## define functions similar to these, otherwise just remove them.
 
-
-# If the RR contains domain names than the two functions will need to be defined. Otherwise just remove them and
-# inheritance will take care of this.
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'foo'}=Net::DNS::stripdot($self->{'foo'}) if defined $self->{'foo'};
-}
-
-
-sub _canonicalRdata {
-    # rdata contains a compressed domainname... we should not have that.
-	my ($self) = @_;
-	my $rdata;
-	$rdata= $self->_name2wire(lc($self->{"foo"}));
-	return $rdata;
-}
-
-
-
-# In case you want to offer users a sorted order then you will have to define the following functions,
-# otherwise just remove these.
-
-# Highest preference sorted first.
-__PACKAGE__->set_rrsort_func("preference",
-			       sub {
-				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
-				   $a->{'preference'} <=> $b->{'preference'}
-}
-);
-
-
-__PACKAGE__->set_rrsort_func("default_sort",
-			       __PACKAGE__->get_rrsort_func("preference")
-
-    );
-
-
-
-
-
+# sort RRs in numerically ascending order
+#__PACKAGE__->set_rrsort_func(
+#	'preference',
+#	sub {
+#		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
+#		$a->{preference} <=> $b->{preference};
+#	} );
+#
+#
+#__PACKAGE__->set_rrsort_func(
+#	'default_sort',
+#	__PACKAGE__->get_rrsort_func('preference')
+#	);
+#
 
 
 1;
 __END__
 
-=head1 NAME
-
-Net::DNS::RR::Template - DNS Template resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name XXXX  ...     ');
 
 =head1 DESCRIPTION
 
-Class for DNS Name Server (NS) resource records.
+Class for DNS hypothetical (XXXX) resource record.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
+=head2 preference
+
+    $preference = $rr->preference;
+
+Returns the server selection preference.
+
 =head2 foo
 
-    print "foo = ", $rr->foo, "\n";
+    $foo = $rr->foo;
 
-Returns the name of the nameserver.
+Returns the domain name of the foo server.
+
 
 =head1 COPYRIGHT
 
-Copyright (c)
+Copyright (c)YYYY John Doe.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::RR>
-
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC????
 
 =cut
-
-

@@ -92,24 +92,31 @@ BEGIN {
 BEGIN {
 
     $DNSSEC = eval {
-	    local $SIG{'__DIE__'} = 'DEFAULT';
-	    require Net::DNS::SEC;
-	    1
-	    } ? 1 : 0;
+		local $SIG{'__DIE__'} = 'DEFAULT';
+		require Net::DNS::SEC;
+		} ? 1 : 0;
 
-
+	if ( $DNSSEC ) {
+		eval { require Net::DNS::RR::DLV };
+		eval { require Net::DNS::RR::DNSKEY };
+		eval { require Net::DNS::RR::DS };
+		eval { require Net::DNS::RR::KEY };
+		eval { require Net::DNS::RR::NSEC };
+		eval { require Net::DNS::RR::NSEC3 };
+		eval { require Net::DNS::RR::NSEC3PARAM };
+		eval { require Net::DNS::RR::NXT };
+		eval { require Net::DNS::RR::RRSIG };
+		eval { require Net::DNS::RR::SIG };
+	}
 }
 
 
 use strict;
 use Carp;
-use Net::DNS::Resolver;
+use Net::DNS::RR;
 use Net::DNS::Packet;
 use Net::DNS::Update;
-use Net::DNS::Header;
-use Net::DNS::Question;
-use Net::DNS::RR;   # use only after $Net::DNS::DNSSEC has been evaluated
-
+use Net::DNS::Resolver;
 
 
 #

@@ -1,117 +1,178 @@
 package Net::DNS::RR::TLSA;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
 
-@ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision: 932 $)[1];
+use base Net::DNS::RR;
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
+=head1 NAME
 
-	if ($self->{'rdlength'} > 0) {
-		@{$self}{qw(usage selector matchingtype certificate_data)} = unpack("\@$offset C3 H*", $$data);
-	}
+Net::DNS::RR::TLSA - DNS TLSA resource record
 
-	return bless $self, $class;
-}
+=cut
 
-sub new_from_string {
-	my ($class, $self, $string) = @_;
 
-	if ($string && ($string =~ /^(\d+)\s+(\d+)\s+(\d+)\s+([0-9A-Fa-f]+)$/)) {
-		@{$self}{qw(usage selector matchingtype certificate_data)} = ($1, $2, $3, lc ( $4 ));
 
-		$self->{'certificate_data'} =~ s/\s+//g;
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
+sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
-	my $rdatastr;
+	my ( $data, $offset ) = @_;
 
-	if (exists $self->{'certificate_data'}) {
-		$rdatastr = join(' ', @{$self}{qw(usage selector matchingtype certificate_data)});
-	} else {
-		$rdatastr = '';
-	}
+	my $next = $offset + $self->{rdlength};
 
-	return $rdatastr;
+	@{$self}{qw(usage selector matchingtype)} = unpack "\@$offset C3", $$data;
+	$offset += 3;
+	$self->{certbin} = substr $$data, $offset, $next - $offset;
 }
 
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = '';
 
-	if (exists $self->{'certificate_data'}) {
-		$rdata .= pack('C3 H*', @{$self}{qw(usage selector matchingtype certificate_data)});
-        }
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
 
-	return $rdata;
+	return '' unless defined $self->{certbin};
+	return pack 'C3 a*', @{$self}{qw(usage selector matchingtype certbin)};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless defined $self->{certbin};
+
+	my $certificate = $self->cert;
+
+	my @list = ( '(', $certificate, ')' );
+	@list = ($certificate) unless length($certificate) > 40;
+
+	join ' ', $self->usage, $self->selector, $self->matchingtype, join "\n\t", @list;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->usage(shift);
+	$self->selector(shift);
+	$self->matchingtype(shift);
+	$self->cert(shift);
+}
+
+
+sub usage {
+	my $self = shift;
+
+	$self->{usage} = shift if @_;
+	return 0 + ( $self->{usage} || 0 );
+}
+
+sub selector {
+	my $self = shift;
+
+	$self->{selector} = shift if @_;
+	return 0 + ( $self->{selector} || 0 );
+}
+
+sub matchingtype {
+	my $self = shift;
+
+	$self->{matchingtype} = shift if @_;
+	return 0 + ( $self->{matchingtype} || 0 );
+}
+
+sub cert {
+	my $self = shift;
+
+	$self->{certbin} = pack "H*", join( "", map { s/\s+//g; $_ } @_ ) if @_;
+	unpack "H*", $self->{certbin} || "" if defined wantarray;
+}
+
+sub certificate {&cert}
+
+sub certbin {
+	my $self = shift;
+
+	$self->{certbin} = shift if @_;
+	$self->{certbin} || "";
 }
 
 
 1;
 __END__
 
-=head1 NAME
-
-Net::DNS::RR::TLSA - DNS TLSA resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name TLSA usage selector matchingtype certificate');
 
 =head1 DESCRIPTION
 
-Class for DNS DANE TLSA resource records.
+The Transport Layer Security Authentication (TLSA) DNS resource record
+is used to associate a TLS server certificate or public key with the
+domain name where the record is found, forming a "TLSA certificate
+association".  The semantics of how the TLSA RR is interpreted are
+described in RFC6698.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 usage
 
-    print "usage = ", $rr->usage, "\n";
+    $usage = $rr->usage;
 
-Returns the numerical usage field of the record.
+8-bit integer value which specifies the provided association that
+will be used to match the certificate presented in the TLS handshake.
 
 =head2 selector
 
-    print "selector = ", $rr->selector, "\n";
+    $selector = $rr->selector;
 
-Returns the numerical selector field of the record.
+8-bit integer value which specifies which part of the TLS certificate
+presented by the server will be matched against the association data.
 
 =head2 matchingtype
 
-    print "matching type = ", $rr->matchingtype, "\n";
+    $matchingtype = $rr->matchingtype;
 
-Returns the numerical matching type field of the record.
+8-bit integer value  which specifies how the certificate association
+is presented.
 
-=head2 certificate_data
+=head2 cert
 
-    print "certificate data = ", $rr->certificate_data, "\n";
+    $cert = $rr->cert;
 
-Returns the certificate data associated with the record, as a hexadecimal string.
+Hexadecimal representation of the certificate data.
+
+=head2 certbin
+
+    $certbin = $rr->certbin;
+
+Binary representation of the certificate data.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)2012 Willem Toorop, NLnet Labs.
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-draft-ietf-dane-protocol-21
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC6698
 
 =cut

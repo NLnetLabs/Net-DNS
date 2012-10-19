@@ -45,7 +45,7 @@ BEGIN {
 
 t5: {
 	my $domain = new Net::DNS::Domain('example.com');
-	my $labels = $domain->label;
+	my $labels = @{[$domain->label]};
 	is( $labels, 2, 'domain labels separated by dots' );
 }
 
@@ -55,7 +55,7 @@ use constant ESC => '\\';
 {
 	my $case   = ESC . '.';
 	my $domain = new Net::DNS::Domain("example${case}com");
-	my $labels = $domain->label;
+	my $labels = @{[$domain->label]};
 	is( $labels, 1, "$case devoid of special meaning" );
 }
 
@@ -63,7 +63,7 @@ use constant ESC => '\\';
 {
 	my $case   = ESC . ESC;
 	my $domain = new Net::DNS::Domain("example${case}.com");
-	my $labels = $domain->label;
+	my $labels = @{[$domain->label]};
 	is( $labels, 2, "$case devoid of special meaning" );
 }
 
@@ -71,7 +71,7 @@ use constant ESC => '\\';
 {
 	my $case   = ESC . ESC . ESC . '.';
 	my $domain = new Net::DNS::Domain("example${case}com");
-	my $labels = $domain->label;
+	my $labels = @{[$domain->label]};
 	is( $labels, 1, "$case devoid of special meaning" );
 }
 
@@ -79,7 +79,7 @@ use constant ESC => '\\';
 {
 	my $case   = '\092';
 	my $domain = new Net::DNS::Domain("example${case}.com");
-	my $labels = $domain->label;
+	my $labels = @{[$domain->label]};
 	is( $labels, 2, "$case devoid of special meaning" );
 }
 

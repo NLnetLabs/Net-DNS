@@ -72,7 +72,6 @@ lib/Net/DNS/RR/TKEY.pm
 lib/Net/DNS/RR/TLSA.pm
 lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TXT.pm
-lib/Net/DNS/RR/Unknown.pm
 lib/Net/DNS/RR/X25.pm
 lib/Net/DNS/Text.pm
 lib/Net/DNS/Update.pm
@@ -96,6 +95,7 @@ t/02-mailbox.t
 t/02-text.t
 t/03-header.t
 t/03-question.t
+t/03-rr.t
 t/04-packet.t
 t/05-DHCID.t
 t/05-HINFO.t
@@ -104,6 +104,7 @@ t/05-IPSECKEY.t
 t/05-OPT.t
 t/05-SOA.t
 t/05-TKEY.t
+t/05-TLSA.t
 t/05-TSIG.t
 t/05-TXT.t
 t/05-apl.t
