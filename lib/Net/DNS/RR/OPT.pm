@@ -27,9 +27,8 @@ use constant CLASS_TTL_RDLENGTH => length pack 'n N n', (0) x 3;
 use constant OPT => typebyname qw(OPT);
 
 
-sub new {				## decode rdata from wire-format octet string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
 	my ( $data, $offset ) = @_;
 
 	my $limit = $offset + $self->{rdlength};
@@ -46,8 +45,6 @@ sub new {				## decode rdata from wire-format octet string
 	}
 
 	croak('corrupt OPT data') unless $offset == $limit;	# more or less FUBAR
-
-	return $self;
 }
 
 
@@ -63,20 +60,17 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub rdatastr {				## format rdata portion of RR string.
+sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	croak 'zone file representation not defined for OPT';
 }
 
 
-sub new_from_string {			## populate RR from rdata string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
 
 	croak 'zone file representation not defined for OPT' if shift;
-
-	return $self;
 }
 
 
@@ -198,23 +192,25 @@ sub default {
 
 sub do {				## historical
 	my $self = shift;
+	carp qq[Deprecated method: please use packet->header->do()] unless $warned++;
 	$self->{flags} & 0x8000;
 }
 
 sub clear_do {				## historical
 	my $self = shift;
+	carp qq[Deprecated method: please use packet->header->do(0)] unless $warned++;
 	$self->{flags} = ( ~0x8000 & $self->{flags} );
 }
 
 sub set_do {				## historical
 	my $self = shift;
+	carp qq[Deprecated method: please use packet->header->do(1)] unless $warned++;
 	$self->{flags} = ( 0x8000 | $self->{flags} );
 }
 
 sub ednsversion	  {&version}
 sub ednsflags	  {&flags}
 sub extendedrcode {&rcode}
-
 
 1;
 __END__
@@ -232,7 +228,14 @@ __END__
 
 =head1 DESCRIPTION
 
-Class for EDNS pseudo resource record OPT.
+EDNS OPT pseudo resource record.
+
+The OPT record supports EDNS protocol extensions and is not intended
+to be created, accessed or modified directly by user applications.
+
+All access to EDNS features is performed indirectly by operations on
+the packet header.  The underlying mechanism is entirely hidden from
+the user.
 
 =head1 METHODS
 
@@ -252,33 +255,38 @@ The version of EDNS used by this OPT record.
 
 =head2 size
 
-	$size = $rr->size;
-	$more = $rr->size(1280);
+	$size = $packet->edns->size;
+	$more = $packet->edns->size(1280);
 
 size() advertises the maximum size (octets) of UDP packet that can be
 reassembled in the network stack of the originating host.
 
 =head2 rcode
 
-	$edns_rcode = $rr->rcode;
+	$extended_rcode   = $packet->header->rcode;
+	$incomplete_rcode = $packet->edns->rcode;
 
-The most significant 8 bits of the 12 bit extended RCODE. The least
-significant 4 bits are obtained from the packet header.
+The 12 bit extended RCODE. The most significant 8 bits reside in
+the OPT record.  The least significant 4 bits can only be obtained
+from the packet header.
 
 =head2 flags
 
-	$edns_flags = $rr->flags;
+	$edns_flags = $packet->edns->flags;
+
+	$do = $packet->header->do;
+	$packet->header->do(1);
 
 16 bit field containing EDNS extended header flags.
 
 =head2 Options
 
-	@option = $rr->options;
+	@option = $packet->edns->options;
 
-	$octets = $rr->option($option_code);
+	$octets = $packet->edns->option($option_code);
 
-	$rr->option( NSID => 'string' );
-	$rr->option( 3	  => 'string' );
+	$packet->edns->option( NSID => 'value' );
+	$packet->edns->option( 3    => 'value' );
 
 When called in a list context, options() returns a list of option codes
 found in the OPT record.
@@ -297,6 +305,8 @@ changes is cumulative. An option is deleted if the value is undefined.
 Copyright (c)2001,2002	RIPE NCC.  Author Olaf M. Kolkman.
 
 Portions Copyright (c)2012 Dick Franks.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 All Rights Reserved
 

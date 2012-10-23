@@ -23,22 +23,22 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	$self->{address} = unpack "\@$offset a4", $$data if $self->{rdlength};
+	$self->{address} = unpack "\@$offset a4", $$data;
 }
 
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{address};
-	return pack 'a* @4', $self->{address};
+	return '' unless length( $self->{address} );
+	return pack 'a4', $self->{address};
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{address};
+	return '' unless length( $self->{address} );
 	return $self->address;
 }
 
@@ -46,8 +46,7 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	my $address = shift;
-	$self->address($address) if defined $address;
+	$self->address(shift);
 }
 
 
@@ -61,7 +60,6 @@ sub address {
 	my $last = pop(@part) || 0;
 	$self->{address} = pack 'C4', @part, (0) x ( 3 - @part ), $last;
 }
-
 
 1;
 __END__

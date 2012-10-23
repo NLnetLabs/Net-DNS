@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 12;
 
 
 use Net::DNS;
@@ -14,7 +14,7 @@ my @attr = qw( address );
 my @data = qw( 192.0.2.1 );
 my @also = qw( );
 
-my $wire = 'C0000201';
+my $wire = 'c0000201';
 
 
 {
@@ -45,22 +45,29 @@ my $wire = 'C0000201';
 	}
 
 
-	my $empty   = new Net::DNS::RR("$name NULL");
+	my $null    = new Net::DNS::RR("$name NULL")->encode;
+	my $empty   = new Net::DNS::RR("$name $type")->encode;
+	my $rxbin   = decode Net::DNS::RR( \$empty )->encode;
+	my $txtext  = new Net::DNS::RR("$name $type")->string;
+	my $rxtext  = new Net::DNS::RR($txtext)->encode;
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
-	my $hex1    = uc unpack 'H*', $decoded->encode;
-	my $hex2    = uc unpack 'H*', $encoded;
-	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
-	is( $hex1, $hex2, 'encode/decode transparent' );
-	is( $hex3, $wire, 'encoded RDATA matches example' );
+	my $hex1    = unpack 'H*', $encoded;
+	my $hex2    = unpack 'H*', $decoded->encode;
+	my $hex3    = unpack 'H*', substr( $encoded, length $null );
+	is( $hex2,	     $hex1,	    'encode/decode transparent' );
+	is( $hex3,	     $wire,	    'encoded RDATA matches example' );
+	is( length($empty),  length($null), 'encoded RDATA can be empty' );
+	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
+	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
 
 {
 	my %testcase = (
-		'1.2.3.4'	=> '1.2.3.4',
-		'1.2.4'		=> '1.2.0.4',
-		'1.4'		=> '1.0.0.4',
+		'1.2.3.4' => '1.2.3.4',
+		'1.2.4'	  => '1.2.0.4',
+		'1.4'	  => '1.0.0.4',
 		);
 
 	foreach my $address ( sort keys %testcase ) {

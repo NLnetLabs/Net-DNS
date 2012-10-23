@@ -23,14 +23,14 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	$self->{address} = unpack "\@$offset a16", $$data if $self->{rdlength};
+	$self->{address} = unpack "\@$offset a16", $$data;
 }
 
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{address};
+	return '' unless length( $self->{address} );
 	pack 'a16', $self->{address};
 }
 
@@ -38,7 +38,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{address};
+	return '' unless length( $self->{address} );
 	return $self->address_short;
 }
 
@@ -46,8 +46,7 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	my $address = shift;
-	$self->address($address) if defined $address;
+	$self->address(shift);
 }
 
 
@@ -77,13 +76,12 @@ sub address_long {
 
 sub address_short {
 	for ( sprintf ':%x:%x:%x:%x:%x:%x:%x:%x:', unpack 'n8', shift->{address} ) {
-		s/(:0[:0]+:)(?!.+:0\1)/::/o;			# squash longest zero sequence
+		s/(:0[:0]+:)(?!.+:0\1)/::/;			# squash longest zero sequence
 		return $1 if /^(::.*):$/;			# leading ::
 		return $1 if /^:(.*::)$/;			# trailing ::
 		return /^:(.+):$/ ? $1 : $_;			# strip outer :s
 	}
 }
-
 
 1;
 __END__

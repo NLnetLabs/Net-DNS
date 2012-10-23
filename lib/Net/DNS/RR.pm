@@ -50,6 +50,19 @@ are of a particular type -- always check the object type before calling
 any of its methods.  If you call an unknown method, you will get an
 error message and execution will be terminated.
 
+=cut
+
+sub new {
+	my ($class) = @_;
+
+	if (COMPATIBLE) {
+		return &_new_from_rdata if ref $_[1];		# resolve new() usage conflict
+		return @_ > 3 ? &new_hash : &new_string;	# avoid exception trap/reraise
+	}
+
+	return eval { @_ > 3 ? &new_hash : &new_string; } || croak "${@}new $class( ... )";
+}
+
 
 =head2 new (from string)
 
@@ -77,19 +90,6 @@ RR owner names in in-addr.arpa or ip6.arpa namespaces may be specified
 using appropriate RFC4291 or RFC4632 IP address/prefix notation.
 
 =cut
-
-
-sub new {
-	my ($class) = @_;
-
-	if (COMPATIBLE) {
-		return &_new_from_rdata if ref $_[1];		# resolve new() usage conflict
-		return @_ > 3 ? &new_hash : &new_string;	# avoid exception trap/reraise
-	}
-
-	return eval { @_ > 3 ? &new_hash : &new_string; } || croak "${@}new $class( ... )";
-}
-
 
 my $CLASS_REGEX = join '|', 'CLASS\d+', keys %classbyname;
 
@@ -354,7 +354,7 @@ sub canonical {
 	my $self = shift;
 
 	if (COMPATIBLE) {
-		my $name   = $self->name;
+		my $dummy  = $self->name;
 		my $owner  = $self->{owner}->encode(0);
 		my $index  = RRFIXEDSZ + length $owner;
 		my $rdata  = eval { $self->_canonicalRdata($index); } || '';
@@ -438,15 +438,15 @@ sub class {
 =head2 ttl
 
     $ttl = $rr->ttl;
-    $ttl = $rr->ttl('1h30m');
+    $ttl = $rr->ttl(3600);
 
 Resource record time to live in seconds.
 
-Time units may be used when specifying a new TTL value.
-The following abbreviations are recognised:  w, d, h, m, s.
-
 =cut
 
+# The following time units are recognised, but are not part of the
+# application program interface. These are required for parsing BIND
+# zone files but should not be used in other contexts.
 my %unit = ( w => 604800, d => 86400, h => 3600, m => 60, s => 1 );
 
 sub ttl {
@@ -476,9 +476,11 @@ sub rdata {
 
 	return eval { $self->encode_rdata( 0x4000, {} ); } || '' unless @_;
 
-	my $rdata = $self->{rdata} = shift;
-	my $octets = $self->{rdlength} = length $rdata;
-	$self->decode_rdata( \$rdata, 0 ) if $octets;
+	my $buffer = $self->{rdata}    = shift;
+	my $octets = $self->{rdlength} = length $buffer;
+	my $hash   = {};
+	$self->decode_rdata( \$buffer, 0, $hash ) if $octets;
+	croak 'compression pointer seen in rdata' if %$hash;
 }
 
 
@@ -513,49 +515,38 @@ sub string {
 	my $name = $self->name if COMPATIBLE;
 	my @basic = ( $self->{owner}->string, $self->ttl, $self->class, $self->type );
 
-	my $rdata = $self->rdatastr;
+	my $rdata = $self->rdstring;
 
 	return join "\t", @basic, '; no data' unless length $rdata;
 
 	chomp $rdata;
-	$rdata =~ s/\n+(?|\t)/\n\t/g;
+	$rdata =~ s/\n+/\n\t/g;
 	return join "\t", @basic, $rdata;
 }
 
 
-=head2 rdatastr
+=head2 rdstring
 
-    $rdatastr = $rr->rdatastr;
+    $rdstring = $rr->rdstring;
 
 Returns a string representation of the RR-specific data.
 
 =cut
 
-sub rdatastr {
+sub rdstring {
 	my $self = shift;
 
-	my $rdata = eval { $self->format_rdata } || '';
+	my $rdata = eval {
+		return $self->rdatastr if COMPATIBLE;
+		return $self->format_rdata;
+	} || '';
 	carp $@ if $@;
+
 	return $rdata;
 }
 
 
-=head2 rdlength
-
-    $rdlength = $rr->rdlength;
-
-Returns the length of the RR type-specific rdata.
-
-=cut
-
-sub rdlength {
-	my $self = shift;
-
-	defined $self->{rdata} ? length $self->{rdata} : $self->{rdlength};
-}
-
-
-########################################
+###################################################################################
 
 =head1 Sorting of RR arrays
 
@@ -648,29 +639,27 @@ sub get_rrsort_func {
 }
 
 
-########################################
-#
-#	Default implementation for unknown RR type
-#
+###################################################################################
+##
+##	Default implementation for unknown RR type
+##
+###################################################################################
 
 sub decode_rdata {				## decode rdata from wire-format byte string
 	my ( $self, $data, $offset ) = @_;
-
-	my $length = $self->{rdlength} || 0;
-	$self->{rdata} = substr $$data, $offset, $length;
+	my $rdlength = $self->{rdlength} || length $$data;
+	$self->{rdata} = substr $$data, $offset, $rdlength;
 }
 
 
 sub encode_rdata {				## encode rdata as wire-format byte string
 	my $self = shift;
-
 	$self->{rdata} || '';
 }
 
 
 sub format_rdata {				## format rdata portion of RR string
 	my $self = shift;
-
 	my $data = $self->{rdata} || $self->encode_rdata;	# unknown RR, per RFC3597
 	my $length = length $data;
 	join ' ', '\\#', $length, $length ? unpack( 'H*', $data ) : ();
@@ -679,16 +668,14 @@ sub format_rdata {				## format rdata portion of RR string
 
 sub parse_rdata {				## parse RR attributes in argument list
 	my ( $self, @rdata ) = @_;
-
-	my $type = $self->type;
-	confess "unable to parse $type record\n" if @_;
+	confess join ' ', 'unable to parse', $self->type, "record\n" if @rdata;
 }
 
 
 sub defaults { }				## set attribute default values
 
 
-########################################
+###################################################################################
 
 use vars qw($AUTOLOAD);
 
@@ -788,9 +775,15 @@ sub _new_from_rdata {				## decode rdata from wire-format byte string
 
 
 sub new_from_string {				## parse RR attributes in argument list
-	my ( $class, $self, undef, @parse ) = @_;
-	$self->parse_rdata(@parse);
+	my ( $class, $self, undef, @parse ) = @_;		# new_from_string() is a misnomer
+	$self->parse_rdata(@parse);				# string already parsed in new_string()
 	return $self;
+}
+
+
+sub rdatastr {					## format rdata portion of RR string
+	my $self = shift;
+	return $self->format_rdata;
 }
 
 
@@ -820,7 +813,7 @@ sub _normalize_ownername { }				## ignore
 
 sub _normalize_dnames { }				## ignore
 
-########################################
+###################################################################################
 
 
 1;
@@ -835,7 +828,7 @@ Portions Copyright (c)2002-2004 Chris Reinhardt.
 
 Portions Copyright (c)2005-2007 Olaf Kolkman.
 
-Portions Copyright (c)2007,2011 Dick Franks.
+Portions Copyright (c)2007,2012 Dick Franks.
 
 All rights reserved.
 
