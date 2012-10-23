@@ -1,82 +1,80 @@
+package Net::DNS::RR::NS;
+
 #
 # $Id$
 #
-package Net::DNS::RR::NS;
-
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
+use base Net::DNS::RR;
 
-	if ($self->{"rdlength"} > 0) {
-		($self->{"nsdname"}) = Net::DNS::Packet::dn_expand($data, $offset);
-	}
+=head1 NAME
 
-	return bless $self, $class;
-}
+Net::DNS::RR::NS - DNS NS resource record
 
-sub new_from_string {
-	my ($class, $self, $string) = @_;
+=cut
 
-	if ($string) {
-		$self->{"nsdname"} = Net::DNS::stripdot($string);
-	}
 
-	return bless $self, $class;
-}
+use strict;
+use integer;
 
-sub rdatastr {
+use Net::DNS::DomainName;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
-	return "" unless defined $self->{nsdname};
-	return "$self->{nsdname}.";
-}
+	my ( $data, $offset ) = @_;
+	my @opaque;
 
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
-	if (exists $self->{"nsdname"}) {
-		$rdata .= $packet->dn_comp($self->{"nsdname"}, $offset);
-	}
-
-	return $rdata;
+	$self->{nsdname} = decode Net::DNS::DomainName1035(@_);
 }
 
 
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
 
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'nsdname'}=Net::DNS::stripdot($self->{'nsdname'}) if defined $self->{'nsdname'};
+	my ( $offset, @opaque ) = @_;
+
+	$self->{nsdname}->encode(@_);
 }
 
 
-sub _canonicalRdata {
-    # rdata contains a compressed domainname... we should not have that.
-	my ($self) = @_;
-	my $rdata;
-	$rdata= $self->_name2wire(lc($self->{"nsdname"}));
-	return $rdata;
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	$self->{nsdname}->string;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->{nsdname} = new Net::DNS::DomainName1035(shift);
+}
+
+
+sub nsdname {
+	my $self = shift;
+
+	$self->{nsdname} = new Net::DNS::DomainName1035(shift) if @_;
+	$self->{nsdname}->name if defined wantarray;
 }
 
 
 1;
 __END__
 
-=head1 NAME
-
-Net::DNS::RR::NS - DNS NS resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name NS nsdname');
+
+    $rr = new Net::DNS::RR(
+	name	=> 'example.com',
+	type	=> 'NS',
+	nsdname => 'ns.example.com',
+	);
 
 =head1 DESCRIPTION
 
@@ -84,29 +82,36 @@ Class for DNS Name Server (NS) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 nsdname
 
-    print "nsdname = ", $rr->nsdname, "\n";
+    $nsdname = $rr->nsdname;
 
-Returns the name of the nameserver.
+A domain name which specifies a host which should be
+authoritative for the specified class and domain.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c) 1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-Portions Copyright (c) 2005 O.M, Kolkman, RIPE NCC.
+All rights reserved.
 
-Portions Copyright (c) 2005-2006 O.M, Kolkman, NLnet Labs.
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.11
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.3.11
 
 =cut

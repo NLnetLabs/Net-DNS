@@ -1,68 +1,82 @@
 package Net::DNS::RR::A;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-
-
-use vars qw(@ISA $VERSION);
-
-use Socket;
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		$self->{"address"} = inet_ntoa(substr($$data, $offset, 4));
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string && ($string =~ /^(\d+)\.(\d+)\.(\d+)\.(\d+)\s*$/o)
-	    && ($1 >= 0) && ($1 <= 255)
-	    && ($2 >= 0) && ($2 <= 255)
-	    && ($3 >= 0) && ($3 <= 255)
-	    && ($4 >= 0) && ($4 <= 255) ) {
-		$self->{"address"} = "$1.$2.$3.$4";
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return $self->{"address"} || '';
-}
-
-sub rr_rdata {
-	my $self = shift;
-
-	return exists $self->{"address"}
-			  ? inet_aton($self->{"address"})
-			  : "";
-}
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::A - DNS A resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	$self->{address} = unpack "\@$offset a4", $$data if $self->{rdlength};
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless defined $self->{address};
+	return pack 'a* @4', $self->{address};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless defined $self->{address};
+	return $self->address;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	my $address = shift;
+	$self->address($address) if defined $address;
+}
+
+
+sub address {
+	my $self = shift;
+
+	return join '.', unpack( 'C4', $self->{address} ) unless @_;
+
+	# Note: pack masks overlarge values, mostly without warning
+	my @part = split /\./, shift || '';
+	my $last = pop(@part) || 0;
+	$self->{address} = pack 'C4', @part, (0) x ( 3 - @part ), $last;
+}
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name IN A address');
+
+    $rr = new Net::DNS::RR(
+	name	=> 'example.com',
+	type	=> 'A',
+	address => '192.0.2.1'
+	);
 
 =head1 DESCRIPTION
 
@@ -70,25 +84,36 @@ Class for DNS Address (A) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 address
 
-    print "address = ", $rr->address, "\n";
+    $IPv4_address = $rr->address;
+    $rr->address( $IPv4_address );
 
-Returns the RR's address field.
+Version 4 IP address represented using dotted-quad notation.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-1998 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.4.1
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.4.1
 
 =cut
