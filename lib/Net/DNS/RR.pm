@@ -91,14 +91,12 @@ sub new {
 }
 
 
-my $CLASS_REGEX;
+my $CLASS_REGEX = join '|', 'CLASS\d+', keys %classbyname;
 
 sub new_string {
 	my $class = shift;
 	local $_ = shift || croak 'empty or undefined argument';
 	my $update = shift;
-
-	$CLASS_REGEX ||= join '|', 'CLASS\d+', keys %classbyname;
 
 	# parse into quoted strings, contiguous non-whitespace, (discarded) brackets and comments
 	s/\\\\/\\092/g;						# disguise escaped escape
@@ -288,11 +286,11 @@ sub decode {
 	die 'corrupt wire-format data' if length $$data < $next;
 
 	if (COMPATIBLE) {
-		ref($self)->new( $self, $data, $index );
+		ref($self)->new( $self, $data, $index, @opaque );
 		return wantarray ? ( $self, $next ) : $self;
 	}
 
-	$self->decode_rdata( $data, $index, @opaque );
+	$self->decode_rdata( $data, $index, @opaque ) if $next > $index or $self->type eq 'OPT';
 
 	return wantarray ? ( $self, $next ) : $self;
 }
@@ -478,7 +476,7 @@ sub rdata {
 
 	return eval { $self->encode_rdata( 0x4000, {} ); } || '' unless @_;
 
-	my $rdata = shift;
+	my $rdata = $self->{rdata} = shift;
 	my $octets = $self->{rdlength} = length $rdata;
 	$self->decode_rdata( \$rdata, 0 ) if $octets;
 }
@@ -658,7 +656,7 @@ sub get_rrsort_func {
 sub decode_rdata {				## decode rdata from wire-format byte string
 	my ( $self, $data, $offset ) = @_;
 
-	my $length = $self->{rdlength} || length $$data;
+	my $length = $self->{rdlength} || 0;
 	$self->{rdata} = substr $$data, $offset, $length;
 }
 
@@ -784,7 +782,7 @@ sub _subclass {
 sub _new_from_rdata {				## decode rdata from wire-format byte string
 	my $class = shift;
 	my $self  = shift;
-	$self->decode_rdata(@_);
+	$self->decode_rdata(@_) if $self->{rdlength} or $self->type eq 'OPT';
 	return $self;
 }
 

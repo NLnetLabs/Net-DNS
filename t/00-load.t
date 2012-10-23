@@ -26,11 +26,11 @@ sub is_rr_loaded {
 
 
 #
-# Check on-demand loading using this list of RR packages
-my @rrs = qw( CNAME HINFO MB MG MINFO MR MX NULL NS PTR SOA TXT A
+# Check on-demand loading using this (incomplete) list of RR packages
+my @rrs = qw( CNAME HINFO MINFO MX NULL NS PTR SOA TXT A
 		AFSDB DNAME KX NAPTR PX RP RT SRV
-		AAAA APL CERT DHCID EID HIP IPSECKEY ISDN LOC
-		NIMLOC OPT SPF SSHFP TKEY TSIG X25 );
+		AAAA APL CERT DHCID HIP IPSECKEY ISDN LOC
+		OPT SPF SSHFP TKEY TSIG X25 );
 
 
 #
