@@ -99,10 +99,14 @@ t/03-rr.t
 t/04-packet.t
 t/05-A.t
 t/05-AAAA.t
+t/05-AFSDB.t
+t/05-CNAME.t
 t/05-DHCID.t
+t/05-DNAME.t
 t/05-HINFO.t
 t/05-HIP.t
 t/05-IPSECKEY.t
+t/05-KX.t
 t/05-NS.t
 t/05-OPT.t
 t/05-SOA.t
