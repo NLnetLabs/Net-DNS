@@ -1,137 +1,281 @@
 package Net::DNS::RR::APL;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
 
-@ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision: 684 $)[1];
-
-use Net::DNS::RR::APL::ApItem;
-
-1;
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::APL - DNS APL resource record
 
-=head1 SYNOPSIS
-
-C<use Net::DNS::RR>;
-
-=head1 DESCRIPTION
-
-This is an RR type for address prefix lists. Please see the RFC3123 for details.
-
-
-=head1 METHODS
-
-=head2 applist
-
-Returns an array of Net::DNS::APL::ApItem objects.
-
-Each ApItem objecst contains the following attribute that can be
-accessed and set using methods of the same name: addressfamily,
-prefix, negation, address
-
-  foreach my $ap ($apl->aplist()){
-     	print $ap->negation()?"!":"";
-    	print $ap->addressfamily().":";
-    	print $ap->address();
-    	print $ap->prefix(). " ";
-    }
-
-In addition the  Net::DNS::APL::ApItem objects can be printed using
-the string method.
-
-    foreach my $ap ($apl->aplist())
-              print $ap->string."\n";
-    }
-
-
-
-
 =cut
 
 
+use strict;
+use integer;
+
+use Carp;
 
 
-
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-	my $max=$offset+$self->{"rdlength"};
-
-	while ($offset < $max){
-		my $apitem;
-		($apitem,$offset)=Net::DNS::RR::APL::ApItem->new_from_wire($$data,$offset);
-		push @{$self->{"aplist"}}, $apitem if defined ($apitem);
-	}
-	bless $self, $class;
-}
-
-
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-	my @input=split(/\s+/, $string);
-	foreach my $i (@input){
-		my $apitem=Net::DNS::RR::APL::ApItem->new($i);
-		push @{$self->{"aplist"}}, $apitem if defined ($apitem);
-	}
-	return bless $self, $class;
-}
-
-
-
-
-sub rdatastr {
+sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
-	my $rdatastr="";
-	foreach my $apitem (@{$self->{'aplist'}}){
-		$rdatastr.=$apitem->string." ";
+	my ( $data, $offset ) = @_;
+
+	my $limit = $offset + $self->{rdlength};
+
+	$self->{aplist} = [];
+	while ( $offset < $limit ) {
+		my $item = bless {}, 'Net::DNS::RR::APL::Item';
+		my $xlen = unpack "\@$offset x3 C", $$data;
+		my $afdlen = ( $xlen & 0x7F );
+		$item->negate(1) if $xlen & 0x80;
+		@{$item}{qw(family prefix afdpart)} = unpack "\@$offset n C x a$afdlen", $$data;
+		$offset += $afdlen + 4;
+		push @{$self->{aplist}}, $item;
 	}
-	chop $rdatastr; #trailing space
-	return $rdatastr;
+	croak('corrupt APL data') unless $offset == $limit;	# more or less FUBAR
 }
 
-sub rr_rdata {
-	my $self = shift;
-	my $rdata = "";
 
-	foreach my $apitem (@{$self->{'aplist'}}){
-		$rdata.=$apitem->rdata;
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	my $rdata = '';
+	return $rdata unless $self->{aplist};
+	foreach ( @{$self->{aplist}} ) {
+		my $afdpart = $_->{afdpart};
+		my $xlength = $_->negate | length($afdpart);
+		$rdata .= pack 'n C2 a*', @{$_}{qw(family prefix)}, $xlength, $afdpart;
 	}
 	return $rdata;
 }
 
 
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
 
-sub aplist {
-	my $self=shift;
-	return @{$self->{'aplist'}};
+	return '' unless $self->{aplist};
+	join ' ', map $_->string, @{$self->{aplist}};
 }
 
 
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->aplist(@_);
+}
+
+
+sub aplist {
+	my $self = shift;
+
+	while (@_) {						# parse apitem strings
+		last unless $_[0] =~ m|^(!?)(\d+):(.+)/(\d+)$|;
+		$self->aplist( negate => ( $1 ? 1 : 0 ), family => $2, address => $3, prefix => $4 );
+		shift;
+	}
+
+	my $aplist = $self->{aplist} ||= [];
+	if ( my %argval = @_ ) {				# parse attribute=value list
+		my $item = bless {}, 'Net::DNS::RR::APL::Item';
+		while ( my ( $attribute, $value ) = each %argval ) {
+			$item->$attribute($value) unless $attribute eq 'address';
+		}
+		$item->address( $argval{address} );		# address must be last
+		push @$aplist, $item;
+	}
+
+	return @$aplist if wantarray;
+	join ' ', map $_->string, @$aplist if defined wantarray;
+}
+
+
+########################################
+
+package Net::DNS::RR::APL::Item;
+
+sub negate {
+	my $bit = 0x80;
+	for ( shift->{negate} ||= 0 ) {
+		return $_ & $bit unless @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+sub family {
+	my $self = shift;
+
+	$self->{family} = shift if @_;
+	return 0 + ( $self->{family} || 0 );
+}
+
+sub prefix {
+	my $self = shift;
+
+	$self->{prefix} = shift if @_;
+	return 0 + ( $self->{prefix} || 0 );
+}
+
+{
+	require Net::DNS::RR::A;
+	require Net::DNS::RR::AAAA;
+
+	sub _address_1 {
+		my $self = shift;
+
+		my $dummy = {address => pack( 'a* @4', $self->{afdpart} || '' )};
+		return &Net::DNS::RR::A::address($dummy) unless @_;
+
+		my $alength = ( $self->prefix + 7 ) >> 3;	# mask non-prefix bits, suppress nulls
+		my @address = unpack "C$alength", &Net::DNS::RR::A::address( $dummy, shift );
+		my $bitmask = 0xFF << ( 8 - $self->prefix & 7 );
+		push @address, ( $bitmask & pop(@address) ) if $alength;
+		for ( reverse @address ) { last if $_; pop @address }
+		$self->{afdpart} = pack 'C*', @address;
+	}
+
+
+	sub _address_2 {
+		my $self = shift;
+
+		my $dummy = {address => pack( 'a* @16', $self->{afdpart} || '' )};
+		return &Net::DNS::RR::AAAA::address_long($dummy) unless @_;
+
+		my $alength = ( $self->prefix + 7 ) >> 3;	# mask non-prefix bits, suppress nulls
+		my @address = unpack "C$alength", &Net::DNS::RR::AAAA::address( $dummy, shift );
+		my $bitmask = 0xFF << ( 8 - $self->prefix & 7 );
+		push @address, ( $bitmask & pop(@address) ) if $alength;
+		for ( reverse @address ) { last if $_; pop @address }
+		$self->{afdpart} = pack 'C*', @address;
+	}
+}
+
+
+sub address {
+	for ( $_[0]->family ) {
+		return &_address_1 if /1/;
+		return &_address_2 if /2/;
+		die 'unknown address family';
+	}
+}
+
+
+sub string {
+	my $self = shift;
+
+	my ( $not, $family, $address, $prefix ) = map $self->$_, qw(negate family address prefix);
+	my $negative = $not ? '!' : '';
+	return "$negative$family:$address/$prefix";
+}
+
+1;
+__END__
+
+
+=head1 SYNOPSIS
+
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name IN APL aplist');
+
+=head1 DESCRIPTION
+
+DNS Address Prefix List (APL) record
+
+=head1 METHODS
+
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
+=head2 aplist
+
+    @aplist = $rr->aplist;
+  
+    @aplist = $rr->aplist( '1:192.168.32.0/21', '!1:192.168.38.0/28' );
+  
+    @aplist = $rr->aplist( '1:224.0.0.0/4', '2:FF00:0:0:0:0:0:0:0/8' );
+  
+    @aplist = $rr->aplist( negate  => 1,
+			   family  => 1,
+			   address => '192.168.38.0',
+			   prefix  => 28,
+			   );
+
+Ordered, possibly empty, list of address prefix items.
+Additional items, if present, are appended to the existing list
+with neither prefix aggregation nor reordering.
+
+
+=head2 Net::DNS::RR::APL::Item
+
+Each element of the prefix list is a Net::DNS::RR::APL::Item
+object which is inextricably bound to the APL record which
+created it.
+
+=head2 negate
+
+    $rr->negate(0);
+    $rr->negate(1);
+
+    if ( $rr->negate ) {
+	...
+    }
+
+Boolean attribute indicating the prefix to be an address range exclusion.
+
+=head2 family
+
+    $family = $rr->family;
+
+Address family discriminant.
+
+=head2 prefix
+
+    $prefix = $rr->prefix;
+
+Number of bits comprising the address prefix.
+
+
+=head2 address
+
+    $address = $object->address;
+
+Address portion of the prefix list item.
+
+
+=head2 string
+
+    $string = $object->string;
+
+Returns the prefix list item in the form required in zone files.
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 2008 Olaf Kolkman (NLnet Labs)
+Copyright (c)2008 Olaf Kolkman, NLnet Labs.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+Portions Copyright (c)2011 Dick Franks.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<Net::DNS::RR::APL::ApItem>,
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 3123
-
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC3123
 
 =cut
-

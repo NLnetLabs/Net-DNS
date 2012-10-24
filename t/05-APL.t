@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 13;
 
 
 use Net::DNS;
 
 
-my $name = 'HINFO.example';
-my $type = 'HINFO';
-my $code = 13;
-my @attr = qw( cpu os );
-my @data = qw( VAX-11/750 VMS );
-my @also = qw( );
+my $name = 'APL.example';
+my $type = 'APL';
+my $code = 42;
+my @attr = qw( aplist );
+my @data = qw( 1:224.0.0.0/4 2:FF00:0:0:0:0:0:0:0/8 !1:192.168.38.0/28 );
+my @also = qw( string negate family address );			# apitem attributes
 
-my $wire = '0a5641582d31312f37353003564d53';
+my $wire = '00010401e000020801ff00011c83c0a826';
 
 
 {
@@ -40,11 +40,19 @@ my $wire = '0a5641582d31312f37353003564d53';
 		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
 	}
 
-	foreach (@also) {
-		is( $rr2->$_, $rr->$_, "additional attribute rr->$_()" );
+	my @aplist1 = $rr->aplist;
+	my @aplist2 = $rr2->aplist;
+	foreach my $item (@aplist1) {
+		my $item2 = shift @aplist2;
+		foreach (@also) {
+			is( $item2->$_, $item->$_, "aplist item->$_() attribute" );
+		}
 	}
+}
 
 
+{
+	my $rr	    = new Net::DNS::RR("$name $type @data");
 	my $null    = new Net::DNS::RR("$name NULL")->encode;
 	my $empty   = new Net::DNS::RR("$name $type")->encode;
 	my $rxbin   = decode Net::DNS::RR( \$empty )->encode;
@@ -64,4 +72,5 @@ my $wire = '0a5641582d31312f37353003564d53';
 
 
 exit;
+
 

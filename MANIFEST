@@ -100,6 +100,8 @@ t/04-packet.t
 t/05-A.t
 t/05-AAAA.t
 t/05-AFSDB.t
+t/05-APL.t
+t/05-CERT.t
 t/05-CNAME.t
 t/05-DHCID.t
 t/05-DNAME.t

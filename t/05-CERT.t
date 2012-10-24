@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 
 use Net::DNS;
 
 
-my $name = 'HINFO.example';
-my $type = 'HINFO';
-my $code = 13;
-my @attr = qw( cpu os );
-my @data = qw( VAX-11/750 VMS );
+my $name = 'CERT.example';
+my $type = 'CERT';
+my $code = 37;
+my @attr = qw( format tag algorithm certificate );
+my @data = qw( 1 2 3 123456789abcdefghijklmnopqrstuvwxyz );
 my @also = qw( );
 
-my $wire = '0a5641582d31312f37353003564d53';
+my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f707172737475767778797a';
 
 
 {
@@ -37,6 +37,7 @@ my $wire = '0a5641582d31312f37353003564d53';
 	is( $rr2->encode, $rr->encode, 'new($string) and new(%hash) equivalent' );
 
 	foreach (@attr) {
+		next if /certificate/;
 		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
 	}
 

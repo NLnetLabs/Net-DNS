@@ -1,178 +1,208 @@
 package Net::DNS::RR::CERT;
+
 #
 # $Id$
 #
-# Written by Mike Schiraldi <raldi@research.netsol.com> for VeriSign
-
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-use MIME::Base64;
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-my %formats = (
-	PKIX => 1,
-	SPKI => 2,
-	PGP  => 3,
-	URI  => 253,
-	OID  => 254,
-);
-
-my %r_formats = reverse %formats;
-
-my %algorithms = (
-	RSAMD5     => 1,
-	DH         => 2,
-	DSA        => 3,
-	ECC        => 4,
-	INDIRECT   => 252,
-	PRIVATEDNS => 253,
-	PRIVATEOID => 254,
-);
-
-my %r_algorithms = reverse %algorithms;
-
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		my ($format, $tag, $algorithm) = unpack("\@$offset n2C", $$data);
-
-		$offset        += 2 * Net::DNS::INT16SZ() + 1;
-
-		my $length      = $self->{"rdlength"} - (2 * Net::DNS::INT16SZ() + 1);
-		my $certificate = substr($$data, $offset, $length);
-
-		$self->{"format"}      = $format;
-		$self->{"tag"}         = $tag;
-		$self->{"algorithm"}   = $algorithm;
-		$self->{"certificate"} = $certificate;
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	$string or return bless $self, $class;
-
-	my ($format, $tag, $algorithm, @rest) = split " ", $string;
-	@rest or return bless $self, $class;
-
-	# look up mnemonics
-	# the "die"s may be rash, but proceeding would be dangerous
-	if ($algorithm =~ /\D/) {
-		$algorithm = $algorithms{$algorithm} || die	"Unknown algorithm mnemonic: '$algorithm'";
-	}
-
-	if ($format =~ /\D/) {
-		$format = $formats{$format} || die "Unknown format mnemonic: '$format'";
-	}
-
-	$self->{"format"}      = $format;
-	$self->{"tag"}         = $tag;
-	$self->{"algorithm"}   = $algorithm;
-	$self->{"certificate"} = MIME::Base64::decode(join('', @rest));
-
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-	my $rdatastr;
-
-	if (exists $self->{"format"}) {
-		my $cert = MIME::Base64::encode $self->{certificate};
-		$cert =~ s/\n//g;
-
-		my $format = defined $r_formats{$self->{"format"}}
-		? $r_formats{$self->{"format"}} : $self->{"format"};
-
-		my $algorithm = defined $r_algorithms{$self->{algorithm}}
-		? $r_algorithms{$self->{algorithm}} : $self->{algorithm};
-
-		$rdatastr = "$format $self->{tag} $algorithm $cert";
-	} else {
-		$rdatastr = '';
-	}
-
-	return $rdatastr;
-}
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-
-	my $rdata = "";
-
-	if (exists $self->{"format"}) {
-		$rdata .= pack("n2", $self->{"format"}, $self->{tag});
-		$rdata .= pack("C",  $self->{algorithm});
-		$rdata .= $self->{certificate};
-	}
-
-	return $rdata;
-}
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::CERT - DNS CERT resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use MIME::Base64;
+
+my %formats = (
+	PKIX	=> 1,						# X.509 as per PKIX
+	SPKI	=> 2,						# SPKI certificate
+	PGP	=> 3,						# OpenPGP packet
+	IPKIX	=> 4,						# The URL of an X.509 data object
+	ISPKI	=> 5,						# The URL of an SPKI certificate
+	IPGP	=> 6,						# The fingerprint and URL of an OpenPGP packet
+	ACPKIX	=> 7,						# Attribute Certificate
+	IACPKIX => 8,						# The URL of an Attribute Certificate
+	URI	=> 253,						# URI private
+	OID	=> 254,						# OID private
+	);
+
+my %r_formats = reverse %formats;
+
+
+my %algorithms = (						# RFC4034 except where noted
+	RSAMD5	   => 1,
+	DH	   => 2,
+	DSA	   => 3,
+	ECC	   => 4,
+	RSASHA1	   => 5,
+	RESERVE123 => 123,					# RFC6014
+	RESERVE251 => 251,					# RFC6014
+	INDIRECT   => 252,
+	PRIVATEDNS => 253,
+	PRIVATEOID => 254,
+	);
+
+my %r_algorithms = reverse %algorithms;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	@{$self}{qw(format tag algorithm)} = unpack "\@$offset n2 C", $$data;
+	$self->{certbin} = substr $$data, $offset + 5, $self->{rdlength} - 5;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{certbin};
+	pack "n2 C a*", @{$self}{qw(format tag algorithm certbin)};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{certbin};
+	my $format    = $r_formats{$self->{format}}	  || $self->{format};
+	my $algorithm = $r_algorithms{$self->{algorithm}} || $self->{algorithm};
+	my $base64    = MIME::Base64::encode $self->{certbin};
+	chomp $base64;
+	return "$format $self->{tag} $algorithm $base64" if length($base64) < 40;
+	return "$format $self->{tag} $algorithm(\n$base64 )";
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->$_(shift) for qw(format tag algorithm);
+	$self->cert(@_);
+}
+
+
+sub format {
+	my $self = shift;
+
+	return $self->{format} unless @_;
+
+	my $format = shift || '<undef>';
+	$format = $formats{$format} || die "Unknown mnemonic: '$format'"
+			if $format =~ /\D/;			# look up mnemonic
+	$self->{format} = $format;
+}
+
+sub tag {
+	my $self = shift;
+
+	$self->{tag} = shift if @_;
+	return 0 + ( $self->{tag} || 0 );
+}
+
+sub algorithm {
+	my $self = shift;
+
+	return $self->{algorithm} unless @_;
+
+	my $algorithm = shift || '<undef>';
+	$algorithm = $algorithms{$algorithm} || die "Unknown mnemonic: '$algorithm'"
+			if $algorithm =~ /\D/;			# look up mnemonic
+	$self->{algorithm} = $algorithm;
+}
+
+sub cert {
+	my $self = shift;
+
+	$self->{certbin} = MIME::Base64::decode( join "", @_ ) if @_;
+	return MIME::Base64::encode( $self->certbin, "" ) if defined wantarray;
+}
+
+sub certbin {
+	my $self = shift;
+
+	$self->{certbin} = shift if @_;
+	$self->{certbin} || "";
+}
+
+sub certificate { &certbin; }				## historical
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name IN CERT format tag algorithm cert');
 
 =head1 DESCRIPTION
 
-Class for DNS Certificate (CERT) resource records. (see RFC 2538)
+Class for DNS Certificate (CERT) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 format
 
-    print "format = ", $rr->format, "\n";
+    $format =  $rr->format;
 
 Returns the format code for the certificate (in numeric form)
 
 =head2 tag
 
-    print "tag = ", $rr->tag, "\n";
+    $tag = $rr->tag;
 
 Returns the key tag for the public key in the certificate
 
 =head2 algorithm
 
-    print "algorithm = ", $rr->algorithm, "\n";
+    $algorithm = $rr->algorithm;
 
-Returns the algorithm used by the certificate (in numeric form)
+Returns the algorithm used by the certificate (in numeric form).
 
-=head2 certificate
+=head2 cert
 
-    print "certificate = ", $rr->certificate, "\n";
+    $cert = $rr->cert;
 
-Returns the data comprising the certificate itself (in raw binary form)
+Base64 representation of the certificate.
+
+=head2 certbin
+
+    $certbin = $rr->certbin;
+
+Binary representation of the certificate.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)2002 VeriSign, Mike Schiraldi
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 2782
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4398
 
+=cut

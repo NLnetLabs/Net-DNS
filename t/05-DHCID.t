@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 12;
 
 
 use Net::DNS;
@@ -11,10 +11,10 @@ my $name = 'DHCID.example';
 my $type = 'DHCID';
 my $code = 49;
 my @attr = qw( identifiertype digesttype digest );
-my @data = qw( 2 1 Y2/AuCccgoJbsaxcQc9TUapptP69lOjxfNuVAA2kjEA= );
-my @also = qw( digestbin );
+my @data = qw( 2 1 ObfuscatedIdentityInformation );
+my @also = qw( rdata );
 
-my $wire = '000201636FC0B8271C82825BB1AC5C41CF5351AA69B4FEBD94E8F17CDB95000DA48C40';
+my $wire = '0002014f6266757363617465644964656e74697479496e666f726d6174696f6e';
 
 
 {
@@ -45,14 +45,21 @@ my $wire = '000201636FC0B8271C82825BB1AC5C41CF5351AA69B4FEBD94E8F17CDB95000DA48C
 	}
 
 
-	my $empty   = new Net::DNS::RR("$name $type");
+	my $null    = new Net::DNS::RR("$name NULL")->encode;
+	my $empty   = new Net::DNS::RR("$name $type")->encode;
+	my $rxbin   = decode Net::DNS::RR( \$empty )->encode;
+	my $txtext  = new Net::DNS::RR("$name $type")->string;
+	my $rxtext  = new Net::DNS::RR($txtext)->encode;
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
-	my $hex1    = uc unpack 'H*', $decoded->encode;
-	my $hex2    = uc unpack 'H*', $encoded;
-	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
-	is( $hex1, $hex2, 'encode/decode transparent' );
-	is( $hex3, $wire, 'encoded RDATA matches example' );
+	my $hex1    = unpack 'H*', $encoded;
+	my $hex2    = unpack 'H*', $decoded->encode;
+	my $hex3    = unpack 'H*', substr( $encoded, length $null );
+	is( $hex2,	     $hex1,	    'encode/decode transparent' );
+	is( $hex3,	     $wire,	    'encoded RDATA matches example' );
+	is( length($empty),  length($null), 'encoded RDATA can be empty' );
+	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
+	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
 

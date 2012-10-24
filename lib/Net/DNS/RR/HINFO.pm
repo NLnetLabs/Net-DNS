@@ -20,22 +20,17 @@ use integer;
 
 use Net::DNS::Text;
 
-use Text::ParseWords;
 
-
-sub new {				## decode rdata from wire-format octet string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
 	my ( $data, $offset ) = @_;
 
 	( $self->{cpu}, $offset ) = decode Net::DNS::Text( $data, $offset );
 	( $self->{os},	$offset ) = decode Net::DNS::Text( $data, $offset );
-
-	return $self;
 }
 
 
-sub rr_rdata {				## encode rdata as wire-format octet string
+sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless defined $self->{os};
@@ -43,21 +38,13 @@ sub rr_rdata {				## encode rdata as wire-format octet string
 }
 
 
-sub rdatastr {				## format rdata portion of RR string.
+sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{os};
 	join ' ', $self->{cpu}->string, $self->{os}->string;
 }
 
-
-sub new_from_string {			## populate RR from rdata string
-	my $class = shift;
-	my $self  = bless shift, $class;
-	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
-	$self->parse_rdata(@parse) if @parse;
-	return $self;
-}
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
@@ -81,7 +68,6 @@ sub os {
 	$self->{os} = new Net::DNS::Text(shift) if @_;
 	$self->{os}->value if defined wantarray;
 }
-
 
 1;
 __END__
@@ -122,6 +108,8 @@ Returns the operating system type for this RR.
 =head1 COPYRIGHT
 
 Copyright (c)1997-1998 Michael Fuhr. 
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 All rights reserved.
 

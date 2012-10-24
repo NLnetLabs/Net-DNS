@@ -20,57 +20,37 @@ use integer;
 
 use MIME::Base64;
 
-use Text::ParseWords;
 
-
-sub new {				## decode rdata from wire-format octet string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $dlen = $self->{rdlength} - 3;
-	@{$self}{qw(identifiertype digesttype digestbin)} = unpack "\@$offset nC a$dlen", $$data;
-
-	return $self;
+	my $size = $self->{rdlength} - 3;
+	@{$self}{qw(identifiertype digesttype digest)} = unpack "\@$offset nC a$size", $$data;
 }
 
-
-sub rr_rdata {				## encode rdata as wire-format octet string
-	my $self = shift;
-	my $pkt	 = shift;
-	$self->encode_rdata(@_);
-}
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{digestbin};
-	pack 'nC a*', map { $self->$_ } qw(identifiertype digesttype digestbin);
+	return '' unless $self->{digest};
+	pack 'nC a*', map $self->$_, qw(identifiertype digesttype digest);
 }
 
 
-sub rdatastr {				## format rdata portion of RR string.
+sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $base64 = MIME::Base64::encode $self->encode_rdata, "\n\t";
-	join ' ', "(\n\t", $base64, ')';
+	my $base64 = MIME::Base64::encode $self->encode_rdata;
+	chomp $base64;
+	return length($base64) > 40 ? "(\n$base64 )" : $base64;
 }
 
-
-sub new_from_string {			## populate RR from rdata string
-	my $class = shift;
-	my $self  = bless shift, $class;
-	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
-	$self->parse_rdata(@parse) if @parse;
-	return $self;
-}
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	my $data = MIME::Base64::decode( join '', @_ );
-	my $dlen = length($data) - 3;
-	@{$self}{qw(identifiertype digesttype digestbin)} = unpack "nC a$dlen", $data;
+	$self->rdata(@_);
 }
 
 
@@ -109,17 +89,20 @@ sub digesttype {
 sub digest {
 	my $self = shift;
 
-	$self->{digestbin} = MIME::Base64::decode( join '', map { s/\s+//g; $_ } @_ ) if @_;
-	MIME::Base64::encode( $self->{digestbin}, '' ) if defined wantarray;
+	$self->{digest} = shift if @_;
+	$self->{digest} || "";
 }
 
-sub digestbin {
+sub rdata {
 	my $self = shift;
 
-	$self->{digestbin} = shift if @_;
-	$self->{digestbin} || "";
+	if (@_) {
+		my $data = MIME::Base64::decode( join "", @_ ) if @_;
+		my $size = length($data) - 3;
+		@{$self}{qw(identifiertype digesttype digest)} = unpack "n C a$size", $data;
+	}
+	return MIME::Base64::encode( $self->encode_rdata, "" ) if defined wantarray;
 }
-
 
 1;
 __END__
@@ -146,14 +129,14 @@ other unpredictable behaviour.
 
 =head2 identifiertype
 
-    $identifiertype = $object->identifiertype;
+    $identifiertype = $rr->identifiertype;
 
 The 16-bit identifier type describes the form of host identifier
 used to construct the DHCP identity information.
 
 =head2 digesttype
 
-    $digesttype = $object->digesttype;
+    $digesttype = $rr->digesttype;
 
 The 8-bit digest type number describes the message-digest
 algorithm used to obfuscate the DHCP identity information.
@@ -162,18 +145,23 @@ algorithm used to obfuscate the DHCP identity information.
 
     $digest = $rr->digest;
 
-Returns the digest data using base64 format.
+Binary representation of the digest of DHCP identity information.
 
-=head2 digestbin
+=head2 rdata
 
-    $digestbin = $object->digestbin;
+The RDATA for this record is stored in master files as a single
+block using Base64 representation.
 
-Returns opaque octet string representing the digest.
+White space characters may appear anywhere within the Base64 text
+and will be silently ignored.
+
 
 
 =head1 COPYRIGHT
 
 Copyright (c)2009 Olaf Kolkman, NLnet Labs.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 All rights reserved.
 
