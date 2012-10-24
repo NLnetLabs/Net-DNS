@@ -1,219 +1,184 @@
 package Net::DNS::RR::SSHFP;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION $HasBabble);
-
-BEGIN {
-	eval {
-		require Digest::BubbleBabble;
-		Digest::BubbleBabble->import(qw(bubblebabble))
-	};
-
-	$HasBabble = $@ ? 0 : 1;
-
-}
-
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-@ISA = qw(Net::DNS::RR);
-
-my %algtype = (
-	RSA => 1,
-	DSA => 2,
-);
-
-my %fingerprinttype = (
-	'SHA-1' => 1,
-);
-
-my %fingerprinttypebyval = reverse %fingerprinttype;
-my %algtypebyval	     = reverse %algtype;
-
-
-sub new {
-    my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{'rdlength'} > 0) {
-		my $offsettoalg    = $offset;
-		my $offsettofptype = $offset+1;
-		my $offsettofp     = $offset+2;
-		my $fplength       = 20;   # This will need to change if other fingerprint types
-								   # are being deployed.
-
-
-		$self->{'algorithm'} = unpack('C', substr($$data, $offsettoalg, 1));
-		$self->{'fptype'}    = unpack('C', substr($$data, $offsettofptype, 1));
-
-		unless (defined $fingerprinttypebyval{$self->{'fptype'}}){
-		  warn "This fingerprint type $self->{'fptype'} has not yet been implemented, creation of SSHFP failed\n." ;
-		  return undef;
-		}
-
-
-		# All this is SHA-1 dependend
-		$self->{'fpbin'} = substr($$data,$offsettofp, $fplength); # SHA1 digest 20 bytes long
-
-		$self->{'fingerprint'} = uc unpack('H*', $self->{'fpbin'});
-    }
-
-
-    return bless $self, $class;
-}
-
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string) {
-		$string =~ tr/()//d;
-		$string =~ s/;.*$//mg;
-		$string =~ s/\n//g;
-
-		@{$self}{qw(algorithm fptype fingerprint)} = split(m/\s+/, $string, 3);
-
-		# We allow spaces in the fingerprint.
-		$self->{'fingerprint'} =~ s/\s//g;
-    }
-
-	return bless $self, $class;
-}
-
-
-
-sub rdatastr {
-	my $self     = shift;
-	my $rdatastr = '';
-
-	if (exists $self->{"algorithm"}) {
-		$rdatastr = join('  ', @{$self}{qw(algorithm fptype fingerprint)})
-					.' ; ' . $self->babble;
-	}
-
-	return $rdatastr;
-}
-
-sub rr_rdata {
-    my $self = shift;
-
-    if (exists $self->{"algorithm"}) {
-    	return pack('C2',  @{$self}{qw(algorithm fptype)}) . $self->fpbin;
-    }
-
-    return '';
-
-}
-
-
-
-sub babble {
-    my $self = shift;
-
-    if ($HasBabble) {
-		return bubblebabble(Digest => $self->fpbin);
-    } else {
-		return "";
-    }
-}
-
-
-sub fpbin {
-	my ($self) = @_;
-
-	return $self->{'fpbin'} ||= pack('H*', $self->{'fingerprint'});
-}
-
-
-1;
-
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::SSHFP - DNS SSHFP resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use constant BABBLE => eval { require Digest::BubbleBabble; };
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $size = $self->{rdlength} - 2;
+	@{$self}{qw(algorithm fptype fpbin)} = unpack "\@$offset C2 a$size", $$data;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{fpbin};
+	pack 'C2 a*', @{$self}{qw(algorithm fptype fpbin)};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{fpbin};
+	my $babble	= $self->babble;
+	my $fingerprint = $self->fp;
+	$fingerprint =~ s/(\S{64})/$1\n/g;
+	$fingerprint = "(\n$fingerprint )" if length $fingerprint > 40;
+	return join ' ', $self->algorithm, $self->fptype, $fingerprint unless $babble;
+	return join ' ', $self->algorithm, $self->fptype, $fingerprint, "\n;", $babble;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->$_(shift) for qw(algorithm fptype);
+	$self->fp(@_);
+}
+
+
+sub algorithm {
+	my $self = shift;
+
+	$self->{algorithm} = shift if @_;
+	return 0 + ( $self->{algorithm} || 0 );
+}
+
+sub fptype {
+	my $self = shift;
+
+	$self->{fptype} = shift if @_;
+	return 0 + ( $self->{fptype} || 0 );
+}
+
+sub fp {
+	my $self = shift;
+
+	$self->{fpbin} = pack "H*", map { s/\s+//g; $_ } join "", @_ if @_;
+	unpack "H*", $self->{fpbin} || "" if defined wantarray;
+}
+
+sub fpbin {
+	my $self = shift;
+
+	$self->{fpbin} = shift if @_;
+	$self->{fpbin} || "";
+}
+
+sub babble {
+	return Digest::BubbleBabble::bubblebabble( Digest => shift->fpbin ) if BABBLE;
+	return '';
+}
+
+
+sub fingerprint { &fp; }					# historical
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name SSHFP algorithm fptype fp');
 
 =head1 DESCRIPTION
 
-Class for Delegation signer (SSHFP) resource records.
+DNS SSH Fingerprint (SSHFP) resource records.
 
 =head1 METHODS
 
-In addition to the regular methods
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
 
 
 =head2 algorithm
 
-    print "algorithm" = ", $rr->algorithm, "\n";
+    $algorithm = $rr->algorithm;
 
-Returns the RR's algorithm field in decimal representation
+The 8-bit algorithm number describes the algorithm used to
+construct the public key.
 
-    1 = RSA
-    2 = DSS
+=head2 fptype
 
+    $fptype = $rr->fptype;
 
-=head2 fingerprint
+The 8-bit fingerprint type number describes the message-digest
+algorithm used to calculate the fingerprint of the public key.
 
-    print "fingerprint" = ", $rr->fingerprint, "\n";
+=head2 fp
 
-Returns the SHA1 fingerprint over the label and key in hexadecimal
-representation.
+    $fp = $rr->fp;
 
+Hexadecimal representation of the fingerprint digest.
 
 =head2 fpbin
 
     $fpbin = $rr->fpbin;
 
-Returns the fingerprint as binary material.
-
-
-=head2 fptype
-
-   print "fingerprint type" . " = " . $rr->fptype ."\n";
-
-Returns the fingerprint type of the SSHFP RR.
+Returns opaque octet string representing the fingerprint digest.
 
 =head2 babble
 
-   print $rr->babble;
+    print $rr->babble;
 
-If Digest::BubbleBabble is available on the sytem this method returns the
-'BabbleBubble' representation of the fingerprint. The 'BabbleBubble'
-string may be handy for telephone confirmation.
+The babble() method returns the 'BabbleBubble' representation of
+the fingerprint if the Digest::BubbleBabble package is available,
+otherwise an empty string is returned.
 
-The 'BabbleBubble' string returned as a comment behind the RDATA when
-the string method is called.
+Bubble babble represents a message digest as a string of "real"
+words, to make the fingerprint easier to remember. The "words"
+are not necessarily real words, but they look more like words
+than a string of hex characters.
 
-The method returns an empty string if Digest::BubbleBable is not installed.
+Bubble babble fingerprinting is used by the SSH2 suite (and
+consequently by Net::SSH::Perl, the Perl SSH implementation)
+to display easy-to-remember key fingerprints.
 
-=head1 TODO
+The 'BubbleBabble' string is appended as a comment to the RDATA
+when the string method is called.
 
-=head1 ACKNOWLEDGEMENT
-
-Jakob Schlyter for code review and supplying patches.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 RIPE NCC, Olaf Kolkman.
+Copyright (c)2007 Olaf Kolkman, NLnet Labs.
 
-"All rights reserved, This program is free software; you may redistribute it
-and/or modify it under the same terms as Perl itself.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-draft-ietf-dnssext-delegation-signer
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4255
 
 =cut
-
-
-
-
-

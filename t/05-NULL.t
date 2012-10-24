@@ -1,22 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 9;
 
 
 use Net::DNS;
 
 
-my $name = '_443._tcp.www.example.com';
-my $type = 'TLSA';
-my $code = 52;
-my @attr = qw( usage selector matchingtype certificate );
-my @data =
-		qw( 1 1 2 92003ba34942dc74152e2f2c408d29eca5a520e7f2e06bb944f4dca346baf63c1b177615d466f6c4b71c216a50292bd58c9ebdd2f74e38fe51ffd48c43326cbc );
-my @also = qw( certbin );
+my $name = 'NULL.example';
+my $type = 'NULL';
+my $code = 10;
+my @attr = qw( );
+my @data = ('\# 4 61626364');
+my @also = qw( rdata );
 
-my $wire =
-'01010292003ba34942dc74152e2f2c408d29eca5a520e7f2e06bb944f4dca346baf63c1b177615d466f6c4b71c216a50292bd58c9ebdd2f74e38fe51ffd48c43326cbc';
+my $wire = '61626364';
 
 
 {
@@ -27,8 +25,9 @@ my $wire =
 	@{$hash}{@attr} = @data;
 
 	my $rr = new Net::DNS::RR(
-		name => $name,
-		type => $type,
+		name  => $name,
+		type  => $type,
+		rdata => 'arbitrary data',
 		%$hash
 		);
 
@@ -45,8 +44,11 @@ my $wire =
 	foreach (@also) {
 		is( $rr2->$_, $rr->$_, "additional attribute rr->$_()" );
 	}
+}
 
 
+{
+	my $rr	    = new Net::DNS::RR("$name $type @data");
 	my $null    = new Net::DNS::RR("$name NULL")->encode;
 	my $empty   = new Net::DNS::RR("$name $type")->encode;
 	my $rxbin   = decode Net::DNS::RR( \$empty )->encode;
@@ -61,7 +63,7 @@ my $wire =
 	is( $hex3,	     $wire,	    'encoded RDATA matches example' );
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
-	is( length($rxtext), length($null), 'string RDATA can be empty' )
+	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
 

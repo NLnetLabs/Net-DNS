@@ -1,65 +1,71 @@
 package Net::DNS::RR::NULL;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-use Net::DNS::Packet;
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-	return bless $self, $class;
-}
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::NULL - DNS NULL resource record
 
+=cut
+
+
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name NULL \# length hexdata ...');
 
 =head1 DESCRIPTION
 
-Class for DNS Null (NULL) resource records.
+Class for DNS null (NULL) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 rdlength
 
-    print "rdlength = ", $rr->rdlength, "\n";
+    $rdlength = $rr->rdlength;
 
-Returns the length of the record's data section.
+Returns the length of the record data section.
 
 =head2 rdata
 
     $rdata = $rr->rdata;
 
-Returns the record's data section as binary data.
+Returns the record data section as binary data.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997 Michael Fuhr.
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.10
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.3.10
 
 =cut

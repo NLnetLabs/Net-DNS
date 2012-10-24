@@ -40,23 +40,19 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{certbin};
-
+	my @params = map $self->$_, qw(usage selector matchingtype);
 	my $certificate = $self->cert;
-
-	my @list = ( '(', $certificate, ')' );
-	@list = ($certificate) unless length($certificate) > 40;
-
-	join ' ', $self->usage, $self->selector, $self->matchingtype, join "\n\t", @list;
+	$certificate =~ s/(\S{64})/$1\n/g;
+	$certificate = "(\n$certificate )" if length $certificate > 40;
+	return join ' ', @params, $certificate;
 }
 
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->usage(shift);
-	$self->selector(shift);
-	$self->matchingtype(shift);
-	$self->cert(shift);
+	$self->$_(shift) for qw(usage selector matchingtype);
+	$self->cert(@_);
 }
 
 
@@ -84,11 +80,9 @@ sub matchingtype {
 sub cert {
 	my $self = shift;
 
-	$self->{certbin} = pack "H*", join( "", map { s/\s+//g; $_ } @_ ) if @_;
+	$self->{certbin} = pack "H*", map { s/\s+//g; $_ } join "", @_ if @_;
 	unpack "H*", $self->{certbin} || "" if defined wantarray;
 }
-
-sub certificate {&cert}
 
 sub certbin {
 	my $self = shift;
@@ -97,6 +91,7 @@ sub certbin {
 	$self->{certbin} || "";
 }
 
+sub certificate { &cert; }
 
 1;
 __END__

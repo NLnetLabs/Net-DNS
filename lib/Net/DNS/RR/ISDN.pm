@@ -1,97 +1,82 @@
 package Net::DNS::RR::ISDN;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		my ($address, $sa, $len);
-
-		($len) = unpack("\@$offset C", $$data);
-		++$offset;
-		$address = substr($$data, $offset, $len);
-		$offset += $len;
-
-		if ($len + 1 < $self->{"rdlength"}) {
-			($len) = unpack("\@$offset C", $$data);
-			++$offset;
-			$sa = substr($$data, $offset, $len);
-			$offset += $len;
-		}
-		else {
-			$sa = "";
-		}
-
-		$self->{"address"} = $address;
-		$self->{"sa"}  = $sa;
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string && $string =~ /^['"](.*?)['"](.*)/s) {
-		$self->{"address"} = $1;
-		my $rest = $2;
-
-		if ($rest =~ /^\s+['"](.*?)['"]$/) {
-			$self->{"sa"} = $1;
-		}
-		else {
-			$self->{"sa"} = "";
-		}
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return $self->{"address"}
-	       ? qq("$self->{address}" "$self->{sa}")
-	       : '';
-}
-
-sub rr_rdata {
-	my $self = shift;
-	my $rdata = "";
-
-	if (exists $self->{"address"}) {
-		$rdata .= pack("C", length $self->{"address"});
-		$rdata .= $self->{"address"};
-
-		if ($self->{"sa"}) {
-			$rdata .= pack("C", length $self->{"sa"});
-			$rdata .= $self->{"sa"};
-		}
-	}
-
-	return $rdata;
-}
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::ISDN - DNS ISDN resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $asize = unpack "\@$offset C", $$data;
+	$self->{address} = unpack "\@$offset x a$asize", $$data;
+	$offset += 1 + $asize;
+	my $ssize = unpack "\@$offset C", $$data;
+	$self->{sa} = unpack "\@$offset x a$ssize", $$data;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{address};
+	pack 'C a* C a*', map { ( length $_, $_ ) } @{$self}{qw(address sa)};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{address};
+	join ' ', @{$self}{qw(address sa)};
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->address(shift);
+	$self->sa(shift);
+}
+
+
+sub address {
+	my $self = shift;
+
+	$self->{address} = shift if @_;
+	$self->{address} || "";
+}
+
+sub sa {
+	my $self = shift;
+
+	$self->{sa} = shift if @_;
+	$self->{sa} || "";
+}
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name ISDN address sa');
 
 =head1 DESCRIPTION
 
@@ -99,31 +84,43 @@ Class for DNS ISDN resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 address
 
-    print "address = ", $rr->address, "\n";
+    $address = $rr->address;
 
-Returns the RR's address field.
+The ISDN-address is a string of characters, normally decimal
+digits, beginning with the E.163 country code and ending with
+the DDI if any.
 
 =head2 sa
 
-    print "subaddress = ", $rr->sa, "\n";
+    $sa = $rr->sa;
 
-Returns the RR's subaddress field.
+The optional subaddress (SA) is a string of hexadecimal digits.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1183 Section 3.2
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1183 Section 3.2
 
 =cut

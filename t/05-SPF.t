@@ -1,22 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 9;
 
 
 use Net::DNS;
 
 
-my $name = '_443._tcp.www.example.com';
-my $type = 'TLSA';
-my $code = 52;
-my @attr = qw( usage selector matchingtype certificate );
-my @data =
-		qw( 1 1 2 92003ba34942dc74152e2f2c408d29eca5a520e7f2e06bb944f4dca346baf63c1b177615d466f6c4b71c216a50292bd58c9ebdd2f74e38fe51ffd48c43326cbc );
-my @also = qw( certbin );
+my $name = 'SPF.example';
+my $type = 'SPF';
+my $code = 99;
+my @attr = qw( spfdata );
+my @data = ('v=spf1 +mx a:colo.example.com/28 -all');
+my @also = qw( );
 
-my $wire =
-'01010292003ba34942dc74152e2f2c408d29eca5a520e7f2e06bb944f4dca346baf63c1b177615d466f6c4b71c216a50292bd58c9ebdd2f74e38fe51ffd48c43326cbc';
+my $wire = '25763d73706631202b6d7820613a636f6c6f2e6578616d706c652e636f6d2f3238202d616c6c';
 
 
 {
@@ -61,7 +59,7 @@ my $wire =
 	is( $hex3,	     $wire,	    'encoded RDATA matches example' );
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
-	is( length($rxtext), length($null), 'string RDATA can be empty' )
+	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
 
