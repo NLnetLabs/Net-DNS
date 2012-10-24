@@ -1,18 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 22;
+use Test::More tests => 33;
 
 
 use Net::DNS;
 
 
-my $name = 'example.com.';
+my $name = 'SOA.example';
 my $type = 'SOA';
 my $code = 6;
 my @attr = qw( mname rname serial refresh retry expire minimum );
-my @data = qw( ns.example.net rp.example.com 0 14400 1800 604800 7200 );
-my $wire = '026E73076578616D706C65036E657400027270076578616D706C6503636F6D0000000000000038400000070800093A8000001C20';
+my @data = qw( ns.example.net rp@example.com 0 14400 1800 604800 7200 );
+my @also = qw( );
+
+my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d0000000000000038400000070800093a8000001c20';
 
 
 {
@@ -37,26 +39,33 @@ my $wire = '026E73076578616D706C65036E657400027270076578616D706C6503636F6D000000
 	foreach (@attr) {
 		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
 	}
-}
+
+	foreach (@also) {
+		is( $rr2->$_, $rr->$_, "additional attribute rr->$_()" );
+	}
 
 
-{
-	my $empty   = new Net::DNS::RR(". $type");
-	my $rr	    = new Net::DNS::RR(". $type @data");
+	my $null    = new Net::DNS::RR("$name NULL")->encode;
+	my $empty   = new Net::DNS::RR("$name $type")->encode;
+	my $rxbin   = decode Net::DNS::RR( \$empty )->encode;
+	my $txtext  = new Net::DNS::RR("$name $type")->string;
+	my $rxtext  = new Net::DNS::RR($txtext)->encode;
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
-	my $hex1    = uc unpack 'H*', $decoded->encode;
-	my $hex2    = uc unpack 'H*', $encoded;
-	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
-	is( $hex1, $hex2, 'encode/decode transparent' );
-	is( $hex3, $wire, 'encoded RDATA matches example' );
+	my $hex1    = unpack 'H*', $encoded;
+	my $hex2    = unpack 'H*', $decoded->encode;
+	my $hex3    = unpack 'H*', substr( $encoded, length $null );
+	is( $hex2,	     $hex1,	    'encode/decode transparent' );
+	is( $hex3,	     $wire,	    'encoded RDATA matches example' );
+	is( length($empty),  length($null), 'encoded RDATA can be empty' );
+	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
+	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
 
 {
-	my $string	= lc join ' ', @data;
-	my $lc		= new Net::DNS::RR(". $type $string" );
-	my $rr		= new Net::DNS::RR(uc ". $type $string" );
+	my $lc		= new Net::DNS::RR( lc ". $type @data" );
+	my $rr		= new Net::DNS::RR( uc ". $type @data" );
 	my $hash	= {};
 	my $predecessor = $rr->encode( 0, $hash );
 	my $compressed	= $rr->encode( length $predecessor, $hash );
@@ -66,8 +75,17 @@ my $wire = '026E73076578616D706C65036E657400027270076578616D706C6503636F6D000000
 }
 
 
+{
+	use integer;
+	my $initial = 0;
+	foreach my $serial ( 2E9, 3E9, 4E9, 1E9, 2E9, 4E9, 1E9, 3E9 ) {
+		my $rr = new Net::DNS::RR("name SOA mname rname $initial");
+		$rr->serial($serial);
+		is( $rr->serial, 0 + $serial, "rr->serial($serial) steps from $initial to $serial" );
+		$initial = $serial;
+	}
+}
 
-#use constant SEQUENTIAL => undef;
 
 {
 	use integer;
@@ -79,20 +97,16 @@ my $wire = '026E73076578616D706C65036E657400027270076578616D706C6503636F6D000000
 	my $pre31wrap  = 0x7FFFFFFF;
 	my $post31wrap = 0x80000000;
 	$rr->serial($pre31wrap);
-	is( $rr->serial(SEQUENTIAL), 0 + $post31wrap, "rr->serial(SEQUENTIAL) wraps $pre31wrap to $post31wrap" );
+	$rr->serial(SEQUENTIAL);
+	is( $rr->serial, 0 + $post31wrap, "rr->serial(SEQUENTIAL) wraps from $pre31wrap to $post31wrap" );
 
 	my $pre32wrap  = 0xFFFFFFFF;
 	my $post32wrap = 0x00000000;
 	$rr->serial($pre32wrap);
-	is( $rr->serial(SEQUENTIAL), 0 + $post32wrap, "rr->serial(SEQUENTIAL) wraps $pre32wrap to $post32wrap" );
+	$rr->serial(SEQUENTIAL);
+	is( $rr->serial, 0 + $post32wrap, "rr->serial(SEQUENTIAL) wraps from $pre32wrap to $post32wrap" );
 }
 
-
-
-#sub YYYYMMDDxx {
-#	my ( $dd, $mm, $yy ) = (localtime)[3 .. 5];
-#	return 1900010000 + sprintf '%d%0.2d%0.2d00', $yy, $mm, $dd;
-#}
 
 {
 	use integer;
@@ -107,12 +121,13 @@ my $wire = '026E73076578616D706C65036E657400027270076578616D706C6503636F6D000000
 
 {
 	use integer;
-	my $rr	     = new Net::DNS::RR('name SOA mname rname 1000000000');	# September 2001
-	my $pretime  = $rr->serial;
-	my $posttime = time;
+	my $pretime = UNIXTIME;
+	my $rr	    = new Net::DNS::RR("name SOA mname rname $pretime");
+	sleep 10;
+	my $posttime = UNIXTIME;
 	my $postincr = $posttime + 1;
-	is( $rr->serial($posttime), $posttime, "rr->serial(time) steps from $pretime to $posttime" );
-	is( $rr->serial($posttime), $postincr, "rr->serial(time) increments $posttime to $postincr" );
+	is( $rr->serial($posttime), $posttime, "rr->serial(UNIXTIME) steps from $pretime to $posttime" );
+	is( $rr->serial($posttime), $postincr, "rr->serial(UNIXTIME) increments $posttime to $postincr" );
 }
 
 

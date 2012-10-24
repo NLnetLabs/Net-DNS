@@ -19,7 +19,6 @@ use strict;
 use integer;
 
 use Carp;
-use MIME::Base64;
 
 use Net::DNS::Parameters;
 use Net::DNS::DomainName;
@@ -28,12 +27,11 @@ use constant ANY  => classbyname qw(ANY);
 use constant TKEY => typebyname qw(TKEY);
 
 
-sub new {				## decode rdata from wire-format octet string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $end = $offset + $self->{rdlength};
+	my $limit = $offset + $self->{rdlength};
 
 	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
 
@@ -48,9 +46,7 @@ sub new {				## decode rdata from wire-format octet string
 	$self->{other} = substr $$data, $offset + 2, $other_size;
 	$offset += $other_size + 2;
 
-	croak 'malformed TKEY record' unless $offset == $end;
-
-	return $self;
+	croak('corrupt TKEY data') unless $offset == $limit;	# more or less FUBAR
 }
 
 
@@ -71,29 +67,17 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub rdatastr {				## format rdata portion of RR string.
+sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	my $data = $self->{rdata} ||= eval { $self->encode_rdata } || "";
-	my $length = length $data;				# unknown, per RFC3597
-	join " ", "\\#", $length, $length ? unpack( "H*", $data ) : ();
-}
-
-
-sub new_from_string {			## populate RR from rdata string
-	my $class = shift;
-	my $self = bless shift, $class;
-
 	croak 'zone file representation not defined for TKEY' if shift;
-
-	return $self;
 }
 
 
 sub encode {				## overide RR method
 	my $self = shift;
 
-	my $owner = new Net::DNS::DomainName($self->name )->encode();
+	my $owner = $self->{owner}->encode();
 	my $rdata = eval { $self->encode_rdata() } || '';
 	return pack 'a* n2 N n a*', $owner, TKEY, ANY, 0, length $rdata, $rdata;
 }
@@ -148,7 +132,6 @@ sub other {
 }
 
 sub other_data {&other}				## historical
-
 
 1;
 __END__
@@ -226,6 +209,8 @@ extensions.
 =head1 COPYRIGHT
 
 Copyright (c)2000 Andrew Tridgell. 
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 All rights reserved.
 

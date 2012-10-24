@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 15;
+use Test::More tests => 13;
 
 
 use Net::DNS;
 
 
-my $name = 'TKEY.example';
-my $type = 'TKEY';
-my $code = 249;
-my @attr = qw( algorithm inception expiration mode error );
-my @data = qw ( alg.example 0 0 1 0 );
-my @also = qw( key other );
+my $name = 'RP.example';
+my $type = 'RP';
+my $code = 17;
+my @attr = qw( mbox txtdname );
+my @data = qw( rp@example.com txt.example.net );
+my @also = qw( );
 
-my $wire = '03616c67076578616d706c650000000000000000000001000000000000';
+my $wire = '027270076578616d706c6503636f6d0003747874076578616d706c65036e657400';
 
 
 {
@@ -60,6 +60,18 @@ my $wire = '03616c67076578616d706c650000000000000000000001000000000000';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+}
+
+
+{
+	my $lc		= new Net::DNS::RR( lc ". $type @data" );
+	my $rr		= new Net::DNS::RR( uc ". $type @data" );
+	my $hash	= {};
+	my $predecessor = $rr->encode( 0, $hash );
+	my $compressed	= $rr->encode( length $predecessor, $hash );
+	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
+	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
+	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
 }
 
 

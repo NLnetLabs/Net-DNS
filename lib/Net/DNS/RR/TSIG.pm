@@ -24,16 +24,14 @@ use Net::DNS::DomainName;
 use constant ANY  => classbyname qw(ANY);
 use constant TSIG => typebyname qw(TSIG);
 
-use Digest::HMAC_MD5;
 use MIME::Base64;
 
-use constant DEFAULT_ALGORITHM => 'HMAC-MD5.SIG-ALG.REG.INT';
-use constant DEFAULT_FUDGE     => 300;
+use constant TSIG_DEFAULT_ALGORITHM => 'HMAC-MD5.SIG-ALG.REG.INT';
+use constant TSIG_DEFAULT_FUDGE     => 300;
 
 
-sub new {				## decode rdata from wire-format octet string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
 	my ( $data, $offset ) = @_;
 
 	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
@@ -51,8 +49,6 @@ sub new {				## decode rdata from wire-format octet string
 
 	my $other_size = unpack "\@$offset n", $$data;
 	$self->{other} = unpack "\@$offset xx a$other_size", $$data;
-
-	return $self;
 }
 
 
@@ -86,27 +82,42 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub rdatastr {				## format rdata portion of RR string.
+sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	join ' ', $self->algorithm, $self->error, $self->other || '';
 }
 
 
-sub new_from_string {			## populate RR from rdata string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
 
 	$self->key(@_) if @_;
-
-	return $self;
 }
+
+
+########################################
+{
+
+	# Default signing function using the HMAC-MD5 algorithm.
+	# This can be overridden using the sign_func attribute.
+
+	use Digest::HMAC_MD5;
+
+	sub _sign_hmac {
+		my $hmac = new Digest::HMAC_MD5( decode_base64(shift) );
+		$hmac->add(shift);
+		$hmac->digest;
+	}
+
+}
+########################################
 
 
 sub encode {				## overide RR method
 	my $self = shift;
 
-	my $kname = new Net::DNS::DomainName($self->name )->encode(0);  # uncompressed key name
+	my $kname = $self->{owner}->encode(0);			# uncompressed key name
 	my $rdata = eval { $self->encode_rdata(@_) } || '';
 	return pack 'a* n2 N n a*', $kname, TSIG, ANY, 0, length $rdata, $rdata;
 }
@@ -115,7 +126,7 @@ sub algorithm {
 	my $self = shift;
 
 	$self->{algorithm} = new Net::DNS::DomainName(shift) if @_;
-	$self->{algorithm} ||= new Net::DNS::DomainName(DEFAULT_ALGORITHM);
+	$self->{algorithm} ||= new Net::DNS::DomainName(TSIG_DEFAULT_ALGORITHM);
 	$self->{algorithm}->name if defined wantarray;
 }
 
@@ -137,7 +148,7 @@ sub fudge {
 	my $self = shift;
 
 	$self->{fudge} = shift if @_;
-	return 0 + ( $self->{fudge} || DEFAULT_FUDGE );
+	return 0 + ( $self->{fudge} || TSIG_DEFAULT_FUDGE );
 }
 
 sub mac {
@@ -193,7 +204,7 @@ sub sig_data {
 	$sigdata .= $packet->data;
 	push @{$packet}{additional}, $self;
 
-	my $kname = new Net::DNS::DomainName($self->name )->encode(0);	# uncompressed key name
+	my $kname = $self->{owner}->encode(0);			# uncompressed key name
 	$sigdata .= pack 'a* n N', $kname, ANY, 0;
 
 	$sigdata .= $self->{algorithm}->encode();		# uncompressed algorithm name
@@ -207,16 +218,6 @@ sub sig_data {
 	$sigdata .= pack 'na*', length($other), $other;
 
 	return $sigdata;
-}
-
-
-# Default signing function using the HMAC-MD5 algorithm.
-# This can be overridden using the sign_func attribute.
-
-sub _sign_hmac {
-	my $hmac = new Digest::HMAC_MD5( decode_base64(shift) );
-	$hmac->add(shift);
-	$hmac->digest;
 }
 
 1;
@@ -375,6 +376,8 @@ You can use other algorithms by supplying an appropriate sign_func.
 Copyright (c)2002 Michael Fuhr. 
 
 Portions Copyright (c)2002-2004 Chris Reinhardt.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 All rights reserved.
 

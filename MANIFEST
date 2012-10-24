@@ -114,7 +114,10 @@ t/05-NS.t
 t/05-OPT.t
 t/05-PTR.t
 t/05-PX.t
+t/05-RP.t
+t/05-RT.t
 t/05-SOA.t
+t/05-SRV.t
 t/05-TKEY.t
 t/05-TLSA.t
 t/05-TSIG.t

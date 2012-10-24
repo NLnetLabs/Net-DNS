@@ -7,14 +7,14 @@ use Test::More tests => 15;
 use Net::DNS;
 
 
-my $name = 'TKEY.example';
-my $type = 'TKEY';
-my $code = 249;
-my @attr = qw( algorithm inception expiration mode error );
-my @data = qw ( alg.example 0 0 1 0 );
-my @also = qw( key other );
+my $name = '_foo._tcp.example.com';
+my $type = 'SRV';
+my $code = 33;
+my @attr = qw( priority weight port target );
+my @data = qw( 1 3 9 fast.example.com );
+my @also = qw( );
 
-my $wire = '03616c67076578616d706c650000000000000000000001000000000000';
+my $wire = '0001000300090466617374076578616d706c6503636f6d00';
 
 
 {
@@ -60,6 +60,18 @@ my $wire = '03616c67076578616d706c650000000000000000000001000000000000';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+}
+
+
+{
+	my $lc		= new Net::DNS::RR( lc ". $type @data" );
+	my $rr		= new Net::DNS::RR( uc ". $type @data" );
+	my $hash	= {};
+	my $predecessor = $rr->encode( 0, $hash );
+	my $compressed	= $rr->encode( length $predecessor, $hash );
+	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
+	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
+	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
 }
 
 

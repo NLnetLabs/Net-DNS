@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 14;
+use Test::More tests => 16;
 
 
 use Net::DNS;
@@ -24,7 +24,8 @@ my @attr = qw( algorithm		time_signed fudge	key	sign_func );
 my @data = ( qw(fake.algorithm.example.com 100001 36000 ), 'fake key', \&mysign );
 my @also = qw( mac macbin error other );
 
-my $wire = '0466616B6509616C676F726974686D076578616D706C6503636F6D000000000186A18CA00020386163653137316336353034373533373861343635306135383339336662333104D200000000';
+my $wire =
+'0466616b6509616c676f726974686d076578616d706c6503636f6d000000000186a18ca00020386163653137316336353034373533373861343635306135383339336662333104d200000000';
 
 
 my $hash = {};
@@ -52,16 +53,21 @@ my $hash = {};
 		ok( defined $rr->$_, "additional attribute rr->$_()" );
 	}
 
-	my $empty = new Net::DNS::RR("$name $type");
+
+	my $null   = new Net::DNS::RR("$name NULL")->encode;
+	my $empty  = new Net::DNS::RR("$name $type")->encode;
+	my $rxbin  = decode Net::DNS::RR( \$empty )->encode;
 	my $packet = Net::DNS::Packet->new( $name, 'TKEY', 'IN' );
 	$packet->header->id(1234);				# fix packet id
 	my $encoded = $rr->encode( 0, {}, $packet );
-	my $hex1    = uc unpack 'H*', $encoded;
 	my $decoded = decode Net::DNS::RR( \$encoded );
-	my $hex2    = uc unpack 'H*', $decoded->encode;
-	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
-	is( $hex2, $hex1, 'encode/decode transparent' );
-	is( $hex3, $wire, 'encoded RDATA matches example' );
+	my $hex1    = unpack 'H*', $encoded;
+	my $hex2    = unpack 'H*', $decoded->encode;
+	my $hex3    = unpack 'H*', substr( $encoded, length $null );
+	is( $hex2,	    $hex1,	   'encode/decode transparent' );
+	is( $hex3,	    $wire,	   'encoded RDATA matches example' );
+	is( length($empty), length($null), 'encoded RDATA can be empty' );
+	is( length($rxbin), length($null), 'decoded RDATA can be empty' );
 }
 
 
@@ -70,9 +76,9 @@ my $hash = {};
 		name	   => $name,
 		type	   => 'TKEY',
 		algorithm  => $$hash{algorithm},
-		inception  => 100000,					# fix inception time to give predictable checksum
+		inception  => 100000,				# fix inception time to give predictable checksum
 		expiration => 100000 + 24 * 3600,
-		mode	   => 3,					# GSS API
+		mode	   => 3,				# GSS API
 		key	   => "fake key",
 		);
 
@@ -85,12 +91,12 @@ my $hash = {};
 
 
 	my $packet = Net::DNS::Packet->new( $name, 'TKEY', 'IN' );
-	$packet->header->id(1234);					# fixed packet id to give predictable checksum
+	$packet->header->id(1234);				# fixed packet id to give predictable checksum
 	$packet->push( 'answer',     $tkey );
 	$packet->push( 'additional', $tsig );
 
 
-	my $raw_packet = $packet->data;					# create the packet - which fills in the 'mac' field
+	my $raw_packet = $packet->data;				# create the packet - which fills in the 'mac' field
 
 	is(	$tsig->mac,
 		'6365643161343964663364643264656131306638303633626465366236643465',

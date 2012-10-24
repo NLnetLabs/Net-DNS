@@ -1,82 +1,113 @@
 package Net::DNS::RR::SOA;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
+use base Net::DNS::RR;
 
-	if ($self->{"rdlength"} > 0) {
-		($self->{"mname"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
-		($self->{"rname"}, $offset) = Net::DNS::Packet::dn_expand($data, $offset);
+=head1 NAME
 
-		@{$self}{qw(serial refresh retry expire minimum)} = unpack("\@$offset N5", $$data);
-	}
+Net::DNS::RR::SOA - DNS SOA resource record
 
-	return bless $self, $class;
-}
+=cut
 
-sub new_from_string {
-	my ($class, $self, $string) = @_;
 
-	if ($string) {
-		$string =~ tr/()//d;
+use strict;
+use integer;
 
-		# XXX do we need to strip out comments here now that RR.pm does it?
-		$string =~ s/;.*$//mg;
+use Net::DNS::DomainName;
+use Net::DNS::Mailbox;
 
-		@{$self}{qw(mname rname serial refresh retry expire minimum)} = $string =~ /(\S+)/g;
 
-		$self->{'mname'} = Net::DNS::stripdot($self->{'mname'});
-		$self->{'rname'} = Net::DNS::stripdot($self->{'rname'});
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
+sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
-	my $rdatastr;
+	my ( $data, $offset, @opaque ) = @_;
 
-	if (exists $self->{"mname"}) {
-		$rdatastr  = "$self->{mname}. $self->{rname}. (\n";
-		$rdatastr .= "\t" x 5 . "$self->{serial}\t; Serial\n";
-		$rdatastr .= "\t" x 5 . "$self->{refresh}\t; Refresh\n";
-		$rdatastr .= "\t" x 5 . "$self->{retry}\t; Retry\n";
-		$rdatastr .= "\t" x 5 . "$self->{expire}\t; Expire\n";
-		$rdatastr .= "\t" x 5 . "$self->{minimum} )\t; Minimum TTL";
-	} else {
-		$rdatastr = '';
-	}
-
-	return $rdatastr;
+	( $self->{mname}, $offset ) = decode Net::DNS::DomainName1035(@_);
+	( $self->{rname}, $offset ) = decode Net::DNS::Mailbox1035($data,$offset,@opaque );
+	@{$self}{qw(serial refresh retry expire minimum)} = unpack "\@$offset N5", $$data;
 }
 
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
 
-	# Assume that if one field exists, they all exist.  Script will
-	# print a warning otherwise.
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+	my ( $offset, @opaque ) = @_;
 
-	if (exists $self->{"mname"}) {
-		$rdata .= $packet->dn_comp($self->{"mname"}, $offset);
-		$rdata .= $packet->dn_comp($self->{"rname"},  $offset + length $rdata);
-
-		$rdata .= pack("N5", @{$self}{qw(serial refresh retry expire minimum)});
-	}
-
-	return $rdata;
+	return '' unless defined $self->{rname};
+	my $rdata = $self->{mname}->encode(@_);
+	$rdata .= $self->{rname}->encode( $offset + length($rdata), @opaque );
+	$rdata .= pack "N5", map $self->$_, qw(serial refresh retry expire minimum);
 }
 
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless defined $self->{rname};
+	my $mname = $self->{mname}->string;
+	my $rname = $self->{rname}->string;
+	my @n	  = map { sprintf "%-10u\t;$_", $self->$_ } qw(serial refresh retry expire);
+	join "\n\t\t\t\t", "$mname $rname (", @n, sprintf "%-6u )\t;minimum", $self->minimum;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	my $ttl = $self->{ttl};
+	$self->$_( @_ ? shift		  : () ) for qw(mname rname serial);
+	$self->$_( @_ ? $self->ttl(shift) : () ) for qw(refresh retry expire minimum);
+	$self->{ttl} = $ttl;
+}
+
+
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	$self->parse_rdata( qw(. . 0 1d 1h 1w 3h) );
+	$self->{serial} = undef;
+}
+
+
+########################################
+{
+
+	sub _ordered($$) {				## irreflexive 32-bit partial ordering
+		use integer;
+		my ( $a, $b ) = @_;
+
+		return defined $b unless defined $a;		# ( undef, any )
+		return 0 unless defined $b;			# ( any, undef )
+
+		# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
+		if ( $a < 0 ) {					# translate $a<0 region
+			$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;	#  0	 <= $a < 2**31
+			$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;	# -2**31 <= $b < 2**32
+		}
+
+		return $a < $b ? ( $a > ( $b - 0x80000000 ) ) : ( $b < ( $a - 0x80000000 ) );
+	}
+
+}
+########################################
+
+
+sub mname {
+	my $self = shift;
+
+	$self->{mname} = new Net::DNS::DomainName1035(shift) if @_;
+	$self->{mname}->name if defined wantarray;
+}
+
+sub rname {
+	my $self = shift;
+
+	$self->{rname} = new Net::DNS::Mailbox1035(shift) if @_;
+	$self->{rname}->address if defined wantarray;
+}
 
 sub serial {
 	use integer;
@@ -85,71 +116,50 @@ sub serial {
 	return $self->{serial} || 0 unless @_;			# current/default value
 
 	my $value = shift;					# replace if in sequence
-	return $self->{serial} = $value if _ordered( $self->{serial}, $value );
+	return $self->{serial} = 0 + $value if _ordered( $self->{serial}, $value );
 
-	# unwise to assume 32-bit hardware, or that integer overflow goes unpunished
-	my $serial = 0xFFFFFFFF & ( 0 + $self->{serial} );
-	return $self->{serial} ^= 0xFFFFFFFF if ( $serial & 0x7FFFFFFF ) == 0x7FFFFFFF;	   # wrap
+	# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
+	my $serial = 0xFFFFFFFF & ( $self->{serial} || 0 );
+	return $self->{serial} = $serial ^ 0xFFFFFFFF if ( $serial & 0x7FFFFFFF ) == 0x7FFFFFFF;    # wrap
 	return $self->{serial} = $serial + 1;			# increment
 }
 
+sub refresh {
+	my $self = shift;
 
-sub _ordered($$) {				## irreflexive partial ordering (32-bit)
-	use integer;
-	my ( $a, $b ) = @_;
-
-	return defined $b unless defined $a;			# ( undef, any )
-	return 0 unless defined $b;				# ( any, undef )
-
-	# unwise to assume 32-bit hardware, or that integer overflow goes unpunished
-	if ( $a < 0 ) {						# translate $a<0 region
-		$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;		#  0	 <= $a < 2**31
-		$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;		# -2**31 <= $b < 2**32
-	}
-
-	if ( $a < $b ) {
-		return $a > ( $b - 0x80000000 );
-	} else {
-		return $b < ( $a - 0x80000000 );
-	}
+	$self->{refresh} = shift if @_;
+	return 0 + ( $self->{refresh} || 0 );
 }
 
+sub retry {
+	my $self = shift;
 
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'mname'}=Net::DNS::stripdot($self->{'mname'}) if defined $self->{'mname'};
-	$self->{'rname'}=Net::DNS::stripdot($self->{'rname'}) if defined $self->{'rname'};
+	$self->{retry} = shift if @_;
+	return 0 + ( $self->{retry} || 0 );
 }
 
+sub expire {
+	my $self = shift;
 
-sub _canonicalRdata {
-    my $self=shift;
-    my $rdata = "";
-
-    # Assume that if one field exists, they all exist.  Script will
-    # print a warning otherwise.
-
-    if (exists $self->{"mname"}) {
-		$rdata .= $self->_name2wire(lc($self->{"mname"}));
-		$rdata .= $self->_name2wire(lc($self->{"rname"}));
-		$rdata .= pack("N5", @{$self}{qw(serial refresh retry expire minimum)});
-	}
-
-	return $rdata;
+	$self->{expire} = shift if @_;
+	return 0 + ( $self->{expire} || 0 );
 }
 
+sub minimum {
+	my $self = shift;
+
+	$self->{minimum} = shift if @_;
+	return 0 + ( $self->{minimum} || 0 );
+}
 
 1;
 __END__
 
-=head1 NAME
-
-Net::DNS::RR::SOA - DNS SOA resource record
 
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name SOA mname rname 0 86400 3600 604800 10800');
 
 =head1 DESCRIPTION
 
@@ -157,25 +167,32 @@ Class for DNS Start of Authority (SOA) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 mname
 
-    print "mname = ", $rr->mname, "\n";
+    $mname = $rr->mname;
 
-Returns the domain name of the original or primary nameserver for
-this zone.
+The domain name of the name server that was the
+original or primary source of data for this zone.
 
 =head2 rname
 
-    print "rname = ", $rr->rname, "\n";
+    $rname = $rr->rname;
 
-Returns a domain name that specifies the mailbox for the person
-responsible for this zone.
-
+The mailbox which identifies the person responsible
+for maintaining this zone.
 
 =head2 serial
 
-    print "serial = ", $rr->serial, "\n";
-    $new_serial = $rr->serial(value);
+    $serial = $rr->serial;
+    $serial = $rr->serial(value);
 
 Unsigned 32 bit version number of the original copy of the zone.
 Zone transfers preserve this value.
@@ -184,80 +201,85 @@ RFC1982 defines a strict (irreflexive) partial ordering for zone
 serial numbers. The serial number will be incremented unless the
 replacement value argument satisfies the ordering constraint.
 
-
 =head2 refresh
 
-    print "refresh = ", $rr->refresh, "\n";
+    $refresh = $rr->refresh;
 
-Returns the zone's refresh interval.
+A 32 bit time interval before the zone should be refreshed.
 
 =head2 retry
 
-    print "retry = ", $rr->retry, "\n";
+    $retry = $rr->retry;
 
-Returns the zone's retry interval.
+A 32 bit time interval that should elapse before a
+failed refresh should be retried.
 
 =head2 expire
 
-    print "expire = ", $rr->expire, "\n";
+    $expire = $rr->expire;
 
-Returns the zone's expire interval.
+A 32 bit time value that specifies the upper limit on
+the time interval that can elapse before the zone is no
+longer authoritative.
 
 =head2 minimum
 
-    print "minimum = ", $rr->minimum, "\n";
+    $minimum = $rr->minimum;
 
-Returns the minimum (default) TTL for records in this zone.
-
+The unsigned 32 bit minimum TTL field that should be
+exported with any RR from this zone.
 
 =head1 Zone Serial Number Management
 
-The internal logic of the serial() method offers support for
-several widely used zone serial numbering policies.
+The internal logic of the serial() method offers support for several
+widely used zone serial numbering policies.
 
 =head2 Strictly Sequential
 
     $successor = $soa->serial( SEQUENTIAL );
 
-The existing serial number is incremented modulo 2**32 because
-the value returned by the auxiliary SEQUENTIAL() function can never
+The existing serial number is incremented modulo 2**32 because the
+value returned by the auxiliary SEQUENTIAL() function can never
 satisfy the serial number ordering constraint.
 
 =head2 Date Encoded
 
     $successor = $soa->serial( YYYYMMDDxx );
 
-The 32 bit value returned by the auxiliary YYYYMMDDxx() function
-will be used if it satisfies the ordering constraint, otherwise
-the existing serial number will be incremented as above.
+The 32 bit value returned by the auxiliary YYYYMMDDxx() function will
+be used if it satisfies the ordering constraint, otherwise the serial
+number will be incremented as above.
 
-Serial number increments must be limited to 100 per day for the
-date information to remain useful.
+Serial number increments must be limited to 100 per day for the date
+information to remain useful.
 
 =head2 Time Encoded
 
-    $successor = $soa->serial( time );
+    $successor = $soa->serial( UNIXTIME );
 
-The 32 bit value returned by the perl CORE::time() function will
-be used if it satisfies the serial number ordering constraint,
-otherwise the existing value will be incremented as above.
+The 32 bit value returned by the auxiliary UNIXTIME() function will
+used if it satisfies the ordering constraint, otherwise the existing
+serial number will be incremented as above.
 
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002-2004 Chris Reinhardt.
 
-Portions Copyright (c) 2011 Dick Franks.
+Portions Copyright (c)2010,2012 Dick Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.13, RFC1982
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.3.13, RFC1982
 
 =cut
