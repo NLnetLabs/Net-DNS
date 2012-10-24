@@ -1,29 +1,21 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 16;
+use Test::More tests => 13;
 
 
 use Net::DNS;
 
 
-my $name = 'HIP.example';
-my $type = 'HIP';
-my $code = 55;
-my @attr = qw( pkalgorithm hit key servers );
-my @data = qw( 2 200100107b1a74df365639cc39f1d578
-		AwEAAbdxyhNuSutc5EMzxTs9LBPCIkOFH8cIvM4p9+LrV4e19WzK00+CI6zBCQTdtWsuxKbWIy87UOoJTwkUs7lBu+Upr1gsNrut79ryra+bSRGQb1slImA8YVJyuIDsj7kwzG7jnERNqnWxZ48AWkskmdHaVDP4BcelrTI3rMXdXF5D
-		rvs1.example.com
-		rvs2.example.com );
-my @also = qw( keybin );
+my $name = 'KX.example';
+my $type = 'KX';
+my $code = 36;
+my @attr = qw( preference exchange );
+my @data = qw( 10 kx.example.com );
+my @also = qw( );
 
-my $wire = join '', qw( 10020084200100107b1a74df365639cc39f1d57803010001b771ca136e4aeb5c
-		e44333c53b3d2c13c22243851fc708bcce29f7e2eb5787b5f56ccad34f8223ac
-		c10904ddb56b2ec4a6d6232f3b50ea094f0914b3b941bbe529af582c36bbadef
-		daf2adaf9b4911906f5b2522603c615272b880ec8fb930cc6ee39c444daa75b1
-		678f005a4b2499d1da5433f805c7a5ad3237acc5dd5c5e430472767331076578
-		616d706c6503636f6d000472767332076578616d706c6503636f6d00
-		);
+my $wire = '000a026b78076578616d706c6503636f6d00';
+
 
 {
 	my $typecode = unpack 'xn', new Net::DNS::RR(". $type")->encode;
@@ -45,23 +37,14 @@ my $wire = join '', qw( 10020084200100107b1a74df365639cc39f1d57803010001b771ca13
 	is( $rr2->encode, $rr->encode, 'new($string) and new(%hash) equivalent' );
 
 	foreach (@attr) {
-		next if /server/;
 		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
-	}
-
-	for (qw(servers)) {
-		my ($rvs) = $rr->$_;				# test limitation: single element list
-		is( $rvs, $hash->{$_}, "expected result from rr->$_()" );
 	}
 
 	foreach (@also) {
 		is( $rr2->$_, $rr->$_, "additional attribute rr->$_()" );
 	}
-}
 
 
-{
-	my $rr	    = new Net::DNS::RR("$name $type @data");
 	my $null    = new Net::DNS::RR("$name NULL")->encode;
 	my $empty   = new Net::DNS::RR("$name $type")->encode;
 	my $rxbin   = decode Net::DNS::RR( \$empty )->encode;
@@ -87,8 +70,8 @@ my $wire = join '', qw( 10020084200100107b1a74df365639cc39f1d57803010001b771ca13
 	my $predecessor = $rr->encode( 0, $hash );
 	my $compressed	= $rr->encode( length $predecessor, $hash );
 	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
-	isnt( $rr->encode,    $lc->encode, 'encoded RDATA names not downcased' );
-	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
+	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
+	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
 }
 
 

@@ -22,16 +22,13 @@ use Carp;
 use Net::DNS::DomainName;
 use MIME::Base64;
 
-use Text::ParseWords;
 
-
-sub new {				## decode rdata from wire-format octet string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
 	my ( $data, $offset ) = @_;
 
 	my ( $hitlen, $pklen ) = unpack "\@$offset Cxn", $$data;
-	@{$self}{qw(pkalgorithm hitbin pubkeybin)} = unpack "\@$offset xCxx a$hitlen a$pklen", $$data;
+	@{$self}{qw(pkalgorithm hitbin keybin)} = unpack "\@$offset xCxx a$hitlen a$pklen", $$data;
 
 	my $limit = $offset + $self->{rdlength};
 	$offset += 4 + $hitlen + $pklen;
@@ -42,52 +39,37 @@ sub new {				## decode rdata from wire-format octet string
 		push @{$self}{servers}, $item;
 	}
 	croak('corrupt HIP data') unless $offset == $limit;	# more or less FUBAR
-
-	return $self;
 }
 
-
-sub rr_rdata {				## encode rdata as wire-format octet string
-	my $self = shift;
-	my $pkt	 = shift;
-	$self->encode_rdata(@_);
-}
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $hit = $self->hitbin || return '';
-	my $key = $self->pubkeybin;
+	return '' unless $self->{hitbin};
+	my $hit = $self->hitbin;
+	my $key = $self->keybin;
 	my $nos = pack 'C2n a* a*', length($hit), $self->pkalgorithm, length($key), $hit, $key;
 	join '', $nos, map $_->encode, @{$self->{servers}};
 }
 
 
-sub rdatastr {				## format rdata portion of RR string.
+sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $algorithm = $self->pkalgorithm || return '';
+	return '' unless $self->{hitbin};
+	my $algorithm = $self->pkalgorithm;
 	my $hit	      = $self->hit;
-	my $pubkey    = MIME::Base64::encode( $self->pubkeybin, "\n\t" );
+	my $base64    = MIME::Base64::encode $self->keybin;
 	my @servers   = map $_->string, @{$self->{servers}};
-	return "( $algorithm $hit\n\t$pubkey@servers )";
+	return "$algorithm $hit (\n$base64@servers )";
 }
 
-
-sub new_from_string {			## populate RR from rdata string
-	my $class = shift;
-	my $self  = bless shift, $class;
-	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
-	$self->parse_rdata(@parse) if @parse;
-	return $self;
-}
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->pkalgorithm(shift);
-	$self->hit(shift);
-	$self->pubkey( grep { $_ !~ /[.]/ } @_ );
+	$self->$_(shift) for qw(pkalgorithm hit);
+	$self->key( grep { $_ !~ /[.]/ } @_ );
 	$self->servers( grep { $_ =~ /[.]/ } @_ );
 }
 
@@ -102,8 +84,8 @@ sub pkalgorithm {
 sub hit {
 	my $self = shift;
 
-	$self->hitbin( pack 'H*', shift ) if @_;
-	return unpack 'H*', $self->hitbin if defined wantarray;
+	$self->{hitbin} = pack "H*", join( "", map { s/\s+//g; $_ } @_ ) if @_;
+	unpack "H*", $self->{hitbin} || "" if defined wantarray;
 }
 
 sub hitbin {
@@ -113,18 +95,18 @@ sub hitbin {
 	$self->{hitbin} || "";
 }
 
-sub pubkey {
+sub key {
 	my $self = shift;
 
-	$self->pubkeybin( MIME::Base64::decode( join '', @_ ) ) if @_;
-	return MIME::Base64::encode( $self->pubkeybin, '' ) if defined wantarray;
+	$self->{keybin} = MIME::Base64::decode( join "", @_ ) if @_;
+	return MIME::Base64::encode( $self->keybin, "" ) if defined wantarray;
 }
 
-sub pubkeybin {
+sub keybin {
 	my $self = shift;
 
-	$self->{pubkeybin} = shift if @_;
-	$self->{pubkeybin} || "";
+	$self->{keybin} = shift if @_;
+	$self->{keybin} || "";
 }
 
 sub servers {
@@ -135,11 +117,12 @@ sub servers {
 	return map $_->name, @$servers if defined wantarray;
 }
 
+sub pubkey { &key; }						# historical
+
 sub rendezvousservers {						# historical
 	my @servers = &servers;
 	\@servers;
 }
-
 
 1;
 __END__
@@ -148,7 +131,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name IN HIP algorithm hit publickey servers');
+    $rr = new Net::DNS::RR('name IN HIP algorithm hit key servers');
 
 =head1 DESCRIPTION
 
@@ -166,7 +149,7 @@ other unpredictable behaviour.
 
 =head2 pkalgorithm
 
-    $pkalgorithm = $object->pkalgorithm;
+    $pkalgorithm = $rr->pkalgorithm;
 
 The PK algorithm field indicates the public key cryptographic
 algorithm and the implied public key field format.
@@ -180,19 +163,19 @@ The hexadecimal representation of the host identity tag.
 
 =head2 hitbin
 
-    $hitbin = $object->hitbin;
+    $hitbin = $rr->hitbin;
 
 The binary representation of the host identity tag.
 
-=head2 pubkey
+=head2 key
 
-    $publickey = $rr->pubkey;
+    $key = $rr->key;
 
-The base64 representation of the public key.
+The hexadecimal representation of the public key.
 
-=head2 pubkeybin
+=head2 keybin
 
-    $pubkeybin = $object->pubkeybin;
+    $keybin = $rr->keybin;
 
 The binary representation of the public key.
 
@@ -206,6 +189,8 @@ Optional list of domain names of rendezvous servers.
 =head1 COPYRIGHT
 
 Copyright (c)2009 Olaf Kolkman, NLnet Labs
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 All rights reserved.
 

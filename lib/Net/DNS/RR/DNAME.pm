@@ -1,78 +1,73 @@
 package Net::DNS::RR::DNAME;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		($self->{"dname"}) = Net::DNS::Packet::dn_expand($data, $offset);
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string) {
-		$string =~ s/\.+$//;
-		$self->{"dname"} = $string;
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return $self->{"dname"} ? "$self->{dname}." : '';
-}
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
-	if (exists $self->{"dname"}) {
-		$rdata = $packet->dn_comp($self->{"dname"}, $offset);
-	}
-
-	return $rdata;
-}
-
-
-
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'dname'}=Net::DNS::stripdot($self->{'dname'}) if defined $self->{'dname'};
-
-
-}
-
-
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::DNAME - DNS DNAME resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use Net::DNS::DomainName;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+
+	$self->{target} = decode Net::DNS::DomainName2535(@_);
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{target};
+	$self->{target}->encode(@_);
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{target};
+	$self->{target}->string;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->target(shift);
+}
+
+
+sub target {
+	my $self = shift;
+
+	$self->{target} = new Net::DNS::DomainName2535(shift) if @_;
+	$self->{target}->name if defined wantarray;
+}
+
+sub dname { &target; }				## historical
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name DNAME target');
 
 =head1 DESCRIPTION
 
@@ -80,25 +75,36 @@ Class for DNS Non-Terminal Name Redirection (DNAME) resource records.
 
 =head1 METHODS
 
-=head2 dname
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
 
-    print "dname = ", $rr->dname, "\n";
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
 
-Returns the DNAME target.
+
+=head2 target
+
+    $target = $rr->target;
+
+Redirection target domain name which is to be substituted
+for its owner as a suffix of a domain name.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)2002 Andreas Gustafsson. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 2672
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC2672
 
 =cut

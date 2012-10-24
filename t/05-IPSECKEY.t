@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 16;
 
 
 use Net::DNS;
@@ -10,11 +10,12 @@ use Net::DNS;
 my $name = '38.1.0.192.in-addr.arpa';
 my $type = 'IPSECKEY';
 my $code = 45;
-my @attr = qw( precedence gatetype algorithm gateway pubkey );
+my @attr = qw( precedence gatetype algorithm gateway key );
 my @data = qw( 10 3 2 gateway.example.com AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== );
 my @also = qw( );
 
-my $wire = '0A03020767617465776179076578616D706C6503636F6D00010351537986ED35533B6064478EEEB27B5BD74DAE149B6E81BA3A0521AF82AB7801';
+my $wire =
+'0a03020767617465776179076578616d706c6503636f6d00010351537986ed35533b6064478eeeb27b5bd74dae149b6e81ba3a0521af82ab7801';
 
 
 {
@@ -45,14 +46,21 @@ my $wire = '0A03020767617465776179076578616D706C6503636F6D00010351537986ED35533B
 	}
 
 
-	my $empty   = new Net::DNS::RR("$name $type");
+	my $null    = new Net::DNS::RR("$name NULL")->encode;
+	my $empty   = new Net::DNS::RR("$name $type")->encode;
+	my $rxbin   = decode Net::DNS::RR( \$empty )->encode;
+	my $txtext  = new Net::DNS::RR("$name $type")->string;
+	my $rxtext  = new Net::DNS::RR($txtext)->encode;
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
-	my $hex1    = uc unpack 'H*', $decoded->encode;
-	my $hex2    = uc unpack 'H*', $encoded;
-	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
-	is( $hex1, $hex2, 'encode/decode transparent' );
-	is( $hex3, $wire, 'encoded RDATA matches example' );
+	my $hex1    = unpack 'H*', $encoded;
+	my $hex2    = unpack 'H*', $decoded->encode;
+	my $hex3    = unpack 'H*', substr( $encoded, length $null );
+	is( $hex2,	     $hex1,	    'encode/decode transparent' );
+	is( $hex3,	     $wire,	    'encoded RDATA matches example' );
+	is( length($empty),  length($null), 'encoded RDATA can be empty' );
+	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
+	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
 
@@ -63,7 +71,7 @@ my $wire = '0A03020767617465776179076578616D706C6503636F6D00010351537986ED35533B
 	my $predecessor = $rr->encode( 0, $hash );
 	my $compressed	= $rr->encode( length $predecessor, $hash );
 	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
-	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
+	isnt( $rr->encode,    $lc->encode, 'encoded RDATA names not downcased' );
 	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
 }
 

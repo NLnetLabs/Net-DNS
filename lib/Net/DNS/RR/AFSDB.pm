@@ -1,101 +1,82 @@
 package Net::DNS::RR::AFSDB;
+
 #
 # $Id$
 #
-use strict;
-
-BEGIN {
-    eval { require bytes; }
-}
-
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		my ($subtype) = unpack("\@$offset n", $$data);
-		$offset += Net::DNS::INT16SZ();
-		my($hostname) = Net::DNS::Packet::dn_expand($data, $offset);
-		$self->{"subtype"} = $subtype;
-		$self->{"hostname"} = $hostname;
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string && ($string =~ /^(\d+)\s+(\S+)$/)) {
-		$self->{"subtype"}  = $1;
-		$self->{"hostname"} = Net::DNS::stripdot($2);
-
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return exists $self->{"subtype"}
-	       ? "$self->{subtype} $self->{hostname}."
-	       : '';
-}
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
-	if (exists $self->{"subtype"}) {
-		$rdata .= pack("n", $self->{"subtype"});
-		$rdata .= $packet->dn_comp($self->{"hostname"},
-					   $offset + length $rdata);
-	}
-
-	return $rdata;
-}
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-
-	foreach my $attribute ( qw ( hostname ) ){
-		$self->{$attribute}=Net::DNS::stripdot($self->{$attribute}) if defined $self->{$attribute};
-	}
-
-}
-
-
-
-
-sub _canonicalRdata {
-    # rdata contains a compressed domainname... we should not have that.
-	my ($self) = @_;
-	my $rdata;
-	if (exists $self->{"subtype"}) {
-	    $rdata .= pack("n", $self->{"subtype"});
-	    $rdata .=  $self->_name2wire(lc($self->{"hostname"}));
-	}
-	return $rdata;
-}
-
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::AFSDB - DNS AFSDB resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+use Net::DNS::DomainName;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset, @opaque ) = @_;
+
+	$self->{subtype} = unpack "\@$offset n", $$data;
+	$self->{hostname} = decode Net::DNS::DomainName2535($data,$offset+2,@opaque );
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+	my ( $offset, @opaque ) = @_;
+
+	return '' unless $self->{hostname};
+	my $rdata = pack 'n', $self->subtype;
+	$rdata .= $self->{hostname}->encode( $offset + length($rdata), @opaque );
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{hostname};
+	join ' ', $self->subtype, $self->{hostname}->string;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->$_(shift) for qw(subtype hostname);
+}
+
+
+sub subtype {
+	my $self = shift;
+
+	$self->{subtype} = shift if @_;
+	return 0 + ( $self->{subtype} || 0 );
+}
+
+sub hostname {
+	my $self = shift;
+
+	$self->{hostname} = new Net::DNS::DomainName2535(shift) if @_;
+	$self->{hostname}->name if defined wantarray;
+}
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name AFSDB subtype hostname');
 
 =head1 DESCRIPTION
 
@@ -103,32 +84,43 @@ Class for DNS AFS Data Base (AFSDB) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 subtype
 
-    print "subtype = ", $rr->subtype, "\n";
+    $subtype = $rr->subtype;
 
-Returns the RR's subtype field.  Use of the subtype field is documented
-in RFC 1183.
+A 16 bit integer which indicates the service offered by the
+listed host.
 
 =head2 hostname
 
-    print "hostname = ", $rr->hostname, "\n";
+    $hostname = $rr->hostname;
 
-Returns the RR's hostname field.  See RFC 1183.
+The hostname field is a domain name of a host that has a server
+for the cell named by the owner name of the RR.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-1998 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1183 Section 1
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1183, RFC5864
 
 =cut
