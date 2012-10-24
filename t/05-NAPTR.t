@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 12;
+use Test::More tests => 17;
 
 
 use Net::DNS;
 
 
-my $name = 'NS.example';
-my $type = 'NS';
-my $code = 2;
-my @attr = qw( nsdname );
-my @data = qw( ns.example.com );
+my $name = '2.1.2.1.5.5.5.0.7.7.1.e164.arpa.';
+my $type = 'NAPTR';
+my $code = 35;
+my @attr = qw( order preference flags service regexp replacement );
+my @data = qw( 100 10 u sip+E2U !^.*$!sip:information@foo.se!i . );
 my @also = qw( );
 
-my $wire = '026e73076578616d706c6503636f6d00';
+my $wire = '0064000a0175077369702b4532551e215e2e2a24217369703a696e666f726d6174696f6e40666f6f2e7365216900';
 
 
 {
@@ -64,12 +64,12 @@ my $wire = '026e73076578616d706c6503636f6d00';
 
 
 {
-	my $lc		= new Net::DNS::RR( lc ". $type @data" );
-	my $rr		= new Net::DNS::RR( uc ". $type @data" );
+	my $lc		= new Net::DNS::RR('. NAPTR 100 50 "s" "http+N2L+N2C+N2R" "" www.example.com.');
+	my $rr		= new Net::DNS::RR('. NAPTR 100 50 "s" "http+N2L+N2C+N2R" "" WWW.EXAMPLE.COM.');
 	my $hash	= {};
 	my $predecessor = $rr->encode( 0, $hash );
 	my $compressed	= $rr->encode( length $predecessor, $hash );
-	ok( length $compressed < length $predecessor, 'encoded RDATA compressible' );
+	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
 	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
 	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
 }

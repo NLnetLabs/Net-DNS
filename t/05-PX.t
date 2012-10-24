@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 12;
+use Test::More tests => 14;
 
 
 use Net::DNS;
 
 
-my $name = 'NS.example';
-my $type = 'NS';
-my $code = 2;
-my @attr = qw( nsdname );
-my @data = qw( ns.example.com );
+my $name = '*.net2.it';
+my $type = 'PX';
+my $code = 26;
+my @attr = qw( preference map822 mapx400 );
+my @data = qw( 10 net2.it PRMD-net2.ADMDb.C-it );
 my @also = qw( );
 
-my $wire = '026e73076578616d706c6503636f6d00';
+my $wire = '000a046e657432026974000950524d442d6e6574320541444d446204432d697400';
 
 
 {
@@ -69,7 +69,7 @@ my $wire = '026e73076578616d706c6503636f6d00';
 	my $hash	= {};
 	my $predecessor = $rr->encode( 0, $hash );
 	my $compressed	= $rr->encode( length $predecessor, $hash );
-	ok( length $compressed < length $predecessor, 'encoded RDATA compressible' );
+	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
 	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
 	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
 }

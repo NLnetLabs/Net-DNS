@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 
 use Net::DNS;
 
 
-my $name = 'NS.example';
-my $type = 'NS';
-my $code = 2;
-my @attr = qw( nsdname );
-my @data = qw( ns.example.com );
+my $name = 'MX.example';
+my $type = 'MX';
+my $code = 15;
+my @attr = qw( preference exchange );
+my @data = qw( 10 mx.example.com );
 my @also = qw( );
 
-my $wire = '026e73076578616d706c6503636f6d00';
+my $wire = '000a026d78076578616d706c6503636f6d00';
 
 
 {

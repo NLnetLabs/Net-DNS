@@ -7,14 +7,14 @@ use Test::More tests => 12;
 use Net::DNS;
 
 
-my $name = 'NS.example';
-my $type = 'NS';
-my $code = 2;
-my @attr = qw( nsdname );
-my @data = qw( ns.example.com );
+my $name = '1.2.0.192.in-addr.arpa';
+my $type = 'PTR';
+my $code = 12;
+my @attr = qw( ptrdname );
+my @data = qw( example.com );
 my @also = qw( );
 
-my $wire = '026e73076578616d706c6503636f6d00';
+my $wire = '076578616d706c6503636f6d00';
 
 
 {

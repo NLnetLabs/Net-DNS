@@ -1,20 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 12;
+use Test::More tests => 13;
 
 
 use Net::DNS;
 
 
-my $name = 'NS.example';
-my $type = 'NS';
-my $code = 2;
-my @attr = qw( nsdname );
-my @data = qw( ns.example.com );
+my $name = 'MINFO.example';
+my $type = 'MINFO';
+my $code = 14;
+my @attr = qw( rmailbx emailbx );
+my @data = qw( rp@example.com rp@example.net );
 my @also = qw( );
 
-my $wire = '026e73076578616d706c6503636f6d00';
+my $wire = '027270076578616d706c6503636f6d00027270076578616d706c65036e657400';
 
 
 {

@@ -23,8 +23,6 @@ use Net::DNS::DomainName;
 
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
-	my ( $data, $offset ) = @_;
-	my @opaque;
 
 	$self->{nsdname} = decode Net::DNS::DomainName1035(@_);
 }
@@ -33,8 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my ( $offset, @opaque ) = @_;
-
+	return '' unless $self->{nsdname};
 	$self->{nsdname}->encode(@_);
 }
 
@@ -42,6 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
+	return '' unless $self->{nsdname};
 	$self->{nsdname}->string;
 }
 
@@ -49,7 +47,7 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->{nsdname} = new Net::DNS::DomainName1035(shift);
+	$self->nsdname(shift);
 }
 
 
@@ -59,7 +57,6 @@ sub nsdname {
 	$self->{nsdname} = new Net::DNS::DomainName1035(shift) if @_;
 	$self->{nsdname}->name if defined wantarray;
 }
-
 
 1;
 __END__
@@ -100,7 +97,7 @@ authoritative for the specified class and domain.
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c)1997-2002 Michael Fuhr. 
 
 Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
