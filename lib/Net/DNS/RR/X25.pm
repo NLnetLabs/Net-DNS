@@ -1,69 +1,73 @@
 package Net::DNS::RR::X25;
+
 #
 # $Id$
 #
-use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		my ($len) = unpack("\@$offset C", $$data);
-		++$offset;
-		$self->{"psdn"} = substr($$data, $offset, $len);
-		$offset += $len;
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string && $string =~ /^\s*["']?(.*?)["']?\s*$/) {
-		$self->{"psdn"} = $1;
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return exists $self->{"psdn"}
-	       ? qq("$self->{psdn}")
-	       : '';
-}
-
-sub rr_rdata {
-	my $self = shift;
-	my $rdata = "";
-
-	if (exists $self->{"psdn"}) {
-		$rdata .= pack("C", length $self->{"psdn"});
-		$rdata .= $self->{"psdn"};
-	}
-
-	return $rdata;
-}
-
-1;
-__END__
+use base Net::DNS::RR;
 
 =head1 NAME
 
 Net::DNS::RR::X25 - DNS X25 resource record
 
+=cut
+
+
+use strict;
+use integer;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+	my ( $data, $offset ) = @_;
+
+	my $asize = unpack "\@$offset C", $$data;
+	$self->{address} = unpack "\@$offset x a$asize", $$data;
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	my $length = length($self->{address}) || return '';
+	pack 'C a*', $length, $self->{address};
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless length($self->{address});
+	$self->address;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->address(shift);
+}
+
+
+sub address {
+	my $self = shift;
+
+	$self->{address} = shift if @_;
+	$self->{address} || "";
+}
+
+sub psdn { &address; }
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name X25 address');
 
 =head1 DESCRIPTION
 
@@ -71,25 +75,37 @@ Class for DNS X25 resource records.
 
 =head1 METHODS
 
-=head2 psdn
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
 
-    print "psdn = ", $rr->psdn, "\n";
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
 
-Returns the PSDN address.
+
+=head2 address
+
+    $address = $rr->address;
+
+The PSDN-address is a string of decimal digits, beginning with
+the 4 digit DNIC (Data Network Identification Code), as specified
+in X.121.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c) 1997 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1183 Section 3.1
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1183 Section 3.1
 
 =cut

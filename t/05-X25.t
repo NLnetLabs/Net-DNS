@@ -1,19 +1,20 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 47;
+use Test::More tests => 9;
 
 
 use Net::DNS;
 
 
-my $name = 'TXT.example';
-my $type = 'TXT';
-my $code = 16;
-my @attr = qw( txtdata );
-my @data = qw( arbitrary_text );
+my $name = 'relay.prime.com';
+my $type = 'X25';
+my $code = 19;
+my @attr = qw( address );
+my @data = qw( 311061700956 );
+my @also = qw( );
 
-my $wire = '0e6172626974726172795f74657874';
+my $wire = '0c333131303631373030393536';
 
 
 {
@@ -39,6 +40,10 @@ my $wire = '0e6172626974726172795f74657874';
 		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
 	}
 
+	foreach (@also) {
+		is( $rr2->$_, $rr->$_, "additional attribute rr->$_()" );
+	}
+
 
 	my $null    = new Net::DNS::RR("$name NULL")->encode;
 	my $empty   = new Net::DNS::RR("$name $type")->encode;
@@ -55,36 +60,6 @@ my $wire = '0e6172626974726172795f74657874';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
-}
-
-
-{
-	foreach my $testcase (
-		q|contiguous|,	q|three unquoted strings|,
-		q|"in quotes"|, q|"two separate" "quoted strings"|,
-		q|"" empty|,	q|" " space|,
-		q|!|,		q|"\""|,
-		q|#|,		q|"$"|,
-		q|%|,		q|&|,
-		q|"'"|,		q|"("|,
-		q|")"|,		q|*|,
-		q|+|,		q|,|,
-		q|-|,		q|.|,
-		q|/|,		q|:|,
-		q|";"|,		q|<|,
-		q|=|,		q|>|,
-		q|?|,		q|"@"|,
-		q|[|,		q|\\\\|,
-		q|]|,		q|^|,
-		q|_|,		q|`|,
-		q|{|,		q(|),
-		q|}|,		q|~|,
-		) {
-		my $string = "$name.	TXT	$testcase";
-		my $expect = new Net::DNS::RR($string)->string; # test for consistent parsing
-		my $result = new Net::DNS::RR($expect)->string;
-		is( $result, $expect, $string );
-	}
 }
 
 

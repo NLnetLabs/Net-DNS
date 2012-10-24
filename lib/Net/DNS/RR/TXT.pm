@@ -22,12 +22,9 @@ use integer;
 
 use Net::DNS::Text;
 
-use Text::ParseWords;
 
-
-sub new {				## decode rdata from wire-format octet string
-	my $class = shift;
-	my $self = bless shift, $class;
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
 	my ( $data, $offset ) = @_;
 
 	my $limit = $offset + $self->{rdlength};
@@ -39,21 +36,18 @@ sub new {				## decode rdata from wire-format octet string
 	}
 
 	croak('corrupt TXT data') unless $offset == $limit;	# more or less FUBAR
-
-	return $self;
 }
 
 
-sub rr_rdata {				## encode rdata as wire-format octet string
+sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
-	my $pkt	 = shift;
 
 	my $txtdata = $self->{txtdata} || [];
 	join '', map $_->encode, @$txtdata;
 }
 
 
-sub rdatastr {				## format rdata portion of RR string.
+sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $txtdata = $self->{txtdata} || [];
@@ -61,12 +55,10 @@ sub rdatastr {				## format rdata portion of RR string.
 }
 
 
-sub new_from_string {			## populate RR from rdata string
-	my $class = shift;
-	my $self  = bless shift, $class;
-	my @parse = grep { not /^[()]$/ } quotewords( qw(\s+), 1, shift || "" );
-	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @parse];
-	return $self;
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @_];
 }
 
 
@@ -86,7 +78,6 @@ sub txtdata {
 sub char_str_list {				## historical
 	return (&txtdata);
 }
-
 
 1;
 __END__
@@ -135,6 +126,8 @@ In a list context, txtdata() returns a list of the text elements.
 =head1 COPYRIGHT
 
 Copyright (c)2011 Dick Franks.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 All rights reserved.
 
