@@ -1,6 +1,29 @@
 $Id$                       -*-text-*-
 
 **** 0.69 ??? ??, 2012
+
+Feature rt.cpan.org #62030
+
+	Parsing of BIND zone files implemented in Net::DNS::ZoneFile.
+	This replaces and is backward compatible with the CPAN module
+	of the same name.
+
+Enhancement to simplify RR subtype template and recode packages.
+
+Enhancement rt.cpan.org #75185
+
+	Packet decoder returns index to end of decoded data.
+
+	Added packet->reply() method.
+
+Fix rt.cpan.org #79569
+
+	AXFR not setting packet->answer_from.
+
+Enhancement rt.cpan.org #18819
+
+	Added support for Unicode and non-ASCII character encoding.
+
 Feature integrate OPT as a header extension
 
 	Treat extended rcodes and the DO flag like they are part of

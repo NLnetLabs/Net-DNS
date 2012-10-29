@@ -74,6 +74,7 @@ lib/Net/DNS/RR/TXT.pm
 lib/Net/DNS/RR/X25.pm
 lib/Net/DNS/Text.pm
 lib/Net/DNS/Update.pm
+lib/Net/DNS/ZoneFile.pm
 Makefile.PL
 MANIFEST			This list of files
 netdns.c
@@ -132,6 +133,7 @@ t/05-X25.t
 t/06-packet-unique-push.t
 t/06-update.t
 t/07-rrsort.t
+t/07-zonefile.t
 t/08-online.t
 t/10-recurse.t
 t/11-inet6.t
