@@ -148,7 +148,7 @@ sub read {
 			$self->{class} ||= $record->class;	# propagate RR class
 			$record->class( $self->{class} );
 
-			$self->{ttl} ||= $record->ttl;		# default TTL
+			$self->{ttl} ||= $record->minimum if $record->type eq 'SOA';    # default TTL
 			$record->ttl( $self->{ttl} ) unless defined $record->{ttl};
 
 			return $self->{latest} = $record;
@@ -248,7 +248,9 @@ The return value is undefined if the zone data can not be parsed.
 		require Net::DNS;
 		my $zone = new Net::DNS::ZoneFile(shift);
 		local $DIR = shift;
-		return eval { my @rr = $zone->read; \@rr; };
+		my $result = eval { my @rr = $zone->read; \@rr; };
+		carp $@ if $@;
+		return $result;
 	}
 }
 

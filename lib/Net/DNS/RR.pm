@@ -92,6 +92,7 @@ using appropriate RFC4291 or RFC4632 IP address/prefix notation.
 =cut
 
 my $CLASS_REGEX = join '|', 'CLASS\d+', keys %classbyname;
+my %dnssectype = map { ( $_, 1 ) } qw(DLV DNSKEY DS KEY NSEC NSEC3 NSEC3PARAM NXT RRSIG SIG);
 
 sub new_string {
 	my $class = shift;
@@ -171,7 +172,7 @@ sub new_string {
 		return ref($self)->new( $self, \$rdata, 0 ) if COMPATIBLE;
 		$self->decode_rdata( \$rdata, 0 );		# unpack RDATA
 	} elsif (COMPATIBLE) {
-		$self->{ttl} ||= 0;				# gloss over bugs in RRSIG
+		$self->{ttl} ||= 0 if $dnssectype{$self->type}; # gloss over bugs in SEC RRs
 		return ref($self)->new_from_string( $self, join( ' ', @parse ), @parse );
 	} else {
 		$self->parse_rdata(@parse);			# parse arguments
@@ -226,7 +227,7 @@ sub new_hash {
 	my $self = $base->_subclass( $temp, $populated );	# RR with defaults (if appropriate)
 	$self->class($class) if defined $class;			# specify CLASS
 	$self->ttl($ttl)     if defined $ttl;			# specify TTL
-	$self->{ttl} ||= 0 if COMPATIBLE;
+	$self->{ttl} ||= 0 if COMPATIBLE and $dnssectype{$self->type};	  # gloss over bugs in SEC RRs
 
 	while ( my ( $method, $argument ) = each %attribute ) {
 		if ( UNIVERSAL::isa( $argument, 'ARRAY' ) ) {
@@ -661,14 +662,14 @@ sub encode_rdata {				## encode rdata as wire-format byte string
 sub format_rdata {				## format rdata portion of RR string
 	my $self = shift;
 	my $data = $self->{rdata} || $self->encode_rdata;	# unknown RR, per RFC3597
-	my $length = length $data;
-	join ' ', '\\#', $length, $length ? unpack( 'H*', $data ) : ();
+	my $size = length $data;
+	join ' ', '\\#', $size, $size ? unpack( 'H*', $data ) : ();
 }
 
 
 sub parse_rdata {				## parse RR attributes in argument list
 	my ( $self, @rdata ) = @_;
-	confess join ' ', 'unable to parse', $self->type, "record\n" if @rdata;
+	croak join ' ', 'zone file representation not defined for', $self->type if @rdata;
 }
 
 
