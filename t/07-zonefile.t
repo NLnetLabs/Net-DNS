@@ -3,7 +3,7 @@
 use strict;
 use FileHandle;
 
-use Test::More tests => 45;
+use Test::More tests => 46;
 use t::NonFatal;
 
 
@@ -87,16 +87,16 @@ EOF
 
 {				## $TTL directive
 	my $zonefile = source <<'EOF';
-rr0	12345	NULL
+rr0		SOA	mname rname 99 6h 1h 1w 12345
 rr1		NULL
 $TTL 54321
 rr2		NULL
-rr3	0	NULL
+rr3	3h	NULL
 EOF
-	my $rr = $zonefile->read;
-	is( $zonefile->read->ttl, $rr->ttl,	  'implicit default from initial record' );
-	is( $zonefile->read->ttl, $zonefile->ttl, 'explicit default from $TTL directive' );
-	isnt( $zonefile->read->ttl, $zonefile->ttl, 'explicit TTL value overrides default' );
+	is( $zonefile->read->ttl, 12345, 'SOA TTL set from SOA minimum field' );
+	is( $zonefile->read->ttl, 12345, 'implicit default from SOA record' );
+	is( $zonefile->read->ttl, 54321, 'explicit default from $TTL directive' );
+	is( $zonefile->read->ttl, 10800, 'explicit TTL value overrides default' );
 }
 
 

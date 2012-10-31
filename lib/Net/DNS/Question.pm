@@ -282,20 +282,22 @@ sub _dns_addr {				## Map IP address into reverse lookup namespace
 
 	# arg looks like IPv4 address: map to in-addr.arpa space
 	if (m#(^|:.*:)((^|\d+\.)+\d+)(/(\d+))?$#) {
+		return undef if new Net::DNS::DomainName('@')->label;
 		my @parse = split /\./, $2;
 		my $prefx = $5 || @parse << 3;
 		my $last = $prefx > 24 ? 3 : ( $prefx - 1 ) >> 3;
-		return join '.', reverse( ( @parse, (0) x 3 )[0 .. $last] ), 'in-addr.arpa';
+		return join '.', reverse( ( @parse, (0) x 3 )[0 .. $last] ), 'in-addr.arpa.';
 	}
 
 	# arg looks like IPv6 address: map to ip6.arpa space
 	if (m#^((\w*:)+)(\w*)(/(\d+))?$#) {
+		return undef if new Net::DNS::DomainName('@')->label;
 		my @parse = split /:/, ( reverse "0${1}0${3}" ), 9;
 		my @xpand = map { /./ ? $_ : ('0') x ( 9 - @parse ) } @parse;	 # expand ::
 		my $prefx = $5 || @xpand << 4;			# implicit length if unspecified
 		my $hex = pack 'A4' x 8, map { $_ . '000' } ('0') x ( 8 - @xpand ), @xpand;
 		my $len = $prefx > 124 ? 32 : ( $prefx + 3 ) >> 2;
-		return join '.', split( //, substr( $hex, -$len ) ), 'ip6.arpa';
+		return join '.', split( //, substr( $hex, -$len ) ), 'ip6.arpa.';
 	}
 
 	return undef;

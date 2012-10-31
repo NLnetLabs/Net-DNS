@@ -158,7 +158,7 @@ sub new_string {
 
 	my $base = new Net::DNS::Question( $name, $rrtype, $rrclass );
 	my $self = $class->_subclass( $base, scalar @parse );	# RR with defaults (if appropriate)
-	$self->{ttl} = $ttl;					# rr->{ttl} may be undefined
+	$self->ttl($ttl) if defined $ttl;			# rr->{ttl} can be undefined
 
 	return $self unless @parse;				# empty RR
 
@@ -754,7 +754,7 @@ sub _subclass {
 	my $defaults = $default ? $_DEFAULTS{$subclass} : {};	# clone object to avoid problem with
 	my $clone = bless {%$object, %$defaults}, $subclass;	# storage reclamation on some platforms
 	return $clone unless COMPATIBLE;
-	$object->name;
+	$clone->name;
 	$clone->type( $object->type );
 	$clone->class( $object->class );
 	return $clone;

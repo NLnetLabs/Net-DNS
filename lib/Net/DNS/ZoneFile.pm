@@ -46,7 +46,6 @@ automatically to all subsequent records.
 use strict;
 use integer;
 use Carp;
-use Cwd;
 use FileHandle;
 
 use Net::DNS::Domain;
@@ -76,23 +75,22 @@ The optional second argument specifies $ORIGIN for the zone file.
 
 =cut
 
-use vars qw($DIR);
+use vars qw($SRC);
 
 sub new {
 	my $self = bless {}, shift;
 	my $file = $self->{handle} = shift;
 	$self->_origin(shift);
 
-	$self->{name} = 'FH';
+	$self->{name} = $file;
 	return $self if ref($file);
 
-	$self->{name} = $file;
-	my $cwd = cwd();
-	chdir $DIR or croak "${DIR}: $!" if $DIR;
+	$file = "$SRC/$file" unless !$SRC or $file =~ /^[^A-Za-z0-9]/;
+	$file =~ s(//)(/)g;					# remove duplicate /
+	$file =~ s(^./)()g;					# and other decoration
 	$self->{handle} = new FileHandle( $file, '<' ) unless UTF8;
 	$self->{handle} = new FileHandle( $file, '<:encoding(UTF-8)' ) if UTF8;
 	croak "Failed to open $file" unless $self->{handle};
-	chdir $cwd or croak "${cwd}: $!" if $DIR;
 
 	return $self;
 }
@@ -130,30 +128,31 @@ sub read {
 	}
 
 	eval {
-		for ( $self->_getline || return undef ) {
-			chomp;
-			if (/^\s/) {				# replace empty RR name
-				my $latest = $self->{latest};
-				my ($name) = split /\s+/, $latest->string if $latest;
-				substr( $_, 0, 0 ) = $name if defined $name;
+		eval {
+			for ( $self->_getline || return undef ) {
+				chomp;
+				if (/^\s/) {			# replace empty RR name
+					my $latest = $self->{latest};
+					my ($name) = split /\s+/, $latest->string if $latest;
+					substr( $_, 0, 0 ) = $name if defined $name;
+				}
+
+				local $SIG{__WARN__} = sub { die @_; };
+
+				# construct RR object with context specific dynamically scoped $ORIGIN
+				my $context = $self->{context};
+				my $record = &$context( sub { new_string Net::DNS::RR($_) } );
+
+				$self->{class} ||= $record->class;    # propagate RR class
+				$record->class( $self->{class} );
+
+				$self->{ttl} ||= $record->minimum if $record->type eq 'SOA';	# default TTL
+				$record->ttl( $self->{ttl} ) unless defined $record->{ttl};
+
+				return $self->{latest} = $record;
 			}
 
-			local $SIG{__WARN__} = sub { die @_; };
-
-			# construct RR object with context specific dynamically scoped $ORIGIN
-			my $context = $self->{context};
-			my $creator = sub { new_string Net::DNS::RR($_) };
-			my $record  = eval { &$context($creator); } or $@ && die;
-
-			$self->{class} ||= $record->class;	# propagate RR class
-			$record->class( $self->{class} );
-
-			$self->{ttl} ||= $record->minimum if $record->type eq 'SOA';    # default TTL
-			$record->ttl( $self->{ttl} ) unless defined $record->{ttl};
-
-			return $self->{latest} = $record;
-		}
-
+		} or $@ && die;					# ugly construct to relate error to source
 	} or $@ && ( $@ =~ s/\.\.\.\w.+<\w+>/$self->name/e, croak $@);
 }
 
@@ -245,9 +244,10 @@ The return value is undefined if the zone data can not be parsed.
 {
 
 	sub _read ($;$) {
+		my $file = shift;
+		local $SRC = shift;
 		require Net::DNS;
-		my $zone = new Net::DNS::ZoneFile(shift);
-		local $DIR = shift;
+		my $zone = new Net::DNS::ZoneFile($file);
 		my $result = eval { my @rr = $zone->read; \@rr; };
 		carp $@ if $@;
 		return $result;
@@ -282,7 +282,7 @@ sub parse ($$;$) {
 	my $data = shift;
 
 	my $pipe = new FileHandle;				# pipe from iterator process
-	my $pid	 = open( $pipe, '-|' );				# spawn iterator process
+	my $pid = open( $pipe, '-|' );				# spawn iterator process
 	die "cannot fork: $!" unless defined $pid;
 
 	unless ($pid) {				## child
@@ -376,19 +376,18 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 		my $fh = $self->{handle};
 		while (<$fh>) {
 			my $line = $self->{line} = $fh->input_line_number;
-			chomp;
-			next unless length $_;			# discard zero length line
 			next if /^\s*$/;			# discard blank line
 			next if /^\s*;/;			# discard comment line
-			s/\\\\/\\092/g;				# disguise escaped escape
-			s/\\"/\\034/g;				# disguise escaped quote
-			s/\\;/\\059/g;				# disguise escaped semicolon
 
 			while (/\(/) {				# concatenate multi-line RR
-				my @split = split /"[^"]*"|;.*\n|;.*$|\s+/;
-				last unless grep length && /[(]/, @split;
-				last if grep length && /[)]/, @split;
-				$_ .= $self->_getline;
+				s/\\\\/\\092/g;			# disguise escaped escape
+				s/\\"/\\034/g;			# disguise escaped double quote
+				s/\\'/\\039/g;			# disguise escaped single quote
+				s/\\;/\\059/g;			# disguise escaped semicolon
+				my @parse = grep length($_), split /("[^"]*")|('[^']*')|;.*\n|([()])|\s+/;
+				last unless grep { length && /^[(]$/ } @parse;
+				last if grep { length && /^[)]$/ } @parse;
+				$_ = "@parse " . <$fh>;
 			}
 			$self->{line} = $line;			# renumber continuation lines
 
@@ -427,8 +426,8 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 	sub _include {				## open $INCLUDE file
 		my ( $self, $filename ) = @_;
-		my $include = eval { new Net::DNS::ZoneFile($filename) } or $@ && die;
-		my $handle = $include->{handle};
+		my $include = new Net::DNS::ZoneFile($filename);
+		my $handle  = $include->{handle};
 		delete $self->{latest};				# forbid empty name
 		%$include = %$self;				# save state, create link
 		@{$self}{qw(link handle name)} = ( $include, $handle, $filename );
