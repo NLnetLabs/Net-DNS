@@ -6,7 +6,7 @@ package Net::DNS;
 use vars qw($SVNVERSION $VERSION);
 BEGIN {
 	$SVNVERSION = (qw$LastChangedRevision$)[1];
-	$VERSION = '0.68_02';
+	$VERSION = '0.68_03';
 }
 
 
