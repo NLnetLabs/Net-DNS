@@ -36,7 +36,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	while ( $offset < $limit ) {
 		my $item;
 		( $item, $offset ) = decode Net::DNS::DomainName($data,$offset );
-		push @{$self}{servers}, $item;
+		push @{$self->{servers}}, $item;
 	}
 	croak('corrupt HIP data') unless $offset == $limit;	# more or less FUBAR
 }

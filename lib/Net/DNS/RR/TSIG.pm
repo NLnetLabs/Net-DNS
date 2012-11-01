@@ -202,7 +202,7 @@ sub sig_data {
 	$sigdata = pack 'H*', $self->{request_mac} if $self->{request_mac};
 
 	$sigdata .= $packet->data;
-	push @{$packet}{additional}, $self;
+	push @{$packet->{additional}}, $self;
 
 	my $kname = $self->{owner}->encode(0);			# uncompressed key name
 	$sigdata .= pack 'a* n N', $kname, ANY, 0;

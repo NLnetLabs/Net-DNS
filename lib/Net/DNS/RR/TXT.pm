@@ -32,7 +32,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	$self->{txtdata} = [];
 	while ( $offset < $limit ) {
 		( $text, $offset ) = decode Net::DNS::Text( $data, $offset );
-		push @{$self}{txtdata}, $text;
+		push @{$self->{txtdata}}, $text;
 	}
 
 	croak('corrupt TXT data') unless $offset == $limit;	# more or less FUBAR

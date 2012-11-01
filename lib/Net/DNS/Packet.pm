@@ -130,23 +130,23 @@ sub decode {
 		my $record;
 		while ( $qd-- ) {
 			( $record, $offset ) = decode Net::DNS::Question( $data, $offset, $hash );
-			CORE::push( @{$self}{question}, $record );
+			CORE::push( @{$self->{question}}, $record );
 		}
 
 		# RR sections
 		while ( $an-- ) {
 			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
-			CORE::push( @{$self}{answer}, $record );
+			CORE::push( @{$self->{answer}}, $record );
 		}
 
 		while ( $ns-- ) {
 			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
-			CORE::push( @{$self}{authority}, $record );
+			CORE::push( @{$self->{authority}}, $record );
 		}
 
 		while ( $ar-- ) {
 			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
-			CORE::push( @{$self}{additional}, $record );
+			CORE::push( @{$self->{additional}}, $record );
 		}
 	};
 
@@ -444,7 +444,7 @@ sub push {
 	my @rr	    = grep ref($_), @_;
 
 	for ($section) {
-		return CORE::push( @{$self}{question}, @rr ) if /^question/;
+		return CORE::push( @{$self->{question}}, @rr ) if /^question/;
 
 		if ( $self->header->opcode eq 'UPDATE' ) {
 			my ($zone) = $self->zone;
@@ -454,9 +454,9 @@ sub push {
 			}
 		}
 
-		return CORE::push( @{$self}{answer},	 @rr ) if /^ans|^pre/;
-		return CORE::push( @{$self}{authority},	 @rr ) if /^auth|^upd/;
-		return CORE::push( @{$self}{additional}, @rr ) if /^add/;
+		return CORE::push( @{$self->{answer}},	 @rr ) if /^ans|^pre/;
+		return CORE::push( @{$self->{authority}},	 @rr ) if /^auth|^upd/;
+		return CORE::push( @{$self->{additional}}, @rr ) if /^add/;
 	}
 
 	carp qq(invalid section "$section");
@@ -512,10 +512,10 @@ sub pop {
 	my $section = lc shift || '';
 
 	for ($section) {
-		return CORE::pop( @{$self}{additional} ) if /^add/;
-		return CORE::pop( @{$self}{answer} )	 if /^ans|^pre/;
-		return CORE::pop( @{$self}{authority} )	 if /^auth|^upd/;
-		return CORE::pop( @{$self}{question} )	 if /^question/;
+		return CORE::pop( @{$self->{additional}} ) if /^add/;
+		return CORE::pop( @{$self->{answer}} )	 if /^ans|^pre/;
+		return CORE::pop( @{$self->{authority}} )	 if /^auth|^upd/;
+		return CORE::pop( @{$self->{question}} )	 if /^question/;
 	}
 
 	carp qq(invalid section "$section");
