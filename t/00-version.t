@@ -15,6 +15,7 @@ plan skip_all => 'No versions from git checkouts' if -e '.git';
 
 plan skip_all => 'Not sure how to parse versions.' unless eval { MM->can('parse_version') };
 
+plan tests => scalar @files;
 
 foreach my $file ( sort @files ) {
 	next if $file =~ /Template/;
@@ -22,6 +23,4 @@ foreach my $file ( sort @files ) {
 	diag("$file\t=>\t$version") if $ENV{'NET_DNS_DEBUG'};
 	ok( $version =~ /[\d.]{3}/, "file version: $version\t$file" );
 }
-
-done_testing();
 

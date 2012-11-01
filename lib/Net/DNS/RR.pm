@@ -105,7 +105,8 @@ sub new_string {
 	s/\\'/\\039/g;						# disguise escaped single quote
 	s/\\;/\\059/g;						# disguise escaped semicolon
 	s/\n(\S)/$1/g if COMPATIBLE;				# gloss over syntax errors in Net::DNS::SEC test data
-	my @parse = grep length($_), split /("[^"]*")|('[^']*')|;.*\n|;.*$|[()]|\s+/;
+	my @parse = grep defined($_) && length($_),
+			 split /("[^"]*")|('[^']*')|;.*\n|;.*$|[()]|\s+/;
 
 	my $name    = shift @parse;				# name [ttl] [class] type ...
 	my $ttl	    = shift @parse if @parse && $parse[0] =~ /^\d/;
@@ -164,7 +165,7 @@ sub new_string {
 
 	if ( $parse[0] eq '\\#' ) {
 		shift @parse;					# RFC3597 hexadecimal format
-		my $length = shift @parse;
+		my $length = shift @parse || 0;
 		my $rdata  = pack 'H*', join '', @parse;
 		my $octets = $self->{rdlength} = length $rdata;
 		croak 'length and hexadecimal data inconsistent' unless $length == $octets;
