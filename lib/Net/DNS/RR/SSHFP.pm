@@ -106,7 +106,7 @@ __END__
 
 =head1 DESCRIPTION
 
-DNS SSH Fingerprint (SSHFP) resource records.
+DNS SSH Fingerprint (SSHFP) resource records - RFC 4255.
 
 =head1 METHODS
 

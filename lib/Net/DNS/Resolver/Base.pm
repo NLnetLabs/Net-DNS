@@ -1113,7 +1113,7 @@ sub make_query_packet {
 	my $optrr = Net::DNS::RR->new(
 						Type         => 'OPT',
 						Name         => '',
-						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload
+						Class        => $self->{'udppacketsize'},  # requestor's UDP payload size
 						ednsflags    => 0x8000, # first bit set see RFC 3225
 				   );
 
@@ -1126,7 +1126,7 @@ sub make_query_packet {
 	    my $optrr = Net::DNS::RR->new(
 						Type         => 'OPT',
 						Name         => '',
-						Class        => $self->{'udppacketsize'},  # Decimal UDPpayload
+						Class        => $self->{'udppacketsize'},  # requestor's UDP payload size
 						TTL          => 0x0000 # RCODE 32bit Hex
 				    );
 
