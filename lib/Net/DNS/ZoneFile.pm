@@ -13,7 +13,7 @@ Net::DNS::ZoneFile - DNS zone file
 
 =head1 SYNOPSIS
 
-    use Net::DNS;
+    use Net::DNS::ZoneFile;
 
     $zonefile = new Net::DNS::ZoneFile( 'db.example' );
 
@@ -75,19 +75,17 @@ The optional second argument specifies $ORIGIN for the zone file.
 
 =cut
 
-use vars qw($SRC);
+use vars qw($DIR);
 
 sub new {
 	my $self = bless {}, shift;
-	my $file = $self->{handle} = shift;
+	my $file = $self->{name} = shift;
 	$self->_origin(shift);
 
-	$self->{name} = $file;
+	$self->{handle} = $file;
 	return $self if ref($file);
 
-	$file = "$SRC/$file" unless !$SRC or $file =~ /^[^A-Za-z0-9]/;
-	$file =~ s(//)(/)g;					# remove duplicate /
-	$file =~ s(^./)()g;					# and other decoration
+	$file = "$DIR/$file" if $DIR && $file !~ m#^[/]#;
 	$self->{handle} = new FileHandle( $file, '<' ) unless UTF8;
 	$self->{handle} = new FileHandle( $file, '<:encoding(UTF-8)' ) if UTF8;
 	croak "Failed to open $file" unless $self->{handle};
@@ -130,14 +128,13 @@ sub read {
 	eval {
 		eval {
 			for ( $self->_getline || return undef ) {
-				chomp;
+				local $SIG{__WARN__} = sub { die @_; };
+
 				if (/^\s/) {			# replace empty RR name
 					my $latest = $self->{latest};
 					my ($name) = split /\s+/, $latest->string if $latest;
 					substr( $_, 0, 0 ) = $name if defined $name;
 				}
-
-				local $SIG{__WARN__} = sub { die @_; };
 
 				# construct RR object with context specific dynamically scoped $ORIGIN
 				my $context = $self->{context};
@@ -153,7 +150,7 @@ sub read {
 			}
 
 		} or $@ && die;					# ugly construct to relate error to source
-	} or $@ && ( $@ =~ s/\.\.\.\w.+<\w+>/$self->name/e, croak $@);
+	} or $@ && ( $@ =~ s/\.\.\.\w.+<\w+>/$self->name/e, croak $@ );
 }
 
 
@@ -222,22 +219,30 @@ interface described below.
 
     use Net::DNS::ZoneFile;
 
-    $rrset = Net::DNS::ZoneFile->read( $filename [, $include_dir] );
+    $listref = Net::DNS::ZoneFile->read( $filename, $include_dir );
 
-    $rrset = Net::DNS::ZoneFile->readfh( $fh [, $include_dir] );
+    $listref = Net::DNS::ZoneFile->readfh( $handle, $include_dir );
 
-    $rrset = Net::DNS::ZoneFile->parse( \$zone_text [, $include_dir] );
+    $listref = Net::DNS::ZoneFile->parse(  $string, $include_dir );
+    $listref = Net::DNS::ZoneFile->parse( \$string, $include_dir );
 
-    print $_->string, "\n" for @$rrset;
+    $_->print for @$listref;
 
+The optional second argument specifies the default path for filenames.
+The current working directory is used by default.
+
+Although not available in the original implementation, the RR list
+can be obtained directly by calling in list context.
+
+    @rr = Net::DNS::ZoneFile->read( $filename, $include_dir );
 
 
 =head2 read
 
-    $rrset = Net::DNS::ZoneFile->read( $filename [, $include_dir] );
+    $listref = Net::DNS::ZoneFile->read( $filename, $include_dir );
 
-read() parses the specified zone file and returns a reference to an
-array of Net::DNS::RR objects representing the RRs in the file.
+read() parses the specified zone file and returns a reference to the
+list of Net::DNS::RR objects representing the RRs in the file.
 The return value is undefined if the zone data can not be parsed.
 =cut
 
@@ -245,35 +250,40 @@ The return value is undefined if the zone data can not be parsed.
 
 	sub _read ($;$) {
 		my $file = shift;
-		local $SRC = shift;
-		require Net::DNS;
+		local $DIR = shift;
 		my $zone = new Net::DNS::ZoneFile($file);
-		my $result = eval { my @rr = $zone->read; \@rr; };
-		carp $@ if $@;
-		return $result;
+		my @rr = eval { $zone->read; };
+		return wantarray ? @rr : \@rr unless $@;
+		carp $@;
+		return wantarray ? @rr : undef;
 	}
 }
 
 
 =head2 readfh
 
-    $rrset = Net::DNS::ZoneFile->readfh( $fh [, $include_dir] );
+    $listref = Net::DNS::ZoneFile->readfh( $handle, $include_dir );
 
 read() parses data from the specified file handle and returns a
-reference to an array of Net::DNS::RR objects representing the RRs
+reference to the list of Net::DNS::RR objects representing the RRs
 in the file.
 The return value is undefined if the zone data can not be parsed.
 =cut
 
 sub readfh ($$;$) {
-	my $self = shift;
+	my $void = shift;
 	return &_read;
 }
 
 
 =head2 parse
 
-    $rrset = Net::DNS::ZoneFile->parse( \$zone_text [, $include_dir] );
+    $listref = Net::DNS::ZoneFile->parse(  $string, $include_dir );
+    $listref = Net::DNS::ZoneFile->parse( \$string, $include_dir );
+
+parse() interprets the argument string and returns a reference to
+the list of Net::DNS::RR objects representing the RRs.
+The return value is undefined if the zone data can not be parsed.
 
 =cut
 
@@ -281,23 +291,18 @@ sub parse ($$;$) {
 	my $self = shift;
 	my $data = shift;
 
-	my $pipe = new FileHandle;				# pipe from iterator process
-	my $pid = open( $pipe, '-|' );				# spawn iterator process
-	die "cannot fork: $!" unless defined $pid;
+	my $temp = "temp$$.txt";
+	my $handle = new FileHandle( $temp, '>' ) unless UTF8;
+	$handle = new FileHandle( $temp, '>:encoding(UTF-8)' ) if UTF8;
+	die "Failed to open $temp" unless $handle;
+	print $handle $$data, "\n" if ref($data);
+	print $handle $data,  "\n" unless ref($data);
+	close $handle;
 
-	unless ($pid) {				## child
-		foreach ( split /\n/, $$data ) {
-			print;					# pipe to parser
-			print "\n";
-		}
-		exit;						# done
-
-	} else {				## parent
-		return $self->readfh( $pipe, @_ );
-	}
+	my $zone = new Net::DNS::ZoneFile($temp);
+	unlink $temp;
+	return $self->readfh( $zone->{handle}, @_ );
 }
-
-sub _parse { &parse; }
 
 
 ########################################
@@ -336,6 +341,8 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 		my ( $self, $range, $template ) = @_;
 		my ( $first, $last ) = split m#[-/]#, $range;
 		my ( $junk,  $step ) = split m#[/]#,  $range;
+		$step = abs( $step || 1 );
+		$step = ( $last < $first ) ? -$step : $step;
 		for ($template) {
 			s/\$\$/\\036/g;				# disguise escaped dollar
 			s/\\\$/\\036/g;				# disguise escaped dollar
@@ -343,10 +350,34 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 		my $handle = new FileHandle;			# pipe from iterator process
 		my $pid = open( $handle, '-|' );		# spawn iterator process
-		die "cannot fork: $!" unless defined $pid;
+
+		unless ( defined $pid ) {			# unable or unwilling to fork
+			my $temp = "temp$$.txt";
+			my $handle = new FileHandle( $temp, '>' ) unless UTF8;
+			$handle = new FileHandle( $temp, '>:encoding(UTF-8)' ) if UTF8;
+			die "Failed to open $temp" unless $handle;
+			my $counter = 1 + int( ( $last - $first ) / $step );
+			my $instant = $first;
+			while ( $counter-- > 0 ) {
+				local $_ = $template;		# copy template
+				while (/\$\{([^\}]*)\}/) {	# substitute ${...}
+					my $s = _format( $instant, split /[,]/, $1 );
+					s/\$\{$1\}/$s/g;
+				}
+				s/\$/$instant/g;		# unqualified $
+				print $handle $_, "\n";
+				$instant += $step;
+			}
+			close $handle;
+			$self->_include($temp);
+			unlink $temp;
+			return;
+		}
+
+		local $SIG{PIPE} = sub { die @_; };
 
 		unless ($pid) {				## child
-			my $counter = 1 + ( $last - $first ) / ( $step ||= 1 );
+			my $counter = 1 + int( ( $last - $first ) / $step );
 			my $instant = $first;
 			while ( $counter-- > 0 ) {
 				local $_ = $template;		# copy template
@@ -358,6 +389,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 				print;				# pipe to parser
 				$instant += $step;
 			}
+			close or die "close: $! $?";
 			exit;					# done
 
 		} else {				## parent
@@ -375,21 +407,19 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 		my $fh = $self->{handle};
 		while (<$fh>) {
-			my $line = $self->{line} = $fh->input_line_number;
+			$self->{line} = $fh->input_line_number; # number refers to initial line
 			next if /^\s*$/;			# discard blank line
 			next if /^\s*;/;			# discard comment line
 
 			while (/\(/) {				# concatenate multi-line RR
 				s/\\\\/\\092/g;			# disguise escaped escape
 				s/\\"/\\034/g;			# disguise escaped double quote
-				s/\\'/\\039/g;			# disguise escaped single quote
 				s/\\;/\\059/g;			# disguise escaped semicolon
-				my @parse = grep length($_), split /("[^"]*")|('[^']*')|;.*\n|([()])|\s+/;
-				last unless grep { length && /^[(]$/ } @parse;
-				last if grep { length && /^[)]$/ } @parse;
-				$_ = "@parse " . <$fh>;
+				my @token = grep defined && length, split /("[^"]*")|;[^\n]*\n|([()])|\s+/;
+				last unless grep $_ eq '(', @token;
+				last if grep $_ eq ')', @token;
+				$_ = "@token " . <$fh>;
 			}
-			$self->{line} = $line;			# renumber continuation lines
 
 			if (/^\$INCLUDE/) {			# directive
 				my ( undef, $file, $origin ) = split;
@@ -411,9 +441,11 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 				$fh = $self->{handle};
 				next;
 			} elsif (/^\$/) {			# unrecognised
+				chomp;
 				die "unknown directive: $_";
 			} else {
-				return "$_\n";			# all or part of RR
+				chomp;
+				return $_;			# RR string
 			}
 		}
 
@@ -443,6 +475,13 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 1;
 __END__
+
+
+=head1 BUGS
+
+The $GENERATE directive is expanded by spawning a child process,
+which causes multiple premature executions of Perl END{} subroutines
+when child processes terminate.
 
 
 =head1 ACKNOWLEDGEMENT

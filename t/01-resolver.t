@@ -8,7 +8,7 @@ use Net::DNS;
 
 my $res = Net::DNS::Resolver->new();
 
-for (qw[cygwin MSWin32]) {
+for ($^O) {
 	diag $_ if eval { $res->SUPER::isa("Net::DNS::Resolver::$_") };
 }
 

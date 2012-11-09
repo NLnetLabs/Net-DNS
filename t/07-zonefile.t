@@ -4,7 +4,6 @@ use strict;
 use FileHandle;
 
 use Test::More tests => 46;
-use t::NonFatal;
 
 
 use constant UTF8 => eval {
@@ -21,11 +20,6 @@ use constant LIBIDN => eval {					# optional IDN support
 
 BEGIN {
 	use_ok('Net::DNS::ZoneFile');
-	NonFatalBegin();
-}
-
-END {
-	NonFatalEnd();
 }
 
 
@@ -206,33 +200,28 @@ EOF
 
 
 {				## compatibility with defunct Net::DNS::ZoneFile 1.04 distro
-	my $data  = "";
-	my $rrset = Net::DNS::ZoneFile->parse( \$data );
-	$_->print for @$rrset;
-	is( scalar(@$rrset), 0, 'parse empty string' );
+	my $listref = Net::DNS::ZoneFile->read('zone8.txt');
+	ok( scalar(@$listref), 'read entire zone file' );
 }
 
 
 {
-	my $data  = "a.example A 192.0.2.1";
-	my $rrset = Net::DNS::ZoneFile->parse( \$data );
-	$_->print for @$rrset;
-	is( scalar(@$rrset), 1, 'parse RR string' );
+	my $listref = Net::DNS::ZoneFile->read( 'zone8.txt', '.' );
+	ok( scalar(@$listref), 'read zone file via path' );
+}
+
+
+{
+	my $data  = "";
+	my $listref = Net::DNS::ZoneFile->parse( \$data );
+	is( scalar(@$listref), 0, 'parse empty string' );
 }
 
 
 {
 	my $data  = "a1.example A 192.0.2.1\na2.example A 192.0.2.2";
-	my $rrset = Net::DNS::ZoneFile->parse( \$data );	# this also tests readfh()
-	$_->print for @$rrset;
-	is( scalar(@$rrset), 2, 'parse RR string' );
-}
-
-
-{
-	my $rrset = Net::DNS::ZoneFile->read('zone8.txt');
-	$_->print for @$rrset;
-	ok( scalar(@$rrset), 'read entire zone file' );
+	my $listref = Net::DNS::ZoneFile->parse( \$data );	# this also tests readfh()
+	is( scalar(@$listref), 2, 'parse RR string' );
 }
 
 

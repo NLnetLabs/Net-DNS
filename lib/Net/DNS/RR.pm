@@ -105,40 +105,39 @@ sub new_string {
 	s/\\'/\\039/g;						# disguise escaped single quote
 	s/\\;/\\059/g;						# disguise escaped semicolon
 	s/\n(\S)/$1/g if COMPATIBLE;				# gloss over syntax errors in Net::DNS::SEC test data
-	my @parse = grep defined($_) && length($_),
-			 split /("[^"]*")|('[^']*')|;.*\n|;.*$|[()]|\s+/;
+	my @token = grep defined && length, split /("[^"]*"|'[^']*')|;[^\n]*\n?|[()]|\s+/;
 
-	my $name    = shift @parse;				# name [ttl] [class] type ...
-	my $ttl	    = shift @parse if @parse && $parse[0] =~ /^\d/;
-	my $rrclass = shift @parse if @parse && $parse[0] =~ /^$CLASS_REGEX$/io;
-	$ttl = shift @parse if @parse && $parse[0] =~ /^\d/;	# name [class] [ttl] type ...
-	my $rrtype = shift @parse;
+	my $name    = shift @token;				# name [ttl] [class] type ...
+	my $ttl	    = shift @token if @token && $token[0] =~ /^\d/;
+	my $rrclass = shift @token if @token && $token[0] =~ /^$CLASS_REGEX$/io;
+	$ttl = shift @token if @token && $token[0] =~ /^\d/;	# name [class] [ttl] type ...
+	my $rrtype = shift(@token);
 
 	if ($update) {
 
 		for ( lc $update ) {
 			/yxrrset/ and do {
-				$rrclass = 'ANY' unless @parse;
+				$rrclass = 'ANY' unless @token;
 				last;
 			};
 
 			/nxrrset/ and do {
 				$rrclass = 'NONE';
-				@parse	 = ();
+				@token	 = ();
 				last;
 			};
 
 			/yxdomain/ and do {
 				$rrclass = 'ANY';
 				$rrtype	 = 'ANY';
-				@parse	 = ();
+				@token	 = ();
 				last;
 			};
 
 			/nxdomain/ and do {
 				$rrclass = 'NONE';
 				$rrtype	 = 'ANY';
-				@parse	 = ();
+				@token	 = ();
 				last;
 			};
 
@@ -148,7 +147,7 @@ sub new_string {
 			};
 
 			/rr_del/ and do {
-				$rrclass = @parse ? 'NONE' : 'ANY';
+				$rrclass = @token ? 'NONE' : 'ANY';
 				last;
 			};
 		}
@@ -158,25 +157,25 @@ sub new_string {
 	}
 
 	my $base = new Net::DNS::Question( $name, $rrtype, $rrclass );
-	my $self = $class->_subclass( $base, scalar @parse );	# RR with defaults (if appropriate)
-	$self->ttl($ttl) if defined $ttl;			# rr->{ttl} can be undefined
+	my $self = $class->_subclass( $base, scalar @token );	# RR with defaults (if appropriate)
+	$self->ttl($ttl) if defined $ttl;			# undefined TTL meaningful in zone file
 
-	return $self unless @parse;				# empty RR
+	return $self unless @token;				# empty RR
 
-	if ( $parse[0] eq '\\#' ) {
-		shift @parse;					# RFC3597 hexadecimal format
-		my $length = shift @parse || 0;
-		my $rdata  = pack 'H*', join '', @parse;
-		my $octets = $self->{rdlength} = length $rdata;
-		croak 'length and hexadecimal data inconsistent' unless $length == $octets;
-		return $self unless $octets;
+	if ( $token[0] eq '\\#' ) {
+		shift @token;					# RFC3597 hexadecimal format
+		my $count = shift(@token) || 0;
+		my $rdata = pack 'H*', join '', @token;
+		my $rdlen = $self->{rdlength} = length $rdata;
+		croak 'length and hexadecimal data inconsistent' unless $rdlen == $count;
+		return $self unless $count;
 		return ref($self)->new( $self, \$rdata, 0 ) if COMPATIBLE;
 		$self->decode_rdata( \$rdata, 0 );		# unpack RDATA
 	} elsif (COMPATIBLE) {
 		$self->{ttl} ||= 0 if $dnssectype{$self->type}; # gloss over bugs in SEC RRs
-		return ref($self)->new_from_string( $self, join( ' ', @parse ), @parse );
+		return ref($self)->new_from_string( $self, "@token", @token );
 	} else {
-		$self->parse_rdata(@parse);			# parse arguments
+		$self->parse_rdata(@token);			# parse arguments
 	}
 	return $self;
 }
@@ -223,18 +222,18 @@ sub new_hash {
 	my $ttl	  = $attribute{ttl};
 	delete @attribute{qw(name class type ttl rdlength)};	# strip non-RDATA fields
 
-	my $populated = scalar %attribute;			# RDATA specified
+	my $populated = scalar keys %attribute;			# RDATA specified
 
 	my $self = $base->_subclass( $temp, $populated );	# RR with defaults (if appropriate)
 	$self->class($class) if defined $class;			# specify CLASS
 	$self->ttl($ttl)     if defined $ttl;			# specify TTL
 	$self->{ttl} ||= 0 if COMPATIBLE and $dnssectype{$self->type};	  # gloss over bugs in SEC RRs
 
-	while ( my ( $method, $argument ) = each %attribute ) {
-		if ( UNIVERSAL::isa( $argument, 'ARRAY' ) ) {
-			$self->$method(@$argument);		# name => [ ... ]
+	while ( my ( $attribute, $value ) = each %attribute ) {
+		if ( UNIVERSAL::isa( $value, 'ARRAY' ) ) {
+			$self->$attribute(@$value);		# attribute => [ ... ]
 		} else {
-			$self->$method($argument);		# name => value
+			$self->$attribute($value);		# attribute => value
 		}
 	}
 
@@ -447,17 +446,18 @@ Resource record time to live in seconds.
 =cut
 
 # The following time units are recognised, but are not part of the
-# application program interface. These are required for parsing BIND
-# zone files but should not be used in other contexts.
+# published API.  These are required for parsing BIND zone files but
+# should not be used in other contexts.
 my %unit = ( w => 604800, d => 86400, h => 3600, m => 60, s => 1 );
 
 sub ttl {
-	my $self = shift;
+	my $self  = shift;
+	my $value = shift;
 
-	return $self->{ttl} || 0 unless @_;			# avoid defining rr->{ttl}
+	return $self->{ttl} || 0 unless defined $value;		# avoid defining rr->{ttl}
 
 	my $ttl = 0;
-	my %time = reverse split /(\D)\D*/, lc( shift || '0' ) . 's';
+	my %time = reverse split /(\D)\D*/, lc($value) . 's';
 	while ( my ( $u, $t ) = each %time ) {
 		$ttl += $unit{$u} > 1 ? $t * $unit{$u} : $t;
 	}
@@ -478,11 +478,11 @@ sub rdata {
 
 	return eval { $self->encode_rdata( 0x4000, {} ); } || '' unless @_;
 
-	my $buffer = $self->{rdata}    = shift;
-	my $octets = $self->{rdlength} = length $buffer;
-	my $hash   = {};
-	$self->decode_rdata( \$buffer, 0, $hash ) if $octets;
-	croak 'compression pointer seen in rdata' if %$hash;
+	my $rdata = $self->{rdata}    = shift;
+	my $rdlen = $self->{rdlength} = length $rdata;
+	my $hash  = {};
+	$self->decode_rdata( \$rdata, 0, $hash ) if $rdlen;
+	croak 'compression pointer seen in rdata' if keys %$hash;
 }
 
 
