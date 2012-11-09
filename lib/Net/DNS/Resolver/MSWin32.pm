@@ -42,7 +42,7 @@ sub init {
 	my @nameservers = map { $_->{IpAddress} } @{$FIXED_INFO->{DnsServersList}};
 
 	my %h;							# remove blanks and dupes
-	$defaults->{nameservers} = [grep { !$_ || $h{$_}++ } @nameservers] if scalar @nameservers;
+	$defaults->{nameservers} = [grep { $_ && !$h{$_}++ } @nameservers] if scalar @nameservers;
 
 	my $domain = $FIXED_INFO->{DomainName} || '';
 	my $searchlist = $domain;
