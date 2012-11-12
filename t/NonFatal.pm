@@ -25,6 +25,8 @@
 	sub ok {
 		my ($self, $test, $name) = @_;
 
+		$name ||= '';
+
 		$name = "NOT OK, but tolerating failure, $name" unless $test;
 		
 		$self->SUPER::ok(1, $name);

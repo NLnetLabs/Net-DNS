@@ -85,7 +85,7 @@ sub new {
 	$self->{handle} = $file;
 	return $self if ref($file);
 
-	$file = "$DIR/$file" if $DIR && $file !~ m#^[/]#;
+	$file = $self->{name} = "$DIR/$file" if $DIR && $file !~ m#^[/]#;
 	$self->{handle} = new FileHandle( $file, '<' ) unless UTF8;
 	$self->{handle} = new FileHandle( $file, '<:encoding(UTF-8)' ) if UTF8;
 	croak "Failed to open $file" unless $self->{handle};
@@ -346,7 +346,16 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 	sub new {
 		my $self = bless {}, shift;
-		@{$self}{qw(line template count instant step)} = @_;
+		my $range = shift;
+		@{$self}{qw(template line)} = @_;
+
+		my ( $first, $last ) = split m#[-/]#, $range;	# initial iterator state
+		my ( $junk,  $step ) = split m#[/]#,  $range;
+		$step = abs( $step || 1 );			# coerce step to match range
+		$step = ( $last < $first ) ? -$step : $step;
+		@{$self}{qw(instant step)} = ( $first, $step );
+		$self->{count} = int( ( $last - $first ) / $step ) + 1;
+
 		for ( $self->{template} ) {
 			s/\\\$/\\036/g;				# disguise escaped dollar
 			s/\$\$/\\036/g;				# disguise escaped dollar
@@ -403,13 +412,8 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 	sub _generate {				## expand $GENERATE into input stream
 		my ( $self, $range, $template ) = @_;
-		my ( $first, $last ) = split m#[-/]#, $range;
-		my ( $junk,  $step ) = split m#[/]#,  $range;
-		$step = abs( $step || 1 );			# coerce step to match range
-		$step = ( $last < $first ) ? -$step : $step;
-		my $count = int( ( $last - $first ) / $step ) + 1;
 
-		my $handle = new Net::DNS::ZoneFile::Generator( $self->line, $template, $count, $first, $step );
+		my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
 
 		my $generate = new Net::DNS::ZoneFile($handle);
 		delete $self->{latest};				# forbid empty name
@@ -461,7 +465,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 			}
 		}
 
-		$self->{fh}->close or die "close: $! $?" if defined($self->{fh});	# end of file
+		$fh->close or die "close: $! $?";		# end of file
 		my $link = $self->{link} || return undef;	# end of zone
 		%$self = %$link;				# end $INCLUDE
 		return $self->_getline;				# resume input
