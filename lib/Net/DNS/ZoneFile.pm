@@ -244,6 +244,7 @@ can be obtained directly by calling in list context.
 read() parses the specified zone file and returns a reference to the
 list of Net::DNS::RR objects representing the RRs in the file.
 The return value is undefined if the zone data can not be parsed.
+
 =cut
 
 {
@@ -257,6 +258,35 @@ The return value is undefined if the zone data can not be parsed.
 		carp $@;
 		return wantarray ? @rr : undef;
 	}
+
+
+	package Net::DNS::ZoneFile::Text;
+
+	use overload ( '<>' => 'read' );
+
+	sub new {
+		my $self = bless {}, shift;
+		my $data = shift;
+		my @line = split /\n/, ref($data) ? $$data : $data;
+		$self->{data} = \@line;
+		return $self;
+	}
+
+	sub read {
+		my $self = shift;
+		$self->{line}++;
+		return shift( @{$self->{data}} );
+	}
+
+	sub close {
+		shift->{data} = [];
+		return 1;
+	}
+
+	sub input_line_number {
+		return shift->{line};
+	}
+
 }
 
 
@@ -289,19 +319,8 @@ The return value is undefined if the zone data can not be parsed.
 
 sub parse ($$;$) {
 	my $self = shift;
-	my $data = shift;
-
-	my $temp = "temp$$.txt";
-	my $handle = new FileHandle( $temp, '>' ) unless UTF8;
-	$handle = new FileHandle( $temp, '>:encoding(UTF-8)' ) if UTF8;
-	die "Failed to open $temp" unless $handle;
-	print $handle $$data, "\n" if ref($data);
-	print $handle $data,  "\n" unless ref($data);
-	close $handle;
-
-	my $zone = new Net::DNS::ZoneFile($temp);
-	unlink $temp;
-	return $self->readfh( $zone->{handle}, @_ );
+	my $data = new Net::DNS::ZoneFile::Text(shift);
+	return $self->readfh( $data, @_ );
 }
 
 
@@ -321,6 +340,47 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 {
 
+	package Net::DNS::ZoneFile::Generator;
+
+	use overload ( '<>' => 'read' );
+
+	sub new {
+		my $self = bless {}, shift;
+		@{$self}{qw(line template count instant step)} = @_;
+		for ( $self->{template} ) {
+			s/\\\$/\\036/g;				# disguise escaped dollar
+			s/\$\$/\\036/g;				# disguise escaped dollar
+		}
+		return $self;
+	}
+
+	sub read {
+		my $self = shift;
+		return undef unless $self->{count};		# EOF
+
+		my $instant = $self->{instant};			# update iterator state
+		$self->{instant} = $instant + $self->{step};
+		$self->{count}--;
+
+		local $_ = $self->{template};			# copy template
+		while (/\$\{([^\}]*)\}/) {			# substitute ${...}
+			my $s = _format( $instant, split /[,]/, $1 );
+			s/\$\{$1\}/$s/g;
+		}
+		s/\$/$instant/g;				# unqualified $
+		return $_;
+	}
+
+	sub close {
+		shift->{count} = 0;				# suppress iterator
+		return 1;
+	}
+
+	sub input_line_number {
+		return shift->{line};				# fixed: identifies $GENERATE
+	}
+
+
 	sub _format {				## convert $GENERATE iteration number to specified format
 		my $number = shift || 0;			# per ISC BIND 9.7
 		my $offset = shift || 0;
@@ -336,73 +396,29 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 		}
 	}
 
+}
+
+
+{
 
 	sub _generate {				## expand $GENERATE into input stream
 		my ( $self, $range, $template ) = @_;
 		my ( $first, $last ) = split m#[-/]#, $range;
 		my ( $junk,  $step ) = split m#[/]#,  $range;
-		$step = abs( $step || 1 );
+		$step = abs( $step || 1 );			# coerce step to match range
 		$step = ( $last < $first ) ? -$step : $step;
-		for ($template) {
-			s/\$\$/\\036/g;				# disguise escaped dollar
-			s/\\\$/\\036/g;				# disguise escaped dollar
-		}
+		my $count = int( ( $last - $first ) / $step ) + 1;
 
-		my $handle = new FileHandle;			# pipe from iterator process
-		my $pid = open( $handle, '-|' );		# spawn iterator process
+		my $handle = new Net::DNS::ZoneFile::Generator( $self->line, $template, $count, $first, $step );
 
-		unless ( defined $pid ) {			# unable or unwilling to fork
-			my $temp = "temp$$.txt";
-			my $handle = new FileHandle( $temp, '>' ) unless UTF8;
-			$handle = new FileHandle( $temp, '>:encoding(UTF-8)' ) if UTF8;
-			die "Failed to open $temp" unless $handle;
-			my $counter = 1 + int( ( $last - $first ) / $step );
-			my $instant = $first;
-			while ( $counter-- > 0 ) {
-				local $_ = $template;		# copy template
-				while (/\$\{([^\}]*)\}/) {	# substitute ${...}
-					my $s = _format( $instant, split /[,]/, $1 );
-					s/\$\{$1\}/$s/g;
-				}
-				s/\$/$instant/g;		# unqualified $
-				print $handle $_, "\n";
-				$instant += $step;
-			}
-			close $handle;
-			$self->_include($temp);
-			unlink $temp;
-			return;
-		}
-
-		local $SIG{PIPE} = sub { die @_; };
-
-		unless ($pid) {				## child
-			my $counter = 1 + int( ( $last - $first ) / $step );
-			my $instant = $first;
-			while ( $counter-- > 0 ) {
-				local $_ = $template;		# copy template
-				while (/\$\{([^\}]*)\}/) {	# substitute ${...}
-					my $s = _format( $instant, split /[,]/, $1 );
-					s/\$\{$1\}/$s/g;
-				}
-				s/\$/$instant/g;		# unqualified $
-				print;				# pipe to parser
-				$instant += $step;
-			}
-			close or die "close: $! $?";
-			exit;					# done
-
-		} else {				## parent
-			my $new = bless {};
-			delete $self->{latest};			# forbid empty name after $GENERATE
-			%$new = %$self;				# save state
-			@{$self}{qw(link handle)} = ( $new, $handle );	  # create link
-			$self->{name} .= '.[$GENERATE]';	# report source in failure messages
-		}
+		my $generate = new Net::DNS::ZoneFile($handle);
+		delete $self->{latest};				# forbid empty name
+		%$generate = %$self;				# save state, create link
+		@{$self}{qw(link handle)} = ( $generate, $handle );
 	}
 
 
-	sub _getline {				## get next RR line from file
+	sub _getline {				## get line from current source
 		my $self = shift;
 
 		my $fh = $self->{handle};
@@ -426,20 +442,16 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 				$self->_include($file);
 				$self->_origin($origin) if $origin;
 				$fh = $self->{handle};
-				next;
 			} elsif (/^\$ORIGIN/) {			# directive
 				my ( undef, $origin ) = split;
 				$self->_origin( $origin or die '$ORIGIN incomplete' );
-				next;
 			} elsif (/^\$TTL/) {			# directive
 				my ( undef, $ttl ) = split;
 				$self->{ttl} = $ttl or die '$TTL incomplete';
-				next;
 			} elsif (/^\$GENERATE/) {		# directive
 				my ( undef, $range, @template ) = split;
 				$self->_generate( $range, "@template\n" );
 				$fh = $self->{handle};
-				next;
 			} elsif (/^\$/) {			# unrecognised
 				chomp;
 				die "unknown directive: $_";
@@ -449,7 +461,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 			}
 		}
 
-		close($fh) or die "close: $! $?";		# EOF
+		$self->{fh}->close or die "close: $! $?" if defined($self->{fh});	# end of file
 		my $link = $self->{link} || return undef;	# end of zone
 		%$self = %$link;				# end $INCLUDE
 		return $self->_getline;				# resume input
@@ -477,14 +489,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 __END__
 
 
-=head1 BUGS
-
-The $GENERATE directive is expanded by spawning a child process,
-which causes multiple premature executions of Perl END{} subroutines
-when child processes terminate.
-
-
-=head1 ACKNOWLEDGEMENT
+=head1 ACKNOWLEDGEMENTS
 
 This package is designed as an improved and compatible replacement
 for Net::DNS::ZoneFile 1.04 which was created by Luis Munoz in 2002
@@ -493,6 +498,9 @@ as a separate CPAN module.
 The present implementation is the result of an agreement to merge our
 two different approaches into one package integrated into Net::DNS.
 The contribution of Luis Munoz is gratefully acknowledged.
+
+Thanks are also due to Willem Toorop for his constructive criticism
+of the initial version and invaluable assistance during testing.
 
 
 =head1 COPYRIGHT

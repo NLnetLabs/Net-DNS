@@ -5,6 +5,7 @@ use FileHandle;
 
 use Test::More tests => 46;
 
+use t::NonFatal;
 
 use constant UTF8 => eval {
 	require Encode;
@@ -20,6 +21,7 @@ use constant LIBIDN => eval {					# optional IDN support
 
 BEGIN {
 	use_ok('Net::DNS::ZoneFile');
+	NonFatalBegin();
 }
 
 
