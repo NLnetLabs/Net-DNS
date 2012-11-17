@@ -14,7 +14,7 @@ use Carp;
 #
 #	Domain Name System (DNS) Parameters
 #
-#	(last updated 2012-09-14)
+#	(last updated 2012-11-12)
 #
 
 
@@ -91,10 +91,10 @@ use vars qw( %typebyname %typebyval );
         TALINK     => 58,                                       # [Wijngaards]
         CDS        => 59,                                       # [Barwood]
         SPF        => 99,                                       # [RFC4408]
-        NID        => 104,                                      # [RFC-irtf-rrg-ilnp-dns-06.txt]
-        L32        => 105,                                      # [RFC-irtf-rrg-ilnp-dns-06.txt]
-        L64        => 106,                                      # [RFC-irtf-rrg-ilnp-dns-06.txt]
-        LP         => 107,                                      # [RFC-irtf-rrg-ilnp-dns-06.txt]
+        NID        => 104,                                      # [RFC6742]
+        L32        => 105,                                      # [RFC6742]
+        L64        => 106,                                      # [RFC6742]
+        LP         => 107,                                      # [RFC6742]
         TKEY       => 249,                                      # [RFC2930]
         TSIG       => 250,                                      # [RFC2845]
         IXFR       => 251,                                      # [RFC1995]

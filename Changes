@@ -2,6 +2,8 @@ $Id$                       -*-text-*-
 
 **** 0.69 ??? ??, 2012
 
+Feature added support for NID L32 L64 LP, RFC6742.
+
 Feature rt.cpan.org #62030
 
 	Parsing of BIND zone files implemented in Net::DNS::ZoneFile.
