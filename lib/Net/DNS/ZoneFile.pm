@@ -51,11 +51,11 @@ use FileHandle;
 use Net::DNS::Domain;
 use Net::DNS::RR;
 
-
 use constant UTF8 => eval {
 	require Encode;
-	Encode::decode_utf8( chr(91) ) eq '[';			# specifically not UTF-EBCDIC
-};
+	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
+	Encode::find_encoding('UTF8');
+} || 0;
 
 
 =head1 METHODS

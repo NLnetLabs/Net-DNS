@@ -289,8 +289,8 @@ sub _encode_ascii {
 
 		# partial transliteration for non-ASCII character encodings
 		$s =~ tr
-		[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
-		[\055\040-\054\056-\176\077];
+		[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
+		[\055\041-\054\056-\176\077];
 
 		return $s;					# ASCII
 	}

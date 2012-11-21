@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 47;
+use Test::More tests => 46;
 use t::NonFatal;
 
 use Net::DNS;
@@ -67,10 +67,10 @@ while (my ($param, $value) = each %good_input) {
 	
 SKIP: {
 	# Test first, if we want online tests at all.
-	skip 'Online tests disabled.', 3
+	skip 'Online tests disabled.', 2
 		unless -e 't/online.enabled';
 
-	skip 'Online tests disabled.', 3
+	skip 'Online tests disabled.', 2
 		if -e 't/online.disabled';
 
 	# Some people try to run these on private address space - test for this case and skip.
@@ -83,7 +83,7 @@ SKIP: {
 	
 	my $ip = $sock ? inet_ntoa($sock->sockaddr) : undef;
 
-	skip "Tests may not succeed from private IP: $ip", 3
+	skip "Tests may not succeed from private IP: $ip", 2
 		if $ip && $ip =~ /^(10|172\.(1[6-9]|2.|30|31)|192.168)\./;
 
 	NonFatalBegin();
@@ -100,31 +100,7 @@ SKIP: {
 	is($ip, '10.0.1.128', 'Nameservers() looks up cname.') or
 	    diag ($res->errorstring . $res->print) ;
 
-
-	# Test to trigger a bug in release 0.59 of Question.pm
-	# (rt.cpan.org #28198) (modification of $_ value in various
-	# places
-	my $die = 0;
-	undef ($res); # default values again
-	$res = Net::DNS::Resolver->new(udp_timeout => 3, tcp_timeout => 3);
-
-	eval{
-	    
-	    local $^W = 1;
-	    local $SIG{__DIE__} = sub { $die++ };
-
-	    for (0)   # Sets $_ to 0
-	    {
-		my  $q=$res->send("net-dns.org","SOA");
-	    }
-	    
-	    
-	    
-	};
-	is($die, 0, 'No deaths because of \$_');
-
 	NonFatalEnd();
-
-}	
+}
 
 
