@@ -109,7 +109,7 @@ sub new_string {
 
 	my $name    = shift @token;				# name [ttl] [class] type ...
 	my $ttl	    = shift @token if @token && $token[0] =~ /^\d/;
-	my $rrclass = shift @token if @token && $token[0] =~ /^$CLASS_REGEX$/io;
+	my $rrclass = shift @token if @token && $token[0] =~ /^($CLASS_REGEX)$/io;
 	$ttl = shift @token if @token && $token[0] =~ /^\d/;	# name [class] [ttl] type ...
 	my $rrtype = shift(@token);
 

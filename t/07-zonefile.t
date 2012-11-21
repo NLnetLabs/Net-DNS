@@ -9,7 +9,8 @@ use t::NonFatal;
 
 use constant UTF8 => eval {
 	require Encode;
-	use encoding 'utf8';
+	require encoding;
+	encoding->import('utf8');
 	Encode::decode_utf8( chr(91) ) eq '[';			# specifically not UTF-EBCDIC
 };
 
