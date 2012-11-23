@@ -5,26 +5,21 @@ use FileHandle;
 
 use Test::More tests => 46;
 
-use t::NonFatal;
-
 use constant UTF8 => eval {
-	require Encode;
+	require Encode;						# expect this to fail pre-5.8.0
 	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
 	Encode::find_encoding('UTF8');
 } || 0;
 
-use constant LIBIDN => eval {					# optional IDN support
-	require Net::LibIDN;
-	Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
+use constant LIBIDN => eval {
+	require Net::LibIDN;					# optional IDN support
+	UTF8 && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
 } || 0;
 
 
 BEGIN {
 	use_ok('Net::DNS::ZoneFile');
 }
-
-
-NonFatalBegin();
 
 
 my $seq;
@@ -35,9 +30,8 @@ sub source {				## zone file builder
 	my $tag	 = ++$seq;
 	my $file = "zone$tag.txt";
 
-	my $handle = new FileHandle( $file, '>' ) unless UTF8;
-	$handle = new FileHandle( $file, '>:encoding(UTF-8)' ) if UTF8;
-	die "Failed to open $file" unless $handle;
+	my $handle = new FileHandle( $file, '>' );		# Note: encoding not specified
+	die "Failed to create $file" unless $handle;
 
 	print $handle $text;
 	close $handle;
@@ -185,24 +179,6 @@ EOF
 }
 
 
-SKIP: {				## Non-ASCII zone file content
-	skip( 'Non-ASCII content - Unicode/UTF-8 not supported', 2 ) unless UTF8;
-
-	my $zonefile = source <<'EOF';
-jp	TXT	"古池や　蛙飛込む　水の音"		; Unicode string
-日本	NULL						; Unicode domain name
-EOF
-
-	my $txt = $zonefile->read;
-	my @txt = $txt->txtdata;
-	is( length( $txt[0] ), 12, 'Non-ASCII TXT argument' );
-
-	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
-	my $rr = $zonefile->read;
-	is( $rr->name, 'xn--wgv71a', 'Non-ASCII domain name' );
-}
-
-
 {				## compatibility with defunct Net::DNS::ZoneFile 1.04 distro
 	my $listref = Net::DNS::ZoneFile->read('zone8.txt');
 	ok( scalar(@$listref), 'read entire zone file' );
@@ -229,4 +205,26 @@ EOF
 }
 
 
+SKIP: {				## Non-ASCII zone content
+	skip( 'Non-ASCII content - Unicode/UTF-8 not supported', 2 ) unless UTF8;
+
+	my $line1 = <DATA>;					# presume default encoding
+	my $zone1 = source($line1);				# avoid string concatenation
+	my $txtrr = $zone1->read;
+	is( length( $txtrr->txtdata ), 12, 'Non-ASCII TXT argument' );
+
+	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
+
+	my $line2 = <DATA>;					# presume default encoding
+	my $zone2 = source($line2);				# avoid string concatenation
+	my $nextr = $zone2->read;
+	is( $nextr->name, 'xn--wgv71a', 'Non-ASCII domain name' );
+}
+
+
 exit;
+
+__END__
+jp	TXT	"古池や　蛙飛込む　水の音"		; Unicode text string
+日本	NULL						; Unicode domain name
+
