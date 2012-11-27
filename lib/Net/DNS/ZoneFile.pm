@@ -79,13 +79,14 @@ use vars qw($DIR);
 
 sub new {
 	my $self = bless {}, shift;
-	my $file = $self->{name} = shift;
+	my $file = shift;
 	$self->_origin(shift);
 
 	$self->{handle} = $file;
 	return $self if ref($file);
 
-	$file = $self->{name} = "$DIR/$file" if $DIR && $file !~ m#^[/]#;
+	$self->{name} = $file;
+	$file = "$DIR/$file" if $DIR && $file !~ m#^[/]#;
 	$self->{handle} = new FileHandle( $file, '<' ) unless UTF8;
 	$self->{handle} = new FileHandle( $file, '<:encoding(UTF-8)' ) if UTF8;
 	croak "Failed to open $file" unless $self->{handle};
@@ -115,7 +116,7 @@ in the zone file.
 =cut
 
 sub read {
-	my $self = shift;
+	my ($self) = @_;
 
 	return &_read unless ref $self;				# compatibility interface
 
@@ -150,7 +151,7 @@ sub read {
 			}
 
 		} or $@ && die;					# ugly construct to relate error to source
-	} or $@ && ( $@ =~ s/\.\.\.\w.+<\w+>/$self->name/e, croak $@ );
+	} or $@ && ( $@ =~ s/\.\.\..+$/join( ', line ', $self->name, $self->line )/e, croak $@ );
 }
 
 
@@ -165,7 +166,7 @@ argument supplied when the object was created.
 =cut
 
 sub name {
-	return shift->{name} || '';
+	return shift->{name} || '<anon>';
 }
 
 
@@ -249,13 +250,15 @@ The return value is undefined if the zone data can not be parsed.
 
 {
 
-	sub _read ($;$) {
+	sub _read {
+		my ($arg1) = @_;
+		shift unless ref($arg1) || $arg1 ne __PACKAGE__;
 		my $file = shift;
 		local $DIR = shift;
 		my $zone = new Net::DNS::ZoneFile($file);
 		my @rr = eval { $zone->read; };
 		return wantarray ? @rr : \@rr unless $@;
-		carp $@;
+		warn "$@\n";
 		return wantarray ? @rr : undef;
 	}
 
@@ -300,8 +303,7 @@ in the file.
 The return value is undefined if the zone data can not be parsed.
 =cut
 
-sub readfh ($$;$) {
-	my $void = shift;
+sub readfh {
 	return &_read;
 }
 
@@ -317,10 +319,10 @@ The return value is undefined if the zone data can not be parsed.
 
 =cut
 
-sub parse ($$;$) {
-	my $self = shift;
-	my $data = new Net::DNS::ZoneFile::Text(shift);
-	return $self->readfh( $data, @_ );
+sub parse {
+	my ($arg1) = @_;
+	shift unless ref($arg1) || $arg1 ne __PACKAGE__;
+	return &_read( new Net::DNS::ZoneFile::Text(shift), @_ );
 }
 
 
