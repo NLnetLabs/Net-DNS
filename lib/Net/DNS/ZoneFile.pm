@@ -446,14 +446,19 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 			if (/^\$INCLUDE/) {			# directive
 				my ( undef, $file, $origin ) = split;
 				$self->_include($file);
-				$self->_origin($origin) if $origin;
 				$fh = $self->{handle};
+				next unless $origin;
+				my $context = $self->{context};
+				&$context( sub { $self->_origin($origin); } );
 			} elsif (/^\$ORIGIN/) {			# directive
 				my ( undef, $origin ) = split;
-				$self->_origin( $origin or die '$ORIGIN incomplete' );
+				die '$ORIGIN incomplete' unless $origin;
+				my $context = $self->{context};
+				&$context( sub { $self->_origin($origin); } );
 			} elsif (/^\$TTL/) {			# directive
 				my ( undef, $ttl ) = split;
-				$self->{ttl} = $ttl or die '$TTL incomplete';
+				die '$TTL incomplete' unless $ttl;
+				$self->{ttl} = Net::DNS::RR::ttl( {}, $ttl );
 			} elsif (/^\$GENERATE/) {		# directive
 				my ( undef, $range, @template ) = split;
 				$self->_generate( $range, "@template\n" );

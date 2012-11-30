@@ -8,7 +8,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 #
 #	Domain Name System (DNS) Parameters
-#	(last updated 2012-11-12)
+#	(last updated 2012-11-27)
 #
 
 use base Exporter;
@@ -70,16 +70,16 @@ use vars qw( %typebyname %typebyval );
 	AAAA	   => 28,					# RFC3596
 	LOC	   => 29,					# RFC1876
 	NXT	   => 30,					# RFC3755 RFC2535
-	EID	   => 31,					#
-	NIMLOC	   => 32,					#
+	EID	   => 31,					# http://ana-3.lcs.mit.edu/~jnc/nimrod/dns.txt
+	NIMLOC	   => 32,					# http://ana-3.lcs.mit.edu/~jnc/nimrod/dns.txt
 	SRV	   => 33,					# RFC2782
-	ATMA	   => 34,					#
+	ATMA	   => 34,					# http://www.broadband-forum.org/ftp/pub/approved-specs/af-dans-0152.000.pdf
 	NAPTR	   => 35,					# RFC2915 RFC2168 RFC3403
 	KX	   => 36,					# RFC2230
 	CERT	   => 37,					# RFC4398
 	A6	   => 38,					# RFC3226 RFC2874 RFC6563
 	DNAME	   => 39,					# RFC6672
-	SINK	   => 40,					#
+	SINK	   => 40,					# http://bgp.potaroo.net/ietf/all-ids/draft-eastlake-kitchen-sink-02.txt
 	OPT	   => 41,					# RFC2671 RFC3225
 	APL	   => 42,					# RFC3123
 	DS	   => 43,					# RFC4034 RFC3658
@@ -114,8 +114,8 @@ use vars qw( %typebyname %typebyval );
 	MAILA	   => 254,					# RFC1035
 	ANY	   => 255,					# RFC1035
 	URI	   => 256,					#
-	CAA	   => 257,					#
-	TA	   => 32768,					#
+	CAA	   => 257,					# RFC-ietf-pkix-caa-15
+	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
 	);
 %typebyval = reverse %typebyname;
@@ -162,8 +162,8 @@ use vars qw( %rcodebyname %rcodebyval );
 # Registry: DNS EDNS0 Options
 use vars qw( %ednsoptionbyname %ednsoptionbyval );
 %ednsoptionbyname = (
-	LLQ  => 1,						#
-	UL   => 2,						#
+	LLQ  => 1,						# http://files.dns-sd.org/draft-sekar-dns-llq.txt
+	UL   => 2,						# http://files.dns-sd.org/draft-sekar-dns-ul.txt
 	NSID => 3,						# RFC5001
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
@@ -304,11 +304,11 @@ file maintained and published by IANA.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr. 
+Copyright (c)2012 Dick Franks
+
+Portions Copyright (c)1997-2002 Michael Fuhr. 
 
 Portions Copyright (c)2002-2004 Chris Reinhardt.
-
-Portions Copyright (c)2012 Dick Franks
 
 All rights reserved.
 

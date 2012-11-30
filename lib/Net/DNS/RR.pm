@@ -111,7 +111,7 @@ sub new_string {
 	my $ttl	    = shift @token if @token && $token[0] =~ /^\d/;
 	my $rrclass = shift @token if @token && $token[0] =~ /^($CLASS_REGEX)$/io;
 	$ttl = shift @token if @token && $token[0] =~ /^\d/;	# name [class] [ttl] type ...
-	my $rrtype = shift(@token);
+	my $rrtype = shift(@token) || croak 'unable to parse RR string';
 
 	if ($update) {
 
@@ -448,7 +448,7 @@ Resource record time to live in seconds.
 # The following time units are recognised, but are not part of the
 # published API.  These are required for parsing BIND zone files but
 # should not be used in other contexts.
-my %unit = ( w => 604800, d => 86400, h => 3600, m => 60, s => 1 );
+my %unit = ( W => 604800, D => 86400, H => 3600, M => 60, S => 1 );
 
 sub ttl {
 	my $self  = shift;
@@ -457,9 +457,10 @@ sub ttl {
 	return $self->{ttl} || 0 unless defined $value;		# avoid defining rr->{ttl}
 
 	my $ttl = 0;
-	my %time = reverse split /(\D)\D*/, lc($value) . 's';
+	my %time = reverse split /(\D)\D*/, uc($value) . 'S';
 	while ( my ( $u, $t ) = each %time ) {
-		$ttl += $unit{$u} > 1 ? $t * $unit{$u} : $t;
+		my $s = $unit{$u} || croak qq(bad time unit "$u");
+		$ttl += $s > 1 ? $t * $s : $t;
 	}
 	$self->{ttl} = $ttl;
 }
