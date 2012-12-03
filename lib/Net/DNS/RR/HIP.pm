@@ -59,9 +59,9 @@ sub format_rdata {			## format rdata portion of RR string.
 	return '' unless $self->{hitbin};
 	my $algorithm = $self->pkalgorithm;
 	my $hit	      = $self->hit;
-	my $base64    = MIME::Base64::encode $self->keybin;
+	my $base64    = MIME::Base64::encode $self->keybin, "";
 	my @servers   = map $_->string, @{$self->{servers}};
-	return "$algorithm $hit (\n$base64@servers )";
+	return "$algorithm $hit (\n$base64\n@servers )";
 }
 
 
