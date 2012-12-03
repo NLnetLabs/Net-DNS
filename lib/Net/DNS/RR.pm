@@ -57,10 +57,10 @@ sub new {
 
 	if (COMPATIBLE) {
 		return &_new_from_rdata if ref $_[1];		# resolve new() usage conflict
-		return @_ > 3 ? &new_hash : &new_string;	# avoid exception trap/reraise
+		return scalar @_ > 2 ? &new_hash : &new_string; # avoid exception trap/reraise
 	}
 
-	return eval { @_ > 3 ? &new_hash : &new_string; } || croak "${@}new $class( ... )";
+	return eval { scalar @_ > 2 ? &new_hash : &new_string; } || croak "${@}new $class( ... )";
 }
 
 
@@ -97,7 +97,6 @@ my %dnssectype = map { ( $_, 1 ) } qw(DLV DNSKEY DS KEY NSEC NSEC3 NSEC3PARAM NX
 sub new_string {
 	my $class = shift;
 	local $_ = shift || croak 'empty or undefined argument';
-	my $update = shift;
 
 	# parse into quoted strings, contiguous non-whitespace, (discarded) brackets and comments
 	s/\\\\/\\092/g;						# disguise escaped escape
@@ -112,49 +111,6 @@ sub new_string {
 	my $rrclass = shift @token if @token && $token[0] =~ /^($CLASS_REGEX)$/io;
 	$ttl = shift @token if @token && $token[0] =~ /^\d/;	# name [class] [ttl] type ...
 	my $rrtype = shift(@token) || croak 'unable to parse RR string';
-
-	if ($update) {
-
-		for ( lc $update ) {
-			/yxrrset/ and do {
-				$rrclass = 'ANY' unless @token;
-				last;
-			};
-
-			/nxrrset/ and do {
-				$rrclass = 'NONE';
-				@token	 = ();
-				last;
-			};
-
-			/yxdomain/ and do {
-				$rrclass = 'ANY';
-				$rrtype	 = 'ANY';
-				@token	 = ();
-				last;
-			};
-
-			/nxdomain/ and do {
-				$rrclass = 'NONE';
-				$rrtype	 = 'ANY';
-				@token	 = ();
-				last;
-			};
-
-			/rr_add/ and do {
-				$ttl ||= 86400;
-				last;
-			};
-
-			/rr_del/ and do {
-				$rrclass = @token ? 'NONE' : 'ANY';
-				last;
-			};
-		}
-
-		$rrtype ||= 'ANY';
-		$ttl	||= 0;
-	}
 
 	my $base = new Net::DNS::Question( $name, $rrtype, $rrclass );
 	my $self = $class->_subclass( $base, scalar @token );	# RR with defaults (if appropriate)
@@ -409,7 +365,6 @@ sub type {
 		return $self->{type} || 'A';
 	}
 
-	$self->{class} = classbyname(shift) if @_;
 	confess 'not possible to change RR->type' if @_;
 	typebyval( $self->{type} || 1 );
 }

@@ -384,17 +384,40 @@ sub mx {
 # Auxiliary functions to support dynamic update.
 #
 
-sub yxrrset { return new Net::DNS::RR( shift, 'yxrrset' ); }
+sub yxrrset {
+	my $rr = new Net::DNS::RR(shift);
+	$rr->class('ANY') unless $rr->rdata;
+	return $rr;
+}
 
-sub nxrrset { return new Net::DNS::RR( shift, 'nxrrset' ); }
+sub nxrrset {
+	my $rr = new Net::DNS::RR(shift);
+	$rr->class('NONE');
+	return $rr;
+}
 
-sub yxdomain { return new Net::DNS::RR( shift, 'yxdomain' ); }
+sub yxdomain {
+	my ($domain) = split /\s+/, shift;
+	return new Net::DNS::RR("$domain ANY ANY");
+}
 
-sub nxdomain { return new Net::DNS::RR( shift, 'nxdomain' ); }
+sub nxdomain {
+	my ($domain) = split /\s+/, shift;
+	return new Net::DNS::RR("$domain NONE ANY");
+}
 
-sub rr_add { return new Net::DNS::RR( shift, 'rr_add' ); }
+sub rr_add {
+	my $rr = new Net::DNS::RR(shift);
+	$rr->{ttl} ||= 86400;
+	return $rr;
+}
 
-sub rr_del { return new Net::DNS::RR( shift, 'rr_del' ); }
+sub rr_del {
+	my ( $head, @tail ) = split /\s+/, shift;
+	my $rr = new Net::DNS::RR( scalar @tail > 1 ? "$head @tail": "$head ANY @tail" );
+	$rr->class( $rr->rdata ? 'NONE' : 'ANY' );
+	return $rr;
+}
 
 
 

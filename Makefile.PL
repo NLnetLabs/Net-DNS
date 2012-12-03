@@ -147,7 +147,7 @@ my %Makefile = (
 	C     => [],
 	clean => {
 		FILES =>
-'t/IPv6.enabled t/online.enabled t/online.nonfatal compile.* DNS.o DNS.c DNS.bs lib/Net/DNS/Resolver/MSWin32'
+'t/IPv6.enabled t/online.enabled t/online.nonfatal compile.* DNS.o DNS.c DNS.bs lib/Net/DNS/Resolver/MSWin32 zone[0-9].txt zone[0-9][0-9].txt'
 				},
 			);
 
