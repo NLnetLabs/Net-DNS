@@ -47,13 +47,17 @@ lib/Net/DNS/RR/HIP.pm
 lib/Net/DNS/RR/IPSECKEY.pm
 lib/Net/DNS/RR/ISDN.pm
 lib/Net/DNS/RR/KX.pm
+lib/Net/DNS/RR/L32.pm
+lib/Net/DNS/RR/L64.pm
 lib/Net/DNS/RR/LOC.pm
+lib/Net/DNS/RR/LP.pm
 lib/Net/DNS/RR/MB.pm
 lib/Net/DNS/RR/MG.pm
 lib/Net/DNS/RR/MINFO.pm
 lib/Net/DNS/RR/MR.pm
 lib/Net/DNS/RR/MX.pm
 lib/Net/DNS/RR/NAPTR.pm
+lib/Net/DNS/RR/NID.pm
 lib/Net/DNS/RR/NIMLOC.pm
 lib/Net/DNS/RR/NS.pm
 lib/Net/DNS/RR/NSAP.pm

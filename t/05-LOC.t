@@ -29,6 +29,7 @@ my $wire = '002513138916cb3c70c310df00988550';
 		type => $type,
 		%$hash
 		);
+	$rr->print;
 
 
 	my $string = $rr->string;

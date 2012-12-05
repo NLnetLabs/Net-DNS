@@ -212,19 +212,21 @@ SKIP: {				## Non-ASCII zone content
 	my $zone1 = source($line1);				# avoid string concatenation
 	my $txtrr = $zone1->read;
 	is( length( $txtrr->txtdata ), 12, 'Non-ASCII TXT argument' );
+#print $txtrr->rdatastr;
 
-	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
+#skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
 
 	my $line2 = <DATA>;					# presume default encoding
 	my $zone2 = source($line2);				# avoid string concatenation
 	my $nextr = $zone2->read;
 	is( $nextr->name, 'xn--wgv71a', 'Non-ASCII domain name' );
+	print $nextr->owner->labels;
 }
 
 
 exit;
 
 __END__
-jp	TXT	"古池や　蛙飛込む　水の音"		; Unicode text string
+jp	TXT	"古池や"　"蛙飛込む"　"水の音"		; Unicode text string
 日本	NULL						; Unicode domain name
 
