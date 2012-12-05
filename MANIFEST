@@ -113,11 +113,15 @@ t/05-HINFO.t
 t/05-HIP.t
 t/05-IPSECKEY.t
 t/05-ISDN.t
+t/05-L32.t
+t/05-L64.t
+t/05-LP.t
 t/05-LOC.t
 t/05-KX.t
 t/05-MINFO.t
 t/05-MX.t
 t/05-NAPTR.t
+t/05-NID.t
 t/05-NULL.t
 t/05-NS.t
 t/05-OPT.t
