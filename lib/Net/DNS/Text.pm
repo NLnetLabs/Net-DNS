@@ -184,6 +184,19 @@ sub string {
 }
 
 
+sub quoted_string {	# Only used from Net::DNS::TXT::rdatastr,
+			# because spamassassin expects TXT rr's 
+			# to quote strings unconditionally.
+
+	my $self = shift;
+
+	my @utf8 = map { s/([^\040\060-\132\141-\172])/$escape{$1}/eg; $_ } @$self;
+	my $string = _decode_utf8( join '', @utf8 );
+
+	join '', $QQ, $string, $QQ;				# quoted string
+}
+
+
 ########################################
 
 use vars qw($AUTOLOAD);

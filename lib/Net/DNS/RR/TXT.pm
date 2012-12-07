@@ -55,6 +55,14 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
+sub rdatastr {	## format rdata as a list of always quotes strings
+		## to retain backwards compatibility with spamassassin
+	my $self = shift;
+
+	my $txtdata = $self->{txtdata} || [];
+	join ' ', map $_->quoted_string, @$txtdata;
+}
+
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
