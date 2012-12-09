@@ -2,6 +2,10 @@ $Id$                       -*-text-*-
 
 **** 0.71
 
+Fix rt.cpan.org #81786
+
+	Preserve last owner on multiline RRs which starting with blanks
+
 Fix rt.cpan.org #77444
 
 	Make use of new extended header modus operandi for OPT records

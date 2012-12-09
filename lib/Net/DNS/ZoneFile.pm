@@ -437,7 +437,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 				s/\\\\/\\092/g;			# disguise escaped escape
 				s/\\"/\\034/g;			# disguise escaped double quote
 				s/\\;/\\059/g;			# disguise escaped semicolon
-				my @token = grep defined && length, split /("[^"]*")|;[^\n]*|([()])|\s+/;
+				my @token = grep defined && length, split /(^\s)|("[^"]*")|;[^\n]*|([()])|\s+/;
 				last unless grep $_ eq '(', @token;
 				last if grep $_ eq ')', @token;
 				$_ = "@token " . <$fh>;
