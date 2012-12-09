@@ -116,7 +116,7 @@ the data buffer.
 =cut
 
 sub decode {
-	my $self   = bless [], shift;
+	my $class  = shift;
 	my $buffer = shift;					# reference to data buffer
 	my $offset = shift || 0;				# offset within buffer
 
@@ -124,7 +124,7 @@ sub decode {
 	my $next = ++$offset + $size;
 	croak 'corrupt wire-format data' if $next > length $$buffer;
 
-	push @$self, unpack "\@$offset a$size", $$buffer;
+	my $self = bless [ unpack( "\@$offset a$size", $$buffer ) ], $class;
 
 	return wantarray ? ( $self, $next ) : $self;
 }
@@ -179,19 +179,6 @@ sub string {
 
 	# Note: Script-specific rules determine which Unicode characters match \s
 	return $string unless $string =~ /^$|\s|["\$'();@]/;	# unquoted contiguous
-
-	join '', $QQ, $string, $QQ;				# quoted string
-}
-
-
-sub quoted_string {	# Only used from Net::DNS::TXT::rdatastr,
-			# because spamassassin expects TXT rr's 
-			# to quote strings unconditionally.
-
-	my $self = shift;
-
-	my @utf8 = map { s/([^\040\060-\132\141-\172])/$escape{$1}/eg; $_ } @$self;
-	my $string = _decode_utf8( join '', @utf8 );
 
 	join '', $QQ, $string, $QQ;				# quoted string
 }

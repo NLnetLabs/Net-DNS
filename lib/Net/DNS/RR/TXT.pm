@@ -20,6 +20,7 @@ Net::DNS::RR::TXT - DNS TXT resource record
 use strict;
 use integer;
 
+use Carp;
 use Net::DNS::Text;
 
 
@@ -55,14 +56,6 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub rdatastr {	## format rdata as a list of always quotes strings
-		## to retain backwards compatibility with spamassassin
-	my $self = shift;
-
-	my $txtdata = $self->{txtdata} || [];
-	join ' ', map $_->quoted_string, @$txtdata;
-}
-
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
@@ -73,7 +66,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub txtdata {
 	my $self = shift;
 
-	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @_] if @_;
+	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @_] if scalar @_;
 
 	my $txtdata = $self->{txtdata} || [];
 
@@ -83,7 +76,7 @@ sub txtdata {
 }
 
 
-sub char_str_list {				## historical
+sub char_str_list {			## historical
 	return (&txtdata);
 }
 
