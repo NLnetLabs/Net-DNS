@@ -1102,36 +1102,21 @@ sub make_query_packet {
 		$packet->header->rd($self->{'recurse'});
 	}
 
-    if ($self->{'dnssec'}) {
-	    # RFC 3225
-    	print ";; Adding EDNS extention with UDP packetsize $self->{'udppacketsize'} and DNS OK bit set\n"
-    		if $self->{'debug'};
+	if ( $self->{dnssec} ) {				# RFC 3225
+		print ";; Set EDNS DO flag and UDP packetsize $self->{udppacketsize}\n" if $self->{debug};
+		$packet->edns->size($self->{udppacketsize});	# advertise UDP payload size for local IP stack
+		$packet->header->do(1);
 
+		$packet->header->ad($self->{adflag});
+		$packet->header->cd($self->{cdflag});
 
-	$packet->header->cd($self->{'cdflag'});
-	$packet->header->ad($self->{'adflag'});
-	my $optrr = Net::DNS::RR->new(
-						Type         => 'OPT',
-						Name         => '',
-						Class        => $self->{'udppacketsize'},  # requestor's UDP payload size
-						ednsflags    => 0x8000, # first bit set see RFC 3225
-				   );
+	} elsif ($self->{udppacketsize} > Net::DNS::PACKETSZ()) {
+		print ";; Clear EDNS DO flag and set UDP packetsize $self->{udppacketsize}\n" if $self->{debug};
+		$packet->edns->size($self->{udppacketsize});	# advertise UDP payload size for local IP stack
+		$packet->header->do(0);
 
-
-	    $packet->push('additional', $optrr) unless defined  $packet->{'optadded'} ;
-	    $packet->{'optadded'}=1;
-	} elsif ($self->{'udppacketsize'} > Net::DNS::PACKETSZ()) {
-	    print ";; Adding EDNS extention with UDP packetsize  $self->{'udppacketsize'}.\n" if $self->{'debug'};
-	    # RFC 3225
-	    my $optrr = Net::DNS::RR->new(
-						Type         => 'OPT',
-						Name         => '',
-						Class        => $self->{'udppacketsize'},  # requestor's UDP payload size
-						TTL          => 0x0000 # RCODE 32bit Hex
-				    );
-
-	    $packet->push('additional', $optrr) unless defined  $packet->{'optadded'} ;
-	    $packet->{'optadded'}=1;
+	} else {
+		$packet->header->do(0);
 	}
 
 

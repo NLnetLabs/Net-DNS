@@ -2,6 +2,11 @@ $Id$                       -*-text-*-
 
 **** 0.71
 
+Fix rt.cpan.org #77444
+
+	Make use of new extended header modus operandi for OPT records
+	from the resolver too. Preventing a warning.
+
 **** 0.70 Dec 6, 2012
 
 Fix add NID L32 L64 LP resource records + unit tests to MANIFEST.
