@@ -93,9 +93,10 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub format {
 	my $self = shift;
 
-	return $self->{format} unless @_;
+	return $self->{format} unless scalar @_;
 
-	my $format = shift || '<undef>';
+	my $format = shift;
+	$format = '<undef>' unless defined $format;
 	$format = $formats{$format} || die "Unknown mnemonic: '$format'"
 			if $format =~ /\D/;			# look up mnemonic
 	$self->{format} = $format;
@@ -104,16 +105,17 @@ sub format {
 sub tag {
 	my $self = shift;
 
-	$self->{tag} = shift if @_;
+	$self->{tag} = shift if scalar @_;
 	return 0 + ( $self->{tag} || 0 );
 }
 
 sub algorithm {
 	my $self = shift;
 
-	return $self->{algorithm} unless @_;
+	return $self->{algorithm} unless scalar @_;
 
-	my $algorithm = shift || '<undef>';
+	my $algorithm = shift;
+	$algorithm = '<undef>' unless defined $algorithm;
 	$algorithm = $algorithms{$algorithm} || die "Unknown mnemonic: '$algorithm'"
 			if $algorithm =~ /\D/;			# look up mnemonic
 	$self->{algorithm} = $algorithm;
@@ -122,18 +124,18 @@ sub algorithm {
 sub cert {
 	my $self = shift;
 
-	$self->{certbin} = MIME::Base64::decode( join "", @_ ) if @_;
+	$self->{certbin} = MIME::Base64::decode( join "", @_ ) if scalar @_;
 	return MIME::Base64::encode( $self->certbin, "" ) if defined wantarray;
 }
 
 sub certbin {
 	my $self = shift;
 
-	$self->{certbin} = shift if @_;
+	$self->{certbin} = shift if scalar @_;
 	$self->{certbin} || "";
 }
 
-sub certificate { &certbin; }				## historical
+sub certificate { &certbin; }			## historical
 
 1;
 __END__

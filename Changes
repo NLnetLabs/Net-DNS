@@ -2,6 +2,10 @@ $Id$                       -*-text-*-
 
 **** 0.71
 
+Fix rt.cpan.org #81814
+
+	Allow format, tag and algorithm to be zero.
+
 Fix rt.cpan.org #81786
 
 	Preserve last owner on multiline RRs which starting with blanks
