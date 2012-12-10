@@ -56,8 +56,8 @@ queries in both in-addr.arpa and ip6.arpa namespaces.
 sub new {
 	my $self   = bless {}, shift;
 	my $qname  = shift;
-	my $qtype  = uc( shift || '' );
-	my $qclass = uc( shift || '' );
+	my $qtype  = shift || '';
+	my $qclass = shift || '';
 
 	# tolerate (possibly unknown) type and class in zone file order
 	unless ( exists $classbyname{$qclass} ) {
@@ -163,7 +163,7 @@ should be extracted from a query or reply packet.
 sub name {
 	my $self = shift;
 
-	croak 'immutable object: argument invalid' if @_;
+	croak 'immutable object: argument invalid' if scalar @_;
 	$self->{owner}->xname;
 }
 
@@ -182,7 +182,7 @@ attribute is known as zname() and refers to the zone name.
 sub qname {
 	my $self = shift;
 
-	croak 'immutable object: argument invalid' if @_;
+	croak 'immutable object: argument invalid' if scalar @_;
 	$self->{owner}->name;
 }
 
@@ -202,7 +202,7 @@ this attribute is known as ztype() and refers to the zone type.
 sub type {
 	my $self = shift;
 
-	croak 'immutable object: argument invalid' if @_;
+	croak 'immutable object: argument invalid' if scalar @_;
 	typebyval( $self->{type} );
 }
 
@@ -223,7 +223,7 @@ this attribute is known as zclass() and refers to the zone class.
 sub class {
 	my $self = shift;
 
-	croak 'immutable object: argument invalid' if @_;
+	croak 'immutable object: argument invalid' if scalar @_;
 	classbyval( $self->{class} );
 }
 

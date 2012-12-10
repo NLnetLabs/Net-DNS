@@ -35,6 +35,7 @@ use vars qw( %classbyname %classbyval );
 	ANY  => 255,						# RFC1035
 	);
 %classbyval = reverse %classbyname;
+%classbyname = ( %classbyname, map { /\D/ ? lc($_) : $_ } %classbyname );
 
 
 # Registry: Resource Record (RR) TYPEs
@@ -119,6 +120,7 @@ use vars qw( %typebyname %typebyval );
 	DLV	   => 32769,					# RFC4431
 	);
 %typebyval = reverse %typebyname;
+%typebyname = ( %typebyname, map { /\D/ ? lc($_) : $_ } %typebyname );
 
 
 # Registry: DNS OpCodes
@@ -131,6 +133,7 @@ use vars qw( %opcodebyname %opcodebyval );
 	UPDATE => 5,						# RFC2136
 	);
 %opcodebyval = reverse %opcodebyname;
+%opcodebyname = ( %opcodebyname, map { /\D/ ? lc($_) : $_ } %opcodebyname );
 
 
 # Registry: DNS RCODEs
@@ -157,6 +160,7 @@ use vars qw( %rcodebyname %rcodebyval );
 	BADTRUNC => 22,						# RFC4635
 	);
 %rcodebyval = reverse %rcodebyname;
+%rcodebyname = ( %rcodebyname, map { /\D/ ? lc($_) : $_ } %rcodebyname );
 
 
 # Registry: DNS EDNS0 Options
@@ -167,6 +171,7 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	NSID => 3,						# RFC5001
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
+%ednsoptionbyname = ( %ednsoptionbyname, map { /\D/ ? lc($_) : $_ } %ednsoptionbyname );
 
 
 # Registry: DNS Header Flags
@@ -193,7 +198,7 @@ use vars qw( %ednsflagbyname );
 # The following functions are wrappers around similarly named hashes.
 
 sub classbyname {
-	my $name = uc shift;
+	my $name = shift;
 
 	return $classbyname{$name} if defined $classbyname{$name};
 
@@ -218,7 +223,7 @@ sub classbyval {
 
 
 sub typebyname {
-	my $name = uc shift;
+	my $name = shift;
 
 	return $typebyname{$name} if defined $typebyname{$name};
 
@@ -243,7 +248,7 @@ sub typebyval {
 
 
 sub opcodebyname {
-	my $name = uc shift;
+	my $name = shift;
 	return $opcodebyname{$name} if defined $opcodebyname{$name};
 	confess "unknown opcode $name";
 }
@@ -255,7 +260,7 @@ sub opcodebyval {
 
 
 sub rcodebyname {
-	my $arg = uc shift;
+	my $arg = shift;
 	return $rcodebyname{$arg} if defined $rcodebyname{$arg};
 	return 0 + $arg if $arg =~ /^\d/;
 	confess "unknown rcode $arg";
@@ -268,7 +273,7 @@ sub rcodebyval {
 
 
 sub ednsoptionbyname {
-	my $arg = uc shift;
+	my $arg = shift;
 	return $ednsoptionbyname{$arg} if defined $ednsoptionbyname{$arg};
 	return 0 + $arg if $arg =~ /^\d/;
 	confess "unknown option $arg";

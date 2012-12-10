@@ -2,26 +2,34 @@ $Id$                       -*-text-*-
 
 **** 0.71
 
+Fix rt.cpan.org #81756
+
+	Test failures on Perl 5.8.5 .. 5.8.8.
+	lc(), uc() and case insensitive regex matching broken for UTF8.
+	Thanks are due to Paul Howarth for patient work with perl -d.
+	
+Fix rt.cpan.org #81787
+
+	NXDOMAIN no longer reported by $resolver->errorstring.
+
 Fix rt.cpan.org #81814
 
-	Allow format, tag and algorithm to be zero.
+	Allow zero in format, tag and algorithm fields of CERT RR.
 
 Fix rt.cpan.org #81786
 
-	Preserve last owner on multiline RRs which starting with blanks
+	Substitute last owner for leading spaces in multiline zonefile RR.
 
 Fix rt.cpan.org #77444
 
 	Make use of new extended header modus operandi for OPT records
-	from the resolver too. Preventing a warning.
+	also in the resolver. Preventing a warning.
 
 **** 0.70 Dec 6, 2012
 
-Fix add NID L32 L64 LP resource records + unit tests to MANIFEST.
+Feature added support for NID L32 L64 LP, RFC6742.
 
 **** 0.69 Dec 5, 2012
-
-Feature added support for NID L32 L64 LP, RFC6742.
 
 Feature rt.cpan.org #62030
 

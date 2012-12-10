@@ -26,7 +26,7 @@ BEGIN { use_ok('Net::DNS'); }
 		my $name      = eval { typebyval($code) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
 		$name = $_ if $_ eq '*';
-		is( $name, $_, "typebyname('$_')\t$exception" );
+		is( $name, uc($_), "typebyname('$_')\t$exception" );
 	}
 }
 
@@ -48,7 +48,7 @@ BEGIN { use_ok('Net::DNS'); }
 		my $code      = classbyname($_);
 		my $name      = eval { classbyval($code) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
-		is( $name, $_, "classbyname('$_')\t$exception" );
+		is( $name, uc($_), "classbyname('$_')\t$exception" );
 	}
 }
 

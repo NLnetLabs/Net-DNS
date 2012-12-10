@@ -885,16 +885,19 @@ sub send_udp {
 				  $self->errorstring($@);
 
 				  if (defined $ans) {
-				      next SELECTOR unless ( $ans->header->qr || $self->{'ignqrid'});
-				      next SELECTOR unless  ( ($ans->header->id == $packet->header->id) || $self->{'ignqrid'} );
+				      my $header = $ans->header;
+				      next SELECTOR unless ( $header->qr || $self->{'ignqrid'});
+				      next SELECTOR unless  ( ($header->id == $packet->header->id) || $self->{'ignqrid'} );
+				      my $rcode = $header->rcode;
+				      $self->errorstring($rcode) unless $@;
+
 				      $ans->answerfrom($self->answerfrom);
-				      if ($ans->header->rcode ne "NOERROR" &&
-					  $ans->header->rcode ne "NXDOMAIN"){
+				      if ($rcode ne "NOERROR" && $rcode ne "NXDOMAIN"){
 					  # Remove this one from the stack
 
-					  print "RCODE: ".$ans->header->rcode ."; trying next nameserver\n" if $self->{'debug'};
+					  print "RCODE: $rcode; trying next nameserver\n" if $self->{'debug'};
 					  $nmbrnsfailed++;
-					  $ns->[3]="RCODE: ".$ans->header->rcode();
+					  $ns->[3]="RCODE: $rcode";
 					  $lastanswer=$ans;
 					  next NAMESERVER ;
 

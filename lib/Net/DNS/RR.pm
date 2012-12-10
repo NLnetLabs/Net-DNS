@@ -91,7 +91,7 @@ using appropriate RFC4291 or RFC4632 IP address/prefix notation.
 
 =cut
 
-my $CLASS_REGEX = join '|', 'CLASS\d+', keys %classbyname;
+my $CLASS_REGEX = join '|', sort( keys %classbyname ), 'CLASS\d+';
 my %dnssectype = map { ( $_, 1 ) } qw(DLV DNSKEY DS KEY NSEC NSEC3 NSEC3PARAM NXT RRSIG SIG);
 
 sub new_string {
@@ -104,11 +104,11 @@ sub new_string {
 	s/\\'/\\039/g;						# disguise escaped single quote
 	s/\\;/\\059/g;						# disguise escaped semicolon
 	s/\n(\S)/$1/g if COMPATIBLE;				# gloss over syntax errors in Net::DNS::SEC test data
-	my @token = grep defined && length, split /("[^"]*"|'[^']*')|;[^\n]*\n?|[()]|\s+/;
+	my @token = grep defined && length, split /("[^"]*"|'[^']*')|;[^\n]*|[()]|\s+/;
 
 	my $name    = shift @token;				# name [ttl] [class] type ...
 	my $ttl	    = shift @token if @token && $token[0] =~ /^\d/;
-	my $rrclass = shift @token if @token && $token[0] =~ /^($CLASS_REGEX)$/io;
+	my $rrclass = shift @token if @token && $token[0] =~ /^($CLASS_REGEX)$/o;
 	$ttl = shift @token if @token && $token[0] =~ /^\d/;	# name [class] [ttl] type ...
 	my $rrtype = shift(@token) || croak 'unable to parse RR string';
 
@@ -404,6 +404,7 @@ Resource record time to live in seconds.
 # published API.  These are required for parsing BIND zone files but
 # should not be used in other contexts.
 my %unit = ( W => 604800, D => 86400, H => 3600, M => 60, S => 1 );
+%unit = ( %unit, map { /\D/ ? lc($_) : $_ } %unit );
 
 sub ttl {
 	my $self  = shift;
@@ -412,7 +413,7 @@ sub ttl {
 	return $self->{ttl} || 0 unless defined $value;		# avoid defining rr->{ttl}
 
 	my $ttl = 0;
-	my %time = reverse split /(\D)\D*/, uc($value) . 'S';
+	my %time = reverse split /(\D)\D*/, $value . 'S';
 	while ( my ( $u, $t ) = each %time ) {
 		my $s = $unit{$u} || croak qq(bad time unit "$u");
 		$ttl += $s > 1 ? $t * $s : $t;
