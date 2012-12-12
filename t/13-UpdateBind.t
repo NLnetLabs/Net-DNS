@@ -10,6 +10,9 @@
 #  sudo ifconfig lo0 inet 127.53.53.3 netmask 255.255.255.255 alias
 # ...
 #  sudo ifconfig lo0 inet 127.53.53.11 netmask 255.255.255.255 alias
+#
+# Also named and named-checkzone should be present at /usr/local/sbin
+# and apparmor or similar should be configured or off.
 
 
 
@@ -344,7 +347,7 @@ if ($pid) {           # parent
 } else {
     unlink("t/example.com.jnl") if -f "t/example.com.jnl";
     # Consider sanitizing the environment even more.
-    exec $named, '-f', '-c',  't/named.conf'
+    exec $named, '-f', '-u', scalar getpwuid($>), '-c',  't/named.conf'
                 or die "can't exec myprog: $!";
 }
 
