@@ -53,22 +53,22 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	my @lat;
-	while (@_) {
+	while ( scalar @_ ) {
 		my $this = shift;
 		push( @lat, $this );
-		last if $this =~ /[NS]/i;
+		last if $this =~ /[NSns]/;
 	}
 	$self->latitude(@lat);
 
 	my @long;
-	while (@_) {
+	while ( scalar @_ ) {
 		my $this = shift;
 		push( @long, $this );
-		last if $this =~ /[EW]/i;
+		last if $this =~ /[EWew]/;
 	}
 	$self->longitude(@long);
 
-	$self->$_( @_ ? shift : () ) for qw(altitude size hp vp);
+	$self->$_( scalar @_ ? shift : () ) for qw(altitude size hp vp);
 }
 
 
@@ -107,9 +107,9 @@ sub defaults() {			## specify RR attribute default values
 
 
 	sub _encode_lat {
-		my @ang = @_ > 1 ? (@_) : ( split /[\s\260'"]+/, shift || '0' );
+		my @ang = scalar @_ > 1 ? (@_) : ( split /[\s\260'"]+/, shift || '0' );
 		my $ang = ( 0 + shift @ang ) * 3600000;
-		my $neg = pop(@ang) =~ /[SW]/i if @ang;
+		my $neg = pop(@ang) =~ /[SWsw]/ if scalar @ang;
 		undef $neg if $ang < 0;
 		$ang += ( @ang ? shift @ang : 0 ) * 60000;
 		$ang += ( @ang ? shift @ang : 0 ) * 1000;
@@ -124,7 +124,7 @@ sub defaults() {			## specify RR attribute default values
 
 
 	sub _encode_alt {
-		( my $argument = shift || '0' ) =~ s/m$//i;
+		( my $argument = shift || '0' ) =~ s/[Mm]$//;
 		$argument += 0;
 		return int( 0.5 + $datum_alt + 100 * $argument );
 	}
@@ -139,7 +139,7 @@ sub defaults() {			## specify RR attribute default values
 	}
 
 	sub _encode_prec {
-		( my $argument = shift || '0' ) =~ s/m$//i;
+		( my $argument = shift || '0' ) =~ s/[Mm]$//;
 		return 0x00 if $argument < 0.01;
 		foreach my $exponent ( 0 .. 9 ) {
 			next unless $argument < $power10[1 + $exponent];
@@ -155,13 +155,13 @@ sub defaults() {			## specify RR attribute default values
 
 sub latitude {
 	my $self = shift;
-	$self->{latitude} = _encode_lat(@_) if @_;
+	$self->{latitude} = _encode_lat(@_) if scalar @_;
 	return _decode_lat( $self->{latitude} ) if defined wantarray;
 }
 
 sub longitude {
 	my $self = shift;
-	$self->{longitude} = _encode_lat(@_) if @_;
+	$self->{longitude} = _encode_lat(@_) if scalar @_;
 	return undef unless defined wantarray;
 	return _decode_lat( $self->{longitude} ) unless wantarray;
 	my @long = map { s/N/E/; s/S/W/; $_ } _decode_lat( $self->{longitude} );
@@ -169,19 +169,19 @@ sub longitude {
 
 sub altitude {
 	my $self = shift;
-	$self->{altitude} = _encode_alt(shift) if @_;
+	$self->{altitude} = _encode_alt(shift) if scalar @_;
 	_decode_alt( $self->{altitude} ) if defined wantarray;
 }
 
 sub size {
 	my $self = shift;
-	$self->{size} = _encode_prec(shift) if @_;
+	$self->{size} = _encode_prec(shift) if scalar @_;
 	_decode_prec( $self->{size} ) if defined wantarray;
 }
 
 sub hp {
 	my $self = shift;
-	$self->{hp} = _encode_prec(shift) if @_;
+	$self->{hp} = _encode_prec(shift) if scalar @_;
 	_decode_prec( $self->{hp} ) if defined wantarray;
 }
 
@@ -189,7 +189,7 @@ sub horiz_pre { &hp; }
 
 sub vp {
 	my $self = shift;
-	$self->{vp} = _encode_prec(shift) if @_;
+	$self->{vp} = _encode_prec(shift) if scalar @_;
 	_decode_prec( $self->{vp} ) if defined wantarray;
 }
 
@@ -205,7 +205,7 @@ sub latlon {
 sub version {
 	my $self = shift;
 
-	$self->{version} = shift if @_;
+	$self->{version} = shift if scalar @_;
 	return 0 + ( $self->{version} || 0 );
 }
 

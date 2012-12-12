@@ -63,10 +63,11 @@ my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f7071727374
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
+
 {
-	is( Net::DNS::RR->new("foo IN CERT 0 2 3 foo")->format,	   0, 'format may be zero' );
-	is( Net::DNS::RR->new("foo IN CERT 1 0 3 foo")->tag,	   0, 'tag may be zero' );
-	is( Net::DNS::RR->new("foo IN CERT 1 2 0 foo")->algorithm, 0, 'algorithm may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 0 2 3 foo=")->format,    0, 'format may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 1 0 3 foo=")->tag,	    0, 'tag may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 1 2 0 foo=")->algorithm, 0, 'algorithm may be zero' );
 }
 
 

@@ -108,7 +108,7 @@ sub new_string {
 
 	my $name    = shift @token;				# name [ttl] [class] type ...
 	my $ttl	    = shift @token if @token && $token[0] =~ /^\d/;
-	my $rrclass = shift @token if @token && $token[0] =~ /^($CLASS_REGEX)$/o;
+	my $rrclass = shift @token if @token > 1 && $token[0] =~ /^($CLASS_REGEX)$/o;
 	$ttl = shift @token if @token && $token[0] =~ /^\d/;	# name [class] [ttl] type ...
 	my $rrtype = shift(@token) || croak 'unable to parse RR string';
 

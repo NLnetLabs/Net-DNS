@@ -2,6 +2,11 @@ $Id$                       -*-text-*-
 
 **** 0.71
 
+Fix rt.cpan.org #81869
+
+	Disambiguate ANY in rr_del auxilliary function, as suggested
+	by Mark Andrews
+
 Fix rt.cpan.org #81756
 
 	Test failures on Perl 5.8.5 .. 5.8.8.
