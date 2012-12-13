@@ -27,7 +27,7 @@ use constant TSIG => typebyname qw(TSIG);
 use MIME::Base64;
 
 use constant TSIG_DEFAULT_ALGORITHM => 'HMAC-MD5.SIG-ALG.REG.INT';
-use constant TSIG_DEFAULT_FUDGE     => 300;
+use constant TSIG_DEFAULT_FUDGE	    => 300;
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -60,7 +60,6 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	my $macbin = $self->macbin;
 	unless ($macbin) {
 		my $key	     = $self->key || return '';
-		my $sig_time = $self->time_signed;
 		my $function = $self->sign_func;
 		my $sigdata  = $self->sig_data($packet);	# form data to be signed
 		$macbin = $self->macbin( &$function( $key, $sigdata ) );
@@ -92,7 +91,14 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->key(@_) if @_;
+	$self->key(@_);
+}
+
+
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	$self->algorithm(TSIG_DEFAULT_ALGORITHM);
 }
 
 
@@ -125,29 +131,28 @@ sub encode {				## overide RR method
 sub algorithm {
 	my $self = shift;
 
-	$self->{algorithm} = new Net::DNS::DomainName(shift) if @_;
-	$self->{algorithm} ||= new Net::DNS::DomainName(TSIG_DEFAULT_ALGORITHM);
+	$self->{algorithm} = new Net::DNS::DomainName(shift) if scalar @_;
 	$self->{algorithm}->name if defined wantarray;
 }
 
 sub key {
 	my $self = shift;
 
-	$self->{key} = shift if @_;
+	$self->{key} = join '', @_ if scalar @_;
 	$self->{key} || "";
 }
 
 sub time_signed {
 	my $self = shift;
 
-	$self->{time_signed} = shift if @_;
+	$self->{time_signed} = shift if scalar @_;
 	return 0 + ( $self->{time_signed} || time() );
 }
 
 sub fudge {
 	my $self = shift;
 
-	$self->{fudge} = shift if @_;
+	$self->{fudge} = shift if scalar @_;
 	return 0 + ( $self->{fudge} || TSIG_DEFAULT_FUDGE );
 }
 
@@ -158,27 +163,27 @@ sub mac {
 sub macbin {
 	my $self = shift;
 
-	$self->{macbin} = shift if @_;
+	$self->{macbin} = shift if scalar @_;
 	$self->{macbin} || "";
 }
 
 sub original_id {
 	my $self = shift;
 
-	$self->{original_id} = shift if @_;
+	$self->{original_id} = shift if scalar @_;
 	return 0 + ( $self->{original_id} || 0 );
 }
 
 sub error {
 	my $self = shift;
-	$self->{error} = rcodebyname(shift) if @_;
+	$self->{error} = rcodebyname(shift) if scalar @_;
 	rcodebyval( $self->{error} || 0 );
 }
 
 sub other {
 	my $self = shift;
 
-	$self->{other} = shift if @_;
+	$self->{other} = shift if scalar @_;
 	return 0 + ( $self->{other} || 0 );
 }
 
@@ -187,7 +192,7 @@ sub other_data {&other}
 sub sign_func {
 	my $self = shift;
 
-	$self->{sign_func} = shift if @_;
+	$self->{sign_func} = shift if scalar @_;
 	$self->{sign_func} || \&_sign_hmac;
 }
 
@@ -210,7 +215,7 @@ sub sig_data {
 	$sigdata .= $self->{algorithm}->encode();		# uncompressed algorithm name
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
-	$sigdata .= pack 'xxN n', $self->{time_signed}, $self->fudge;
+	$sigdata .= pack 'xxN n', $self->time_signed, $self->fudge;
 
 	$sigdata .= pack 'n', $self->{error} || 0;
 
@@ -252,7 +257,7 @@ A domain name which specifies the name of the algorithm.
 
     $key = $rr->key;
 
-Base64 encoded key.
+Key string in the format expected by the signing function.
 
 =head2 time_signed
 
