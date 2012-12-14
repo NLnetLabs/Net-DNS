@@ -806,6 +806,24 @@ sub truncate {
 }
 
 
+########################################
+
+use vars qw($AUTOLOAD);
+
+sub AUTOLOAD {				## Default method
+	no strict;
+	@_ = ("method $AUTOLOAD undefined");
+	goto &{'Carp::confess'};
+}
+
+sub DESTROY {				## object destructor
+	my $self = shift;
+	my $header = $self->header;				# invalidate Header object
+	%$header = ();
+	undef $self->{header};					# unlink defunct header
+}
+
+
 sub dump {				## print internal data structure
 	use Data::Dumper;
 	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };

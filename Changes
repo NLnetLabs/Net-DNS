@@ -2,6 +2,18 @@ $Id$                       -*-text-*-
 
 **** 0.71
 
+Fix rt.cpan.org #81942
+
+	Fix memory leak on packet cleanup. The backreference via the
+	header attribute (with xbody) caused the garbage collector not 
+	to clean a packet. Header is now explicitely cleaned via
+	Net::DNS::Packet::DESTROY.
+
+Fix TSIG initialization
+
+	Fix TSIG signed packet creation. A default algorithm was not set
+	on packet contruction causing signature creation to silently fail.
+
 Fix rt.cpan.org #81869
 
 	Disambiguate ANY in rr_del auxilliary function, as suggested
