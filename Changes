@@ -1,12 +1,19 @@
 $Id$                       -*-text-*-
 
-**** 0.71
+**** 0.71 Dec 14, 2012
+
+Temporary workaround rt.cpan.org #81760
+
+	The rdatastr method for TXT RRs will return unconditionally 
+	quoted rdata fields to work around an issue with updating 
+	SpamAssassin rules.  This workaround will be reverted after
+	a new version of SpamAssassin with the issue fixed is released.
 
 Fix rt.cpan.org #81942
 
-	Fix memory leak on packet cleanup. The backreference via the
+	Fix memory leak on packet cleanup. The back-reference via the
 	header attribute (with xbody) caused the garbage collector not 
-	to clean a packet. Header is now explicitely cleaned via
+	to clean a packet. Header is now explicitly cleaned via
 	Net::DNS::Packet::DESTROY.
 
 Fix TSIG initialization

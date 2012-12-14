@@ -80,6 +80,21 @@ sub char_str_list {			## historical
 	return (&txtdata);
 }
 
+sub rdatastr {			## SpamAssassin workaround, per CPAN RT#81760
+	my $txtdata = shift->{txtdata} || [];
+	join ' ', map $_->quoted_string, @$txtdata;
+}
+
+package Net::DNS::Text;
+
+my $QQ = _decode_utf8( pack 'C', 34 );
+
+sub quoted_string {
+	my $string = shift->string;
+	return $string if $string =~ /^$|\s|["\$'();@]/;	# should already be quoted
+	join '', $QQ, $string, $QQ;				# quote previously unquoted string
+}
+
 1;
 __END__
 
