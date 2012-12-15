@@ -7,7 +7,7 @@ Temporary workaround rt.cpan.org #81760
 	The rdatastr method for TXT RRs will return unconditionally 
 	quoted rdata fields to work around an issue with updating 
 	SpamAssassin rules.  This workaround will be reverted after
-	a new version of SpamAssassin with the issue fixed is released.
+	release of a version of SpamAssassin which resolves the issue.
 
 Fix rt.cpan.org #81942
 
@@ -18,13 +18,15 @@ Fix rt.cpan.org #81942
 
 Fix TSIG initialization
 
-	Fix TSIG signed packet creation. A default algorithm was not set
-	on packet contruction causing signature creation to silently fail.
+	Uninitialised algorithm attribute caused signature generation
+	to fail silently when creating a TSIG signed packet.
 
 Fix rt.cpan.org #81869
 
-	Disambiguate ANY in rr_del auxilliary function, as suggested
-	by Mark Andrews
+	The rr_del auxilliary function broken by a conflicting change
+	in the RR.pm string parser. Note the ambiguous use of ANY,
+	which may stand for CLASS255 or TYPE255 depending upon the
+	argument string presented.
 
 Fix rt.cpan.org #81756
 
