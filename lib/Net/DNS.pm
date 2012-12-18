@@ -400,12 +400,12 @@ sub nxrrset {
 
 sub yxdomain {
 	my ($domain) = split /\s+/, shift;
-	return new Net::DNS::RR("$domain 0 ANY ANY");
+	return new Net::DNS::RR("$domain ANY ANY");
 }
 
 sub nxdomain {
 	my ($domain) = split /\s+/, shift;
-	return new Net::DNS::RR("$domain 0 NONE ANY");
+	return new Net::DNS::RR("$domain NONE ANY");
 }
 
 sub rr_add {

@@ -4,8 +4,7 @@ $Id$                       -*-text-*-
 
 Fix rt.cpan.org #82063
 
-	yxrrset, nxrrset, yxdomain, nxdomain and rr_del functions should
-	force zero TTL.
+	yxrrset, nxrrset and rr_del functions should force zero TTL.
 
 Fix rt.cpan.org #82047
  
