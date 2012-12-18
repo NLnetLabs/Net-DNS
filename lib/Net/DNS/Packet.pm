@@ -96,6 +96,10 @@ are collected in the $@ ($EVAL_ERROR) variable.
 If called in array context, returns a packet object and the
 number of octets successfully decoded.
 
+Note that the number of RRs in each section of the packet may
+differ from the corresponding header value if the data has been
+truncated or corrupted.
+
 =cut
 
 use constant HEADER_LENGTH => length pack 'n6', (0) x 6;

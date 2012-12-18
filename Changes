@@ -4,12 +4,18 @@ $Id$                       -*-text-*-
 
 Fix rt.cpan.org #82063
 
-	Initialize yxrrset, nxrrset, yxdomain, nxdomain and rr_del with
-	ttl set to zero (0).
+	yxrrset, nxrrset, yxdomain, nxdomain and rr_del functions should
+	force zero TTL.
 
-Clarification rt.cpan.org #81941
+Fix rt.cpan.org #82047
+ 
+	Clarify documentation to indicate that header counts may
+	differ from the number of RRs present if a packet is corrupt.
 
-	Clarification of bgsend/bgread behaviour with truncated packets.
+Fix rt.cpan.org #81941
+
+	Clarify documentation to make clear that bgread will not switch to
+	TCP when a truncated packet is received.
 
 **** 0.71 Dec 15, 2012
 

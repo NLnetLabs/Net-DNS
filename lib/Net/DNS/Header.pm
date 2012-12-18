@@ -355,7 +355,9 @@ sub qdcount {
 
     print "# of answer records: ", $packet->header->ancount, "\n";
 
-Gets the number of records in the answer section of the packet.
+Returns the number of records in the answer section of the packet
+which may, in the case of corrupt packets, differ from the actual
+number of records.
 In dynamic update packets, this field is known as C<prcount> and refers
 to the number of RRs in the prerequisite section.
 
@@ -373,7 +375,9 @@ sub ancount {
 
     print "# of authority records: ", $packet->header->nscount, "\n";
 
-Gets the number of records in the authority section of the packet.
+Returns the number of records in the authority section of the packet
+which may, in the case of corrupt packets, differ from the actual
+number of records.
 In dynamic update packets, this field is known as C<upcount> and refers
 to the number of RRs in the update section.
 
@@ -391,7 +395,9 @@ sub nscount {
 
     print "# of additional records: ", $packet->header->arcount, "\n";
 
-Gets the number of records in the additional section of the packet.
+Returns the number of records in the additional section of the packet
+which may, in the case of corrupt packets, differ from the actual
+number of records.
 In dynamic update packets, this field is known as C<adcount>.
 
 =cut
