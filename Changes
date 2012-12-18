@@ -2,7 +2,9 @@ $Id$                       -*-text-*-
 
 **** 0.72 
 
+Clarification rt.cpan.org #81941
 
+	Clarification of bgsend/bgread behaviour with truncated packets.
 
 **** 0.71 Dec 15, 2012
 
