@@ -431,10 +431,15 @@ before reading it.
 
 bgsend does not support persistent sockets.
 bgsend does not support the usevc option (TCP).
+Beware that truncated packets will not be retried over TCP automatically 
+and should be handled by the caller.
 
 =head2 bgread
 
     $packet = $res->bgread($socket);
+    if ($packet->header->tc) { 
+    	# Retry over TCP (blocking).
+    }
     undef $socket;
 
 Reads the answer from a background query (see L</bgsend>).  The argument
@@ -451,6 +456,9 @@ The programmer should close or destroy the socket object after reading it.
         # do some other processing
     }
     $packet = $res->bgread($socket);
+    if ($packet->header->tc) { 
+    	# Retry over TCP (blocking).
+    }
     $socket = undef;
 
 Determines whether a socket is ready for reading.  The argument is
