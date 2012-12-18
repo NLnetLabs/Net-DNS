@@ -386,24 +386,26 @@ sub mx {
 
 sub yxrrset {
 	my $rr = new Net::DNS::RR(shift);
+	$rr->ttl(0);
 	$rr->class('ANY') unless $rr->rdata;
 	return $rr;
 }
 
 sub nxrrset {
 	my $rr = new Net::DNS::RR(shift);
+	$rr->ttl(0);
 	$rr->class('NONE');
 	return $rr;
 }
 
 sub yxdomain {
 	my ($domain) = split /\s+/, shift;
-	return new Net::DNS::RR("$domain ANY ANY");
+	return new Net::DNS::RR("$domain 0 ANY ANY");
 }
 
 sub nxdomain {
 	my ($domain) = split /\s+/, shift;
-	return new Net::DNS::RR("$domain NONE ANY");
+	return new Net::DNS::RR("$domain 0 NONE ANY");
 }
 
 sub rr_add {
@@ -415,6 +417,7 @@ sub rr_add {
 sub rr_del {
 	my ( $head, @tail ) = split /\s+/, shift;
 	my $rr = new Net::DNS::RR( scalar @tail > 1 ? "$head @tail": "$head ANY @tail" );
+	$rr->ttl(0);
 	$rr->class( $rr->rdata ? 'NONE' : 'ANY' );
 	return $rr;
 }

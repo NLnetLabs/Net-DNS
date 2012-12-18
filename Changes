@@ -2,6 +2,11 @@ $Id$                       -*-text-*-
 
 **** 0.72 
 
+Fix rt.cpan.org #82063
+
+	Initialize yxrrset, nxrrset, yxdomain, nxdomain and rr_del with
+	ttl set to zero (0).
+
 Clarification rt.cpan.org #81941
 
 	Clarification of bgsend/bgread behaviour with truncated packets.
