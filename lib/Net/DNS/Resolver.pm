@@ -430,9 +430,12 @@ $res->bgisready >> or C<IO::Select> to find out if the socket is ready
 before reading it.
 
 bgsend does not support persistent sockets.
-bgsend does not support the usevc option (TCP).
-Beware that truncated packets will not be retried over TCP automatically 
-and should be handled by the caller.
+
+B<BEWARE>:
+bgsend does not support the usevc option (TCP) and operates on UDP only;
+Answers may not fit in an UDP packet and might be truncated. Truncated 
+packets will B<not> be retried over TCP automatically and should be handled
+by the caller.
 
 =head2 bgread
 
