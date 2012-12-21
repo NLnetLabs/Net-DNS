@@ -2,6 +2,15 @@ $Id$                       -*-text-*-
 
 **** 0.72 
 
+Fix rt.cpan.org #82148
+
+	nxrrset fails to ignore RDATA.
+
+Fix rt.cpan.org #82134
+
+	TSIG key and algorithm names not downcased in digest.
+	Class not forced to ANY.
+
 Fix rt.cpan.org #82063
 
 	yxrrset, nxrrset and rr_del functions should force zero TTL.

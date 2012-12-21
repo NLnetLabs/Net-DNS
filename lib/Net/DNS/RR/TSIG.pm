@@ -32,9 +32,9 @@ use constant TSIG_DEFAULT_FUDGE	    => 300;
 
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
-	my ( $data, $offset ) = @_;
+	my ( $data, $offset, @opaque ) = @_;
 
-	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
+	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName2535(@_);
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
 	@{$self}{qw(time_signed fudge)} = unpack "\@$offset xxN n", $$data;
@@ -54,8 +54,9 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
+	my ( $offset, @opaque ) = @_;
 
-	my ( $offset, $hash, $packet ) = @_;
+	my ( $hash, $packet ) = @opaque;
 
 	my $macbin = $self->macbin;
 	unless ($macbin) {
@@ -84,7 +85,11 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	join ' ', $self->algorithm, $self->error, $self->other || '';
+	my $fixed = join( ' ', ';', $self->algorithm, $self->error, $self->other || '' );
+	my @other = (
+		join( ' ', '; time signed', $self->time_signed, 'fudge', $self->fudge ),
+		join( ' ', '; original id', $self->original_id ) );
+	join "\n", $fixed, @other;
 }
 
 
@@ -131,7 +136,7 @@ sub encode {				## overide RR method
 sub algorithm {
 	my $self = shift;
 
-	$self->{algorithm} = new Net::DNS::DomainName(shift) if scalar @_;
+	$self->{algorithm} = new Net::DNS::DomainName2535(shift) if scalar @_;
 	$self->{algorithm}->name if defined wantarray;
 }
 
@@ -165,6 +170,20 @@ sub macbin {
 
 	$self->{macbin} = shift if scalar @_;
 	$self->{macbin} || "";
+}
+
+sub request_mac {
+	my $self = shift;
+
+	$self->{request_mac} = shift if scalar @_;
+	$self->{request_mac} || "";
+}
+
+sub continuation {
+	my $self = shift;
+
+	$self->{continuation} = shift if scalar @_;
+	return 0 + ( $self->{continuation} || 0 );
 }
 
 sub original_id {
@@ -206,16 +225,21 @@ sub sig_data {
 	my $sigdata = '';
 	$sigdata = pack 'H*', $self->{request_mac} if $self->{request_mac};
 
+	$self->class('ANY');
 	$sigdata .= $packet->data;
 	push @{$packet->{additional}}, $self;
 
-	my $kname = $self->{owner}->encode(0);			# uncompressed key name
-	$sigdata .= pack 'a* n N', $kname, ANY, 0;
-
-	$sigdata .= $self->{algorithm}->encode();		# uncompressed algorithm name
-
 	# Design decision: Use 32 bits, which will work until the end of time()!
-	$sigdata .= pack 'xxN n', $self->time_signed, $self->fudge;
+	my $time = pack 'xxN n', $self->time_signed, $self->fudge;
+
+	return $sigdata . $time if $self->continuation;
+
+	my $kname = new Net::DNS::DomainName2535($self->{owner}->name );
+	$sigdata .= pack 'a* n N', $kname->encode(0), ANY, 0;	# canonical key name
+
+	$sigdata .= $self->{algorithm}->encode(0);		# canonical algorithm name
+
+	$sigdata .= $time;
 
 	$sigdata .= pack 'n', $self->{error} || 0;
 
@@ -287,6 +311,18 @@ object method before this will return anything meaningful.
     $macbin = $rr->macbin;
 
 Binary message authentication code (MAC).
+
+=head2 request_mac
+
+    $request_mac = $rr->request_mac;
+
+Request message authentication code (MAC).
+
+=head2 continuation
+
+    $continuation = $rr->continuation;
+
+Flag which indicates continuation of a multi-message response.
 
 =head2 original_id
 

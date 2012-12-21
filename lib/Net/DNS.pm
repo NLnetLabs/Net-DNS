@@ -393,9 +393,11 @@ sub yxrrset {
 
 sub nxrrset {
 	my $rr = new Net::DNS::RR(shift);
-	$rr->ttl(0);
-	$rr->class('NONE');
-	return $rr;
+	return new Net::DNS::RR(
+		name  => $rr->name,
+		type  => $rr->type,
+		class => 'NONE'
+		);
 }
 
 sub yxdomain {
