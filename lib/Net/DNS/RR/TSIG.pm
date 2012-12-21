@@ -58,6 +58,11 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 
 	my ( $hash, $packet ) = @opaque;
 
+	my @additional = grep { $_->type ne 'TSIG' } @{$packet->{additional}};
+	$packet->{additional} = \@additional;
+
+	$self->class('ANY');
+
 	my $macbin = $self->macbin;
 	unless ($macbin) {
 		my $key	     = $self->key || return '';
@@ -78,6 +83,8 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 
 	my $other = $self->other || '';
 	$rdata .= pack 'na*', length($other), $other;
+
+	push @{$packet->{additional}}, $self;
 	return $rdata;
 }
 
@@ -176,14 +183,14 @@ sub request_mac {
 	my $self = shift;
 
 	$self->{request_mac} = shift if scalar @_;
-	$self->{request_mac} || "";
+	$self->{request_mac} || '';
 }
 
 sub continuation {
 	my $self = shift;
 
 	$self->{continuation} = shift if scalar @_;
-	return 0 + ( $self->{continuation} || 0 );
+	$self->{continuation} || 0;
 }
 
 sub original_id {
@@ -218,16 +225,11 @@ sub sign_func {
 sub sig_data {
 	my ( $self, $packet ) = @_;
 
-	my @additional = grep { $_->type ne 'TSIG' } @{$packet->{additional}};
-	$packet->{additional} = [@additional];
-
 	# Add the request MAC if present (used to validate responses).
 	my $sigdata = '';
 	$sigdata = pack 'H*', $self->{request_mac} if $self->{request_mac};
 
-	$self->class('ANY');
 	$sigdata .= $packet->data;
-	push @{$packet->{additional}}, $self;
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
 	my $time = pack 'xxN n', $self->time_signed, $self->fudge;
@@ -314,15 +316,17 @@ Binary message authentication code (MAC).
 
 =head2 request_mac
 
-    $request_mac = $rr->request_mac;
+     $tsig->request_mac( $request->macbin );
 
 Request message authentication code (MAC).
 
+
 =head2 continuation
 
-    $continuation = $rr->continuation;
+     $tsig->continuation(1);
 
 Flag which indicates continuation of a multi-message response.
+
 
 =head2 original_id
 
