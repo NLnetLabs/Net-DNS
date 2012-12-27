@@ -139,7 +139,7 @@ sub read {
 
 				# construct RR object with context specific dynamically scoped $ORIGIN
 				my $context = $self->{context};
-				my $record = &$context( sub { new_string Net::DNS::RR($_) } );
+				my $record = &$context( sub { Net::DNS::RR->new_string($_) } );
 
 				$self->{class} ||= $record->class;    # propagate RR class
 				$record->class( $self->{class} );
@@ -378,7 +378,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 			my $s = _format( $instant, split /[,]/, $1 );
 			s/\$\{$1\}/$s/g;
 		}
-		s/\$/$instant/g;				# unqualified $
+		s/\$/_format($instant)/eg;			# unqualified $
 		return $_;
 	}
 
@@ -461,6 +461,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 				$self->{ttl} = Net::DNS::RR::ttl( {}, $ttl );
 			} elsif (/^\$GENERATE/) {		# directive
 				my ( undef, $range, @template ) = split;
+				die '$GENERATE incomplete' unless $range;
 				$self->_generate( $range, "@template\n" );
 				$fh = $self->{handle};
 			} elsif (/^\$/) {			# unrecognised

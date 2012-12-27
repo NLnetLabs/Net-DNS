@@ -55,12 +55,11 @@ error message and execution will be terminated.
 sub new {
 	my ($class) = @_;
 
-	if (COMPATIBLE) {
-		return &_new_from_rdata if ref $_[1];		# resolve new() usage conflict
-		return scalar @_ > 2 ? &new_hash : &new_string; # avoid exception trap/reraise
-	}
+	return &_new_from_rdata if COMPATIBLE && ref $_[1];	# resolve new() usage conflict
 
-	return eval { scalar @_ > 2 ? &new_hash : &new_string; } || croak "${@}new $class( ... )";
+	my $rr = eval { scalar @_ > 2 ? &new_hash : &new_string; };
+	croak "${@}new $class( ... )" if $@;
+	return $rr;
 }
 
 
@@ -626,8 +625,10 @@ sub format_rdata {				## format rdata portion of RR string
 
 
 sub parse_rdata {				## parse RR attributes in argument list
-	my ( $self, @rdata ) = @_;
-	croak join ' ', 'zone file representation not defined for', $self->type if @rdata;
+	my $self = shift;
+	return unless shift;
+	die join ' ', $self->type, 'not implemented' if ref($self) eq __PACKAGE__;
+	die join ' ', 'zone file representation not defined for', $self->type;
 }
 
 
@@ -735,6 +736,7 @@ sub _new_from_rdata {				## decode rdata from wire-format byte string
 
 sub new_from_string {				## parse RR attributes in argument list
 	my ( $class, $self, undef, @parse ) = @_;		# new_from_string() is a misnomer
+	confess 'new_from_string() deprecated' unless ref($self);
 	$self->parse_rdata(@parse);				# string already parsed in new_string()
 	return $self;
 }

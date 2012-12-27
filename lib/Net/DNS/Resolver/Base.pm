@@ -218,7 +218,7 @@ sub read_env {
 
 	if (exists $ENV{'RES_OPTIONS'}) {
 		foreach ($ENV{'RES_OPTIONS'} =~ m/(\S+)/g) {
-			my ($name, $val) = split(m/:/);
+			my ($name, $val) = split(m/:/,$_,2);
 			$val = 1 unless defined $val;
 			$config->{$name} = $val if exists $config->{$name};
 		}
