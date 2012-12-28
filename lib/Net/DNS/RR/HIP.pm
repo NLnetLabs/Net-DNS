@@ -4,7 +4,7 @@ package Net::DNS::RR::HIP;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Previous revision 1063
+$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1063
 
 use base Net::DNS::RR;
 

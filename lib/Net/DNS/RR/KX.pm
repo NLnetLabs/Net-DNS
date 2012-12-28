@@ -4,7 +4,7 @@ package Net::DNS::RR::KX;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Previous revision 1037
+$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
 
 use base Net::DNS::RR;
 

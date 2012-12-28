@@ -5,7 +5,7 @@ use base Net::DNS::Resolver::Base;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Previous revision 1045
+$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1045
 
 =head1 NAME
 
