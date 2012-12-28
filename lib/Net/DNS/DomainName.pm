@@ -5,7 +5,7 @@ use base qw(Net::DNS::Domain);
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision$)[1]; # Previous revision 1006
 
 
 =head1 NAME

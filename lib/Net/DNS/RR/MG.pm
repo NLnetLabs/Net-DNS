@@ -9,7 +9,7 @@ BEGIN {
 use vars qw(@ISA $VERSION);
 
 @ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision$)[1]; # Previous revision 1037
 
 sub new {
 	my ($class, $self, $data, $offset) = @_;

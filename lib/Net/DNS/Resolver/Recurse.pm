@@ -7,7 +7,7 @@ use Net::DNS::Resolver;
 
 use vars qw($VERSION @ISA);
 
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision$)[1]; # Previous revision 990
 @ISA = qw(Net::DNS::Resolver);
 
 my %hardcodedhints

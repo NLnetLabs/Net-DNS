@@ -4,7 +4,7 @@ package Net::DNS::RR::SSHFP;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+$VERSION = (qw$LastChangedRevision$)[1]; # Previous revision 1046
 
 use base Net::DNS::RR;
 
