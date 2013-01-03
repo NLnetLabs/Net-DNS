@@ -2,10 +2,12 @@
 
 use strict;
 
-use Net::DNS::Parameters;
-use Test::More tests => 99 + keys(%classbyname) + keys(%typebyname);
+BEGIN {
+	use Net::DNS::Parameters;
+	use Test::More tests => 101 + keys(%classbyname) + keys(%typebyname);
 
-BEGIN { use_ok('Net::DNS'); }
+	use_ok('Net::DNS');
+}
 
 
 {	# check type conversion functions
@@ -152,6 +154,14 @@ BEGIN { use_ok('Net::DNS'); }
 	is(	new Net::DNS::Question('1:2:3:4:5:6:7:8')->string,
 		"8.0.0.0.7.0.0.0.6.0.0.0.5.0.0.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.ip6.arpa.\tIN\tPTR",
 		'interpret IPv6 address as PTR query in ip6.arpa namespace'
+		);
+	is(	new Net::DNS::Question('::ffff:1.2.3.4')->string,
+		"4.3.2.1.in-addr.arpa.\tIN\tPTR",
+		'interpret IPv6 form of IPv4 address as query in in-addr.arpa'
+		);
+	is(	new Net::DNS::Question('1:2:3:4:5:6:254.235.218.237')->string,
+		"d.e.a.d.b.e.e.f.6.0.0.0.5.0.0.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.ip6.arpa.\tIN\tPTR",
+		'interpret IPv6 + embedded IPv4 address as query in ip6.arpa'
 		);
 	is(	new Net::DNS::Question('::x')->string,
 		"::x.\tIN\tA",

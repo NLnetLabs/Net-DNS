@@ -443,23 +443,23 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 				$_ = "@token " . <$fh>;
 			}
 
-			if (/^\$INCLUDE/) {			# directive
+			if (/^\$(INCLUDE|include)/) {		# directive
 				my ( undef, $file, $origin ) = split;
 				$self->_include($file);
 				$fh = $self->{handle};
 				next unless $origin;
 				my $context = $self->{context};
 				&$context( sub { $self->_origin($origin); } );
-			} elsif (/^\$ORIGIN/) {			# directive
+			} elsif (/^\$(ORIGIN|origin)/) {	# directive
 				my ( undef, $origin ) = split;
 				die '$ORIGIN incomplete' unless $origin;
 				my $context = $self->{context};
 				&$context( sub { $self->_origin($origin); } );
-			} elsif (/^\$TTL/) {			# directive
+			} elsif (/^\$(TTL|ttl)/) {		# directive
 				my ( undef, $ttl ) = split;
 				die '$TTL incomplete' unless $ttl;
 				$self->{ttl} = Net::DNS::RR::ttl( {}, $ttl );
-			} elsif (/^\$GENERATE/) {		# directive
+			} elsif (/^\$(GENERATE|generate)/) {	# directive
 				my ( undef, $range, @template ) = split;
 				die '$GENERATE incomplete' unless $range;
 				$self->_generate( $range, "@template\n" );

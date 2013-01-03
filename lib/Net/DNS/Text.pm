@@ -69,7 +69,7 @@ interpretation.
 
 =cut
 
-my %unescape;				## precalculated numeric escape table
+my %unescape;			## precalculated numeric escape table
 
 sub new {
 	my $self = bless [], shift;
@@ -124,7 +124,7 @@ sub decode {
 	my $next = ++$offset + $size;
 	croak 'corrupt wire-format data' if $next > length $$buffer;
 
-	my $self = bless [ unpack( "\@$offset a$size", $$buffer ) ], $class;
+	my $self = bless [unpack( "\@$offset a$size", $$buffer )], $class;
 
 	return wantarray ? ( $self, $next ) : $self;
 }
@@ -153,8 +153,6 @@ Character string representation of the text object.
 
 =cut
 
-my %escape;							# precalculated ASCII/UTF-8 escape table
-
 sub value {
 	my $self = shift;
 	_decode_utf8( join '', @$self );
@@ -168,6 +166,8 @@ sub value {
 Conditionally quoted zone file representation of the text object.
 
 =cut
+
+my %escape;			## precalculated ASCII/UTF-8 escape table
 
 my $QQ = _decode_utf8( pack 'C', 34 );
 
@@ -188,55 +188,49 @@ sub string {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {				## Default method
+sub AUTOLOAD {			## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
 
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 
 
 sub _decode_utf8 {
+	my $s = shift;
 
-	return UTF8->decode(shift) if UTF8;
+	return UTF8->decode($s) . substr( $s, 0, 0 ) if UTF8;
 
-	return ASCII->decode(shift) if ASCII && not UTF8;
+	return ASCII->decode($s) . substr( $s, 0, 0 ) if ASCII && not UTF8;
 
-	unless (ASCII) {
-		my $s = shift;
+	# partial transliteration for non-ASCII character encodings
+	$s =~ tr
+	[\055\040-\054\056-\176\000-\377]
+	[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
-		# partial transliteration for non-ASCII character encodings
-		$s =~ tr
-		[\055\040-\054\056-\176\000-\377]
-		[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?];
-
-		return $s;					# native 8-bit code
-	}
+	return $s;						# native 8-bit code
 }
 
 
 sub _encode_utf8 {
+	my $s = shift;
 
-	return UTF8->encode(shift) if UTF8;
+	return UTF8->encode($s) . substr( $s, 0, 0 ) if UTF8;
 
-	return ASCII->encode(shift) if ASCII && not UTF8;
+	return ASCII->encode($s) . substr( $s, 0, 0 ) if ASCII && not UTF8;
 
-	unless (ASCII) {
-		my $s = shift;
+	# partial transliteration for non-ASCII character encodings
+	$s =~ tr
+	[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
+	[\055\040-\054\056-\176\077] unless ASCII;
 
-		# partial transliteration for non-ASCII character encodings
-		$s =~ tr
-		[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
-		[\055\040-\054\056-\176\077];
-
-		return $s;					# ASCII
-	}
+	return $s;						# ASCII
 }
 
 
-%escape = eval {				## precalculated ASCII/UTF-8 escape table
+%escape = eval {			## precalculated ASCII/UTF-8 escape table
 	my %table;
 	my @C0 = ( 0 .. 31 );					# control characters
 	my @NA = UTF8 ? ( 192, 193, 245 .. 255 ) : ( 128 .. 255 );
@@ -257,7 +251,7 @@ sub _encode_utf8 {
 };
 
 
-%unescape = eval {				## precalculated numeric escape table
+%unescape = eval {			## precalculated numeric escape table
 	my %table;
 
 	foreach ( 0 .. 255 ) {

@@ -264,43 +264,45 @@ sub string {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {				## Default method
+sub AUTOLOAD {			## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
 
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 
 
-sub _dns_addr {				## Map IP address into reverse lookup namespace
+sub _dns_addr {			## Map IP address into reverse lookup namespace
 	local $_ = shift;
 
 	# IP address must contain address characters only
 	return undef unless m#^[a-fA-F0-9:./]+$#;
 
-	# arg looks like IPv4 address: map to in-addr.arpa space
-	if (m#(^|:.*:)((^|\d+\.)+\d+)(/(\d+))?$#) {
+	my ( $address, $length ) = split m#/#, $_ . '/0';
+
+	# map IPv4 address to in-addr.arpa space
+	if (m#^\d*[.\d]*\d(/\d+)?$#) {
 		return undef if new Net::DNS::DomainName('@')->label;
-		my @parse = split /\./, $2;
-		my $prefx = $5 || @parse << 3;
+		my @parse = split /\./, $address;
+		my $prefx = $length || @parse << 3;
 		my $last = $prefx > 24 ? 3 : ( $prefx - 1 ) >> 3;
 		return join '.', reverse( ( @parse, (0) x 3 )[0 .. $last] ), 'in-addr.arpa.';
 	}
 
-	# arg looks like IPv6 address: map to ip6.arpa space
-	if (m#^((\w*:)+)(\w*)(/(\d+))?$#) {
-		return undef if new Net::DNS::DomainName('@')->label;
-		my @parse = split /:/, ( reverse "0${1}0${3}" ), 9;
-		my @xpand = map { /./ ? $_ : ('0') x ( 9 - @parse ) } @parse;	 # expand ::
-		my $prefx = $5 || @xpand << 4;			# implicit length if unspecified
-		my $hex = pack 'A4' x 8, map { $_ . '000' } ('0') x ( 8 - @xpand ), @xpand;
-		my $len = $prefx > 124 ? 32 : ( $prefx + 3 ) >> 2;
-		return join '.', split( //, substr( $hex, -$len ) ), 'ip6.arpa.';
-	}
-
-	return undef;
+	# map IPv6 address to ip6.arpa space
+	return unless m#^[:\w]+:([.\w]*)(/\d+)?$#;
+	my $rhs = $1 || '0';
+	return _dns_addr("$rhs/$length") if m#^[:0]*:0*:[fF]{4}:[^:]+$#;	   # IPv4
+	$rhs = sprintf '%x%0.2x:%x%0.2x', split( /\./, $rhs ), 0, 0, 0 if /\./;
+	$address =~ s/:[^:]*$/:0$rhs/;
+	my @parse = split /:/, ( reverse "0$address" ), 9;
+	my @xpand = map { /./ ? $_ : ('0') x ( 9 - @parse ) } @parse;		   # expand ::
+	my $prefx = $length || @xpand << 4;			# implicit length if unspecified
+	my $len = $prefx > 124 ? 32 : ( $prefx + 3 ) >> 2;
+	my $hex = pack 'A4' x 8, map { $_ . '000' } ('0') x ( 8 - @xpand ), @xpand;
+	return join '.', split( //, substr( $hex, -$len ) ), 'ip6.arpa.';
 }
 
 

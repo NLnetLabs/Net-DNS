@@ -4,7 +4,7 @@ package Net::DNS::Domain;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1055
+$VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -190,12 +190,8 @@ Identifies the domain by means of a list of domain labels.
 sub label {
 	my $self = shift;
 
-	my @label = map _decode_ascii( _escape($_) ), @{$self->{label}} unless LIBIDN;
-	my @xlabel = map UTF8->decode( Net::LibIDN::idn_to_unicode( _escape($_), 'utf-8' ) ), @{$self->{label}}
-			if LIBIDN;
-
-	return ( @label, @xlabel ) unless $self->{origin};
-	return ( @label, @xlabel, $self->{origin}->label );
+	my @tail = $self->{origin}->label if $self->{origin};
+	return ( map( _decode_ascii( _escape($_) ), @{$self->{label}} ), @tail );
 }
 
 
@@ -250,54 +246,49 @@ sub origin {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {				## Default method
+sub AUTOLOAD {			## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
 
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 
 
 sub _decode_ascii {
+	my $s = shift;
 
-	return ASCII->decode(shift) if ASCII;
+	return ASCII->decode($s) . substr( $s, 0, 0 ) if ASCII;
 
-	unless (ASCII) {
-		my $s = shift;
+	# partial transliteration for non-ASCII character encodings
+	$s =~ tr
+	[\055\041-\054\056-\176\000-\377]
+	[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
-		# partial transliteration for non-ASCII character encodings
-		$s =~ tr
-		[\055\041-\054\056-\176\000-\377]
-		[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?];
-
-		return $s;					# native 8-bit code
-	}
+	return $s;						# native 8-bit code
 }
 
 
 sub _encode_ascii {
+	my $s = shift;
+	my $t = substr( $s, 0, 0 ) if ASCII;			# preserve taint
 
-	return Net::LibIDN::idn_to_ascii( shift, 'utf-8' ) || croak 'invalid name'
-			if UTF8 && $_[0] =~ /[^\000-\177]/;
+	return $t . Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
+			if UTF8 && $s =~ /[^\000-\177]/;
 
-	return ASCII->encode(shift) if ASCII;
+	return $t . ASCII->encode($s) if ASCII;
 
-	unless (ASCII) {
-		my $s = shift;
+	# partial transliteration for non-ASCII character encodings
+	$s =~ tr
+	[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
+	[\055\041-\054\056-\176\077] unless ASCII;
 
-		# partial transliteration for non-ASCII character encodings
-		$s =~ tr
-		[-!"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
-		[\055\041-\054\056-\176\077];
-
-		return $s;					# ASCII
-	}
+	return $s;						# ASCII
 }
 
 
-my %esc = eval {				## precalculated ASCII escape table
+my %esc = eval {		## precalculated ASCII escape table
 	my %table;
 
 	foreach ( 33 .. 126 ) {					# ASCII printable
@@ -317,14 +308,14 @@ my %esc = eval {				## precalculated ASCII escape table
 };
 
 
-sub _escape {				## Insert escape sequences in string
+sub _escape {			## Insert escape sequences in string
 	my $s = shift;
 	$s =~ s/([^\055\101-\132\141-\172\060-\071])/$esc{$1}/eg;
 	return $s;
 }
 
 
-my %unesc = eval {				## precalculated numeric escape table
+my %unesc = eval {		## precalculated numeric escape table
 	my %table;
 
 	foreach ( 0 .. 255 ) {
@@ -337,7 +328,7 @@ my %unesc = eval {				## precalculated numeric escape table
 };
 
 
-sub _unescape {				## Remove escape sequences in string
+sub _unescape {			## Remove escape sequences in string
 	my $s = shift;
 	$s =~ s/\134([\060-\062][\060-\071]{2})/$unesc{$1}/eg;	# numeric escape
 	$s =~ s/\134\066\066\066/\134\134/g;			# reveal escaped escape

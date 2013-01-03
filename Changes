@@ -1,5 +1,16 @@
 $Id$                       -*-text-*-
 
+**** 0.73 [unreleased]
+
+Fix rt.cpan.org #82296
+
+	IPv6 with embedded IPv4 address not mapped to ip6.arpa.
+
+Fix rt.cpan.org #82294
+
+	Perl taint inadvertently removed in Domain and Text objects.
+
+
 **** 0.72 Dec 28, 2012
 
 Fix rt.cpan.org #82148
@@ -22,8 +33,9 @@ Fix rt.cpan.org #82047
 
 Fix rt.cpan.org #81941
 
-	Clarify documentation to make clear that bgread will not switch to
-	TCP when a truncated packet is received.
+	Clarify documentation to make users aware that bgread will not
+	switch to TCP when a truncated packet is received.
+
 
 **** 0.71 Dec 15, 2012
 
@@ -1516,78 +1528,6 @@ Fix: Bug report by Bernhard Schmidt (concerning a bug on the IPv6 branch).
 
 *** 0.48_01 March 7, 2005 (Version 0.49 release candidate 1)
 
-
-Fix: rt.cpan.org  #8882  
-      No redundant lookups on SERVFAIL response 
-      and #6149 	 
-      Does not search multiple DNS servers
- 
-      Net::DNS::Resolver will now use the other nameservers in the
-      list if the RCODE of the answer is not NO ERROR (0) or NAME
-      ERROR (3). When send() exhausted the last nameserver from the it
-      will return the answer that was received from the last
-      nameserver that responded with an RCODE.
-
-      The error string will be set to "RCODE: <rcode from last packet>"
-
-
-Fix: rt.cpan.org #8803  
-
-      TXT records don't work with semicolons 
-
-      Since we are expecting presentation format at input a comment
-      will need to be escaped ( \; ).
-
-      It could be argued that this is a to strict interpretation of 
-      1035 section 5.1.
-
-      While working on this I discovered there are more problems with
-      TXT RRs. e.g.; '0100' (a character string content represented in
-      hex) is a perfectly legal and should be represented as "\000" in
-      presentation format. Net::DNS does pass character strings with
-      "non-ASCII" chars from the wire to the char_str_lst array but
-      the print functions do not properly escape them when printing.
-
-      Some tests with TXT RRs added to 07-misc.t
-
-      Properly dealing with zone file presentation format and binary 
-      data is still to be done.
-
-
-Fix: rt.cpan.org Ticket #8483 
-	eval tests for DNS::RR::SIG fail when using a die handler 
-	(Thanks Sebastiaan Hoogeveen)
-	
-      Patch applied.
-
-Fix: rt.cpan.org: Ticket #8608 
-	Net::DNS::Packet->data makes incorrect assumptions
-
-      Implemented the "pop" method for the question.
-      Since having a qcount that is not 1 is somewhat rare (it appears
-      in TCP AXFR streams) the ability to pop the answer from a question
-      has not been documented in the "pod"
-
-      Also fixed the incorrect assumption.
-
-      (Thanks Bruce Campbell.)
-
-
-Fix: Ticket #11106 
-      Incorrect instructions in README 
-
-      Corrected in the README and in Makefile.PL
-
-
-Olaf Kolkman took over maintenance responsibility from Chris
-Reinardt. This involved importing the code into another subversion
-repository. I made sure the numbers jumped, but I did not have access
-to the "original" subversion repository so I lost some of the history.
-
-
-*** 0.48_01 March 2005 (Version 0.49 release candidate 1)
-
-
 Fix: rt.cpan.org  #8882  
       No redundant lookups on SERVFAIL response 
      and #6149 	 
@@ -1648,12 +1588,11 @@ Fix: Ticket #11106
 
 
 Olaf Kolkman took over maintenance responsibility from Chris
-Reinardt. This involved importing the code into another subversion
+Reinhardt. This involved importing the code into another subversion
 repository. I made sure the numbers jumped, but I did not have access
 to the "original" subversion repository so I lost some of the history.
 
 
->>>>>>> .merge-right.r260
 *** 0.48 Aug 12, 2004
 
 

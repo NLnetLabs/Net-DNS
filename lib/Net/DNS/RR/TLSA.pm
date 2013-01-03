@@ -4,7 +4,7 @@ package Net::DNS::RR::TLSA;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
 use base Net::DNS::RR;
 
@@ -42,8 +42,8 @@ sub format_rdata {			## format rdata portion of RR string.
 	return '' unless defined $self->{certbin};
 	my @params = map $self->$_, qw(usage selector matchingtype);
 	my $certificate = $self->cert;
-	$certificate =~ s/(\S{64})/$1\n/g;
 	$certificate = "(\n$certificate )" if length $certificate > 40;
+	$certificate =~ s/(\S{64})/$1\n/g;
 	return join ' ', @params, $certificate;
 }
 
@@ -59,35 +59,35 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub usage {
 	my $self = shift;
 
-	$self->{usage} = shift if @_;
+	$self->{usage} = shift if scalar @_;
 	return 0 + ( $self->{usage} || 0 );
 }
 
 sub selector {
 	my $self = shift;
 
-	$self->{selector} = shift if @_;
+	$self->{selector} = shift if scalar @_;
 	return 0 + ( $self->{selector} || 0 );
 }
 
 sub matchingtype {
 	my $self = shift;
 
-	$self->{matchingtype} = shift if @_;
+	$self->{matchingtype} = shift if scalar @_;
 	return 0 + ( $self->{matchingtype} || 0 );
 }
 
 sub cert {
 	my $self = shift;
 
-	$self->{certbin} = pack "H*", map { s/\s+//g; $_ } join "", @_ if @_;
+	$self->{certbin} = pack "H*", map { s/\s+//g; $_ } join "", @_ if scalar @_;
 	unpack "H*", $self->{certbin} || "" if defined wantarray;
 }
 
 sub certbin {
 	my $self = shift;
 
-	$self->{certbin} = shift if @_;
+	$self->{certbin} = shift if scalar @_;
 	$self->{certbin} || "";
 }
 

@@ -4,7 +4,7 @@ package Net::DNS::RR::SSHFP;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1046
+$VERSION = (qw$LastChangedRevision$)[1];
 
 use base Net::DNS::RR;
 
@@ -44,8 +44,8 @@ sub format_rdata {			## format rdata portion of RR string.
 	return '' unless $self->{fpbin};
 	my $babble	= $self->babble;
 	my $fingerprint = $self->fp;
-	$fingerprint =~ s/(\S{64})/$1\n/g;
 	$fingerprint = "(\n$fingerprint )" if length $fingerprint > 40;
+	$fingerprint =~ s/(\S{64})/$1\n/g;
 	return join ' ', $self->algorithm, $self->fptype, $fingerprint unless $babble;
 	return join ' ', $self->algorithm, $self->fptype, $fingerprint, "\n;", $babble;
 }
@@ -62,28 +62,28 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub algorithm {
 	my $self = shift;
 
-	$self->{algorithm} = shift if @_;
+	$self->{algorithm} = shift if scalar @_;
 	return 0 + ( $self->{algorithm} || 0 );
 }
 
 sub fptype {
 	my $self = shift;
 
-	$self->{fptype} = shift if @_;
+	$self->{fptype} = shift if scalar @_;
 	return 0 + ( $self->{fptype} || 0 );
 }
 
 sub fp {
 	my $self = shift;
 
-	$self->{fpbin} = pack "H*", map { s/\s+//g; $_ } join "", @_ if @_;
+	$self->{fpbin} = pack "H*", map { s/\s+//g; $_ } join "", @_ if scalar @_;
 	unpack "H*", $self->{fpbin} || "" if defined wantarray;
 }
 
 sub fpbin {
 	my $self = shift;
 
-	$self->{fpbin} = shift if @_;
+	$self->{fpbin} = shift if scalar @_;
 	$self->{fpbin} || "";
 }
 
@@ -106,7 +106,7 @@ __END__
 
 =head1 DESCRIPTION
 
-DNS SSH Fingerprint (SSHFP) resource records - RFC 4255.
+DNS SSH Fingerprint (SSHFP) resource records.
 
 =head1 METHODS
 

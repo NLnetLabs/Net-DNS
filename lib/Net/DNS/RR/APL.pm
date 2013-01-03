@@ -4,7 +4,7 @@ package Net::DNS::RR::APL;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
 use base Net::DNS::RR;
 
@@ -29,12 +29,12 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 
 	$self->{aplist} = [];
 	while ( $offset < $limit ) {
-		my $item = bless {}, 'Net::DNS::RR::APL::Item';
 		my $xlen = unpack "\@$offset x3 C", $$data;
-		my $afdlen = ( $xlen & 0x7F );
+		my $size = ( $xlen & 0x7F );
+		my $item = bless {}, 'Net::DNS::RR::APL::Item';
 		$item->negate(1) if $xlen & 0x80;
-		@{$item}{qw(family prefix afdpart)} = unpack "\@$offset n C x a$afdlen", $$data;
-		$offset += $afdlen + 4;
+		@{$item}{qw(family prefix address)} = unpack "\@$offset n C x a$size", $$data;
+		$offset += $size + 4;
 		push @{$self->{aplist}}, $item;
 	}
 	croak('corrupt APL data') unless $offset == $limit;	# more or less FUBAR
@@ -47,9 +47,9 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	my $rdata = '';
 	return $rdata unless $self->{aplist};
 	foreach ( @{$self->{aplist}} ) {
-		my $afdpart = $_->{afdpart};
-		my $xlength = $_->negate | length($afdpart);
-		$rdata .= pack 'n C2 a*', @{$_}{qw(family prefix)}, $xlength, $afdpart;
+		my $address = $_->{address};
+		my $xlength = $_->negate | length($address);
+		$rdata .= pack 'n C2 a*', @{$_}{qw(family prefix)}, $xlength, $address;
 	}
 	return $rdata;
 }
@@ -73,10 +73,12 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub aplist {
 	my $self = shift;
 
-	while (@_) {						# parse apitem strings
-		last unless $_[0] =~ m|^(!?)(\d+):(.+)/(\d+)$|;
-		$self->aplist( negate => ( $1 ? 1 : 0 ), family => $2, address => $3, prefix => $4 );
-		shift;
+	while ( scalar @_ ) {					# parse apitem strings
+		last unless $_[0] =~ m#^(!?)(\d+):(.+)/(\d+)$#;
+		my $n = $1 ? 1 : 0;
+		my $f = $2;
+		my ( $x, $a, $p ) = split m#^[^:]+:|/#, shift;
+		$self->aplist( negate => $n, family => $f, address => $a, prefix => $p );
 	}
 
 	my $aplist = $self->{aplist} ||= [];
@@ -89,8 +91,8 @@ sub aplist {
 		push @$aplist, $item;
 	}
 
-	return @$aplist if wantarray;
-	join ' ', map $_->string, @$aplist if defined wantarray;
+	my @ap = @$aplist;
+	return wantarray ? @ap : join ' ', map $_->string, @ap if defined wantarray;
 }
 
 
@@ -101,7 +103,7 @@ package Net::DNS::RR::APL::Item;
 sub negate {
 	my $bit = 0x80;
 	for ( shift->{negate} ||= 0 ) {
-		return $_ & $bit unless @_;
+		return $_ & $bit unless scalar @_;
 		my $set = $_ | $bit;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
@@ -111,48 +113,48 @@ sub negate {
 sub family {
 	my $self = shift;
 
-	$self->{family} = shift if @_;
+	$self->{family} = shift if scalar @_;
 	return 0 + ( $self->{family} || 0 );
 }
 
 sub prefix {
 	my $self = shift;
 
-	$self->{prefix} = shift if @_;
+	$self->{prefix} = shift if scalar @_;
 	return 0 + ( $self->{prefix} || 0 );
 }
 
 {
-	require Net::DNS::RR::A;
-	require Net::DNS::RR::AAAA;
+	use Net::DNS::RR::A;
+	use Net::DNS::RR::AAAA;
 
 	sub _address_1 {
 		my $self = shift;
 
-		my $dummy = {address => pack( 'a* @4', $self->{afdpart} || '' )};
-		return &Net::DNS::RR::A::address($dummy) unless @_;
+		my $dummy = {address => pack( 'a* @4', $self->{address} || '' )};
+		return Net::DNS::RR::A::address($dummy) unless scalar @_;
 
 		my $alength = ( $self->prefix + 7 ) >> 3;	# mask non-prefix bits, suppress nulls
-		my @address = unpack "C$alength", &Net::DNS::RR::A::address( $dummy, shift );
+		my @address = unpack "C$alength", Net::DNS::RR::A::address( $dummy, shift );
 		my $bitmask = 0xFF << ( 8 - $self->prefix & 7 );
 		push @address, ( $bitmask & pop(@address) ) if $alength;
 		for ( reverse @address ) { last if $_; pop @address }
-		$self->{afdpart} = pack 'C*', @address;
+		$self->{address} = pack 'C*', @address;
 	}
 
 
 	sub _address_2 {
 		my $self = shift;
 
-		my $dummy = {address => pack( 'a* @16', $self->{afdpart} || '' )};
-		return &Net::DNS::RR::AAAA::address_long($dummy) unless @_;
+		my $dummy = {address => pack( 'a* @16', $self->{address} || '' )};
+		return Net::DNS::RR::AAAA::address_long($dummy) unless scalar @_;
 
 		my $alength = ( $self->prefix + 7 ) >> 3;	# mask non-prefix bits, suppress nulls
-		my @address = unpack "C$alength", &Net::DNS::RR::AAAA::address( $dummy, shift );
+		my @address = unpack "C$alength", Net::DNS::RR::AAAA::address( $dummy, shift );
 		my $bitmask = 0xFF << ( 8 - $self->prefix & 7 );
 		push @address, ( $bitmask & pop(@address) ) if $alength;
 		for ( reverse @address ) { last if $_; pop @address }
-		$self->{afdpart} = pack 'C*', @address;
+		$self->{address} = pack 'C*', @address;
 	}
 }
 
