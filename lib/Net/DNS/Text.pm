@@ -79,16 +79,13 @@ sub new {
 
 	s/^([\042\047])(.*)\1$/$2/;				# strip paired quotes
 
-	s/\134\134/\134\066\066\066/g;				# disguise escaped escape
-
-	s/\134([\060-\062][\060-\071]{2})/$unescape{$1}/eg;	# numeric escape
-
-	s/\134\066\066\066/\134\134/g;				# reveal escaped escape
+	s/\134\134/\134\060\071\062/g;				# disguise escaped escape
+	s/\134([\060-\071]{3})/$unescape{$1}/eg;		# numeric escape
 	s/\134(.)/$1/g;						# character escape
 
 	while ( length $_ > 255 ) {
 		my $chunk = substr( $_, 0, 255 );		# carve into chunks
-		substr( $chunk, -length($1) ) = '' if $chunk =~ /.([\300-\377][\200-\277]+)$/;
+		substr( $chunk, -length($1) ) = '' if $chunk =~ /.([\300-\377][\200-\277]*)$/;
 		push @$self, $chunk;
 		substr( $_, 0, length $chunk ) = '';
 	}
@@ -141,7 +138,7 @@ suitable for inclusion in a DNS packet buffer.
 
 sub encode {
 	my $self = shift;
-	join '', map { pack 'C a*', length $_, $_ } @$self;
+	join '', map pack( 'C a*', length $_, $_ ), @$self;
 }
 
 
@@ -174,8 +171,8 @@ my $QQ = _decode_utf8( pack 'C', 34 );
 sub string {
 	my $self = shift;
 
-	my @utf8 = map { s/([^\040\060-\132\141-\172])/$escape{$1}/eg; $_ } @$self;
-	my $string = _decode_utf8( join '', @utf8 );
+	my @s = map split( '', $_ ), @$self;			# escape non-printable
+	my $string = _decode_utf8( join '', map $escape{$_}, @s );
 
 	# Note: Script-specific rules determine which Unicode characters match \s
 	return $string unless $string =~ /^$|\s|["\$'();@]/;	# unquoted contiguous
@@ -201,14 +198,14 @@ sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 sub _decode_utf8 {
 	my $s = shift;
 
-	return UTF8->decode($s) . substr( $s, 0, 0 ) if UTF8;
+	return pack 'a0 a*', $s, UTF8->decode($s) if UTF8;	# preserve taint
 
-	return ASCII->decode($s) . substr( $s, 0, 0 ) if ASCII && not UTF8;
+	return pack 'a0 a*', $s, ASCII->decode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
-	[\055\040-\054\056-\176\000-\377]
-	[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
+	[\040-\176\000-\377]
+	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
 	return $s;						# native 8-bit code
 }
@@ -217,14 +214,15 @@ sub _decode_utf8 {
 sub _encode_utf8 {
 	my $s = shift;
 
-	return UTF8->encode($s) . substr( $s, 0, 0 ) if UTF8;
+	return pack 'a0 a*', $s, UTF8->encode($s) if UTF8;	# preserve taint
 
-	return ASCII->encode($s) . substr( $s, 0, 0 ) if ASCII && not UTF8;
+	return pack 'a0 a*', $s, ASCII->encode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
+	$s = pack 'C*', unpack 'U0 C*', $s unless ASCII;	# repackage pre-5.8 Unicode
 	$s =~ tr
-	[- !"#$%&'()*+,./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
-	[\055\040-\054\056-\176\077] unless ASCII;
+	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~]
+	[\040-\176] unless ASCII;
 
 	return $s;						# ASCII
 }
@@ -233,18 +231,18 @@ sub _encode_utf8 {
 %escape = eval {			## precalculated ASCII/UTF-8 escape table
 	my %table;
 	my @C0 = ( 0 .. 31 );					# control characters
-	my @NA = UTF8 ? ( 192, 193, 245 .. 255 ) : ( 128 .. 255 );
+	my @NA = UTF8 ? ( 192, 193, 216 .. 223, 245 .. 255 ) : ( 128 .. 255 );
 
 	foreach ( 0 .. 255 ) {					# transparent
 		$table{pack( 'C', $_ )} = pack 'C', $_;
 	}
 
 	foreach ( 34, 92 ) {					# escape character
-		$table{pack( 'C', $_ )} = pack 'C*', 92, $_;
+		$table{pack( 'C', $_ )} = pack 'C2', 92, $_;
 	}
 
 	foreach ( @C0, 127, @NA ) {				# \ddd
-		$table{pack( 'C', $_ )} = _encode_utf8 sprintf( '\\%03u', $_ );
+		$table{pack( 'C', $_ )} = pack 'C a3', 92, _encode_utf8( sprintf '%03u', $_ );
 	}
 
 	return %table;
@@ -258,7 +256,7 @@ sub _encode_utf8 {
 		$table{_encode_utf8 sprintf( '%03u', $_ )} = pack 'C', $_;
 	}
 
-	$table{_encode_utf8('092')} = pack 'Ca*', 92, _encode_utf8 '666';
+	$table{_encode_utf8('092')} = pack 'C2', 92, 92;
 
 	return %table;
 };

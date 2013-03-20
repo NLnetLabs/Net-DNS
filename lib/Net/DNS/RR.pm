@@ -32,7 +32,7 @@ See also the manual pages for each specific RR type.
 =cut
 
 
-use constant COMPATIBLE => 1;				## enable architecture transition code
+use constant COMPATIBLE => 1;			## enable architecture transition code
 
 use strict;
 use integer;
@@ -46,9 +46,9 @@ use Net::DNS::Question;
 =head1 METHODS
 
 B<WARNING!!!>  Do not assume the RR objects you receive from a query
-are of a particular type -- always check the object type before calling
-any of its methods.  If you call an unknown method, you will get an
-error message and execution will be terminated.
+are of a particular type -- you must always check the object type
+before calling any of its methods.  If you call an unknown method,
+you will get an error message and execution will be terminated.
 
 =cut
 
@@ -57,7 +57,7 @@ sub new {
 
 	return &_new_from_rdata if COMPATIBLE && ref $_[1];	# resolve new() usage conflict
 
-	my $rr = eval { scalar @_ > 2 ? &new_hash : &new_string; };
+	my $rr = eval { scalar @_ > 2 ? &_new_hash : &_new_string; };
 	croak "${@}new $class( ... )" if $@;
 	return $rr;
 }
@@ -90,10 +90,10 @@ using appropriate RFC4291 or RFC4632 IP address/prefix notation.
 
 =cut
 
-my $CLASS_REGEX = join '|', sort( keys %classbyname ), 'CLASS\d+';
+my $PARSE_REGEX = qw/("[^"]*"|'[^']*')|;[^\n]*|[()\s]/;
 my %dnssectype = map { ( $_, 1 ) } qw(DLV DNSKEY DS KEY NSEC NSEC3 NSEC3PARAM NXT RRSIG SIG);
 
-sub new_string {
+sub _new_string {
 	my $class = shift;
 	local $_ = shift || croak 'empty or undefined argument';
 
@@ -103,19 +103,31 @@ sub new_string {
 	s/\\'/\\039/g;						# disguise escaped single quote
 	s/\\;/\\059/g;						# disguise escaped semicolon
 	s/\n(\S)/$1/g if COMPATIBLE;				# gloss over syntax errors in Net::DNS::SEC test data
-	my @token = grep defined && length, split /("[^"]*"|'[^']*')|;[^\n]*|[()]|\s+/;
+	my ( $name, @token ) = grep defined && length, split /$PARSE_REGEX/o;
 
-	my $name    = shift @token;				# name [ttl] [class] type ...
-	my $ttl	    = shift @token if @token && $token[0] =~ /^\d/;
-	my $rrclass = shift @token if @token > 1 && $token[0] =~ /^($CLASS_REGEX)$/o;
-	$ttl = shift @token if @token && $token[0] =~ /^\d/;	# name [class] [ttl] type ...
+	my ( $t1, $t2, $t3 ) = @token;
+	return $class->_subclass( Net::DNS::Question->new( $name, $t1 || croak 'RR type not specified' ) )
+			unless defined $t2;			# <name> <rrtype>
+
+	my ( $ttl, $rrclass );
+	if ( $classbyname{$t2} && defined $t3 ) {
+		$ttl	 = shift @token;			# <name> <ttl> <rrclass> <rrtype>
+		$rrclass = shift @token;
+	} elsif ( $t1 =~ /^\d/ ) {
+		$ttl = shift @token;				# <name> <ttl> [<rrclass>] <rrtype>
+		$rrclass = shift @token if $t2 =~ /^CLASS\d/;
+	} elsif ( $classbyname{$t1} || $t1 =~ /^CLASS\d/ ) {
+		$rrclass = shift @token;			# <name> <rrclass> [<ttl>] <rrtype>
+		$ttl = shift @token if $t2 =~ /^\d/;
+	}
+
 	my $rrtype = shift(@token) || croak 'unable to parse RR string';
 
-	my $base = new Net::DNS::Question( $name, $rrtype, $rrclass );
-	my $self = $class->_subclass( $base, scalar @token );	# RR with defaults (if appropriate)
+	my $populated = scalar @token;
+	my $self = $class->_subclass( Net::DNS::Question->new( $name, $rrtype, $rrclass ), $populated );
 	$self->ttl($ttl) if defined $ttl;			# undefined TTL meaningful in zone file
 
-	return $self unless @token;				# empty RR
+	return $self unless $populated;				# empty RR
 
 	if ( $token[0] eq '\\#' ) {
 		shift @token;					# RFC3597 hexadecimal format
@@ -126,12 +138,13 @@ sub new_string {
 		return $self unless $count;
 		return ref($self)->new( $self, \$rdata, 0 ) if COMPATIBLE;
 		$self->decode_rdata( \$rdata, 0 );		# unpack RDATA
+		return $self;
 	} elsif (COMPATIBLE) {
 		$self->{ttl} ||= 0 if $dnssectype{$self->type}; # gloss over bugs in SEC RRs
-		return ref($self)->new_from_string( $self, "@token", @token );
-	} else {
-		$self->parse_rdata(@token);			# parse arguments
+		return ref($self)->new_from_string( $self, join( ' ', @token ), \@token );
 	}
+
+	$self->parse_rdata(@token);				# parse arguments
 	return $self;
 }
 
@@ -163,10 +176,10 @@ sections required for certain dynamic update operations.
 
 =cut
 
-sub new_hash {
+sub _new_hash {
 	my $base = shift;
 	my %attribute = ( name => '.' );
-	while (@_) {
+	while ( scalar @_ ) {
 		my $key = lc shift;
 		$attribute{$key} = shift;
 	}
@@ -270,7 +283,7 @@ subordinate encoders.
 sub encode {
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
-	( $offset, @opaque ) = ( 0, {} ) unless @_;
+	( $offset, @opaque ) = ( 0x4000, {} ) unless scalar @_;
 
 	if (COMPATIBLE) {
 		my ( $hash, $packet ) = @opaque;
@@ -311,7 +324,7 @@ sub canonical {
 
 	if (COMPATIBLE) {
 		my $dummy  = $self->name;
-		my $owner  = $self->{owner}->encode(0);
+		my $owner  = $self->{owner}->canonical;
 		my $index  = RRFIXEDSZ + length $owner;
 		my $rdata  = eval { $self->_canonicalRdata($index); } || '';
 		my $itype  = typebyname( $self->type );
@@ -319,7 +332,7 @@ sub canonical {
 		return pack 'a* n2 N n a*', $owner, $itype, $iclass, $self->ttl, length $rdata, $rdata;
 	}
 
-	my $owner = $self->{owner}->encode(0);
+	my $owner = $self->{owner}->canonical;
 	my $index = RRFIXEDSZ + length $owner;
 	my $rdata = eval { $self->encode_rdata($index); } || '';
 	pack 'a* n2 N n a*', $owner, @{$self}{qw(type class)}, $self->ttl, length $rdata, $rdata;
@@ -338,7 +351,7 @@ sub name {
 	my $self = shift;
 
 	if (COMPATIBLE) {
-		$self->{owner} = new Net::DNS::DomainName1035(shift) if @_;
+		@{$self}{qw(name owner)} = ( undef, new Net::DNS::DomainName1035(shift) ) if @_;
 		$self->{owner} = new Net::DNS::DomainName1035( $self->{name} ) unless $self->{owner};
 		return $self->{name} = $self->{owner}->name;
 	}
@@ -386,7 +399,7 @@ sub class {
 	}
 
 	$self->{class} = classbyname(shift) if @_;
-	classbyval( $self->{class} || 1 );
+	classbyval( $self->{class} || 1 ) if defined wantarray;
 }
 
 
@@ -406,16 +419,14 @@ my %unit = ( W => 604800, D => 86400, H => 3600, M => 60, S => 1 );
 %unit = ( %unit, map { /\D/ ? lc($_) : $_ } %unit );
 
 sub ttl {
-	my $self  = shift;
-	my $value = shift;
+	my $self = shift;
 
-	return $self->{ttl} || 0 unless defined $value;		# avoid defining rr->{ttl}
+	return $self->{ttl} || 0 unless scalar @_;		# avoid defining rr->{ttl}
 
 	my $ttl = 0;
-	my %time = reverse split /(\D)\D*/, $value . 'S';
+	my %time = reverse split /(\D)\D*/, shift() . 'S';
 	while ( my ( $u, $t ) = each %time ) {
-		my $s = $unit{$u} || croak qq(bad time unit "$u");
-		$ttl += $s > 1 ? $t * $s : $t;
+		$ttl += $t * ( $unit{$u} || croak qq(bad time unit "$u") );
 	}
 	$self->{ttl} = $ttl;
 }
@@ -432,7 +443,7 @@ Resource record data section when viewed as opaque octets.
 sub rdata {
 	my $self = shift;
 
-	return eval { $self->encode_rdata( 0x4000, {} ); } || '' unless @_;
+	return eval { $self->encode_rdata( 0x4000, {} ); } unless scalar @_;
 
 	my $rdata = $self->{rdata}    = shift;
 	my $rdlen = $self->{rdlength} = length $rdata;
@@ -471,15 +482,15 @@ sub string {
 	my $self = shift;
 
 	my $name = $self->name if COMPATIBLE;
-	my @basic = ( $self->{owner}->string, $self->ttl, $self->class, $self->type );
+	my @core = ( $self->{owner}->string, $self->ttl, $self->class, $self->type );
 
 	my $rdata = $self->rdstring;
 
-	return join "\t", @basic, '; no data' unless length $rdata;
+	return join "\t", @core, '; no data' unless length $rdata;
 
 	chomp $rdata;
 	$rdata =~ s/\n+/\n\t/g;
-	return join "\t", @basic, $rdata;
+	return join "\t", @core, $rdata;
 }
 
 
@@ -504,6 +515,41 @@ sub rdstring {
 }
 
 
+=head2 plain
+
+    $plain = $rr->plain;
+
+Returns a simplified single line representation of the RR using the
+zone file format described in RFC1035.  This facilitates interaction
+with programs like nsupdate which have simplified RR parsers.
+
+=cut
+
+sub plain {
+	join ' ', shift->token;
+}
+
+
+=head2 token
+
+    @token = $rr->token;
+
+Returns a token list representation of the RR zone file string.
+
+=cut
+
+sub token {
+	my $self = shift;
+
+	my @core = ( $self->{owner}->string, $self->ttl, $self->class, $self->type );
+	local $_ = $self->rdstring;
+	s/\\\\/\\092/g;						# disguise escaped escape
+	s/\\"/\\034/g;						# disguise escaped quote
+	s/\\;/\\059/g;						# disguise escaped semicolon
+	my @token = @core, grep defined && length, split /$PARSE_REGEX/o;
+}
+
+
 ###################################################################################
 
 =head1 Sorting of RR arrays
@@ -515,21 +561,23 @@ sorting functions used for a particular RR based on its attributes.
 
 =head2 set_rrsort_func
 
-    Net::DNS::RR::SRV->set_rrsort_func('priority',
-			       sub {
-				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
-				   $a->priority <=> $b->priority
-				   ||
-				   $b->weight <=> $a->weight
-		     }
+    Net::DNS::RR::SRV->set_rrsort_func(
+	'priority',
+	sub {
+	    my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
+	    $a->priority <=> $b->priority
+	    || $b->weight <=> $a->weight;
+	    }
+	);
 
-    Net::DNS::RR::SRV->set_rrsort_func('default_sort',
-			       sub {
-				   my ($a,$b)=($Net::DNS::a,$Net::DNS::b);
-				   $a->priority <=> $b->priority
-				   ||
-				   $b->weight <=> $a->weight
-		     }
+    Net::DNS::RR::SRV->set_rrsort_func(
+	'default_sort',
+	sub {
+	    my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
+	    $a->priority <=> $b->priority
+	    || $b->weight <=> $a->weight;
+	    }
+	);
 
 set_rrsort_func needs to be called as a class method. The first
 argument is the attribute name on which the sorting will need to take
@@ -603,20 +651,20 @@ sub get_rrsort_func {
 ##
 ###################################################################################
 
-sub decode_rdata {				## decode rdata from wire-format byte string
+sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $self, $data, $offset ) = @_;
 	my $rdlength = $self->{rdlength} || length $$data;
 	$self->{rdata} = substr $$data, $offset, $rdlength;
 }
 
 
-sub encode_rdata {				## encode rdata as wire-format byte string
+sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	$self->{rdata} || '';
 }
 
 
-sub format_rdata {				## format rdata portion of RR string
+sub format_rdata {			## format rdata portion of RR string
 	my $self = shift;
 	my $data = $self->{rdata} || $self->encode_rdata;	# unknown RR, per RFC3597
 	my $size = length $data;
@@ -624,7 +672,7 @@ sub format_rdata {				## format rdata portion of RR string
 }
 
 
-sub parse_rdata {				## parse RR attributes in argument list
+sub parse_rdata {			## parse RR attributes in argument list
 	my $self = shift;
 	return unless shift;
 	die join ' ', $self->type, 'not implemented' if ref($self) eq __PACKAGE__;
@@ -632,14 +680,14 @@ sub parse_rdata {				## parse RR attributes in argument list
 }
 
 
-sub defaults { }				## set attribute default values
+sub defaults { }			## set attribute default values
 
 
 ###################################################################################
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {				## Default method
+sub AUTOLOAD {			## Default method
 	my $self = shift;
 	confess "method '$AUTOLOAD' undefined" unless ref $self;
 
@@ -668,10 +716,10 @@ END
 }
 
 
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 
 
-sub dump {				## print internal data structure
+sub dump {			## print internal data structure
 	use Data::Dumper;
 	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
 	return Dumper(shift) if defined wantarray;
@@ -697,15 +745,15 @@ sub _subclass {
 	my $class   = shift || '';
 	my $object  = shift;
 	my $default = shift;
-	die "Usage:\tuse Net::DNS;\n\t\$rr = new $class( ... )\n"
-			unless $class eq __PACKAGE__;
 
-	my $required = join '::', $class, $object->type;	# full package name
-
-	my $subclass = $_LOADED{$required};			# load once only
+	my $subclass = $_LOADED{$object->type};			# load once only
 	unless ($subclass) {
-		eval "require $required";
-		$subclass = $_LOADED{$required} = $@ ? $class : $required;
+		my $rrtype = $object->type;
+		die "Usage:\t\$rr = new Net::DNS::RR( name $rrtype ... )\n"
+				unless $class eq __PACKAGE__;
+		my $module = join '::', $class, $rrtype;	# full package name
+		eval "require $module";
+		$_LOADED{$rrtype} = $subclass = $@ ? $class : $module;
 		$_DEFAULTS{$subclass} = bless {}, $subclass;	# cache default values
 		$_DEFAULTS{$subclass}->defaults;
 	}
@@ -726,7 +774,7 @@ sub _subclass {
 ##	"new" modules inherit these methods to wrap themselves in "old" clothing.
 ###################################################################################
 
-sub _new_from_rdata {				## decode rdata from wire-format byte string
+sub _new_from_rdata {			## decode rdata from wire-format byte string
 	my $class = shift;
 	my $self  = shift;
 	$self->decode_rdata(@_) if $self->{rdlength} or $self->type eq 'OPT';
@@ -734,45 +782,44 @@ sub _new_from_rdata {				## decode rdata from wire-format byte string
 }
 
 
-sub new_from_string {				## parse RR attributes in argument list
-	my ( $class, $self, undef, @parse ) = @_;		# new_from_string() is a misnomer
+sub new_from_string {			## parse RR attributes in argument list
+	my ( $class, $self, undef, $parse ) = @_;		# new_from_string() is a misnomer
 	confess 'new_from_string() deprecated' unless ref($self);
-	$self->parse_rdata(@parse);				# string already parsed in new_string()
+	$self->parse_rdata(@$parse);				# string already parsed in _new_string()
 	return $self;
 }
 
 
-sub rdatastr {					## format rdata portion of RR string
-	my $self = shift;
-	return $self->format_rdata;
+sub rdatastr {				## format rdata portion of RR string
+	return shift->format_rdata;
 }
 
 
-sub rr_rdata {					## encode rdata as wire-format byte string
+sub rr_rdata {				## encode rdata as wire-format byte string
 	my $self   = shift;
 	my $packet = shift;
 	return $self->encode_rdata(@_);
 }
 
 
-sub _canonicaldata {				## encode RR in canonical form
+sub _canonicaldata {			## encode RR in canonical form
 	&canonical;
 }
 
-sub _canonicalRdata {				## encode rdata in canonical form
+sub _canonicalRdata {			## encode rdata in canonical form
 	my ( $self, $offset ) = @_;
 	return $self->rr_rdata( undef, $offset );
 }
 
 
-sub _name2wire {				## emulate
+sub _name2wire {			## emulate
 	my $class = shift;
 	new Net::DNS::DomainName(shift)->encode();
 }
 
-sub _normalize_ownername { }				## ignore
+sub _normalize_ownername { }
 
-sub _normalize_dnames { }				## ignore
+sub _normalize_dnames { }
 
 ###################################################################################
 

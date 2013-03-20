@@ -2,6 +2,14 @@ $Id$                       -*-text-*-
 
 **** 0.73 [unreleased]
 
+Fix rt.cpan.org #83075
+
+	ZoneFile.pm wrongly rejects $TTL 0 directive.
+
+Fix rt.cpan.org #82621
+
+	Error string empty after failed TCP query.
+
 Fix rt.cpan.org #82296
 
 	IPv6 with embedded IPv4 address not mapped to ip6.arpa.

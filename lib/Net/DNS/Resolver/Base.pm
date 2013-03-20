@@ -619,18 +619,17 @@ sub send_tcp {
 			}
 
 			my $ans = Net::DNS::Packet->new(\$buf, $self->{debug});
-			$self->errorstring($@);
+			my $rcode = $ans->header->rcode;
+			$self->errorstring( $@ ? $@ : $rcode );
 
 			if (defined $ans) {
 				$ans->answerfrom($self->answerfrom);
 
-				if ($ans->header->rcode ne "NOERROR" &&
-				    $ans->header->rcode ne "NXDOMAIN"){
+				if ( $rcode ne "NOERROR" && $rcode ne "NXDOMAIN" ) {
 					# Remove this one from the stack
-					print "RCODE: ".$ans->header->rcode ."; trying next nameserver\n" if $self->{'debug'};
+					print "RCODE: $rcode; trying next nameserver\n" if $self->{debug};
 					$lastanswer=$ans;
 					next NAMESERVER ;
-
 				}
 
 			}

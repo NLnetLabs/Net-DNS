@@ -13,9 +13,11 @@ Net::DNS::ZoneFile - DNS zone file
 
 =head1 SYNOPSIS
 
+  [ use encoding 'UTF8'; ]
+
     use Net::DNS::ZoneFile;
 
-    $zonefile = new Net::DNS::ZoneFile( 'db.example' );
+    $zonefile = new Net::DNS::ZoneFile( 'named.example' );
 
     while ( $rr = $zonefile->read ) {
 	$rr->print;
@@ -47,15 +49,12 @@ use strict;
 use integer;
 use Carp;
 use FileHandle;
+use File::Spec::Functions;
 
 use Net::DNS::Domain;
 use Net::DNS::RR;
 
-use constant UTF8 => eval {
-	require Encode;
-	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
-	Encode::find_encoding('UTF8');
-} || 0;
+use constant PERLIO => eval { require PerlIO; } || 0;
 
 
 =head1 METHODS
@@ -63,33 +62,40 @@ use constant UTF8 => eval {
 
 =head2 new
 
-    $zonefile = new Net::DNS::ZoneFile( 'db.example', ['example.com'] );
+    $zonefile = new Net::DNS::ZoneFile( 'named.example', ['example.com'] );
+    $zonefile = new Net::DNS::ZoneFile( FILEHANDLE, ['example.com'] );
 
-Returns a Net::DNS::ZoneFile object which represents the zone
-file specified in the argument list.
+The new() constructor returns a Net::DNS::ZoneFile object which
+represents the zone file specified in the argument list.
 
-The file is opened for reading and remains open until exhausted
-or all references to the ZoneFile object cease to exist.
+The specified file or file handle is open for reading and closed when
+exhausted or all references to the ZoneFile object cease to exist.
+
+Character encoding discipline for files is coersed to be the same as
+STDIN and specified indirectly using the encoding pragma.
 
 The optional second argument specifies $ORIGIN for the zone file.
 
 =cut
 
 use vars qw($DIR);
+my $discipline = '';
 
 sub new {
 	my $self = bless {}, shift;
 	my $file = shift;
 	$self->_origin(shift);
 
-	$self->{handle} = $file;
-	return $self if ref($file);
+	if ( ref($file) ) {					# presumed to be a file handle
+		$self->{handle} = $file;
+		return $self;
+	}
 
+	$file = catfile( $DIR || curdir(), $file ) unless file_name_is_absolute($file);
+	$discipline ||= join ':', '', PerlIO::get_layers( \*STDIN ) if PERLIO;
+	$self->{handle} = new FileHandle( $file, "<$discipline" );
+	croak "Failed to open $file" unless defined $self->{handle};
 	$self->{name} = $file;
-	$file = "$DIR/$file" if $DIR && $file !~ m#^[/]#;
-	$self->{handle} = new FileHandle( $file, '<' ) unless UTF8;
-	$self->{handle} = new FileHandle( $file, '<:encoding(UTF-8)' ) if UTF8;
-	croak "Failed to open $file" unless $self->{handle};
 
 	return $self;
 }
@@ -98,20 +104,19 @@ sub new {
 =head2 read
 
     $rr = $zonefile->read;
+    @rr = $zonefile->read;
 
-When invoked in scalar context, returns the next RR encountered
-in the zone file, or undefined if end of data has been reached.
+When invoked in scalar context, read() returns a Net::DNS::RR object
+representing the next resource record encountered in the zone file,
+or undefined if end of data has been reached.
+
+When invoked in list context, read() returns the list of Net::DNS::RR
+objects in the order that they appear in the zone file.
 
 Comments and blank lines are silently disregarded.
 
 $INCLUDE, $ORIGIN, $TTL and $GENERATE directives are processed
 transparently.
-
-
-    @rr = $zonefile->read;
-
-When invoked in list context, returns the list of all RR objects
-in the zone file.
 
 =cut
 
@@ -120,38 +125,20 @@ sub read {
 
 	return &_read unless ref $self;				# compatibility interface
 
+	local $SIG{__WARN__} = sub { die @_; };
 	if (wantarray) {
 		my @zone;					# return entire zone
-		while ( my $rr = $self->read ) { push( @zone, $rr ) }
+		eval {
+			my $rr;
+			push( @zone, $rr ) while ( $rr = $self->_getRR );
+		};
+		croak join ' ', $@, 'file', $self->name, 'line', $self->line, "\n " if $@;
 		return @zone;
 	}
 
-	eval {
-		eval {
-			for ( $self->_getline || return undef ) {
-				local $SIG{__WARN__} = sub { die @_; };
-
-				if (/^\s/) {			# replace empty RR name
-					my $latest = $self->{latest};
-					my ($name) = split /\s+/, $latest->string if $latest;
-					substr( $_, 0, 0 ) = $name if defined $name;
-				}
-
-				# construct RR object with context specific dynamically scoped $ORIGIN
-				my $context = $self->{context};
-				my $record = &$context( sub { Net::DNS::RR->new_string($_) } );
-
-				$self->{class} ||= $record->class;    # propagate RR class
-				$record->class( $self->{class} );
-
-				$self->{ttl} ||= $record->minimum if $record->type eq 'SOA';	# default TTL
-				$record->ttl( $self->{ttl} ) unless defined $record->{ttl};
-
-				return $self->{latest} = $record;
-			}
-
-		} or $@ && die;					# ugly construct to relate error to source
-	} or $@ && ( $@ =~ s/\.\.\..+$/join( ', line ', $self->name, $self->line )/e, croak $@ );
+	my $rr = eval { $self->_getRR };			# return single RR
+	croak join ' ', $@, 'file', $self->name, 'line', $self->line, "\n " if $@;
+	return $rr;
 }
 
 
@@ -233,7 +220,7 @@ The optional second argument specifies the default path for filenames.
 The current working directory is used by default.
 
 Although not available in the original implementation, the RR list
-can be obtained directly by calling in list context.
+can be obtained directly by calling these methods in list context.
 
     @rr = Net::DNS::ZoneFile->read( $filename, $include_dir );
 
@@ -241,27 +228,35 @@ can be obtained directly by calling in list context.
 =head2 read
 
     $listref = Net::DNS::ZoneFile->read( $filename, $include_dir );
+    @rr = Net::DNS::ZoneFile->read( $filename, $include_dir );
 
 read() parses the specified zone file and returns a reference to the
 list of Net::DNS::RR objects representing the RRs in the file.
 The return value is undefined if the zone data can not be parsed.
 
+When called in list context, the partial result is returned if an
+error is encountered by the parser.
+
 =cut
 
+sub _read {
+	my ($arg1) = @_;
+	shift unless ref($arg1) || $arg1 ne __PACKAGE__;
+	my $filename = shift;
+	local $DIR = shift;
+	my $file = new Net::DNS::ZoneFile($filename);
+	my $zone = [];
+	eval {
+		my $rr;
+		push( @$zone, $rr ) while ( $rr = $file->_getRR );
+	};
+	return wantarray ? @$zone : $zone unless $@;
+	carp join ' ', $@, 'file', $file->name, 'line', $file->line, "\n ";
+	return wantarray ? @$zone : undef;
+}
+
+
 {
-
-	sub _read {
-		my ($arg1) = @_;
-		shift unless ref($arg1) || $arg1 ne __PACKAGE__;
-		my $file = shift;
-		local $DIR = shift;
-		my $zone = new Net::DNS::ZoneFile($file);
-		my @rr = eval { $zone->read; };
-		return wantarray ? @rr : \@rr unless $@;
-		warn "$@\n";
-		return wantarray ? @rr : undef;
-	}
-
 
 	package Net::DNS::ZoneFile::Text;
 
@@ -270,8 +265,7 @@ The return value is undefined if the zone data can not be parsed.
 	sub new {
 		my $self = bless {}, shift;
 		my $data = shift;
-		my @line = split /\n/, ref($data) ? $$data : $data;
-		$self->{data} = \@line;
+		$self->{data} = [split /\n/, ref($data) ? $$data : $data];
 		return $self;
 	}
 
@@ -297,10 +291,10 @@ The return value is undefined if the zone data can not be parsed.
 
     $listref = Net::DNS::ZoneFile->readfh( $handle, $include_dir );
 
-read() parses data from the specified file handle and returns a
+readfh() parses data from the specified file handle and returns a
 reference to the list of Net::DNS::RR objects representing the RRs
 in the file.
-The return value is undefined if the zone data can not be parsed.
+
 =cut
 
 sub readfh {
@@ -313,9 +307,9 @@ sub readfh {
     $listref = Net::DNS::ZoneFile->parse(  $string, $include_dir );
     $listref = Net::DNS::ZoneFile->parse( \$string, $include_dir );
 
-parse() interprets the argument string and returns a reference to
-the list of Net::DNS::RR objects representing the RRs.
-The return value is undefined if the zone data can not be parsed.
+parse() interprets the zone file text in the argument string and
+returns a reference to the list of Net::DNS::RR objects representing
+the RRs.
 
 =cut
 
@@ -330,14 +324,14 @@ sub parse {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {				## Default method
+sub AUTOLOAD {			## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
 
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 
 
 {
@@ -370,7 +364,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 		return undef unless $self->{count};		# EOF
 
 		my $instant = $self->{instant};			# update iterator state
-		$self->{instant} = $instant + $self->{step};
+		$self->{instant} += $self->{step};
 		$self->{count}--;
 
 		local $_ = $self->{template};			# copy template
@@ -392,7 +386,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 	}
 
 
-	sub _format {				## convert $GENERATE iteration number to specified format
+	sub _format {			## convert $GENERATE iteration number to specified format
 		my $number = shift || 0;			# per ISC BIND 9.7
 		my $offset = shift || 0;
 		my $length = shift || 0;
@@ -410,90 +404,122 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 }
 
 
-{
+sub _generate {			## expand $GENERATE into input stream
+	my ( $self, $range, $template ) = @_;
 
-	sub _generate {				## expand $GENERATE into input stream
-		my ( $self, $range, $template ) = @_;
+	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
+	my $generate = new Net::DNS::ZoneFile($handle);
 
-		my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
-
-		my $generate = new Net::DNS::ZoneFile($handle);
-		delete $self->{latest};				# forbid empty name
-		%$generate = %$self;				# save state, create link
-		@{$self}{qw(link handle)} = ( $generate, $handle );
-	}
+	undef $self->{latest};					# forbid empty owner field
+	%$generate = %$self;					# save state, create link
+	@{$self}{qw(link handle)} = ( $generate, $handle );
+	return $handle;
+}
 
 
-	sub _getline {				## get line from current source
-		my $self = shift;
+sub _getline {			## get line from current source
+	my $self = shift;
 
-		my $fh = $self->{handle};
-		while (<$fh>) {
-			$self->{line} = $fh->input_line_number; # number refers to initial line
-			next if /^\s*$/;			# discard blank line
-			next if /^\s*;/;			# discard comment line
+	my $fh = $self->{handle};
+	while (<$fh>) {
+		$self->{line} = $fh->input_line_number;		# number refers to initial line
+		next unless /[^\s]/;				# discard blank line
+		next if /^\s*;/;				# discard comment line
 
-			while (/\(/) {				# concatenate multi-line RR
+		if (/\(/) {					# concatenate multi-line RR
+			s/\\\\/\\092/g;				# disguise escaped escape
+			s/\\"/\\034/g;				# disguise escaped quote
+			s/\\;/\\059/g;				# disguise escaped semicolon
+			my @token = grep defined && length, split /("[^"]*")|;[^\n]*|([()])|(^\s)|\s/;
+			return $_ unless grep $_ eq '(', @token;
+			return $_ if grep $_ eq ')', @token;
+			while (<$fh>) {
 				s/\\\\/\\092/g;			# disguise escaped escape
-				s/\\"/\\034/g;			# disguise escaped double quote
+				s/\\"/\\034/g;			# disguise escaped quote
 				s/\\;/\\059/g;			# disguise escaped semicolon
-				my @token = grep defined && length, split /(^\s)|("[^"]*")|;[^\n]*|([()])|\s+/;
-				last unless grep $_ eq '(', @token;
-				last if grep $_ eq ')', @token;
-				$_ = "@token " . <$fh>;
+				my @part = grep defined && length, split /("[^"]*")|;[^\n]*|([()])|\s/;
+				push @token, @part;
+				last if grep $_ eq ')', @part;
 			}
-
-			if (/^\$(INCLUDE|include)/) {		# directive
-				my ( undef, $file, $origin ) = split;
-				$self->_include($file);
-				$fh = $self->{handle};
-				next unless $origin;
-				my $context = $self->{context};
-				&$context( sub { $self->_origin($origin); } );
-			} elsif (/^\$(ORIGIN|origin)/) {	# directive
-				my ( undef, $origin ) = split;
-				die '$ORIGIN incomplete' unless $origin;
-				my $context = $self->{context};
-				&$context( sub { $self->_origin($origin); } );
-			} elsif (/^\$(TTL|ttl)/) {		# directive
-				my ( undef, $ttl ) = split;
-				die '$TTL incomplete' unless $ttl;
-				$self->{ttl} = Net::DNS::RR::ttl( {}, $ttl );
-			} elsif (/^\$(GENERATE|generate)/) {	# directive
-				my ( undef, $range, @template ) = split;
-				die '$GENERATE incomplete' unless $range;
-				$self->_generate( $range, "@template\n" );
-				$fh = $self->{handle};
-			} elsif (/^\$/) {			# unrecognised
-				chomp;
-				die "unknown directive: $_";
-			} else {
-				chomp;
-				return $_;			# RR string
-			}
+			$_ = join ' ', @token;			# reconstitute RR string
 		}
 
-		$fh->close or die "close: $! $?";		# end of file
-		my $link = $self->{link} || return undef;	# end of zone
-		%$self = %$link;				# end $INCLUDE
-		return $self->_getline;				# resume input
+		return $_ unless /^\$/;				# RR string
+
+		if ( /^\$GENERATE/ || /^\$generate/ ) {		# directive
+			my ( undef, $range, @template ) = split;
+			die '$GENERATE incomplete' unless $range;
+			$fh = $self->_generate( $range, "@template\n" );
+
+		} elsif ( /^\$INCLUDE/ || /^\$include/ ) {	# directive
+			my ( undef, $file, $origin ) = split;
+			$fh = $self->_include($file);
+			my $context = $self->{context};
+			&$context( sub { $self->_origin($origin); } ) if $origin;
+
+		} elsif ( /^\$ORIGIN/ || /^\$origin/ ) {	# directive
+			my ( undef, $origin ) = split;
+			die '$ORIGIN incomplete' unless $origin;
+			my $context = $self->{context};
+			&$context( sub { $self->_origin($origin); } );
+
+		} elsif ( /^\$TTL/ || /^\$ttl/ ) {		# directive
+			my ( undef, $ttl ) = split;
+			die '$TTL incomplete' unless defined $ttl;
+			$self->{ttl} = Net::DNS::RR::ttl( {}, $ttl );
+
+		} else {					# unrecognised
+			chomp;
+			die "unknown directive: $_";
+		}
 	}
 
-
-	sub _include {				## open $INCLUDE file
-		my ( $self, $filename ) = @_;
-		my $include = new Net::DNS::ZoneFile($filename);
-		my $handle  = $include->{handle};
-		delete $self->{latest};				# forbid empty name
-		%$include = %$self;				# save state, create link
-		@{$self}{qw(link handle name)} = ( $include, $handle, $filename );
-	}
+	$fh->close or die "close: $! $?";			# end of file
+	my $link = $self->{link} || return undef;		# end of zone
+	%$self = %$link;					# end $INCLUDE
+	return $self->_getline;					# resume input
+}
 
 
-	sub _origin {				## change $ORIGIN (scope: current file)
-		my $self = shift;
-		$self->{context} = origin Net::DNS::Domain(shift);
-	}
+sub _getRR {			## get RR from current source
+	my $self = shift;
+
+	my $line = $self->_getline;
+	return undef unless defined $line;
+
+	my $noname = $line =~ s/^\s/\@\t/;			# RR name empty
+
+	# construct RR object with context specific dynamically scoped $ORIGIN
+	my $context = $self->{context};
+	my $rr = &$context( sub { Net::DNS::RR->_new_string($line) } );
+
+	$rr->{owner} = ( $self->{latest} || $rr )->{owner} if $noname;	  # overwrite placeholder
+
+	$rr->class( $self->{class} ||= $rr->class );		# propagate RR class
+
+	$self->{ttl} ||= $rr->type eq 'SOA' ? $rr->minimum : $rr->ttl;	  # default TTL
+	$rr->ttl( $self->{ttl} ) unless defined $rr->{ttl};
+
+	return $self->{latest} = $rr;
+}
+
+
+sub _include {			## open $INCLUDE file
+	my $self    = shift;
+	my $include = new Net::DNS::ZoneFile(shift);
+	my $handle  = $include->{handle};
+	my $name    = $include->{name};
+	undef $self->{latest};					# forbid empty owner field
+	%$include = %$self;					# save state, create link
+	@{$self}{qw(link handle name)} = ( $include, $handle, $name );
+	return $handle;
+}
+
+
+sub _origin {			## change $ORIGIN (scope: current file)
+	my $self = shift;
+	$self->{context} = origin Net::DNS::Domain(shift);
+	undef $self->{latest};					# forbid empty owner field
 }
 
 

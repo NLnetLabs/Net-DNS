@@ -59,8 +59,6 @@ sub new {
 
 	my ( $mbox, @host ) = split /\@/;			# split on @ if present
 	for ( $mbox ||= '' ) {
-		s/\\\s/\\032/g;					# disguise escaped white space
-		s/^(".*)\s+(.*")/$1\\032$2/g;			# disguise quoted white space
 		s/^"(.*)"/$1/;					# strip quotes
 		s/\\\./\\046/g;					# disguise escaped dot
 		s/\./\\046/g if @host;				# escape dots in local part

@@ -3,7 +3,7 @@
 use strict;
 use FileHandle;
 
-use Test::More tests => 51;
+use Test::More tests => 52;
 
 use constant UTF8 => eval {
 	require Encode;						# expect this to fail pre-5.8.0
@@ -226,19 +226,29 @@ EOF
 
 
 SKIP: {				## Non-ASCII zone content
-	skip( 'Non-ASCII content - Unicode/UTF-8 not supported', 2 ) unless UTF8;
+	skip( 'Non-ASCII content - Unicode/UTF-8 not supported', 3 ) unless UTF8;
 
-	my $line1 = <DATA>;					# presume default encoding
-	my $zone1 = source($line1);				# avoid string concatenation
-	my $txtrr = $zone1->read;
-	is( length( $txtrr->txtdata ), 12, 'Non-ASCII TXT argument' );
+	my $greek = pack 'C*', 103, 114, 9, 84, 88, 84, 9, 229, 224, 241, 231, 234, 225, 10;
+	my $file1 = source($greek);
+	my $fh1   = new FileHandle( $file1->name, '<:encoding(ISO8859-7)' );	# Greek
+	my $zone1 = new Net::DNS::ZoneFile($fh1);
+	my $txtgr = $zone1->read;
+	my $text  = pack 'U*', 949, 944, 961, 951, 954, 945;
+	is( $txtgr->txtdata, $text , 'ISO8859-7 TXT argument' );
+
+	my $jptxt = <DATA>;
+	my $file2 = source($jptxt);
+	my $fh2   = new FileHandle( $file2->name, '<:utf8' );	# UTF-8 character encoding
+	my $zone2 = new Net::DNS::ZoneFile($fh2);
+	my $txtrr = $zone2->read;
+	is( length( $txtrr->txtdata ), 12, 'Unicode/UTF-8 TXT argument' );
 
 	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
 
-	my $line2 = <DATA>;					# presume default encoding
-	my $zone2 = source($line2);				# avoid string concatenation
-	my $nextr = $zone2->read;
-	is( $nextr->name, 'xn--wgv71a', 'Non-ASCII domain name' );
+	my $uname = <DATA>;
+	my $zone3 = source($uname);
+	my $nextr = $zone3->read;
+	is( $nextr->name, 'xn--wgv71a', 'Unicode/UTF-8 domain name' );
 }
 
 

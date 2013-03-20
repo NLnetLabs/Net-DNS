@@ -44,6 +44,8 @@ use strict;
 use integer;
 use Carp;
 
+use constant OKlc => eval { require 5.8.9; } || 0;
+
 
 =head1 METHODS
 
@@ -53,6 +55,20 @@ use Carp;
 
 Creates a domain name object which identifies the domain specified
 by the character string argument.
+
+
+=head2 canonical
+
+    $data = $object->canonical;
+
+Returns the canonical wire-format representation of the domain name
+as defined in RFC2535(8.1).
+
+=cut
+
+sub canonical {
+	join '', map pack( 'C a*', length($_), OKlc ? lc($_) : _lc($_) ), shift->_wire, '';
+}
 
 
 =head2 decode
@@ -76,7 +92,8 @@ data buffer.
 =cut
 
 sub decode {
-	my $self   = bless {}, shift;
+	my $label  = [];
+	my $self   = bless {label => $label}, shift;
 	my $buffer = shift;					# reference to data buffer
 	my $offset = shift || 0;				# offset within buffer
 	my $cache  = shift || {};				# hashed objectref by offset
@@ -90,7 +107,7 @@ sub decode {
 			return wantarray ? ( $self, ++$index ) : $self;
 
 		} elsif ( $header < 0x40 ) {			# non-terminal label
-			push( @{$self->{label}}, substr( $$buffer, ++$index, $header ) );
+			push @$label, substr( $$buffer, ++$index, $header );
 			$index += $header;
 
 		} elsif ( $header < 0xC0 ) {			# deprecated extended label types
@@ -123,12 +140,17 @@ sub encode {
 
 ########################################
 
-sub _wire {				## Generate list of wire-format labels
+sub _lc {			## work around 5.8.x case-folding bug
+	( my $s = shift ) =~ tr [\101-\132] [\141-\172];
+	return $s;
+}
+
+sub _wire {			## Generate list of wire-format labels
 	my $self = shift;
 
-	my @label = @{$self->{label}} if $self->{label};
-	my @suffx = $self->{origin}->_wire if $self->{origin};
-	return ( @label, @suffx );
+	my $label = $self->{label};
+	my $origin = $self->{origin} || return (@$label);
+	return ( @$label, $origin->_wire );
 }
 
 
@@ -173,9 +195,7 @@ uncompressed canonical representation defined in RFC2535(8.1).
 sub encode {
 	my $self   = shift;
 	my $offset = shift || 0;				# offset in data buffer
-	my $hash   = shift;					# hashed offset by name
-
-	return join '', map pack( 'C a*', length($_), _lc($_) ), $self->_wire, '' unless defined $hash;
+	my $hash   = shift || return $self->canonical;		# hashed offset by name
 
 	my @labels = $self->_wire;
 	my $data   = '';
@@ -192,14 +212,7 @@ sub encode {
 		$hash->{$name} = $offset;
 		$offset += 1 + $length;
 	}
-	$data .= chr(0);
-}
-
-
-sub _lc {
-	my $s = shift;
-	$s =~ tr [\101-\132] [\141-\172];
-	return $s;
+	$data .= pack 'x';
 }
 
 
@@ -238,20 +251,9 @@ canonical form defined in RFC2535(8.1).
 =cut
 
 sub encode {
-	my ( $self, $offset, $hash ) = @_;
-
-	return join '', map pack( 'C a*', length($_), $_ ), $self->_wire, '' if defined $hash;
-
-	return join '', map pack( 'C a*', length($_), _lc($_) ), $self->_wire, '';
+	return shift->canonical unless defined $_[2];
+	join '', map pack( 'C a*', length($_), $_ ), shift->_wire, '';
 }
-
-
-sub _lc {
-	my $s = shift;
-	$s =~ tr [\101-\132] [\141-\172];
-	return $s;
-}
-
 
 1;
 __END__
