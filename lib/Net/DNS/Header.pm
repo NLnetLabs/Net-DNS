@@ -51,53 +51,7 @@ sub new {
 
 	croak 'object model violation' unless $packet->isa(qw(Net::DNS::Packet));
 
-	my $self = bless {
-		status => 0,
-		count  => [],
-		xbody  => $packet
-		}, $class;
-
-	$self->id(undef);
-
-	return $self;
-}
-
-
-=head2 decode
-
-	$header->decode(\$data);
-
-Decodes the header record at the start of a DNS packet.
-The argument is a reference to the packet data.
-
-=cut
-
-sub decode {
-	my $self = shift;
-	my $data = shift;
-
-	@{$self}{qw(id status)} = unpack 'n2', $$data;
-	$self->{count} = [unpack 'x4 n6', $$data];
-}
-
-
-=head2 encode
-
-	$header->encode(\$data);
-
-Returns the header data in binary format, appropriate for use in a
-DNS packet.
-
-=cut
-
-sub encode {
-	my $self = shift;
-
-	$self->{count} = [];
-
-	my @count = map { $self->$_ } qw(qdcount ancount nscount arcount);
-
-	return pack 'n6', $self->{id}, $self->{status}, @count;
+	bless { xbody => $packet }, $class;
 }
 
 
@@ -121,11 +75,15 @@ sub string {
 	my $ns	   = $self->nscount;
 	my $ar	   = $self->arcount;
 
+	my $opt = $self->edns;
+	my $edns = ( $opt->isa(qw(Net::DNS::RR::OPT)) && not $opt->default ) ? $opt->string : '';
+
 	my $retval;
 	return $retval = <<EOF if $opcode eq 'UPDATE';
 ;;	id = $id
 ;;	qr = $qr		opcode = $opcode	rcode = $rcode
 ;;	zocount = $qd	prcount = $an	upcount = $ns	adcount = $ar
+$edns
 EOF
 
 	my $aa = $self->aa;
@@ -136,9 +94,6 @@ EOF
 	my $ad = $self->ad;
 	my $cd = $self->cd;
 	my $do = $self->do;
-
-	my $opt = $self->edns;
-	my $edns = ( $opt->isa(qw(Net::DNS::RR::OPT)) && not $opt->default ) ? $opt->string : '';
 
 	return $retval = <<EOF;
 ;;	id = $id
@@ -166,8 +121,9 @@ A random value is assigned if the argument value is undefined.
 
 sub id {
 	my $self = shift;
-	return $self->{id} unless @_;
-	return $self->{id} = shift || int rand(0xffff);
+	my $xpkt = $self->{xbody};
+	$xpkt->{id} = shift if scalar @_;
+	$xpkt->{id} ||= int rand(0xffff);
 }
 
 
@@ -182,8 +138,9 @@ Gets or sets the query opcode (the purpose of the query).
 
 sub opcode {
 	my $self = shift;
-	for ( $self->{status} ) {
-		return opcodebyval( ( $_ >> 11 ) & 0x0f ) unless @_;
+	my $xpkt = $self->{xbody};
+	for ( $xpkt->{status} ||= 0 ) {
+		return opcodebyval( ( $_ >> 11 ) & 0x0f ) unless scalar @_;
 		my $opcode = opcodebyname(shift);
 		$_ = ( $_ & 0x87ff ) | ( $opcode << 11 );
 		return $opcode;
@@ -202,7 +159,8 @@ Gets or sets the query response code (the status of the query).
 
 sub rcode {
 	my $self = shift;
-	for ( $self->{status} ) {
+	my $xpkt = $self->{xbody};
+	for ( $xpkt->{status} ||= 0 ) {
 		my $arg = shift;
 		my $opt = $self->edns;
 		unless ( defined $arg ) {
@@ -335,7 +293,7 @@ sub cd {
 
     print "# of question records: ", $packet->header->qdcount, "\n";
 
-Gets the number of records in the question section of the packet.
+Returns the number of records in the question section of the packet.
 In dynamic update packets, this field is known as C<zocount> and refers
 to the number of RRs in the zone section.
 
@@ -346,7 +304,7 @@ use vars qw($warned);
 sub qdcount {
 	my $self = shift;
 	my $xpkt = $self->{xbody};
-	return $self->{count}[0] || scalar @{$xpkt->{question}} unless @_;
+	return $xpkt->{count}[0] || scalar @{$xpkt->{question}} unless scalar @_;
 	carp 'header->qdcount attribute is read-only' unless $warned;
 }
 
@@ -366,7 +324,7 @@ to the number of RRs in the prerequisite section.
 sub ancount {
 	my $self = shift;
 	my $xpkt = $self->{xbody};
-	return $self->{count}[1] || scalar @{$xpkt->{answer}} unless @_;
+	return $xpkt->{count}[1] || scalar @{$xpkt->{answer}} unless scalar @_;
 	carp 'header->ancount attribute is read-only' unless $warned;
 }
 
@@ -386,7 +344,7 @@ to the number of RRs in the update section.
 sub nscount {
 	my $self = shift;
 	my $xpkt = $self->{xbody};
-	return $self->{count}[2] || scalar @{$xpkt->{authority}} unless @_;
+	return $xpkt->{count}[2] || scalar @{$xpkt->{authority}} unless scalar @_;
 	carp 'header->nscount attribute is read-only' unless $warned;
 }
 
@@ -405,7 +363,7 @@ In dynamic update packets, this field is known as C<adcount>.
 sub arcount {
 	my $self = shift;
 	my $xpkt = $self->{xbody};
-	return $self->{count}[3] || scalar @{$xpkt->{additional}} unless @_;
+	return $xpkt->{count}[3] || scalar @{$xpkt->{additional}} unless scalar @_;
 	carp 'header->arcount attribute is read-only' unless $warned;
 }
 
@@ -469,11 +427,11 @@ extension OPT RR.
 =cut
 
 sub edns {
-	my $self    = shift;
-	my $xpkt    = $self->{xbody};
-	my $xtender = \$self->{xtender};
-	($$xtender) = grep { $_->type eq 'OPT' } @{$xpkt->{additional}} unless $$xtender;
-	return $$xtender ||= new Net::DNS::RR('. OPT');
+	my $self = shift;
+	my $xpkt = $self->{xbody};
+	my $link = \$xpkt->{xedns};
+	($$link) = grep { $_->type eq 'OPT' } @{$xpkt->{additional}} unless $$link;
+	return $$link ||= new Net::DNS::RR('. OPT');
 }
 
 
@@ -481,31 +439,23 @@ sub edns {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {				## Default method
+sub AUTOLOAD {			## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
-
-sub dump {				## print internal data structure
-	use Data::Dumper;
-	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
-	my $self = shift;
-	return Dumper($self) if defined wantarray;
-	print Dumper($self);
-}
+sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 
 
 sub _dnsflag {
 	my $self = shift;
 	my $flag = shift;
-	for ( $self->{status} ) {
+	my $xpkt = $self->{xbody};
+	for ( $xpkt->{status} ||= 0 ) {
 		my $set = $_ | $flag;
 		my $not = $set - $flag;
-		$_ = (shift) ? $set : $not if @_;
+		$_ = (shift) ? $set : $not if scalar @_;
 		return ( $_ & $flag ) ? 1 : 0;
 	}
 }
@@ -515,7 +465,7 @@ sub _ednsflag {
 	my $self = shift;
 	my $flag = shift;
 	my $edns = eval { $self->edns->flags } || 0;
-	return $flag & $edns ? 1 : 0 unless @_;
+	return $flag & $edns ? 1 : 0 unless scalar @_;
 	my $set = $flag | $edns;
 	my $not = $set - $flag;
 	my $new = (shift) ? $set : $not;

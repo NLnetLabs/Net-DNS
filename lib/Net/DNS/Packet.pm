@@ -30,7 +30,6 @@ A C<Net::DNS::Packet> object represents a DNS protocol packet.
 use base Exporter;
 @EXPORT_OK = qw(dn_expand);
 
-use strict;
 use integer;
 use Carp;
 
@@ -67,7 +66,8 @@ sub new {
 		authority  => [],
 		additional => []}, $class;
 
-	$self->{question} = [Net::DNS::Question->new(@_)] if @_;
+	$self->{question} = [Net::DNS::Question->new(@_)] if scalar @_;
+	$self->{header} = {}; # For compatibility with Net::DNS::SEC
 
 	$self->header->rd(1);
 	return $self;
@@ -114,19 +114,22 @@ sub decode {
 	eval {
 		die 'corrupt wire-format data' if length($$data) < HEADER_LENGTH;
 
+		# header section
+		my ( $id, $status, @count ) = unpack 'n6', $$data;
+		my ( $qd, $an, $ns, $ar ) = @count;
+		$offset = HEADER_LENGTH;
+
 		$self = bless {
+			id	   => $id,
+			status	   => $status,
+			count	   => [@count],
 			question   => [],
 			answer	   => [],
 			authority  => [],
 			additional => [],
-			answersize => length $$data
+			answersize => length $$data,
+			header     => {} # Compatibility with Net::DNS::SEC
 			}, $class;
-
-		# header section
-		my $header = $self->header;
-		$header->decode($data);
-		my ( $qd, $an, $ns, $ar ) = map { $header->$_ } qw(qdcount ancount nscount arcount);
-		$offset = HEADER_LENGTH;
 
 		# question/zone section
 		my $hash = {};
@@ -178,18 +181,21 @@ sub encode {&data}
 sub data {
 	my $self = shift;
 
-	for ( my $edns = $self->edns ) {			# EDNS support
+	my $header = $self->header;				# packet header
+	my $ident  = $header->id;
+
+	for ( my $edns = $header->edns ) {			# EDNS support
 		my @xopt = grep { $_->type ne 'OPT' } @{$self->{additional}};
 		$self->{additional} = $edns->default ? [@xopt] : [$edns, @xopt];
 	}
 
-	my $data = $self->header->encode;			# packet header
+	my @part = qw(question answer authority additional);
+	my @size = map scalar( @{$self->{$_}} ), @part;
+	my $data = pack 'n6', $ident, $self->{status}, @size;
+	$self->{count} = [];
 
 	my $hash = {};						# packet body
-	foreach my $component ( @{$self->{question}},
-				@{$self->{answer}},
-				@{$self->{authority}},
-				@{$self->{additional}}	) {
+	foreach my $component ( map @{$self->{$_}}, @part ) {
 		$data .= $component->encode( length $data, $hash, $self );
 	}
 
@@ -208,8 +214,7 @@ of the packet.
 =cut
 
 sub header {
-	my $self = shift;
-	$self->{header} ||= new Net::DNS::Header($self);
+	return new Net::DNS::Header(shift);
 }
 
 
@@ -243,19 +248,20 @@ response to an EDNS query.
 sub reply {
 	my $query  = shift;
 	my $UDPmax = shift;
-	die 'erroneous qr flag in query packet' if $query->header->qr;
+	my $qheadr = $query->header;
+	die 'erroneous qr flag in query packet' if $qheadr->qr;
 
 	my $reply  = new Net::DNS::Packet();
-	my $header = $reply->header;
-	$header->qr(1);						# reply with same id, opcode and question
-	$header->id( $query->header->id );
-	$header->opcode( $query->header->opcode );
-	$reply->{question} = [$query->question];
+	my $rheadr = $reply->header;
+	$rheadr->qr(1);						# reply with same id, opcode and question
+	$rheadr->id( $qheadr->id );
+	$rheadr->opcode( $qheadr->opcode );
+	$reply->{question} = $query->{question};
 
-	$header->rcode('FORMERR');				# failure to provide RCODE is sinful!
+	$rheadr->rcode('FORMERR');				# failure to provide RCODE is sinful!
 
-	$header->rd( $query->header->rd );			# copy these flags into reply
-	$header->cd( $query->header->cd );
+	$rheadr->rd( $qheadr->rd );				# copy these flags into reply
+	$rheadr->cd( $qheadr->cd );
 
 	$reply->edns->size($UDPmax) unless $query->edns->default;
 	return $reply;
@@ -405,7 +411,7 @@ packets will return undef for this method.
 sub answerfrom {
 	my $self = shift;
 
-	return $self->{answerfrom} = shift if @_;
+	return $self->{answerfrom} = shift if scalar @_;
 
 	return $self->{answerfrom};
 }
@@ -778,7 +784,7 @@ sub truncate {
 			my $i=0;
 			my @stripped_additonal;
 
-			while ($i< @{$self->{'additional'}}){
+			while ( $i < scalar @{$self->{'additional'}} ) {
 				#remove all of these same RRtypes
 				if  (
 				    ${$self->{'additional'}}[$i]->type eq $popped->type &&
@@ -814,21 +820,16 @@ sub truncate {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {				## Default method
+sub AUTOLOAD {			## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
-sub DESTROY {				## object destructor
-	my $self = shift;
-	my $header = $self->header;				# invalidate Header object
-	%$header = ();
-	undef $self->{header};					# unlink defunct header
-}
+sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 
 
-sub dump {				## print internal data structure
+sub dump {			## print internal data structure
 	use Data::Dumper;
 	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
 	my $self = shift;
