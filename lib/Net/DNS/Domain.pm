@@ -36,7 +36,6 @@ partially mitigated by use of caches.
 =cut
 
 
-use strict;
 use integer;
 use Carp;
 
@@ -91,21 +90,22 @@ my $cache2 = {};
 my $expire;
 
 sub new {
-	my $self = bless {}, shift;
+	my $class = shift;
 	my $s = shift;
 	croak 'domain identifier undefined' unless defined $s;
 
-	if ( $self->{label} = $$cache1{$s} ||= $$cache2{$s} ) {
-		return $self if $s =~ /\.$/;			# fully qualified name
-		$self->{origin} = $ORIGIN || return $self;	# dynamically scoped $ORIGIN
-		return $self;
-	}
+	my $k = join '', $s, $class, $ORIGIN || '';		# cache key
+	my $cache = $$cache1{$k} ||= $$cache2{$k};		# two layer cache
+	return $cache if defined $cache;
 
-	my $k = $s;
+	( $cache1, $cache2, $expire ) = ( {}, $cache1, 500 ) unless $expire--;	  # recycle cache
+
+	my $self = bless {}, $class;
+
 	$s =~ s/\\\\/\\092/g;					# disguise escaped escape
 	$s =~ s/\\\./\\046/g;					# disguise escaped dot
 
-	my $label = $self->{label} = $s eq '@' ? [] : [split /\056+/, _encode_ascii($s)];
+	my $label = $self->{label} = $s eq '@' ? [] : [split /\056/, _encode_ascii($s)];
 
 	foreach my $l (@$label) {
 		$l = _unescape($l) if $l =~ /\\/;
@@ -113,8 +113,7 @@ sub new {
 				if ( length($l) || croak 'empty domain label' ) > 63;
 	}
 
-	$$cache1{$k} = $label;					# cache label list
-	( $cache1, $cache2, $expire ) = ( {}, $cache1, 100 ) unless $expire--;	  # recycle cache
+	$$cache1{$k} = $self;					# cache object reference
 
 	return $self if $s =~ /\.$/;				# fully qualified name
 	$self->{origin} = $ORIGIN || return $self;		# dynamically scoped $ORIGIN
@@ -144,7 +143,8 @@ sub name {
 
 	return $self->{name} if defined $self->{name};
 
-	my $head = _decode_ascii( join chr(46), map _escape($_), @{$self->{label}} );
+	my $lref = $self->{label} || [];
+	my $head = _decode_ascii( join chr(46), map _escape($_), @$lref );
 	my $tail = $self->{origin} || return $self->{name} = $head || $dot;
 	return $self->{name} = $tail->name unless length $head;
 	return $self->{name} = join $dot, $head, $tail->name;
@@ -283,11 +283,12 @@ sub _decode_ascii {
 
 sub _encode_ascii {
 	my $s = shift;
+	my $z = substr $s, 0, 0;
 
-	return pack 'a0 a*', $s, Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
-			if UTF8 && $s =~ /[^\000-\177]/;
+	return pack 'a0 a*', $z, Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
+			if LIBIDN && $s =~ /[^\000-\177]/;
 
-	return pack 'a0 a*', $s, ASCII->encode($s) if ASCII;	# preserve taint
+	return pack 'a0 a*', $z, ASCII->encode($s) if ASCII;	# preserve taint
 
 	# partial transliteration for non-ASCII character encodings
 	$s = pack 'C*', unpack 'U0 C*', $s unless ASCII;	# repackage pre-5.8 Unicode

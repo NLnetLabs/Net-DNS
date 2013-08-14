@@ -33,9 +33,9 @@ use base Exporter;
 use integer;
 use Carp;
 
-use Net::DNS::Header;
-use Net::DNS::Question;
-use Net::DNS::RR;
+require Net::DNS::Header;
+require Net::DNS::Question;
+require Net::DNS::RR;
 
 
 =head1 METHODS
@@ -175,18 +175,17 @@ a nameserver.
 
 =cut
 
-
 sub encode {&data}
 
 sub data {
 	my $self = shift;
 
-	my $header = $self->header;				# packet header
-	my $ident  = $header->id;
+	my $ident = $self->header->id;				# packet header
 
-	for ( my $edns = $header->edns ) {			# EDNS support
-		my @xopt = grep { $_->type ne 'OPT' } @{$self->{additional}};
-		$self->{additional} = $edns->default ? [@xopt] : [$edns, @xopt];
+	for ( my $edns = $self->edns ) {			# EDNS support
+		my @xopt = grep !$_->isa('Net::DNS::RR::OPT'), @{$self->{additional}};
+		unshift( @xopt, $edns ) if $edns->defined;
+		$self->{additional} = \@xopt;
 	}
 
 	my @part = qw(question answer authority additional);
@@ -207,14 +206,14 @@ sub data {
 
     $header = $packet->header;
 
-Constructor method which returns a reference to the unique
-C<Net::DNS::Header> object which represents the header section
-of the packet.
+Constructor method which returns a C<Net::DNS::Header> object
+which represents the header section of the packet.
 
 =cut
 
 sub header {
-	return new Net::DNS::Header(shift);
+	my $self = shift;
+	return bless \$self, Net::DNS::Header;
 }
 
 
@@ -229,7 +228,10 @@ Auxilliary function edns() provides access to EDNS extensions.
 =cut
 
 sub edns {
-	shift->header->edns;
+	my $self = shift;
+	my $link = \$self->{xedns};
+	($$link) = grep $_->isa(qw(Net::DNS::RR::OPT)), @{$self->{additional}} unless $$link;
+	return $$link ||= new Net::DNS::RR( type => 'OPT' );
 }
 
 
@@ -252,18 +254,18 @@ sub reply {
 	die 'erroneous qr flag in query packet' if $qheadr->qr;
 
 	my $reply  = new Net::DNS::Packet();
-	my $rheadr = $reply->header;
-	$rheadr->qr(1);						# reply with same id, opcode and question
-	$rheadr->id( $qheadr->id );
-	$rheadr->opcode( $qheadr->opcode );
+	my $header = $reply->header;
+	$header->qr(1);						# reply with same id, opcode and question
+	$header->id( $qheadr->id );
+	$header->opcode( $qheadr->opcode );
 	$reply->{question} = $query->{question};
 
-	$rheadr->rcode('FORMERR');				# failure to provide RCODE is sinful!
+	$header->rcode('FORMERR');				# failure to provide RCODE is sinful!
 
-	$rheadr->rd( $qheadr->rd );				# copy these flags into reply
-	$rheadr->cd( $qheadr->cd );
+	$header->rd( $qheadr->rd );				# copy these flags into reply
+	$header->cd( $qheadr->cd );
 
-	$reply->edns->size($UDPmax) unless $query->edns->default;
+	$reply->edns->size($UDPmax) if $query->edns->defined;
 	return $reply;
 }
 

@@ -15,7 +15,6 @@ Net::DNS::RR::CERT - DNS CERT resource record
 =cut
 
 
-use strict;
 use integer;
 
 use MIME::Base64;
@@ -78,7 +77,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $base64    = MIME::Base64::encode $self->{certbin};
 	chomp $base64;
 	return "$format $self->{tag} $algorithm $base64" if length($base64) < 40;
-	return "$format $self->{tag} $algorithm(\n$base64 )";
+	return "$format $self->{tag} $algorithm (\n$base64 )";
 }
 
 
@@ -105,8 +104,8 @@ sub format {
 sub tag {
 	my $self = shift;
 
-	$self->{tag} = shift if scalar @_;
-	return 0 + ( $self->{tag} || 0 );
+	$self->{tag} = 0 + shift if scalar @_;
+	return $self->{tag} || 0;
 }
 
 sub algorithm {

@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 22;
+use Test::More tests => 19;
 
 
 use Net::DNS;
@@ -11,9 +11,9 @@ use Net::DNS::Parameters;
 my $name = '.';
 my $type = 'OPT';
 my $code = 41;
-my @attr = qw( version size rcode flags );
-my @data = qw( 0 1280 0 32768 );
-my @also = qw( );
+my @attr = qw( size rcode flags );
+my @data = qw( 1280 0 32768 );
+my @also = qw( version );
 
 my $wire = '0000290500000080000000';
 
@@ -34,17 +34,13 @@ my $wire = '0000290500000080000000';
 	my $string = $rr->string;
 	like( $string, '/EDNS/', 'string method works' );
 
-	foreach ( qw(version) ) {
-		is( $rr->$_, 0, "expected result from rr->$_()" );
-	}
-
 	foreach (@attr) {
 		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
 	}
 
 	foreach (@also) {
 		my $value = $rr->$_;
-		ok( $rr->$_, "additional attribute rr->$_()" );
+		ok( defined $rr->$_, "additional attribute rr->$_()" );
 	}
 
 	my $encoded = $rr->encode;
@@ -71,8 +67,8 @@ my $wire = '0000290500000080000000';
 {
 	my $rr = new Net::DNS::RR( name => '.', type => $type );
 	my $n = 3;
-	while ( ednsoptionbyval($n) =~ /[^0-9]/ ) { $n++ }
-	my @optn = ( ($n-3) .. $n );				# cover both known and unknown
+	$n++ until ednsoptionbyval($n) eq "$n";
+	my @optn = ( ( $n - 3 ) .. $n );
 	foreach (@optn) {
 		my $value = "value $_";
 		$rr->option( $_ => $value );

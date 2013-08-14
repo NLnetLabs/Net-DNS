@@ -40,7 +40,6 @@ introduced by RFC3597.
 =cut
 
 
-use strict;
 use integer;
 use Carp;
 
@@ -148,9 +147,10 @@ sub _lc {			## work around 5.8.x case-folding bug
 sub _wire {			## Generate list of wire-format labels
 	my $self = shift;
 
-	my $label = $self->{label};
-	my $origin = $self->{origin} || return (@$label);
-	return ( @$label, $origin->_wire );
+	my $label = $self->{label} || [];
+	my @label = @$label;
+	my $origin = $self->{origin} || return (@label);
+	return ( @label, $origin->_wire );
 }
 
 

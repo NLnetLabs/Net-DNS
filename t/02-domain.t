@@ -1,7 +1,6 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use diagnostics;
 use Test::More tests => 50;
 
 
@@ -30,14 +29,14 @@ BEGIN {
 
 
 {
-	eval { my $domain = new Net::DNS::Domain(); };
+	my $domain = eval { new Net::DNS::Domain(); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "empty argument list\t[$exception]" );
 }
 
 
 {
-	eval { my $domain = new Net::DNS::Domain(undef); };
+	my $domain = eval { new Net::DNS::Domain(undef); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "argument undefined\t[$exception]" );
 }
@@ -85,27 +84,12 @@ use constant ESC => '\\';
 
 
 t10: {
-	my $name   = 'example.com';
-	my $domain = new Net::DNS::Domain("$name...");
-	is( $domain->name, $name, 'ignore gratuitous trailing dots' );
-}
-
-
-{
-	my $left   = 'example';
-	my $right  = 'com';
-	my $domain = new Net::DNS::Domain("$left..$right");
-	is( $domain->name, "$left.$right", 'ignore interior null label' );
-}
-
-
-{
 	my $domain = new Net::DNS::Domain('');
 	is( $domain->name, '.', 'DNS root represented as single dot' );
 }
 
 
-t13: {
+{
 	my $name   = 'simple-name';
 	my $suffix = 'example.com';
 	my $create = origin Net::DNS::Domain($suffix);
@@ -133,7 +117,7 @@ t13: {
 }
 
 
-t22: {
+t20: {
 	foreach my $part ( qw(_rvp._tcp *) ) {
 		my $name = "$part.example.com.";
 		my $domain = new Net::DNS::Domain($name);
@@ -149,7 +133,7 @@ t22: {
 }
 
 
-t25: {
+{
 	my @warnings;
 	local $SIG{__WARN__} = sub { push( @warnings, "@_" ); };
 	my $name      = 'LO-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-NG!';
@@ -161,9 +145,23 @@ t25: {
 
 
 {
-	eval { my $domain = new Net::DNS::Domain('.example.com') };
+	my $domain = eval { new Net::DNS::Domain('.example.com') };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "null domain label\t[$exception]" );
+	ok( $exception ||= '', "empty initial label\t[$exception]" );
+}
+
+
+t25: {
+	my $domain = eval { new Net::DNS::Domain("example..com"); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "empty interior label\t[$exception]" );
+}
+
+
+{
+	my $name   = 'example.com';
+	my $domain = new Net::DNS::Domain("$name...");
+	is( $domain->name, $name, 'ignore gratuitous trailing dots' );
 }
 
 

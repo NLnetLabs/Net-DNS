@@ -418,7 +418,7 @@ sub rr_add {
 
 sub rr_del {
 	my ( $head, @tail ) = split /\s+/, shift;
-	my $rr = new Net::DNS::RR( scalar @tail > 1 ? "$head @tail": "$head ANY @tail" );
+	my $rr = new Net::DNS::RR( scalar @tail ? "$head @tail": "$head ANY" );
 	$rr->ttl(0);
 	$rr->class( $rr->rdata ? 'NONE' : 'ANY' );
 	return $rr;

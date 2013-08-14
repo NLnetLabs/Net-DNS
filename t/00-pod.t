@@ -5,17 +5,17 @@ use File::Spec;
 use File::Find;
 use strict;
 
-eval "use Test::Pod 0.95";
+eval 'use 5.6.2; use Test::Pod 0.95';
 
 if ($@) {
-	plan skip_all => "Test::Pod v0.95 required for testing POD";
+	plan skip_all => 'test requires Perl 5.6.2 and Test::Pod 0.95';
 } else {
 	Test::Pod->import;
-	
+
 	my @files;
 	my $blib = File::Spec->catfile(qw(blib lib));
-	
-	find( sub { push(@files, $File::Find::name) if /\.p(l|m|od)$/}, $blib);
+
+	find( sub { push( @files, $File::Find::name ) if /\.(pl|pm|pod)$/ }, $blib );
 
 	plan tests => scalar @files;
 

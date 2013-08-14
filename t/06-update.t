@@ -53,13 +53,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = yxrrset("$name $class $type");
+	my $arg = "$name $ttl $class $type";
+	my $rr	= yxrrset($arg);
 
-	ok( $rr, 'yxrrset() returned RR' );			#7
+	ok( $rr, "yxrrset($arg)" );				#7
 	is( $rr->name,	$name, 'yxrrset - right name' );
-	is( $rr->ttl,	0,     'yxrrset - right TTL' );
-	is( $rr->class, 'ANY', 'yxrrset - right class' );
-	is( $rr->type,	$type, 'yxrrset - right type' );
+	is( $rr->ttl,	0,     'yxrrset - ttl	0' );
+	is( $rr->class, 'ANY', 'yxrrset - class ANY' );
+	is( $rr->type,	$type, "yxrrset - type	$type" );
 	ok( is_empty( $rr->rdatastr ), 'yxrrset - data empty' );
 }
 
@@ -68,13 +69,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = yxrrset("$name $class $type $rdata");
+	my $arg = "$name $ttl $class $type $rdata";
+	my $rr	= yxrrset($arg);
 
-	ok( $rr, 'yxrrset() returned RR' );			#13
+	ok( $rr, "yxrrset($arg)" );				#13
 	is( $rr->name,	   $name,  'yxrrset - right name' );
-	is( $rr->ttl,	   0,	   'yxrrset - right TTL' );
-	is( $rr->class,	   $class, 'yxrrset - right class' );
-	is( $rr->type,	   $type,  'yxrrset - right type' );
+	is( $rr->ttl,	   0,	   'yxrrset - ttl   0' );
+	is( $rr->class,	   $class, "yxrrset - class $class" );
+	is( $rr->type,	   $type,  "yxrrset - type  $type" );
 	is( $rr->rdatastr, $rdata, 'yxrrset - right data' );
 }
 
@@ -84,13 +86,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = nxrrset("$name $class $type");
+	my $arg = "$name $ttl $class $type $rdata";
+	my $rr	= nxrrset($arg);
 
-	ok( $rr, 'nxrrset() returned RR' );			#19
+	ok( $rr, "nxrrset($arg)" );				#19
 	is( $rr->name,	$name,	'nxrrset - right name' );
-	is( $rr->ttl,	0,	'nxrrset - right ttl' );
-	is( $rr->class, 'NONE', 'nxrrset - right class' );
-	is( $rr->type,	$type,	'nxrrset - right type' );
+	is( $rr->ttl,	0,	'nxrrset - ttl	 0' );
+	is( $rr->class, 'NONE', 'nxrrset - class NONE' );
+	is( $rr->type,	$type,	"nxrrset - type	 $type" );
 	ok( is_empty( $rr->rdatastr ), 'nxrrset - data empty' );
 }
 
@@ -100,13 +103,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = yxdomain("$name $class");
+	my $arg = "$name $class";
+	my $rr	= yxrrset($arg);
 
-	ok( $rr, 'yxdomain() returned RR' );			#25
+	ok( $rr, "yxrrset($arg)" );				#25
 	is( $rr->name,	$name, 'yxdomain - right name' );
-	is( $rr->ttl,	0,     'yxdomain - right ttl' );
-	is( $rr->class, 'ANY', 'yxdomain - right class' );
-	is( $rr->type,	'ANY', 'yxdomain - right type' );
+	is( $rr->ttl,	0,     'yxdomain - ttl	 0' );
+	is( $rr->class, 'ANY', 'yxdomain - class ANY' );
+	is( $rr->type,	'ANY', 'yxdomain - type	 ANY' );
 	ok( is_empty( $rr->rdatastr ), 'yxdomain - data empty' );
 }
 
@@ -116,13 +120,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = nxdomain("$name $class");
+	my $arg = "$name $class";
+	my $rr	= nxdomain($arg);
 
-	ok( $rr, 'nxdomain() returned RR' );			#31
+	ok( $rr, "nxdomain($arg)" );				#31
 	is( $rr->name,	$name,	'nxdomain - right name' );
-	is( $rr->ttl,	0,	'nxdomain - right ttl' );
-	is( $rr->class, 'NONE', 'nxdomain - right class' );
-	is( $rr->type,	'ANY',	'nxdomain - right type' );
+	is( $rr->ttl,	0,	'nxdomain - ttl	  0' );
+	is( $rr->class, 'NONE', 'nxdomain - class NONE' );
+	is( $rr->type,	'ANY',	'nxdomain - type  ANY' );
 	ok( is_empty( $rr->rdatastr ), 'nxdomain - data empty' );
 }
 
@@ -132,13 +137,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = rr_add("$name $ttl $class $type $rdata");
+	my $arg = "$name $ttl $class $type $rdata";
+	my $rr	= rr_add($arg);
 
-	ok( $rr, 'rr_add() returned RR' );			#37
+	ok( $rr, "rr_add($arg)" );				#37
 	is( $rr->name,	   $name,  'rr_add - right name' );
-	is( $rr->ttl,	   $ttl,   'rr_add - right ttl' );
-	is( $rr->class,	   $class, 'rr_add - right class' );
-	is( $rr->type,	   $type,  'rr_add - right type' );
+	is( $rr->ttl,	   $ttl,   "rr_add - ttl   $ttl" );
+	is( $rr->class,	   $class, "rr_add - class $class" );
+	is( $rr->type,	   $type,  "rr_add - type  $type" );
 	is( $rr->rdatastr, $rdata, 'rr_add - right data' );
 }
 
@@ -148,13 +154,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = rr_del("$name $class $type");
+	my $arg = "$name $class $type";
+	my $rr	= rr_del($arg);
 
-	ok( $rr, 'rr_del() returned RR' );			#43
+	ok( $rr, "rr_del($arg)" );				#43
 	is( $rr->name,	$name, 'rr_del - right name' );
-	is( $rr->ttl,	0,     'rr_del - right ttl' );
-	is( $rr->class, 'ANY', 'rr_del - right class' );
-	is( $rr->type,	$type, 'rr_del - right type' );
+	is( $rr->ttl,	0,     'rr_del - ttl   0' );
+	is( $rr->class, 'ANY', 'rr_del - class ANY' );
+	is( $rr->type,	$type, "rr_del - type  $type" );
 	ok( is_empty( $rr->rdatastr ), 'rr_del - data empty' );
 }
 
@@ -163,13 +170,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = rr_del("$name");
+	my $arg = "$name";
+	my $rr	= rr_del($arg);
 
-	ok( $rr, 'rr_del() returned RR' );			#49
+	ok( $rr, "rr_del($arg)" );				#49
 	is( $rr->name,	$name, 'rr_del - right name' );
-	is( $rr->ttl,	0,     'rr_del - right ttl' );
-	is( $rr->class, 'ANY', 'rr_del - right class' );
-	is( $rr->type,	'ANY', 'rr_del - right type' );
+	is( $rr->ttl,	0,     'rr_del - ttl   0' );
+	is( $rr->class, 'ANY', 'rr_del - class ANY' );
+	is( $rr->type,	'ANY', 'rr_del - type  ANY' );
 	ok( is_empty( $rr->rdatastr ), 'rr_del - data empty' );
 }
 
@@ -178,14 +186,15 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = rr_del("$name $class");
+	my $arg = "$name $class";
+	my $rr	= rr_del($arg);
 
-	ok( $rr, 'nxdomain() returned RR' );			#55
-	is( $rr->name,	$name, 'nxdomain - right name' );
-	is( $rr->ttl,	0,     'nxdomain - right ttl' );
-	is( $rr->class, 'ANY', 'nxdomain - right class' );
-	is( $rr->type,	'ANY', 'nxdomain - right type' );
-	ok( is_empty( $rr->rdatastr ), 'nxdomain - data empty' );
+	ok( $rr, "rr_del($arg)" );				#55
+	is( $rr->name,	$name, 'rr_del - right name' );
+	is( $rr->ttl,	0,     'rr_del - ttl   0' );
+	is( $rr->class, 'ANY', 'rr_del - class ANY' );
+	is( $rr->type,	'ANY', 'rr_del - type  ANY' );
+	ok( is_empty( $rr->rdatastr ), 'rr_del - data empty' );
 }
 
 #------------------------------------------------------------------------------
@@ -193,13 +202,14 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $rr = rr_del("$name $class $type $rdata");
+	my $arg = "$name $class $type $rdata";
+	my $rr	= rr_del($arg);
 
-	ok( $rr, 'rr_del() returned RR' );			#61
+	ok( $rr, "rr_del($arg)" );				#61
 	is( $rr->name,	   $name,  'rr_del - right name' );
-	is( $rr->ttl,	   0,	   'rr_del - right ttl' );
-	is( $rr->class,	   'NONE', 'rr_del - right class' );
-	is( $rr->type,	   $type,  'rr_del - right type' );
+	is( $rr->ttl,	   0,	   'rr_del - ttl   0' );
+	is( $rr->class,	   'NONE', 'rr_del - class NONE' );
+	is( $rr->type,	   $type,  "rr_del - type  $type" );
 	is( $rr->rdatastr, $rdata, 'rr_del - right data' );
 }
 

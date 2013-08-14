@@ -213,10 +213,11 @@ sub _decode_utf8 {
 
 sub _encode_utf8 {
 	my $s = shift;
+	my $z = substr $s, 0, 0;
 
-	return pack 'a0 a*', $s, UTF8->encode($s) if UTF8;	# preserve taint
+	return pack 'a0 a*', $z, UTF8->encode($s) if UTF8;	# preserve taint
 
-	return pack 'a0 a*', $s, ASCII->encode($s) if ASCII && not UTF8;
+	return pack 'a0 a*', $z, ASCII->encode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s = pack 'C*', unpack 'U0 C*', $s unless ASCII;	# repackage pre-5.8 Unicode

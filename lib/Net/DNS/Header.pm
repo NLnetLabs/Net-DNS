@@ -31,28 +31,22 @@ use integer;
 use Carp;
 
 use Net::DNS::Parameters;
-require Net::DNS::RR;
 
 
 =head1 METHODS
 
-=head2 new
 
-    $header = new Net::DNS::Header($packet);
+=head2 $packet->header
 
-Constructor method which returns a C<Net::DNS::Header> object
-representing the header section of the specified packet.
+    $packet = new Net::DNS::Packet;
+    $header = $packet->header;
 
-=cut
+Net::DNS::Header objects emanate from the Net::DNS::Packet header()
+method, and contain an opaque reference to the parent Packet object.
 
-sub new {
-	my $class  = shift;
-	my $packet = shift;
-
-	croak 'object model violation' unless $packet->isa(qw(Net::DNS::Packet));
-
-	bless { xbody => $packet }, $class;
-}
+Header objects may be assigned to suitably scoped lexical variables.
+They should never be stored in global variables or persistent data
+structures.
 
 
 =head2 string
@@ -75,8 +69,8 @@ sub string {
 	my $ns	   = $self->nscount;
 	my $ar	   = $self->arcount;
 
-	my $opt = $self->edns;
-	my $edns = ( $opt->isa(qw(Net::DNS::RR::OPT)) && not $opt->default ) ? $opt->string : '';
+	my $opt = $$self->edns;
+	my $edns = $opt->defined ? $opt->string : '';
 
 	my $retval;
 	return $retval = <<EOF if $opcode eq 'UPDATE';
@@ -105,6 +99,15 @@ $edns
 EOF
 }
 
+
+=head2 string
+
+    $packet->header->print;
+
+Prints the string representation of the packet header.
+
+=cut
+
 sub print { print &string; }
 
 
@@ -121,9 +124,8 @@ A random value is assigned if the argument value is undefined.
 
 sub id {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	$xpkt->{id} = shift if scalar @_;
-	$xpkt->{id} ||= int rand(0xffff);
+	$$self->{id} = shift if scalar @_;
+	$$self->{id} ||= int rand(0xffff);
 }
 
 
@@ -138,8 +140,7 @@ Gets or sets the query opcode (the purpose of the query).
 
 sub opcode {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	for ( $xpkt->{status} ||= 0 ) {
+	for ( $$self->{status} ||= 0 ) {
 		return opcodebyval( ( $_ >> 11 ) & 0x0f ) unless scalar @_;
 		my $opcode = opcodebyname(shift);
 		$_ = ( $_ & 0x87ff ) | ( $opcode << 11 );
@@ -159,19 +160,20 @@ Gets or sets the query response code (the status of the query).
 
 sub rcode {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	for ( $xpkt->{status} ||= 0 ) {
+	for ( $$self->{status} ||= 0 ) {
 		my $arg = shift;
-		my $opt = $self->edns;
+		my $opt = $$self->edns;
 		unless ( defined $arg ) {
-			return rcodebyval( $_ & 0x0f ) unless $opt->isa(qw(Net::DNS::RR::OPT));
-			my $rcode = ( $opt->rcode() & 0xff0 ) | ( $_ & 0x00f );
+			my $rcode = $opt->rcode;
+			return rcodebyval( $_ & 0x0f ) unless $opt->defined;
+			$rcode = ( $rcode & 0xff0 ) | ( $_ & 0x00f );
 			$opt->rcode($rcode);			# write back full 12-bit rcode
 			return $rcode == 16 ? 'BADVERS' : rcodebyval($rcode);
 		}
 		my $rcode = rcodebyname($arg);
 		$opt->rcode($rcode);				# write back full 12-bit rcode
-		$_ = ( $_ & 0xfff0 ) | ( $rcode & 0x000f );
+		$_ &= 0xfff0;					# write back low 4-bit rcode
+		$_ |= ( $rcode & 0x000f ) if $rcode < 16 or $opt->rcode;
 		return $rcode;
 	}
 }
@@ -303,9 +305,8 @@ use vars qw($warned);
 
 sub qdcount {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	return $xpkt->{count}[0] || scalar @{$xpkt->{question}} unless scalar @_;
-	carp 'header->qdcount attribute is read-only' unless $warned;
+	return $$self->{count}[0] || scalar @{$$self->{question}} unless scalar @_;
+	carp 'header->qdcount attribute is read-only' unless $warned++;
 }
 
 
@@ -323,9 +324,8 @@ to the number of RRs in the prerequisite section.
 
 sub ancount {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	return $xpkt->{count}[1] || scalar @{$xpkt->{answer}} unless scalar @_;
-	carp 'header->ancount attribute is read-only' unless $warned;
+	return $$self->{count}[1] || scalar @{$$self->{answer}} unless scalar @_;
+	carp 'header->ancount attribute is read-only' unless $warned++;
 }
 
 
@@ -343,9 +343,8 @@ to the number of RRs in the update section.
 
 sub nscount {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	return $xpkt->{count}[2] || scalar @{$xpkt->{authority}} unless scalar @_;
-	carp 'header->nscount attribute is read-only' unless $warned;
+	return $$self->{count}[2] || scalar @{$$self->{authority}} unless scalar @_;
+	carp 'header->nscount attribute is read-only' unless $warned++;
 }
 
 
@@ -362,9 +361,8 @@ In dynamic update packets, this field is known as C<adcount>.
 
 sub arcount {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	return $xpkt->{count}[3] || scalar @{$xpkt->{additional}} unless scalar @_;
-	carp 'header->arcount attribute is read-only' unless $warned;
+	return $$self->{count}[3] || scalar @{$$self->{additional}} unless scalar @_;
+	carp 'header->arcount attribute is read-only' unless $warned++;
 }
 
 sub zocount { &qdcount; }
@@ -397,8 +395,8 @@ EDNS extended rcodes are handled transparently by $packet->header->rcode().
 
 =head2 UDP packet size
 
-    $udp_max = $packet->edns->size;
     $udp_max = $packet->header->size;
+    $udp_max = $packet->edns->size;
 
 EDNS offers a mechanism to advertise the maximum UDP packet size
 which can be assembled by the local network stack.
@@ -409,7 +407,8 @@ an EDNS feature.  Endless debate is avoided by supporting both views.
 =cut
 
 sub size {
-	shift->edns->size(@_);
+	my $self = shift;
+	return $$self->edns->size(@_);
 }
 
 
@@ -428,10 +427,7 @@ extension OPT RR.
 
 sub edns {
 	my $self = shift;
-	my $xpkt = $self->{xbody};
-	my $link = \$xpkt->{xedns};
-	($$link) = grep { $_->type eq 'OPT' } @{$xpkt->{additional}} unless $$link;
-	return $$link ||= new Net::DNS::RR('. OPT');
+	return $$self->edns;
 }
 
 
@@ -451,8 +447,7 @@ sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 sub _dnsflag {
 	my $self = shift;
 	my $flag = shift;
-	my $xpkt = $self->{xbody};
-	for ( $xpkt->{status} ||= 0 ) {
+	for ( $$self->{status} ||= 0 ) {
 		my $set = $_ | $flag;
 		my $not = $set - $flag;
 		$_ = (shift) ? $set : $not if scalar @_;
@@ -464,12 +459,12 @@ sub _dnsflag {
 sub _ednsflag {
 	my $self = shift;
 	my $flag = shift;
-	my $edns = eval { $self->edns->flags } || 0;
+	my $edns = $$self->edns->flags || 0;
 	return $flag & $edns ? 1 : 0 unless scalar @_;
 	my $set = $flag | $edns;
 	my $not = $set - $flag;
 	my $new = (shift) ? $set : $not;
-	$self->edns->flags($new) unless $new == $edns;
+	$$self->edns->flags($new) unless $new == $edns;
 	return ( $new & $flag ) ? 1 : 0;
 }
 

@@ -1,7 +1,6 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use diagnostics;
 use Test::More tests => 42;
 
 

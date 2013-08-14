@@ -13,8 +13,6 @@ Net::DNS::ZoneFile - DNS zone file
 
 =head1 SYNOPSIS
 
-  [ use encoding 'UTF8'; ]
-
     use Net::DNS::ZoneFile;
 
     $zonefile = new Net::DNS::ZoneFile( 'named.example' );
@@ -29,10 +27,10 @@ Net::DNS::ZoneFile - DNS zone file
 =head1 DESCRIPTION
 
 Each Net::DNS::ZoneFile object instance represents a zone file
-together with any subordinate files nominated using $INCLUDE
-directives.  Zone file syntax is defined by RFC1035.
+together with any subordinate files introduced by the $INCLUDE
+directive.  Zone file syntax is defined by RFC1035.
 
-A program can have multiple zone file objects, each maintaining
+A program may have multiple zone file objects, each maintaining
 its own independent parser state information.
 
 The parser supports both the $TTL directive defined by RFC2308
@@ -45,14 +43,13 @@ automatically to all subsequent records.
 =cut
 
 
-use strict;
 use integer;
 use Carp;
 use FileHandle;
 use File::Spec::Functions;
 
-use Net::DNS::Domain;
-use Net::DNS::RR;
+require Net::DNS::Domain;
+require Net::DNS::RR;
 
 use constant PERLIO => eval { require PerlIO; } || 0;
 
@@ -62,8 +59,10 @@ use constant PERLIO => eval { require PerlIO; } || 0;
 
 =head2 new
 
-    $zonefile = new Net::DNS::ZoneFile( 'named.example', ['example.com'] );
-    $zonefile = new Net::DNS::ZoneFile( FILEHANDLE, ['example.com'] );
+    $zonefile = new Net::DNS::ZoneFile( 'filename', ['example.com'] );
+
+    $handle   = new FileHandle( 'filename', '<:encoding(ISO8859-7)' );
+    $zonefile = new Net::DNS::ZoneFile( $handle, ['example.com'] );
 
 The new() constructor returns a Net::DNS::ZoneFile object which
 represents the zone file specified in the argument list.
@@ -71,15 +70,14 @@ represents the zone file specified in the argument list.
 The specified file or file handle is open for reading and closed when
 exhausted or all references to the ZoneFile object cease to exist.
 
-Character encoding discipline for files is coersed to be the same as
-STDIN and specified indirectly using the encoding pragma.
-
 The optional second argument specifies $ORIGIN for the zone file.
+
+Character encoding is specified indirectly using a FileHandle package
+and also applies to any files introduced by $include directives.
 
 =cut
 
 use vars qw($DIR);
-my $discipline = '';
 
 sub new {
 	my $self = bless {}, shift;
@@ -91,10 +89,8 @@ sub new {
 		return $self;
 	}
 
-	$file = catfile( $DIR || curdir(), $file ) unless file_name_is_absolute($file);
-	$discipline ||= join ':', '', PerlIO::get_layers( \*STDIN ) if PERLIO;
-	$self->{handle} = new FileHandle( $file, "<$discipline" );
-	croak "Failed to open $file" unless defined $self->{handle};
+	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
+	$self->{handle} = new FileHandle($file) or croak qq($! "$file");
 	$self->{name} = $file;
 
 	return $self;
@@ -130,14 +126,14 @@ sub read {
 		my @zone;					# return entire zone
 		eval {
 			my $rr;
-			push( @zone, $rr ) while ( $rr = $self->_getRR );
+			push( @zone, $rr ) while $rr = $self->_getRR;
 		};
-		croak join ' ', $@, 'file', $self->name, 'line', $self->line, "\n " if $@;
+		croak join ' ', $@, ' file', $self->name, 'line', $self->line, "\n " if $@;
 		return @zone;
 	}
 
 	my $rr = eval { $self->_getRR };			# return single RR
-	croak join ' ', $@, 'file', $self->name, 'line', $self->line, "\n " if $@;
+	croak join ' ', $@, ' file', $self->name, 'line', $self->line, "\n " if $@;
 	return $rr;
 }
 
@@ -245,14 +241,14 @@ sub _read {
 	my $filename = shift;
 	local $DIR = shift;
 	my $file = new Net::DNS::ZoneFile($filename);
-	my $zone = [];
+	my @zone;
 	eval {
 		my $rr;
-		push( @$zone, $rr ) while ( $rr = $file->_getRR );
+		push( @zone, $rr ) while $rr = $file->_getRR;
 	};
-	return wantarray ? @$zone : $zone unless $@;
-	carp join ' ', $@, 'file', $file->name, 'line', $file->line, "\n ";
-	return wantarray ? @$zone : undef;
+	return wantarray ? @zone : \@zone unless $@;
+	carp join ' ', $@, ' file', $file->name, 'line', $file->line, "\n ";
+	return wantarray ? @zone : undef;
 }
 
 
@@ -370,7 +366,7 @@ sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 		local $_ = $self->{template};			# copy template
 		while (/\$\{([^\}]*)\}/) {			# substitute ${...}
 			my $s = _format( $instant, split /[,]/, $1 );
-			s/\$\{$1\}/$s/g;
+			s/\$\{$1\}/$s/eg;
 		}
 		s/\$/_format($instant)/eg;			# unqualified $
 		return $_;
@@ -423,6 +419,7 @@ sub _getline {			## get line from current source
 	my $fh = $self->{handle};
 	while (<$fh>) {
 		$self->{line} = $fh->input_line_number;		# number refers to initial line
+
 		next unless /[^\s]/;				# discard blank line
 		next if /^\s*;/;				# discard comment line
 
@@ -430,14 +427,14 @@ sub _getline {			## get line from current source
 			s/\\\\/\\092/g;				# disguise escaped escape
 			s/\\"/\\034/g;				# disguise escaped quote
 			s/\\;/\\059/g;				# disguise escaped semicolon
-			my @token = grep defined && length, split /("[^"]*")|;[^\n]*|([()])|(^\s)|\s/;
+			my @token = grep defined && length, split /("[^"]*")|;[^\n]*|(^\s)|\s/;
 			return $_ unless grep $_ eq '(', @token;
 			return $_ if grep $_ eq ')', @token;
 			while (<$fh>) {
 				s/\\\\/\\092/g;			# disguise escaped escape
 				s/\\"/\\034/g;			# disguise escaped quote
 				s/\\;/\\059/g;			# disguise escaped semicolon
-				my @part = grep defined && length, split /("[^"]*")|;[^\n]*|([()])|\s/;
+				my @part = grep defined && length, split /("[^"]*")|;[^\n]*|\s/;
 				push @token, @part;
 				last if grep $_ eq ')', @part;
 			}
@@ -505,13 +502,18 @@ sub _getRR {			## get RR from current source
 
 
 sub _include {			## open $INCLUDE file
-	my $self    = shift;
-	my $include = new Net::DNS::ZoneFile(shift);
-	my $handle  = $include->{handle};
-	my $name    = $include->{name};
+	my $self = shift;
+	my $file = shift;
+
+	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
+
+	my @discipline = ( join ':', '<', PerlIO::get_layers $self->{handle} ) if PERLIO;
+	my $handle = new FileHandle( $file, @discipline ) or croak qq($! "$file");
+
+	my $include = bless {}, ref($self);
 	undef $self->{latest};					# forbid empty owner field
 	%$include = %$self;					# save state, create link
-	@{$self}{qw(link handle name)} = ( $include, $handle, $name );
+	@{$self}{qw(link handle name)} = ( $include, $handle, $file );
 	return $handle;
 }
 
@@ -553,7 +555,7 @@ modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::Domain>, L<Net::DNS::RR>,
-RFC1035 Section 5.1, RFC2308, BIND 9 Administrator Reference Manual
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 5.1,
+RFC2308, BIND 9 Administrator Reference Manual
 
 =cut

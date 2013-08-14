@@ -15,7 +15,6 @@ Net::DNS::RR::OPT - DNS OPT resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Carp;
@@ -74,6 +73,13 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	delete $self->{class};
+}
+
+
 sub encode {				## overide RR method
 	my $self = shift;
 
@@ -95,7 +101,7 @@ sub string {				## overide RR method
 			map sprintf( "%s\t%s", ednsoptionbyval($_), unpack 'H*', $self->option($_) ), @option;
 
 	$rcode = 0 if $rcode < 16;				# weird: 1 .. 15 not EDNS codes!!
-	$rcode = defined( $self->{rdlength} ) ? "$rcode + [4-bits]" : rcodebyval($rcode);
+	$rcode = exists( $self->{rdlength} ) && $rcode ? "$rcode + [4-bits]" : rcodebyval($rcode);
 	$rcode = 'BADVERS' if $rcode eq 'BADSIG';		# code 16 unambiguous here
 
 	return <<"QQ";
@@ -118,7 +124,7 @@ sub class {				## overide RR method
 
 sub ttl {				## overide RR method
 	my $self = shift;
-	my $mods = shift || return if @_;
+	my $mods = shift || return if scalar @_;
 	carp qq[Usage: OPT has no "ttl" attribute, please use "flags()" and "rcode()"] unless $warned++;
 	@{$self}{qw(rcode version flags)} = unpack 'C2 n', pack 'N', $mods if $mods;
 	return pack 'C2 n', @{$self}{qw(rcode version flags)} if defined wantarray;
@@ -127,8 +133,8 @@ sub ttl {				## overide RR method
 sub version {
 	my $self = shift;
 
-	$self->{version} = shift if @_;
-	return 0 + ( $self->{version} || 0 );
+	$self->{version} = 0 + shift if scalar @_;
+	return $self->{version} || 0;
 }
 
 
@@ -136,7 +142,7 @@ sub size {
 	my $self = shift;
 	for ( $self->{size} ) {
 		my $UDP_size = 0;
-		( $UDP_size, $_ ) = ( shift || 0 ) if @_;
+		( $UDP_size, $_ ) = ( shift || 0 ) if scalar @_;
 		return $UDP_size > 512 ? ( $_ = $UDP_size ) : 512 unless $_;
 		return $_ > 512 ? $_ : 512;
 	}
@@ -144,7 +150,7 @@ sub size {
 
 sub rcode {
 	my $self = shift;
-	return $self->{rcode} || 0 unless @_;
+	return $self->{rcode} || 0 unless scalar @_;
 	delete $self->{rdlength};				# (ab)used to signal incomplete value
 	my $val = shift || 0;
 	$val = 0 if $val < 16;					# discard non-EDNS rcodes 1 .. 15
@@ -154,7 +160,7 @@ sub rcode {
 
 sub flags {
 	my $self = shift;
-	return $self->{flags} || 0 unless @_;
+	return $self->{flags} || 0 unless scalar @_;
 	my $val = shift;
 	$self->{flags} = $val if $val or defined $self->{flags};
 	return $val;
@@ -170,10 +176,10 @@ sub option {
 	my $self = shift;
 
 	my $options = $self->{option} || {};
-	while (@_) {
+	while ( scalar @_ ) {
 		my $option = shift;
 		my $number = ednsoptionbyname($option);
-		return $options->{$number} unless @_;
+		return $options->{$number} unless scalar @_;
 		my $value = shift;
 		delete $options->{$number} unless defined $value;
 		$options = $self->{option} ||= {};
@@ -181,13 +187,13 @@ sub option {
 	}
 }
 
-sub default {
+sub defined {
 	my $self = shift;
 
 	foreach (qw(size flags rcode option)) {
-		return 0 if defined $self->{$_};
+		return 1 if defined $self->{$_};
 	}
-	return 1;
+	return 0;
 }
 
 sub do {				## historical
