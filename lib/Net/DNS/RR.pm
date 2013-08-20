@@ -85,7 +85,7 @@ The trailing dot (.) is optional.
 
 =cut
 
-my $PARSE_REGEX = qw/("[^"]*"|'[^']*')|;[^\n]*|\s+/;
+my $PARSE_REGEX = qw/("[^"]*"|'[^']*')|;[^\n]*|\s|\)$/;
 my %dnssectype = map { ( $_, 1 ) } qw(DLV DNSKEY DS KEY NSEC NSEC3 NSEC3PARAM NXT RRSIG SIG);
 
 sub _new_string {

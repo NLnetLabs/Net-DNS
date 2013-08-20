@@ -2,6 +2,19 @@ $Id$                       -*-text-*-
 
 **** 0.73 [unreleased]
 
+Fix rt.cpan.org #81942/#84601
+
+	Fix memory leak on packet cleanup. Indirect self-reference via
+	header prevented garbage collector from deallocating packet.
+
+Fix rt.cpan.org #84110
+
+	Incorrect parsing of PTR records in zonefile.
+
+Fix rt.cpan.org #83755
+
+	Erroneous attempt to invoke Net::LibIDN package in Domain.pm.
+
 Fix rt.cpan.org #83075
 
 	ZoneFile.pm wrongly rejects $TTL 0 directive.
@@ -53,13 +66,6 @@ Temporary workaround rt.cpan.org #81760
 	quoted rdata fields to work around an issue with updating 
 	SpamAssassin rules.  This workaround will be reverted after
 	release of a version of SpamAssassin which resolves the issue.
-
-Fix rt.cpan.org #81942
-
-	Fix memory leak on packet cleanup. The back-reference via the
-	header attribute (with xbody) caused the garbage collector not 
-	to clean a packet. Header is now explicitly cleaned via
-	Net::DNS::Packet::DESTROY.
 
 Fix TSIG initialization
 

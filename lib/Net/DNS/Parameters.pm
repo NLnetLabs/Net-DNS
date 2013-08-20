@@ -8,8 +8,9 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 #
 #	Domain Name System (DNS) Parameters
-#	(last updated 2012-11-27)
+#	(last updated 2013-07-24)
 #
+
 
 use base Exporter;
 @EXPORT = qw(
@@ -20,7 +21,6 @@ use base Exporter;
 		ednsoptionbyname ednsoptionbyval
 		);
 
-use strict;
 use integer;
 use Carp;
 
@@ -35,7 +35,7 @@ use vars qw( %classbyname %classbyval );
 	ANY  => 255,						# RFC1035
 	);
 %classbyval = reverse %classbyname;
-%classbyname = ( %classbyname, map { /\D/ ? lc($_) : $_ } %classbyname );
+%classbyname = ( %classbyname, map /\D/ ? lc($_) : $_, %classbyname );
 
 
 # Registry: Resource Record (RR) TYPEs
@@ -80,8 +80,8 @@ use vars qw( %typebyname %typebyval );
 	CERT	   => 37,					# RFC4398
 	A6	   => 38,					# RFC3226 RFC2874 RFC6563
 	DNAME	   => 39,					# RFC6672
-	SINK	   => 40,					# http://bgp.potaroo.net/ietf/all-ids/draft-eastlake-kitchen-sink-02.txt
-	OPT	   => 41,					# RFC2671 RFC3225
+	SINK	   => 40,					# http://tools.ietf.org/html/draft-eastlake-kitchen-sink
+	OPT	   => 41,					# RFC6891 RFC3225
 	APL	   => 42,					# RFC3123
 	DS	   => 43,					# RFC4034 RFC3658
 	SSHFP	   => 44,					# RFC4255
@@ -107,20 +107,22 @@ use vars qw( %typebyname %typebyval );
 	L32	   => 105,					# RFC6742
 	L64	   => 106,					# RFC6742
 	LP	   => 107,					# RFC6742
+	EUI48	   => 108,					# draft-jabley-dnsext-eui48-eui64-rrtypes
+	EUI64	   => 109,					# draft-jabley-dnsext-eui48-eui64-rrtypes
 	TKEY	   => 249,					# RFC2930
 	TSIG	   => 250,					# RFC2845
 	IXFR	   => 251,					# RFC1995
 	AXFR	   => 252,					# RFC1035 RFC5936
 	MAILB	   => 253,					# RFC1035
 	MAILA	   => 254,					# RFC1035
-	ANY	   => 255,					# RFC1035
+	ANY	   => 255,					# RFC1035 RFC6895
 	URI	   => 256,					#
-	CAA	   => 257,					# RFC-ietf-pkix-caa-15
+	CAA	   => 257,					# RFC6844
 	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
 	);
 %typebyval = reverse %typebyname;
-%typebyname = ( %typebyname, map { /\D/ ? lc($_) : $_ } %typebyname );
+%typebyname = ( %typebyname, map /\D/ ? lc($_) : $_, %typebyname );
 
 
 # Registry: DNS OpCodes
@@ -133,7 +135,7 @@ use vars qw( %opcodebyname %opcodebyval );
 	UPDATE => 5,						# RFC2136
 	);
 %opcodebyval = reverse %opcodebyname;
-%opcodebyname = ( %opcodebyname, map { /\D/ ? lc($_) : $_ } %opcodebyname );
+%opcodebyname = ( %opcodebyname, map /\D/ ? lc($_) : $_, %opcodebyname );
 
 
 # Registry: DNS RCODEs
@@ -145,12 +147,13 @@ use vars qw( %rcodebyname %rcodebyval );
 	NXDOMAIN => 3,						# RFC1035
 	NOTIMP	 => 4,						# RFC1035
 	REFUSED	 => 5,						# RFC1035
-	YXDOMAIN => 6,						# RFC2136
+	YXDOMAIN => 6,						# RFC2136 RFC6672
 	YXRRSET	 => 7,						# RFC2136
 	NXRRSET	 => 8,						# RFC2136
 	NOTAUTH	 => 9,						# RFC2136
+	NOTAUTH	 => 9,						# RFC2845
 	NOTZONE	 => 10,						# RFC2136
-	BADVERS	 => 16,						# RFC2671
+	BADVERS	 => 16,						# RFC6891
 	BADSIG	 => 16,						# RFC2845
 	BADKEY	 => 17,						# RFC2845
 	BADTIME	 => 18,						# RFC2845
@@ -159,19 +162,23 @@ use vars qw( %rcodebyname %rcodebyval );
 	BADALG	 => 21,						# RFC2930
 	BADTRUNC => 22,						# RFC4635
 	);
-%rcodebyval = reverse %rcodebyname;
-%rcodebyname = ( %rcodebyname, map { /\D/ ? lc($_) : $_ } %rcodebyname );
+%rcodebyval = reverse( BADSIG => 16, %rcodebyname );
+%rcodebyname = ( %rcodebyname, map /\D/ ? lc($_) : $_, %rcodebyname );
 
 
-# Registry: DNS EDNS0 Options
+# Registry: DNS EDNS0 Option Codes (OPT)
 use vars qw( %ednsoptionbyname %ednsoptionbyval );
 %ednsoptionbyname = (
-	LLQ  => 1,						# http://files.dns-sd.org/draft-sekar-dns-llq.txt
-	UL   => 2,						# http://files.dns-sd.org/draft-sekar-dns-ul.txt
-	NSID => 3,						# RFC5001
+	LLQ		     => 1,				# http://files.dns-sd.org/draft-sekar-dns-llq.txt
+	UL		     => 2,				# http://files.dns-sd.org/draft-sekar-dns-ul.txt
+	NSID		     => 3,				# RFC5001
+	DAU		     => 5,				# RFC6975
+	DHU		     => 6,				# RFC6975
+	N3U		     => 7,				# RFC6975
+	'EDNS-CLIENT-SUBNET' => 8,				# draft-vandergaast-edns-client-subnet
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
-%ednsoptionbyname = ( %ednsoptionbyname, map { /\D/ ? lc($_) : $_ } %ednsoptionbyname );
+%ednsoptionbyname = ( %ednsoptionbyname, map /\D/ ? lc($_) : $_, %ednsoptionbyname );
 
 
 # Registry: DNS Header Flags
@@ -324,5 +331,5 @@ modify it under the same terms as Perl itself.
 =head1 SEE ALSO
  
 L<perl>, L<Net::DNS>,
-L<IANA dns-parameters|//www.iana.org/assignments/dns-parameters>
+L<IANA Registry|http://www.iana.org/assignments/dns-parameters>
 
