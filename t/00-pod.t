@@ -5,10 +5,10 @@ use File::Spec;
 use File::Find;
 use strict;
 
-eval 'use 5.6.2; use Test::Pod 0.95';
+eval 'require Encode; use Test::Pod 0.95';
 
 if ($@) {
-	plan skip_all => 'test requires Perl 5.6.2 and Test::Pod 0.95';
+	plan skip_all => 'test requires Test::Pod 0.95 and POD "=encoding" support';
 } else {
 	Test::Pod->import;
 

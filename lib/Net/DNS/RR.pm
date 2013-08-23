@@ -51,13 +51,16 @@ you will get an error message and execution will be terminated.
 =cut
 
 sub new {
-	my ($class) = @_;
-
 	return &_new_from_rdata if COMPATIBLE && ref $_[1];	# resolve new() usage conflict
 
-	my $rr = eval { scalar @_ > 2 ? &_new_hash : &_new_string; };
-	croak "${@}new $class( ... )" if $@;
-	return $rr;
+	my @arg = @_;						# save @_ from destruction
+
+	my $rr = eval { scalar @arg > 2 ? &_new_hash : &_new_string; };
+	return $rr unless $@;
+
+	my $class = shift(@arg) || __PACKAGE__;
+	my @parse = split /\s+/, shift(@arg) || '';
+	croak join ' ', "${@}new $class(", substr( "@parse @arg", 0, 50 ), '... ';
 }
 
 
@@ -813,7 +816,7 @@ sub _canonicaldata {			## encode RR in canonical form
 
 sub _canonicalRdata {			## encode rdata in canonical form
 	my ( $self, $offset ) = @_;
-	return $self->rr_rdata( undef, $offset );
+	return $self->rr_rdata( undef, $offset || 0 );
 }
 
 
