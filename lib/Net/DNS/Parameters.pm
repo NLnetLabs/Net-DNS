@@ -132,6 +132,7 @@ use vars qw( %opcodebyname %opcodebyval );
 	IQUERY => 1,						# RFC3425
 	STATUS => 2,						# RFC1035
 	NOTIFY => 4,						# RFC1996
+	NS_NOTIFY_OP => 4,			# Backwards compatibility
 	UPDATE => 5,						# RFC2136
 	);
 %opcodebyval = reverse %opcodebyname;
