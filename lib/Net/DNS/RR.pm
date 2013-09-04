@@ -302,7 +302,7 @@ sub encode {
 
 	my $owner = $self->{owner}->encode(@_);
 	my $type  = $self->{type};
-	my $class = $self->{class};
+	my $class = $self->{class} || 1;
 	my $index = $offset + length($owner) + RRFIXEDSZ;
 	my $rdata = eval { $self->encode_rdata( $index, @opaque ); } || '';
 	return pack 'a* n2 N n a*', $owner, $type, $class, $self->ttl, length $rdata, $rdata;
@@ -337,7 +337,7 @@ sub canonical {
 
 	my $owner = $self->{owner}->canonical;
 	my $type  = $self->{type};
-	my $class = $self->{class};
+	my $class = $self->{class} || 1;
 	my $index = RRFIXEDSZ + length $owner;
 	my $rdata = eval { $self->encode_rdata($index); } || '';
 	pack 'a* n2 N n a*', $owner, $type, $class, $self->ttl, length $rdata, $rdata;

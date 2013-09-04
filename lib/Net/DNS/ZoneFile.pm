@@ -90,7 +90,7 @@ sub new {
 	}
 
 	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
-	$self->{handle} = new FileHandle($file) or croak qq($! "$file");
+	$self->{handle} = new FileHandle($file) or croak qq(open: $! "$file");
 	$self->{name} = $file;
 
 	return $self;
@@ -198,7 +198,7 @@ sub ttl {
 =head1 COMPATIBILITY WITH Net::DNS::ZoneFile 1.04
 
 Applications which depended on the Net::DNS::ZoneFile 1.04 package
-will continue to operate with minimal change using compatibility
+will continue to operate with minimal change using the compatibility
 interface described below.
 
     use Net::DNS::ZoneFile;
@@ -320,14 +320,14 @@ sub parse {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {			## Default method
+sub AUTOLOAD {				## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
 
-sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 
 {
@@ -400,7 +400,7 @@ sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
 }
 
 
-sub _generate {			## expand $GENERATE into input stream
+sub _generate {				## expand $GENERATE into input stream
 	my ( $self, $range, $template ) = @_;
 
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
@@ -413,57 +413,60 @@ sub _generate {			## expand $GENERATE into input stream
 }
 
 
-sub _getline {			## get line from current source
+my $LEX_REGEX = qw/("[^"]*")|("[^"]*)$|;[^\n]*|(^\s)|\s/;
+
+sub _getline {				## get line from current source
 	my $self = shift;
 
 	my $fh = $self->{handle};
 	while (<$fh>) {
 		$self->{line} = $fh->input_line_number;		# number refers to initial line
 
-		next unless /[^\s]/;				# discard blank line
+		next unless /\S/;				# discard blank line
 		next if /^\s*;/;				# discard comment line
 
 		if (/\(/) {					# concatenate multi-line RR
 			s/\\\\/\\092/g;				# disguise escaped escape
 			s/\\"/\\034/g;				# disguise escaped quote
 			s/\\;/\\059/g;				# disguise escaped semicolon
-			my @token = grep defined && length, split /("[^"]*")|;[^\n]*|(^\s)|\s/;
-			return $_ unless grep $_ eq '(', @token;
-			return $_ if grep $_ eq ')', @token;
-			while (<$fh>) {
-				s/\\\\/\\092/g;			# disguise escaped escape
-				s/\\"/\\034/g;			# disguise escaped quote
-				s/\\;/\\059/g;			# disguise escaped semicolon
-				my @part = grep defined && length, split /("[^"]*")|;[^\n]*|\s/;
-				push @token, @part;
-				last if grep $_ eq ')', @part;
+			my @token = grep defined && length, split /$LEX_REGEX/o;
+			if ( grep $_ eq '(', @token ) {
+				return $_ if grep $_ eq ')', @token;	# question user sanity
+				while (<$fh>) {
+					s/\\\\/\\092/g;		# disguise escaped escape
+					s/\\"/\\034/g;		# disguise escaped quote
+					s/\\;/\\059/g;		# disguise escaped semicolon
+					substr( $_, 0, 0 ) = join ' ', @token;	  # need to handle multi-line quote
+					@token = grep defined && length, split /$LEX_REGEX/o;
+					last if grep $_ eq ')', @token;
+				}
+				$_ = join ' ', @token;		# reconstitute RR string
 			}
-			$_ = join ' ', @token;			# reconstitute RR string
 		}
 
 		return $_ unless /^\$/;				# RR string
 
-		if ( /^\$GENERATE/ || /^\$generate/ ) {		# directive
+		if (/^\$GENERATE/i) {				# directive
 			my ( undef, $range, @template ) = split;
 			die '$GENERATE incomplete' unless $range;
 			$fh = $self->_generate( $range, "@template\n" );
 
-		} elsif ( /^\$INCLUDE/ || /^\$include/ ) {	# directive
+		} elsif (/^\$INCLUDE/i) {			# directive
 			my ( undef, $file, $origin ) = split;
 			$fh = $self->_include($file);
 			my $context = $self->{context};
 			&$context( sub { $self->_origin($origin); } ) if $origin;
 
-		} elsif ( /^\$ORIGIN/ || /^\$origin/ ) {	# directive
+		} elsif (/^\$ORIGIN/i) {			# directive
 			my ( undef, $origin ) = split;
 			die '$ORIGIN incomplete' unless $origin;
 			my $context = $self->{context};
 			&$context( sub { $self->_origin($origin); } );
 
-		} elsif ( /^\$TTL/ || /^\$ttl/ ) {		# directive
+		} elsif (/^\$TTL/i) {				# directive
 			my ( undef, $ttl ) = split;
 			die '$TTL incomplete' unless defined $ttl;
-			$self->{ttl} = Net::DNS::RR::ttl( {}, $ttl );
+			$self->{ttl} = new Net::DNS::RR(". $ttl IN A")->ttl;
 
 		} else {					# unrecognised
 			chomp;
@@ -471,14 +474,16 @@ sub _getline {			## get line from current source
 		}
 	}
 
-	$fh->close or die "close: $! $?";			# end of file
+	my $ok = $fh->close;					# end of file
+	die "pipe: process exit status $?" if $?;
+	die "close: $!" unless $ok;
 	my $link = $self->{link} || return undef;		# end of zone
 	%$self = %$link;					# end $INCLUDE
 	return $self->_getline;					# resume input
 }
 
 
-sub _getRR {			## get RR from current source
+sub _getRR {				## get RR from current source
 	my $self = shift;
 
 	my $line = $self->_getline;
@@ -490,35 +495,34 @@ sub _getRR {			## get RR from current source
 	my $context = $self->{context};
 	my $rr = &$context( sub { Net::DNS::RR->_new_string($line) } );
 
-	$rr->{owner} = ( $self->{latest} || $rr )->{owner} if $noname;	  # overwrite placeholder
+	$rr->{owner} = ( $self->{latest} || $rr )->{owner} if $noname;		  # overwrite placeholder
 
 	$rr->class( $self->{class} ||= $rr->class );		# propagate RR class
 
-	$self->{ttl} ||= $rr->type eq 'SOA' ? $rr->minimum : $rr->ttl;	  # default TTL
+	$self->{ttl} ||= $rr->type eq 'SOA' ? $rr->minimum : $rr->ttl;		  # default TTL
 	$rr->ttl( $self->{ttl} ) unless defined $rr->{ttl};
 
 	return $self->{latest} = $rr;
 }
 
 
-sub _include {			## open $INCLUDE file
+sub _include {				## open $INCLUDE file
 	my $self = shift;
 	my $file = shift;
 
 	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
 
 	my @discipline = ( join ':', '<', PerlIO::get_layers $self->{handle} ) if PERLIO;
-	my $handle = new FileHandle( $file, @discipline ) or croak qq($! "$file");
+	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: $! "$file");
 
-	my $include = bless {}, ref($self);
 	undef $self->{latest};					# forbid empty owner field
-	%$include = %$self;					# save state, create link
+	my $include = bless {%$self}, ref($self);		# save state, create link
 	@{$self}{qw(link handle name)} = ( $include, $handle, $file );
 	return $handle;
 }
 
 
-sub _origin {			## change $ORIGIN (scope: current file)
+sub _origin {				## change $ORIGIN (scope: current file)
 	my $self = shift;
 	$self->{context} = origin Net::DNS::Domain(shift);
 	undef $self->{latest};					# forbid empty owner field

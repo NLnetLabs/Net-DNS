@@ -77,7 +77,8 @@ sub new {
 
 	local $_ = &_encode_utf8;
 
-	s/^([\042\047])(.*)\1$/$2/;				# strip paired quotes
+	s/^\042([^\042]*)\042/$1/;				# strip paired quotes
+	s/^\047([^\047]*)\047/$1/;				# strip paired quotes
 
 	s/\134\134/\134\060\071\062/g;				# disguise escaped escape
 	s/\134([\060-\071]{3})/$unescape{$1}/eg;		# numeric escape
