@@ -45,9 +45,9 @@ automatically to all subsequent records.
 
 use integer;
 use Carp;
-use FileHandle;
 use File::Spec::Functions;
 
+require FileHandle;
 require Net::DNS::Domain;
 require Net::DNS::RR;
 
@@ -157,13 +157,14 @@ sub name {
 
     $line = $zonefile->line;
 
-Returns the line number of the last non-continuation line encountered
-in the current zone file.
+Returns the number of the last line read from the current zone file.
 
 =cut
 
 sub line {
-	return shift->{line} || 0;
+	my $self = shift;
+	return $self->{eof} if defined $self->{eof};
+	return $self->{handle}->input_line_number;
 }
 
 
@@ -420,8 +421,6 @@ sub _getline {				## get line from current source
 
 	my $fh = $self->{handle};
 	while (<$fh>) {
-		$self->{line} = $fh->input_line_number;		# number refers to initial line
-
 		next unless /\S/;				# discard blank line
 		next if /^\s*;/;				# discard comment line
 
@@ -474,7 +473,8 @@ sub _getline {				## get line from current source
 		}
 	}
 
-	my $ok = $fh->close;					# end of file
+	$self->{eof} = $self->line;				# end of file
+	my $ok = $fh->close;
 	die "pipe: process exit status $?" if $?;
 	die "close: $!" unless $ok;
 	my $link = $self->{link} || return undef;		# end of zone
