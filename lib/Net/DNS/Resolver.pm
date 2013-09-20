@@ -21,23 +21,19 @@ BEGIN {
 	for ($^O) {				## Perl OS identifier
 
 		/cygwin/ && do {
-			eval { require Net::DNS::Resolver::MSWin32; };
-
-			unless ($@) {
+			if ( eval { require Net::DNS::Resolver::MSWin32; } ) {
 				@ISA = qw(Net::DNS::Resolver::MSWin32);
 				last;
 			}
 		};
 
-
-		eval "require Net::DNS::Resolver::$_;";
-
-		unless ($@) {
+		if ( eval "require Net::DNS::Resolver::$_;" ) {
 			@ISA = ("Net::DNS::Resolver::$_");
-		} else {
-			require Net::DNS::Resolver::UNIX;
-			@ISA = qw(Net::DNS::Resolver::UNIX);
+			last;
 		}
+
+		require Net::DNS::Resolver::UNIX;
+		@ISA = qw(Net::DNS::Resolver::UNIX);
 	}
 }
 

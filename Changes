@@ -15,6 +15,10 @@ Fix rt.cpan.org #83755
 
 	Erroneous attempt to invoke Net::LibIDN package in Domain.pm.
 
+Fix rt.cpan.org #83078
+
+	eval{ ... }; { } if $@; unsafe using threads.
+
 Fix rt.cpan.org #83075
 
 	ZoneFile.pm wrongly rejects $TTL 0 directive.

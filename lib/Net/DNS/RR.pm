@@ -32,7 +32,7 @@ See also the manual pages for each specific RR type.
 =cut
 
 
-use constant COMPATIBLE => 1;			## enable architecture transition code
+use constant COMPATIBLE => 1;		## enable architecture transition code
 
 use integer;
 use Carp;
@@ -56,11 +56,12 @@ sub new {
 	my @arg = @_;						# save @_ from destruction
 
 	my $rr = eval { scalar @arg > 2 ? &_new_hash : &_new_string; };
-	return $rr unless $@;
+	return $rr if $rr;
 
+	my $error = $@;
 	my $class = shift(@arg) || __PACKAGE__;
 	my @parse = split /\s+/, shift(@arg) || '';
-	croak join ' ', "${@}new $class(", substr( "@parse @arg", 0, 50 ), '... ';
+	croak join ' ', "${error}new $class(", substr( "@parse @arg", 0, 50 ), '... ';
 }
 
 
@@ -694,7 +695,7 @@ sub defaults { }			## set attribute default values
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {			## Default method
+sub AUTOLOAD {				## Default method
 	my $self = shift;
 	confess "method '$AUTOLOAD' undefined" unless ref $self;
 
@@ -723,10 +724,10 @@ END
 }
 
 
-sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 
-sub dump {			## print internal data structure
+sub dump {				## print internal data structure
 	use Data::Dumper;
 	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
 	return Dumper(shift) if defined wantarray;
@@ -760,19 +761,18 @@ sub _subclass {
 		my $number = typebyname($rrtype);
 		my $symbol = typebyval($number);
 		my $module = join '::', $class, $symbol;
-		eval "require $module";
-		$subclass = $@ ? $class : $module;
+		$subclass = eval("require $module") ? $module : $class;
 		$subclass = $module if $symbol eq 'OPT';	# default to OPT declared below
 		my $object = bless {type => $number}, $subclass;
 		$object->type($symbol) if COMPATIBLE;
-		$_MINIMAL{$subclass} = {%$object};		# cache minimal content
-		$object->defaults;
-		$_DEFAULT{$subclass} = $object;			# cache default content
+		$_MINIMAL{$subclass} = [%$object];		# cache minimal content
+		$object->defaults if $subclass eq $module;
+		$_DEFAULT{$subclass} = [%$object];		# cache default content
 		$_LOADED{$rrtype}    = $subclass;
 	}
 
 	my $prebuilt = $default ? $_DEFAULT{$subclass} : $_MINIMAL{$subclass};
-	return bless {%$prebuilt}, $subclass;			# create object
+	return bless {@$prebuilt}, $subclass;			# create object
 }
 
 
@@ -836,8 +836,8 @@ sub _normalize_dnames { }
 
 package Net::DNS::RR::OPT;
 
-sub AUTOLOAD {			## stub out all OPT attributes
-	my @a0;			## delivering 0, '' or () according to context
+sub AUTOLOAD {				## stub out all OPT attributes
+	my @a0;				## delivering 0, '' or () according to context
 	return @a0 if wantarray;
 	$! = scalar @a0;
 }
