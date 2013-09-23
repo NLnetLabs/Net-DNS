@@ -242,8 +242,6 @@ sub origin {
 	my $class = shift;
 	my $name = shift || return $placebo;
 
-	return $placebo unless $name =~ /[^.]/;
-
 	my $domain = new Net::DNS::Domain($name);
 	return sub {						# closure w.r.t. $domain
 		my $constructor = shift;

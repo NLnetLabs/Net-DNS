@@ -8,7 +8,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 #
 #	Domain Name System (DNS) Parameters
-#	(last updated 2013-07-24)
+#	(last updated 2013-09-05)
 #
 
 
@@ -107,8 +107,8 @@ use vars qw( %typebyname %typebyval );
 	L32	   => 105,					# RFC6742
 	L64	   => 106,					# RFC6742
 	LP	   => 107,					# RFC6742
-	EUI48	   => 108,					# draft-jabley-dnsext-eui48-eui64-rrtypes
-	EUI64	   => 109,					# draft-jabley-dnsext-eui48-eui64-rrtypes
+	EUI48	   => 108,					# RFC-jabley-dnsext-eui48-eui64-rrtypes-07
+	EUI64	   => 109,					# RFC-jabley-dnsext-eui48-eui64-rrtypes-07
 	TKEY	   => 249,					# RFC2930
 	TSIG	   => 250,					# RFC2845
 	IXFR	   => 251,					# RFC1995
@@ -135,8 +135,7 @@ use vars qw( %opcodebyname %opcodebyval );
 	UPDATE => 5,						# RFC2136
 	);
 %opcodebyval = reverse %opcodebyname;
-$opcodebyname{NS_NOTIFY_OP} = 4;
-%opcodebyname = ( %opcodebyname, map /\D/ ? lc($_) : $_, %opcodebyname);
+%opcodebyname = ( NS_NOTIFY_OP => 4, %opcodebyname, map /\D/ ? lc($_) : $_, %opcodebyname );
 
 
 # Registry: DNS RCODEs
@@ -240,7 +239,7 @@ sub typebyname {
 	my $val = 0 + $1;
 	confess "typebyname( $name ) out of range" if $val > 0xffff;
 
-	return $val ? $val : '00'; ## preserve historical behaviour for TYPE0 [OMK] ##
+	return $val;
 }
 
 sub typebyval {

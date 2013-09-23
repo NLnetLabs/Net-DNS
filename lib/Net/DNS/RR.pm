@@ -53,15 +53,12 @@ you will get an error message and execution will be terminated.
 sub new {
 	return &_new_from_rdata if COMPATIBLE && ref $_[1];	# resolve new() usage conflict
 
-	my @arg = @_;						# save @_ from destruction
-
-	my $rr = eval { scalar @arg > 2 ? &_new_hash : &_new_string; };
-	return $rr if $rr;
-
-	my $error = $@;
-	my $class = shift(@arg) || __PACKAGE__;
-	my @parse = split /\s+/, shift(@arg) || '';
-	croak join ' ', "${error}new $class(", substr( "@parse @arg", 0, 50 ), '... ';
+	return eval { scalar @_ > 2 ? &_new_hash : &_new_string; } || do {
+		my $error = $@	  || 'unknown error ';
+		my $class = shift || __PACKAGE__;
+		my @parse = split /\s+/, shift || '';
+		croak join ' ', "${error}in new $class( ", substr( "@parse @_", 0, 50 ), '... )';
+			}
 }
 
 
@@ -90,11 +87,12 @@ The trailing dot (.) is optional.
 =cut
 
 my $PARSE_REGEX = qw/("[^"]*"|'[^']*')|;[^\n]*|\s|\)$/;
-my %dnssectype = map { ( $_, 1 ) } qw(DLV DNSKEY DS KEY NSEC NSEC3 NSEC3PARAM NXT RRSIG SIG);
 
 sub _new_string {
-	my $base = shift;
-	local $_ = shift || croak 'empty or undefined argument';
+	my $base;
+	local $_;
+	( $base, $_ ) = @_;
+	croak 'argument absent or undefined' unless defined $_;
 
 	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
 	s/\\\\/\\092/g;						# disguise escaped escape
@@ -132,7 +130,7 @@ sub _new_string {
 
 	return $self unless $populated;				# empty RR
 
-	if ( $token[0] eq '\\#' ) {
+	if ( $token[0] =~ /#$/ ) {
 		shift @token;					# RFC3597 hexadecimal format
 		my $count = shift(@token) || 0;
 		my $rdata = pack 'H*', join '', @token;
@@ -142,8 +140,8 @@ sub _new_string {
 		return ref($self)->new( $self, \$rdata, 0 ) if COMPATIBLE;
 		$self->decode_rdata( \$rdata, 0 );		# unpack RDATA
 		return $self;
-	} elsif (COMPATIBLE) {
-		$self->{ttl} ||= 0 if $dnssectype{$self->type}; # gloss over bugs in SEC RRs
+	} elsif ( COMPATIBLE && $self->{OLD} ) {
+		$self->{ttl} ||= 0;
 		return ref($self)->new_from_string( $self, join( ' ', @token ), \@token );
 	}
 
@@ -180,11 +178,11 @@ sections required for certain dynamic update operations.
 =cut
 
 sub _new_hash {
-	my $base = shift;
+	my ( $base, %argument ) = @_;
+
 	my %attribute = ( name => '.' );
-	while ( scalar @_ ) {
-		my $key = lc shift;
-		$attribute{$key} = shift;
+	while ( my ( $key, $value ) = each %argument ) {
+		$attribute{lc $key} = $value;
 	}
 
 	my ( $name, $type, $class, $ttl ) = @attribute{qw(name type class ttl)};
@@ -205,10 +203,10 @@ sub _new_hash {
 		}
 	}
 
-	return $self unless COMPATIBLE;
-
-	$self->{ttl} ||= 0 if $dnssectype{$self->type};		# gloss over bugs in SEC RRs
-	$self->_normalize_dnames if $populated;			# strip trailing dot from RDATA names
+	if ( COMPATIBLE && $self->{OLD} ) {
+		$self->{ttl} ||= 0;
+		$self->_normalize_dnames if $populated;		# strip trailing dot from RDATA names
+	}
 
 	return $self;
 }
@@ -378,12 +376,9 @@ Returns the record type.
 sub type {
 	my $self = shift;
 
-	if (COMPATIBLE) {
-		$self->{type} = typebyval( typebyname(shift) ) if @_;
-		return $self->{type} || 'A';
-	}
+	croak 'not possible to change RR->type' if scalar @_;
 
-	confess 'not possible to change RR->type' if scalar @_;
+	return $self->{type} || 'A' if COMPATIBLE;
 	typebyval( $self->{type} || 1 );
 }
 
@@ -432,7 +427,7 @@ sub ttl {
 	my $ttl = 0;
 	my %time = reverse split /(\D)\D*/, shift() . 'S';
 	while ( my ( $u, $t ) = each %time ) {
-		$ttl += $t * ( $unit{$u} || croak qq(bad time unit "$u") );
+		$ttl += $t * ( $unit{$u} || croak qq(bad time: $t$u) );
 	}
 	$self->{ttl} = $ttl;
 }
@@ -764,7 +759,11 @@ sub _subclass {
 		$subclass = eval("require $module") ? $module : $class;
 		$subclass = $module if $symbol eq 'OPT';	# default to OPT declared below
 		my $object = bless {type => $number}, $subclass;
-		$object->type($symbol) if COMPATIBLE;
+		if (COMPATIBLE) {
+			my $method = "${module}::new";
+			$object->{OLD}++ if exists &$method;
+			$object->{type} = $symbol;
+		}
 		$_MINIMAL{$subclass} = [%$object];		# cache minimal content
 		$object->defaults if $subclass eq $module;
 		$_DEFAULT{$subclass} = [%$object];		# cache default content

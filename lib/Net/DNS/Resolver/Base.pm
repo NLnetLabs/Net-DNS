@@ -619,10 +619,14 @@ sub send_tcp {
 			}
 
 			my $ans = Net::DNS::Packet->new(\$buf, $self->{debug});
-			my $rcode = $ans->header->rcode;
-			$self->errorstring( $@ ? $@ : $rcode );
+			my $error = $@;
 
-			if (defined $ans) {
+			unless ( defined $ans ) {
+			      $self->errorstring($error);
+			} else {
+				my $rcode = $ans->header->rcode;
+				$self->errorstring( $error || $rcode );
+
 				$ans->answerfrom($self->answerfrom);
 
 				if ( $rcode ne "NOERROR" && $rcode ne "NXDOMAIN" ) {
@@ -881,14 +885,16 @@ sub send_udp {
 				      if $self->{'debug'};
 
 				  my $ans = Net::DNS::Packet->new(\$buf, $self->{debug});
-				  $self->errorstring($@);
+				  my $error = $@;
 
-				  if (defined $ans) {
+				  unless ( defined $ans ) {
+				      $self->errorstring($error);
+				  } else {
 				      my $header = $ans->header;
 				      next SELECTOR unless ( $header->qr || $self->{'ignqrid'});
 				      next SELECTOR unless  ( ($header->id == $packet->header->id) || $self->{'ignqrid'} );
 				      my $rcode = $header->rcode;
-				      $self->errorstring($rcode) unless $@;
+				      $self->errorstring( $error || $rcode);
 
 				      $ans->answerfrom($self->answerfrom);
 				      if ($rcode ne "NOERROR" && $rcode ne "NXDOMAIN"){

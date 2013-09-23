@@ -121,7 +121,6 @@ sub read {
 
 	return &_read unless ref $self;				# compatibility interface
 
-	local $SIG{__WARN__} = sub { die @_; };
 	if (wantarray) {
 		my @zone;					# return entire zone
 		eval {
@@ -179,7 +178,7 @@ zone file.
 
 sub origin {
 	my $context = shift->{context};
-	return &$context( sub { new Net::DNS::Domain('@') } )->name;
+	return &$context( sub { new Net::DNS::Domain('@') } )->string;
 }
 
 
@@ -339,37 +338,36 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 	sub new {
 		my $self = bless {}, shift;
-		my $range = shift;
-		@{$self}{qw(template line)} = @_;
+		my ( $range, $template, $line ) = @_;
 
-		my ( $first, $last ) = split m#[-/]#, $range;	# initial iterator state
-		my ( $junk,  $step ) = split m#[/]#,  $range;
+		$template =~ s/\\\$/\\036/g;			# disguise escaped dollar
+		$template =~ s/\$\$/\\036/g;			# disguise escaped dollar
+
+		my ( $bound, $step ) = split m#[/]#, $range;	# initial iterator state
+		my ( $first, $last ) = split m#[-]#, $bound;
 		$step = abs( $step || 1 );			# coerce step to match range
-		$step = ( $last < $first ) ? -$step : $step;
-		@{$self}{qw(instant step)} = ( $first, $step );
+		$step = -$step if $last < $first;
 		$self->{count} = int( ( $last - $first ) / $step ) + 1;
 
-		for ( $self->{template} ) {
-			s/\\\$/\\036/g;				# disguise escaped dollar
-			s/\$\$/\\036/g;				# disguise escaped dollar
-		}
+		@{$self}{qw(instant step template line)} = ( $first, $step, $template, $line );
+
 		return $self;
 	}
 
 	sub read {
 		my $self = shift;
-		return undef unless $self->{count};		# EOF
+		return undef unless $self->{count}-- > 0;	# EOF
 
 		my $instant = $self->{instant};			# update iterator state
 		$self->{instant} += $self->{step};
-		$self->{count}--;
 
 		local $_ = $self->{template};			# copy template
-		while (/\$\{([^\}]*)\}/) {			# substitute ${...}
-			my $s = _format( $instant, split /[,]/, $1 );
+		while (/\$\{(.*)\}/) {				# interpolate ${...}
+			my $s = _format( $instant, split /\,/, $1 );
 			s/\$\{$1\}/$s/eg;
 		}
-		s/\$/_format($instant)/eg;			# unqualified $
+
+		s/\$/$instant/eg;				# interpolate $
 		return $_;
 	}
 
@@ -384,18 +382,18 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 
 	sub _format {			## convert $GENERATE iteration number to specified format
-		my $number = shift || 0;			# per ISC BIND 9.7
+		my $number = shift;				# per ISC BIND 9.7
 		my $offset = shift || 0;
 		my $length = shift || 0;
 		my $format = shift || 'd';
-		for ($format) {
-			my $value = $number + $offset;
-			my $digit = $length || 1;
-			return substr sprintf( "%01.$digit$format", $value ), -$length if /[doxX]/;
-			my $nibble = join( '.', split //, sprintf ".%32.32lx", $value );
-			return lc reverse substr $nibble, -$length if /[n]/;
-			return uc reverse substr $nibble, -$length if /[N]/;
-		}
+
+		my $value = $number + $offset;
+		my $digit = $length || 1;
+		return substr sprintf( "%01.$digit$format", $value ), -$length if $format =~ /[doxX]/;
+
+		my $nibble = join( '.', split //, sprintf ".%32.32lx", $value );
+		return lc reverse substr $nibble, -$length if $format =~ /[n]/;
+		return uc reverse substr $nibble, -$length if $format =~ /[N]/;
 	}
 
 }
@@ -407,10 +405,10 @@ sub _generate {				## expand $GENERATE into input stream
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
 	my $generate = new Net::DNS::ZoneFile($handle);
 
-	undef $self->{latest};					# forbid empty owner field
-	%$generate = %$self;					# save state, create link
-	@{$self}{qw(link handle)} = ( $generate, $handle );
-	return $handle;
+	delete $self->{latest};					# forbid empty owner field
+	%$generate = (%$self);					# save state, create link
+	$self->{link} = $generate;
+	return $self->{handle} = $handle;
 }
 
 
@@ -445,22 +443,20 @@ sub _getline {				## get line from current source
 
 		return $_ unless /^\$/;				# RR string
 
-		if (/^\$GENERATE/i) {				# directive
-			my ( undef, $range, @template ) = split;
-			die '$GENERATE incomplete' unless $range;
-			$fh = $self->_generate( $range, "@template\n" );
-
-		} elsif (/^\$INCLUDE/i) {			# directive
-			my ( undef, $file, $origin ) = split;
-			$fh = $self->_include($file);
-			my $context = $self->{context};
-			&$context( sub { $self->_origin($origin); } ) if $origin;
-
-		} elsif (/^\$ORIGIN/i) {			# directive
+		if (/^\$ORIGIN/i) {				# directive
 			my ( undef, $origin ) = split;
 			die '$ORIGIN incomplete' unless $origin;
 			my $context = $self->{context};
 			&$context( sub { $self->_origin($origin); } );
+
+		} elsif (/^\$INCLUDE/i) {			# directive
+			my ( undef, @argument ) = split;
+			$fh = $self->_include(@argument);
+
+		} elsif (/^\$GENERATE/i) {			# directive
+			my ( undef, $range, @template ) = split;
+			die '$GENERATE incomplete' unless $range;
+			$fh = $self->_generate( $range, "@template\n" );
 
 		} elsif (/^\$TTL/i) {				# directive
 			my ( undef, $ttl ) = split;
@@ -495,7 +491,7 @@ sub _getRR {				## get RR from current source
 	my $context = $self->{context};
 	my $rr = &$context( sub { Net::DNS::RR->_new_string($line) } );
 
-	$rr->{owner} = ( $self->{latest} || $rr )->{owner} if $noname;		  # overwrite placeholder
+	$rr->{owner} = $self->{latest}->{owner} if $noname && $self->{latest};	  # overwrite placeholder
 
 	$rr->class( $self->{class} ||= $rr->class );		# propagate RR class
 
@@ -509,23 +505,25 @@ sub _getRR {				## get RR from current source
 sub _include {				## open $INCLUDE file
 	my $self = shift;
 	my $file = shift;
+	my $root = shift;
 
 	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
 
 	my @discipline = ( join ':', '<', PerlIO::get_layers $self->{handle} ) if PERLIO;
 	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: $! "$file");
 
-	undef $self->{latest};					# forbid empty owner field
+	delete $self->{latest};					# forbid empty owner field
 	my $include = bless {%$self}, ref($self);		# save state, create link
-	@{$self}{qw(link handle name)} = ( $include, $handle, $file );
-	return $handle;
+	@{$self}{qw(link name)} = ( $include, $file );
+	$self->{context} = origin Net::DNS::Domain($root) if $root;
+	return $self->{handle} = $handle;
 }
 
 
 sub _origin {				## change $ORIGIN (scope: current file)
 	my $self = shift;
 	$self->{context} = origin Net::DNS::Domain(shift);
-	undef $self->{latest};					# forbid empty owner field
+	delete $self->{latest};					# forbid empty owner field
 }
 
 
