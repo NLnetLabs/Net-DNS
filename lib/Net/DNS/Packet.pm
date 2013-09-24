@@ -64,10 +64,11 @@ sub new {
 		question   => [],
 		answer	   => [],
 		authority  => [],
-		additional => []}, $class;
+		additional => [],
+		header	   => {}	## Compatibility with Net::DNS::SEC
+		}, $class;
 
 	$self->{question} = [Net::DNS::Question->new(@_)] if scalar @_;
-	$self->{header} = {}; # For compatibility with Net::DNS::SEC
 
 	$self->header->rd(1);
 	return $self;
@@ -128,7 +129,7 @@ sub decode {
 			authority  => [],
 			additional => [],
 			answersize => length $$data,
-			header     => {} # Compatibility with Net::DNS::SEC
+			header	   => {}## Compatibility with Net::DNS::SEC
 			}, $class;
 
 		# question/zone section
@@ -450,28 +451,19 @@ Returns the number of resource records in the specified section.
 =cut
 
 sub push {
-	my $self    = shift;
-	my $section = lc shift || '';
-	my @rr	    = grep ref($_), @_;
+	my $self = shift;
+	my $list = $self->_section(shift);
+	my @rr	 = grep ref($_), @_;
 
-	for ($section) {
-		return CORE::push( @{$self->{question}}, @rr ) if /^question/;
-
-		if ( $self->header->opcode eq 'UPDATE' ) {
-			my ($zone) = $self->zone;
-			my $zclass = $zone->zclass;
-			foreach (@rr) {
-				$_->class($zclass) unless $_->class =~ /ANY|NONE/;
-			}
+	if ( $self->header->opcode eq 'UPDATE' ) {
+		my ($zone) = $self->zone;
+		my $zclass = $zone->zclass;
+		foreach (@rr) {
+			$_->class($zclass) unless $_->class =~ /ANY|NONE/;
 		}
-
-		return CORE::push( @{$self->{answer}},	   @rr ) if /^ans|^pre/;
-		return CORE::push( @{$self->{authority}},  @rr ) if /^auth|^upd/;
-		return CORE::push( @{$self->{additional}}, @rr ) if /^add/;
 	}
 
-	carp qq(invalid section "$section");
-	return undef;
+	return CORE::push( @$list, @rr );
 }
 
 
@@ -485,24 +477,25 @@ sub push {
     $nscount = $packet->unique_push(update => @rr);
 
 Adds RRs to the specified section of the packet provided that
-the RRs do not already exist in the packet.
+the RRs are not already present in the same section.
 
 Returns the number of resource records in the specified section.
 
 =cut
 
 sub unique_push {
-	my $self    = shift;
-	my $section = shift;
-	my @rr	    = grep ref($_), @_;
+	my $self = shift;
+	my $list = $self->_section(shift);
+	my @rr	 = grep ref($_), @_;
 
-	my @unique = grep !$self->{seen}->{lc( $_->name ) . $_->class . $_->type . $_->rdatastr}++, @rr;
+	my %unique = map { ( bless( {%$_, ttl => 0}, ref($_) )->canonical, $_ ) } @$list, @rr;
 
-	return $self->push( $section, @unique );
+	@$list = ();
+	return CORE::push( @$list, values %unique );
 }
 
 sub safe_push {
-	carp('safe_push() is deprecated, please use unique_push() instead,');
+	carp 'safe_push() deprecated: replaced by unique_push()';
 	&unique_push;
 }
 
@@ -512,27 +505,33 @@ sub safe_push {
     my $rr = $packet->pop("pre");
     my $rr = $packet->pop("update");
     my $rr = $packet->pop("additional");
-    my $rr = $packet->pop("question");
 
-Removes RRs from the specified section of the packet.
+Removes a single RR from the specified section of the packet.
 
 =cut
 
 sub pop {
 	my $self = shift;
-	my $section = lc shift || '';
+	my $list = $self->_section(shift);
 
-	for ($section) {
-		return CORE::pop( @{$self->{additional}} ) if /^add/;
-		return CORE::pop( @{$self->{answer}} )	   if /^ans|^pre/;
-		return CORE::pop( @{$self->{authority}} )  if /^auth|^upd/;
-		return CORE::pop( @{$self->{question}} )   if /^question/;
-	}
-
-	carp qq(invalid section "$section");
-	return undef;
+	return CORE::pop(@$list);
 }
 
+
+my %_section = (			## section name abbreviation table
+	'ans' => 'answer',
+	'pre' => 'answer',
+	'aut' => 'authority',
+	'upd' => 'authority',
+	'add' => 'additional'
+	);
+
+sub _section {				## returns array reference for section
+	my $self = shift;
+	my $name = shift;
+	my $list = $_section{unpack 'a3', $name} || $name;
+	return $self->{$list} || [];
+}
 
 
 =head2 dn_comp
@@ -648,9 +647,9 @@ Attaches a TSIG resource record object containing a key, which will
 be used to sign a packet with a TSIG resource record (see RFC 2845).
 Uses the following defaults:
 
-    algorithm   = HMAC-MD5.SIG-ALG.REG.INT
+    algorithm	= HMAC-MD5.SIG-ALG.REG.INT
     time_signed = current time
-    fudge       = 300 seconds
+    fudge	= 300 seconds
 
 If you wish to customize the TSIG record, you'll have to create it
 yourself and call the appropriate Net::DNS::RR::TSIG methods.  The
@@ -674,7 +673,7 @@ sub sign_tsig {
 	my $self = shift;
 	my $tsig = shift || return undef;
 
-	unless ( ref $tsig && ($tsig->type eq "TSIG") ) {
+	unless ( ref($tsig) && $tsig->isa('Net::DNS::TSIG') ) {
 		my $key = shift || return undef;
 		$tsig = Net::DNS::RR->new("$tsig TSIG $key");
 	}
@@ -711,29 +710,22 @@ sub sign_sig0 {
 	my $sig0;
 
 	croak('sign_sig0() is only available when Net::DNS::SEC is installed')
-		unless $Net::DNS::DNSSEC;
+			unless $Net::DNS::DNSSEC;
 
-	if ( ref $arg ) {
-		if ( UNIVERSAL::isa($arg,'Net::DNS::RR::SIG') ) {
-			$sig0 = $arg;
+	unless ( ref($arg) ) {
+		$sig0 = Net::DNS::RR::SIG->create( '', $arg );
 
-		} elsif ( UNIVERSAL::isa($arg,'Net::DNS::SEC::Private') ) {
-			$sig0 = Net::DNS::RR::SIG->create('', $arg);
+	} elsif ( $arg->isa('Net::DNS::RR::SIG') ) {
+		$sig0 = $arg;
 
-		} elsif ( UNIVERSAL::isa($arg,'Net::DNS::RR::SIG::Private') ) {
-			carp ref($arg).' is deprecated - use Net::DNS::SEC::Private instead';
-			$sig0 = Net::DNS::RR::SIG->create('', $arg);
-
-		} else {
-			croak 'Incompatible class as argument to sign_sig0: '.ref($arg);
-
-		}
+	} elsif ( $arg->isa('Net::DNS::SEC::Private') ) {
+		$sig0 = Net::DNS::RR::SIG->create( '', $arg );
 
 	} else {
-		$sig0 = Net::DNS::RR::SIG->create('', $arg);
+		croak join ' ', 'Incompatible', ref($arg), 'argument to sign_sig0';
 	}
 
-	$self->push('additional', $sig0) if $sig0;
+	$self->push( 'additional', $sig0 ) if $sig0;
 	return $sig0;
 }
 
@@ -822,16 +814,16 @@ sub truncate {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {			## Default method
+sub AUTOLOAD {				## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
-sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 
-sub dump {			## print internal data structure
+sub dump {				## print internal data structure
 	use Data::Dumper;
 	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
 	my $self = shift;
@@ -852,7 +844,7 @@ Portions Copyright (c)2002-2004 Chris Reinhardt.
 
 Portions Copyright (c)2002-2009 Olaf Kolkman
 
-Portions Copyright (c)2007-2008 Dick Franks
+Portions Copyright (c)2007-2013 Dick Franks
 
 All rights reserved.
 

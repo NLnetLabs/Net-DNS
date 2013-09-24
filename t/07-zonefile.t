@@ -3,7 +3,7 @@
 use strict;
 use FileHandle;
 
-use Test::More tests => 52;
+use Test::More tests => 56;
 
 use constant UTF8 => eval {
 	require Encode;						# expect this to fail pre-5.8.0
@@ -26,6 +26,7 @@ my $seq;
 
 sub source {				## zone file builder
 	my $text = shift;
+	my @args = @_;
 
 	my $tag	 = ++$seq;
 	my $file = "zone$tag.txt";
@@ -36,7 +37,7 @@ sub source {				## zone file builder
 	print $handle $text;
 	close $handle;
 
-	return new Net::DNS::ZoneFile($file);
+	return new Net::DNS::ZoneFile( $file, @args );
 }
 
 
@@ -51,6 +52,15 @@ sub source {				## zone file builder
 	my @rr = $zonefile->read;
 	is( scalar @rr,	     0, 'zonefile->read to end of file' );
 	is( $zonefile->line, 0, 'zonefile->line zero if file empty' );
+
+	is( $zonefile->origin, '.', 'new ZoneFile origin defaults to DNS root' );
+
+	my $tld = 'test';
+	my $absolute = source( '', "$tld." );
+	is( $absolute->origin, "$tld.", 'new ZoneFile with absolute origin' );
+
+	my $relative = source( '', "$tld" );
+	is( $relative->origin, "$tld.", 'new ZoneFile->origin always absolute' );
 }
 
 
@@ -132,26 +142,31 @@ EOF
 }
 
 
+my $zonefile;
 {				## $ORIGIN directive
 	my $nested = source <<'EOF';
 nested	NULL
 EOF
 
+	my $origin = 'example.com';
+	my $ORIGIN = '$ORIGIN';
 	my $inner = join ' ', '$INCLUDE', $nested->name;
 	my $include = source <<"EOF";
+$ORIGIN $origin
 @	NS	host
 $inner 
 @	NULL
+$ORIGIN relative
+@	NULL
 EOF
 
-	my $outer = join ' ', '$INCLUDE', $include->name, 'example.com';
-	my $zonefile = source <<"EOF";
+	my $outer  = join ' ', '$INCLUDE', $include->name;
+	$zonefile = source <<"EOF";
 $outer 
 outer	NULL
 EOF
 
-	my $ns	   = $zonefile->read;
-	my $origin = $zonefile->origin;
+	my $ns = $zonefile->read;
 	is( $ns->name,	  $origin,	  '@	NS	has expected name' );
 	is( $ns->nsdname, "host.$origin", '@	NS	has expected rdata' );
 
@@ -160,6 +175,8 @@ EOF
 	is( $rr->name, $expect, 'scope of $ORIGIN encompasses nested $INCLUDE' );
 
 	is( $zonefile->read->name, $origin, 'scope of $ORIGIN continues after $INCLUDE' );
+
+	is( $zonefile->read->name, "relative.$origin", '$ORIGIN can be relative to current $ORIGIN' );
 
 	is( $zonefile->read->name, 'outer', 'scope of $ORIGIN curtailed by end of file' );
 }
@@ -185,9 +202,9 @@ $TTL 1234
 $ORIGIN example.
 hosta	A	192.0.2.1
 	MX	10 hosta
-	TXT	( multiline
-		resource
-		record )
+	TXT	( multiline	; interspersed ( mischievously )
+		resource	; with	( confusing )
+		record	)	; comments
 	TXT	string
 EOF
 	is( $zonefile->read->name, 'hosta.example', 'name of simple RR as expected' );
@@ -200,13 +217,13 @@ EOF
 
 
 {				## compatibility with defunct Net::DNS::ZoneFile 1.04 distro
-	my $listref = Net::DNS::ZoneFile->read('zone8.txt');
+	my $listref = Net::DNS::ZoneFile->read( $zonefile->name );
 	ok( scalar(@$listref), 'read entire zone file' );
 }
 
 
 {
-	my $listref = Net::DNS::ZoneFile->read( 'zone8.txt', '.' );
+	my $listref = Net::DNS::ZoneFile->read( $zonefile->name, '.' );
 	ok( scalar(@$listref), 'read zone file via path' );
 }
 

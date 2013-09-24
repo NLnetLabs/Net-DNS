@@ -195,10 +195,9 @@ sub make_reply {
 	}
 
 	if ( $query->header->qr() ) {
-		print "ERROR: invalid packet (qr was set, dropping)\n" if $self->{Verbose};
+		print "ERROR: invalid packet (qr set), dropping\n" if $self->{Verbose};
 		return;
 	}
-
 
 	my $reply  = $query->reply();
 	my $header = $reply->header;
@@ -351,11 +350,16 @@ sub tcp_connection {
 			my $qbuf = substr( $self->{_tcp}{$sock}{inbuffer}, 0, $self->{_tcp}{$sock}{querylength} );
 			substr( $self->{_tcp}{$sock}{inbuffer}, 0, $self->{_tcp}{$sock}{querylength} ) = "";
 			my $query = new Net::DNS::Packet( \$qbuf );
-			my $conn  = {
-				sockhost => $sock->sockhost(),
-				sockport => $sock->sockport(),
-				peerhost => $sock->peerhost(),
-				peerport => $sock->peerport()};
+			if ( my $err = $@ ) {
+				print "Error decoding query packet: $err\n" if $self->{Verbose};
+				undef $query;			# force FORMERR reply
+			}
+			my $conn = {
+				sockhost => $sock->sockhost,
+				sockport => $sock->sockport,
+				peerhost => $sock->peerhost,
+				peerport => $sock->peerport
+				};
 			my $reply = $self->make_reply( $query, $sock->peerhost, $conn );
 			if ( not defined $reply ) {
 				print "I couldn't create a reply for $peer. Closing socket.\n"
@@ -398,10 +402,9 @@ sub udp_connection {
 	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{Verbose};
 
 	my $query = new Net::DNS::Packet( \$buf, $self->{Verbose} );
-	my $err = $@;
-	if ( !defined($query) ) {
-		print "Error interpreting query: $err\n" if $self->{Verbose};
-		return;
+	if ( my $err = $@ ) {
+		print "Error decoding query packet: $err\n" if $self->{Verbose};
+		undef $query;					# force FORMERR reply
 	}
 	my $conn = {
 		sockhost => $sock->sockhost,
@@ -416,7 +419,7 @@ sub udp_connection {
 	local $| = 1 if $self->{Verbose};
 	print "Writing response - " if $self->{Verbose};
 
-	if ( $sock->send( $reply->data ) ) {			#
+	if ( $sock->send( $reply->data ) ) {
 		print "done\n" if $self->{Verbose};
 	} else {
 		print "failed to send reply: $!\n" if $self->{Verbose};
