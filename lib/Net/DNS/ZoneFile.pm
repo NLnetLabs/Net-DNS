@@ -72,8 +72,10 @@ exhausted or all references to the ZoneFile object cease to exist.
 
 The optional second argument specifies $ORIGIN for the zone file.
 
-Character encoding is specified indirectly using a FileHandle package
-and also applies to any files introduced by $include directives.
+Character encoding is specified indirectly by creating a FileHandle
+with the desired encoding layer, which is then passed as an argument
+to new(). The specified encoding is applied to any files introduced
+by $include directives.
 
 =cut
 
@@ -84,9 +86,10 @@ sub new {
 	my $file = shift;
 	$self->_origin(shift);
 
-	if ( ref($file) ) {					# presumed to be a file handle
-		$self->{handle} = $file;
-		return $self;
+	if ( ref($file) ) {
+		$self->{name} = $self->{handle} = $file;
+		return $self if ref($file) =~ /FileHandle|GLOB|Text/;
+		croak 'argument not a file handle';
 	}
 
 	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
@@ -403,11 +406,10 @@ sub _generate {				## expand $GENERATE into input stream
 	my ( $self, $range, $template ) = @_;
 
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
-	my $generate = new Net::DNS::ZoneFile($handle);
 
 	delete $self->{latest};					# forbid empty owner field
-	%$generate = (%$self);					# save state, create link
-	$self->{link} = $generate;
+	my $parent = bless {%$self}, Net::DNS::ZoneFile;	# save state, create link
+	$self->{link} = $parent;
 	return $self->{handle} = $handle;
 }
 

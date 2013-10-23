@@ -2,10 +2,22 @@ $Id$                       -*-text-*-
 
 **** 0.73 [unreleased]
 
-Fix rt.cpan.org #81942/#84601
+Fix rt.cpan.org #88778
+
+	$update->unique_push() does not work as advertised.
+
+Fix rt.cpan.org #88744
+
+	Nameserver crashes on malformed TCP query.
+
+Fix rt.cpan.org #84601/#81942
 
 	Fix memory leak on packet cleanup. Indirect self-reference via
 	header prevented garbage collector from deallocating packet.
+
+Feature rt.cpan.org #84468
+
+	TSIG: add support for HMAC-SHA1 .. HMAC-SHA512
 
 Fix rt.cpan.org #84110
 
@@ -17,7 +29,8 @@ Fix rt.cpan.org #83755
 
 Fix rt.cpan.org #83078
 
-	eval{ ... }; { } if $@; unsafe using threads.
+	Can't locate Net/DNS/Resolver/linux.pm in @INC
+	Conjecture:  eval{ ... };  if ($@) { ... };  broken by threads.
 
 Fix rt.cpan.org #83075
 
@@ -34,6 +47,10 @@ Fix rt.cpan.org #82296
 Fix rt.cpan.org #82294
 
 	Perl taint inadvertently removed in Domain and Text objects.
+
+Feature rt.cpan.org #53610
+
+	add TSIG validation support
 
 
 **** 0.72 Dec 28, 2012

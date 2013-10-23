@@ -54,10 +54,10 @@ sub new {
 	return &_new_from_rdata if COMPATIBLE && ref $_[1];	# resolve new() usage conflict
 
 	return eval { scalar @_ > 2 ? &_new_hash : &_new_string; } || do {
-		my $error = $@	  || 'unknown error ';
+		my $error = $@	  || 'eval{} aborted without setting $@, contrary to Perl specification' . "\n";
 		my $class = shift || __PACKAGE__;
 		my @parse = split /\s+/, shift || '';
-		croak join ' ', "${error}in new $class( ", substr( "@parse @_", 0, 50 ), '... )';
+		croak join ' ', "${error}in new $class(", substr( "@parse @_", 0, 50 ), '... )';
 			}
 }
 
@@ -760,8 +760,8 @@ sub _subclass {
 		$subclass = $module if $symbol eq 'OPT';	# default to OPT declared below
 		my $object = bless {type => $number}, $subclass;
 		if (COMPATIBLE) {
-			my $method = "${module}::new";
-			$object->{OLD}++ if exists &$method;
+			my $method = "${module}::encode_rdata";
+			$object->{OLD}++ unless exists &$method;
 			$object->{type} = $symbol;
 		}
 		$_MINIMAL{$subclass} = [%$object];		# cache minimal content

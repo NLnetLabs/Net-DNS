@@ -83,8 +83,9 @@ available.
      Test::More       
      IO::Socket      
      MIME::Base64     
+     Digest::HMAC
      Digest::MD5  
-     Digest::HMAC_MD5
+     Digest::SHA  
 
 
 For IPv6 support you will need Socket6 and IO::Socket::INET6.  The availability

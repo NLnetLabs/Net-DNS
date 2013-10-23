@@ -15,14 +15,14 @@ Net::DNS::Packet - DNS protocol packet
 
     use Net::DNS::Packet;
 
-    $query = new Net::DNS::Packet('example.com', 'MX', 'IN');
+    $query = new Net::DNS::Packet( 'example.com', 'MX', 'IN' );
 
-    $reply = $resolver->send($query);
+    $reply = $resolver->send( $query );
 
 
 =head1 DESCRIPTION
 
-A C<Net::DNS::Packet> object represents a DNS protocol packet.
+A Net::DNS::Packet object represents a DNS protocol packet.
 
 =cut
 
@@ -42,17 +42,17 @@ require Net::DNS::RR;
 
 =head2 new
 
-    $packet = new Net::DNS::Packet('example.com');
-    $packet = new Net::DNS::Packet('example.com', 'MX', 'IN');
+    $packet = new Net::DNS::Packet( 'example.com' );
+    $packet = new Net::DNS::Packet( 'example.com', 'MX', 'IN' );
 
     $packet = new Net::DNS::Packet();
 
-If passed a domain, type, and class, C<new> creates a packet
-object appropriate for making a DNS query for the requested
-information.  The type and class can be omitted; they default
-to A and IN.
+If passed a domain, type, and class, new() creates a Net::DNS::Packet
+object which is suitable for making a DNS query for the specified
+information.  The type and class may be omitted; they default to A
+and IN.
 
-If called with an empty argument list, C<new> creates an empty packet.
+If called with an empty argument list, new() creates an empty packet.
 
 =cut
 
@@ -79,27 +79,27 @@ sub new {
 
 =pod
 
-    $packet = new Net::DNS::Packet(\$data);
-    $packet = new Net::DNS::Packet(\$data, 1);		# set debugging
+    $packet = new Net::DNS::Packet( \$data );
+    $packet = new Net::DNS::Packet( \$data, 1 );	# debug
 
-If passed a reference to a scalar containing DNS packet data,
-a new packet object is created by decoding the data.  The optional
-second boolean argument is used to enable debugging output.
+If passed a reference to a scalar containing DNS packet data, a new
+packet object is created by decoding the data.  The optional second
+boolean argument is used to enable debugging output.
 
 Returns undef if unable to create a packet object.
 
-Decoding errors, including data corruption and truncation,
-are collected in the $@ ($EVAL_ERROR) variable.
+Decoding errors, including data corruption and truncation, are
+collected in the $@ ($EVAL_ERROR) variable.
 
 
-    ($packet, $length) = new Net::DNS::Packet(\$data);
+    ( $packet, $length ) = new Net::DNS::Packet( \$data );
 
-If called in array context, returns a packet object and the
-number of octets successfully decoded.
+If called in array context, returns a packet object and the number
+of octets successfully decoded.
 
-Note that the number of RRs in each section of the packet may
-differ from the corresponding header value if the data has been
-truncated or corrupted.
+Note that the number of RRs in each section of the packet may differ
+from the corresponding header value if the data has been truncated
+or corrupted during transmission.
 
 =cut
 
@@ -155,6 +155,10 @@ sub decode {
 			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
 			CORE::push( @{$self->{additional}}, $record );
 		}
+
+		return $self;
+	} or do {
+		die 'eval{} aborted without setting $@, contrary to Perl specification' unless $@;
 	};
 
 	if ( $debug && $self ) {
@@ -169,10 +173,9 @@ sub decode {
 =head2 data
 
     $data = $packet->data;
-    $data = $packet->data($limit);
 
-Returns the packet data in binary format, suitable for sending to
-a nameserver.
+Returns the packet data in binary format, suitable for sending as a
+query or update request to a nameserver.
 
 =cut
 
@@ -207,8 +210,8 @@ sub data {
 
     $header = $packet->header;
 
-Constructor method which returns a C<Net::DNS::Header> object
-which represents the header section of the packet.
+Constructor method which returns a Net::DNS::Header object which
+represents the header section of the packet.
 
 =cut
 
@@ -259,7 +262,8 @@ sub reply {
 	$header->qr(1);						# reply with same id, opcode and question
 	$header->id( $qheadr->id );
 	$header->opcode( $qheadr->opcode );
-	$reply->{question} = $query->{question};
+	my @question = $query->question;
+	$reply->{question} = [@question];
 
 	$header->rcode('FORMERR');				# failure to provide RCODE is sinful!
 
@@ -275,11 +279,11 @@ sub reply {
 
     @question = $packet->question;
 
-Returns a list of C<Net::DNS::Question> objects representing the
+Returns a list of Net::DNS::Question objects representing the
 question section of the packet.
 
-In dynamic update packets, this section is known as C<zone> and
-specifies the zone to be updated.
+In dynamic update packets, this section is known as zone() and
+specifies the DNS zone to be updated.
 
 =cut
 
@@ -294,12 +298,12 @@ sub zone {&question}
 
     @answer = $packet->answer;
 
-Returns a list of C<Net::DNS::RR> objects representing the answer
+Returns a list of Net::DNS::RR objects representing the answer
 section of the packet.
 
-In dynamic update packets, this section is known as C<pre> or
-C<prerequisite> and specifies the RRs or RRsets which must or
-must not preexist.
+In dynamic update packets, this section is known as pre() or
+prerequisite() and specifies the RRs or RRsets which must or must
+not preexist.
 
 =cut
 
@@ -315,10 +319,10 @@ sub prerequisite {&answer}
 
     @authority = $packet->authority;
 
-Returns a list of C<Net::DNS::RR> objects representing the authority
+Returns a list of Net::DNS::RR objects representing the authority
 section of the packet.
 
-In dynamic update packets, this section is known as C<update> and
+In dynamic update packets, this section is known as update() and
 specifies the RRs or RRsets to be added or deleted.
 
 =cut
@@ -334,7 +338,7 @@ sub update {&authority}
 
     @additional = $packet->additional;
 
-Returns a list of C<Net::DNS::RR> objects representing the additional
+Returns a list of Net::DNS::RR objects representing the additional
 section of the packet.
 
 =cut
@@ -406,8 +410,8 @@ sub string {
 
     print "packet received from ", $packet->answerfrom, "\n";
 
-Returns the IP address from which we received this packet.  User-created
-packets will return undef for this method.
+Returns the IP address from which this packet was received.
+User-created packets will return undef for this method.
 
 =cut
 
@@ -426,7 +430,7 @@ sub answerfrom {
 
 Returns the size of the packet in bytes as it was received from a
 nameserver.  User-created packets will return undef for this method
-(use C<< length $packet->data >> instead).
+(use length($packet->data) instead).
 
 =cut
 
@@ -437,12 +441,12 @@ sub answersize {
 
 =head2 push
 
-    $ancount = $packet->push(prereq => $rr);
-    $nscount = $packet->push(update => $rr);
-    $arcount = $packet->push(additional => $rr);
+    $ancount = $packet->push( prereq => $rr );
+    $nscount = $packet->push( update => $rr );
+    $arcount = $packet->push( additional => $rr );
 
-    $nscount = $packet->push(update => $rr1, $rr2, $rr3);
-    $nscount = $packet->push(update => @rr);
+    $nscount = $packet->push( update => $rr1, $rr2, $rr3 );
+    $nscount = $packet->push( update => @rr );
 
 Adds RRs to the specified section of the packet.
 
@@ -456,8 +460,7 @@ sub push {
 	my @rr	 = grep ref($_), @_;
 
 	if ( $self->header->opcode eq 'UPDATE' ) {
-		my ($zone) = $self->zone;
-		my $zclass = $zone->zclass;
+		my $zclass = ( $self->zone )[0]->zclass;
 		foreach (@rr) {
 			$_->class($zclass) unless $_->class =~ /ANY|NONE/;
 		}
@@ -469,15 +472,15 @@ sub push {
 
 =head2 unique_push
 
-    $ancount = $packet->unique_push(prereq => $rr);
-    $nscount = $packet->unique_push(update => $rr);
-    $arcount = $packet->unique_push(additional => $rr);
+    $ancount = $packet->unique_push( prereq => $rr );
+    $nscount = $packet->unique_push( update => $rr );
+    $arcount = $packet->unique_push( additional => $rr );
 
-    $nscount = $packet->unique_push(update => $rr1, $rr2, $rr3);
-    $nscount = $packet->unique_push(update => @rr);
+    $nscount = $packet->unique_push( update => $rr1, $rr2, $rr3 );
+    $nscount = $packet->unique_push( update => @rr );
 
-Adds RRs to the specified section of the packet provided that
-the RRs are not already present in the same section.
+Adds RRs to the specified section of the packet provided that the
+RRs are not already present in the same section.
 
 Returns the number of resource records in the specified section.
 
@@ -487,6 +490,13 @@ sub unique_push {
 	my $self = shift;
 	my $list = $self->_section(shift);
 	my @rr	 = grep ref($_), @_;
+
+	if ( $self->header->opcode eq 'UPDATE' ) {
+		my $zclass = ( $self->zone )[0]->zclass;
+		foreach (@rr) {
+			$_->class($zclass) unless $_->class =~ /ANY|NONE/;
+		}
+	}
 
 	my %unique = map { ( bless( {%$_, ttl => 0}, ref($_) )->canonical, $_ ) } @$list, @rr;
 
@@ -502,9 +512,9 @@ sub safe_push {
 
 =head2 pop
 
-    my $rr = $packet->pop("pre");
-    my $rr = $packet->pop("update");
-    my $rr = $packet->pop("additional");
+    my $rr = $packet->pop( 'pre' );
+    my $rr = $packet->pop( 'update' );
+    my $rr = $packet->pop( 'additional' );
 
 Removes a single RR from the specified section of the packet.
 
@@ -534,16 +544,16 @@ sub _section {				## returns array reference for section
 }
 
 
-=head2 dn_comp
+# =head2 dn_comp
 
-    $compname = $packet->dn_comp("foo.example.com", $offset);
+#     $compname = $packet->dn_comp("foo.example.com", $offset);
 
-Returns a domain name compressed for a particular packet object, to
-be stored beginning at the given offset within the packet data.  The
-name will be added to a running list of compressed domain names for
-future use.
+# Returns a domain name compressed for a particular packet object, to
+# be stored beginning at the given offset within the packet data.  The
+# name will be added to a running list of compressed domain names for
+# future use.
 
-=cut
+# =cut
 
 sub dn_comp {
 	my ($self, $fqdn, $offset) = @_;
@@ -573,24 +583,24 @@ sub dn_comp {
 }
 
 
-=head2 dn_expand
+# =head2 dn_expand
 
-    use Net::DNS::Packet qw(dn_expand);
-    ($name, $nextoffset) = dn_expand(\$data, $offset);
+#     use Net::DNS::Packet qw(dn_expand);
+#     ($name, $nextoffset) = dn_expand(\$data, $offset);
 
-    ($name, $nextoffset) = Net::DNS::Packet::dn_expand(\$data, $offset);
+#     ($name, $nextoffset) = Net::DNS::Packet::dn_expand(\$data, $offset);
 
-Expands the domain name stored at a particular location in a DNS
-packet.  The first argument is a reference to a scalar containing
-the packet data.  The second argument is the offset within the
-packet where the (possibly compressed) domain name is stored.
+# Expands the domain name stored at a particular location in a DNS
+# packet.  The first argument is a reference to a scalar containing
+# the packet data.  The second argument is the offset within the
+# packet where the (possibly compressed) domain name is stored.
 
-Returns the domain name and the offset of the next location in the
-packet.
+# Returns the domain name and the offset of the next location in the
+# packet.
 
-Returns undef if the domain name could not be expanded.
+# Returns undef if the domain name could not be expanded.
 
-=cut
+# =cut
 
 
 # This is very hot code, so we try to keep things fast.  This makes for
@@ -633,110 +643,141 @@ sub dn_expand_PP {
 
 =head2 sign_tsig
 
-    $key_name = "tsig-key";
-    $key      = "awwLOtRfpGE+rRKF2+DEiw==";
+    $update = new Net::DNS::Update( 'example.com' );
+    $update->push( update => rr_add( 'foo.example.com A 10.1.2.3' ) );
+    $update->sign_tsig( 'Khmac-sha512.example.+165+01018.key' );
 
-    $update = Net::DNS::Update->new("example.com");
-    $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
+    $update->sign_tsig( 'Khmac-sha512.example.+165+01018.key',
+			fudge => 60
+			);
 
-    $update->sign_tsig($key_name, $key);
+Attaches a TSIG resource record object, which will be used to sign
+the packet (see RFC 2845).
 
-    $response = $res->send($update);
+The TSIG record can be customised by optional additional arguments to
+sign_tsig() or by calling the appropriate Net::DNS::RR::TSIG methods.
 
-Attaches a TSIG resource record object containing a key, which will
-be used to sign a packet with a TSIG resource record (see RFC 2845).
-Uses the following defaults:
+If you wish to create a TSIG record using a non-standard algorithm,
+you will have to create it yourself.  In all cases, the TSIG name
+must uniquely identify the key shared between the parties, and the
+algorithm name must identify the signing function to be used with the
+specified key.
 
-    algorithm	= HMAC-MD5.SIG-ALG.REG.INT
-    time_signed = current time
-    fudge	= 300 seconds
+    $tsig = Net::DNS::RR->new(	name		=> 'tsig.example',
+				type		=> 'TSIG',
+				algorithm	=> 'custom-algorithm',
+				sig_function	=> sub { ... },
+				key		=> '<base64 key text>'
+				);
 
-If you wish to customize the TSIG record, you'll have to create it
-yourself and call the appropriate Net::DNS::RR::TSIG methods.  The
-following example creates a TSIG record and sets the fudge to 60
-seconds:
+    $packet = Net::DNS::Packet->new( 'www.example.com', 'A' );
+    $packet->sign_tsig( $tsig );
 
-    $key_name = "tsig-key";
-    $key      = "awwLOtRfpGE+rRKF2+DEiw==";
+    $response = $res->send( $packet );
 
-    $tsig = Net::DNS::RR->new("$key_name TSIG $key");
-    $tsig->fudge(60);
+The historical simplified syntax is still available, but additional
+options can not be specified.
 
-    $query = Net::DNS::Packet->new("www.example.com");
-    $query->sign_tsig($tsig);
-
-    $response = $res->send($query);
+    $packet->sign_tsig( $key_name, $key );
 
 =cut
 
 sub sign_tsig {
 	my $self = shift;
-	my $tsig = shift || return undef;
+	my $karg = shift || return undef;
 
-	unless ( ref($tsig) && $tsig->isa('Net::DNS::TSIG') ) {
-		my $key = shift || return undef;
-		$tsig = Net::DNS::RR->new("$tsig TSIG $key");
+	my $tsig;
+	unless ( ref($karg) ) {
+		require Net::DNS::RR::TSIG;
+		$tsig = Net::DNS::RR::TSIG->create( $karg, @_ );
+
+	} elsif ( $karg->isa('Net::DNS::RR::TSIG') ) {
+		$tsig = $karg;
+
+	} else {
+		croak join ' ', 'Incompatible', ref($karg), 'argument to sign_tsig';
 	}
 
-	my @additional = grep { $_->type ne 'TSIG' } @{$self->{additional}};
-	my $arcount = scalar @{$self->{additional}};
-	carp("A TSIG RR is already present, removing...") if scalar @additional < $arcount;
-
-	CORE::push( @additional, $tsig ) if $tsig;
-	@{$self}{additional} = [@additional];
+	CORE::push( @{$self->{additional}}, $tsig ) if $tsig;
 	return $tsig;
 }
 
 
 =head2 sign_sig0
 
-SIG0 support is provided through the Net::DNS::RR::SIG class. This class is not part
-of the default Net::DNS distribution but resides in the Net::DNS::SEC distribution.
+SIG0 support is provided through the Net::DNS::RR::SIG class. This
+class is not part of the default Net::DNS distribution but resides
+in the Net::DNS::SEC distribution.
 
-    $update = Net::DNS::Update->new("example.com");
-    $update->push("update", rr_add("foo.example.com A 10.1.2.3"));
-    $update->sign_sig0("Kexample.com+003+25317.private");
+    $update = new Net::DNS::Update('example.com');
+    $update->push( update => rr_add('foo.example.com A 10.1.2.3'));
+    $update->sign_sig0('Kexample.com+003+25317.private');
 
-
-SIG0 support is experimental see Net::DNS::RR::SIG for details.
-
-The method will call C<Carp::croak()> if Net::DNS::RR::SIG cannot be found.
+The method will call Carp::croak() if Net::DNS::RR::SIG can not be
+found.
 
 =cut
 
 sub sign_sig0 {
 	my $self = shift;
-	my $arg = shift || return undef;
+	my $karg = shift || return undef;
+
 	my $sig0;
+	unless ( ref($karg) ) {
+		require Net::DNS::RR::SIG;
+		$sig0 = Net::DNS::RR::SIG->create( '', $karg );
 
-	croak('sign_sig0() is only available when Net::DNS::SEC is installed')
-			unless $Net::DNS::DNSSEC;
+	} elsif ( $karg->isa('Net::DNS::RR::SIG') ) {
+		$sig0 = $karg;
 
-	unless ( ref($arg) ) {
-		$sig0 = Net::DNS::RR::SIG->create( '', $arg );
-
-	} elsif ( $arg->isa('Net::DNS::RR::SIG') ) {
-		$sig0 = $arg;
-
-	} elsif ( $arg->isa('Net::DNS::SEC::Private') ) {
-		$sig0 = Net::DNS::RR::SIG->create( '', $arg );
+	} elsif ( $karg->isa('Net::DNS::SEC::Private') ) {
+		require Net::DNS::RR::SIG;
+		$sig0 = Net::DNS::RR::SIG->create( '', $karg );
 
 	} else {
-		croak join ' ', 'Incompatible', ref($arg), 'argument to sign_sig0';
+		croak join ' ', 'Incompatible', ref($karg), 'argument to sign_sig0';
 	}
 
-	$self->push( 'additional', $sig0 ) if $sig0;
+	CORE::push( @{$self->{additional}}, $sig0 ) if $sig0;
 	return $sig0;
+}
+
+
+=head2 verify and verifyerr
+
+    $packet->verify()		|| die $packet->verifyerr;
+    $reply->verify( $query )	|| die $reply->verifyerr;
+
+Verify TSIG signature of packet or reply to the corresponding query.
+
+    $packet->verify( $keyrr )		|| die $packet->verifyerr;
+    $packet->verify( [$keyrr, ...] )	|| die $packet->verifyerr;
+
+Verify SIG0 packet signature against one or more specified KEY RRs.
+=cut
+
+sub verify {
+	my $self = shift;
+
+	my $sig = $self->sigrr || return undef;
+	return $sig->verify( $self, @_ );
+}
+
+sub verifyerr {
+	my $self = shift;
+
+	my $sig = $self->sigrr || return 'not signed';
+	return $sig->vrfyerrstr;
 }
 
 
 =head2 truncate
 
 The truncate method takes a maximum length as argument and then tries
-to truncate the packet an set the TC bit according to the rules of
+to truncate the packet and set the TC bit according to the rules of
 RFC2181 Section 9.
 
-The minimum maximum length that is honored is 512 octets.
+The minimum maximum length that is honoured is 512 octets.
 
 =cut
 
@@ -832,6 +873,17 @@ sub dump {				## print internal data structure
 }
 
 
+sub sigrr {				## obtain packet signature RR
+	my $self = shift;
+
+	my ($sig) = reverse @{$self->{additional}};
+	return undef unless $sig;
+	return $sig if $sig->type eq 'TSIG';
+	return $sig if $sig->type eq 'SIG';
+	return undef;
+}
+
+
 1;
 __END__
 
@@ -854,9 +906,9 @@ modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Update>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 4.1, RFC 2136 Section 2, RFC 2845
+L<perl>, L<Net::DNS>, L<Net::DNS::Update>, L<Net::DNS::Header>,
+L<Net::DNS::Question>, L<Net::DNS::RR>, L<Net::DNS::RR::TSIG>,
+RFC1035 Section 4.1, RFC2136 Section 2, RFC2845
 
 =cut
 
