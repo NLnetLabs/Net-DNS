@@ -34,7 +34,7 @@ use constant TSIG => typebyname qw(TSIG);
 
 
 {
-	my %algbyname = (
+	my @algbyname = (
 		'HMAC-MD5.SIG-ALG.REG.INT' => 157,
 		'HMAC-SHA1'		   => 161,
 		'HMAC-SHA224'		   => 162,
@@ -43,21 +43,21 @@ use constant TSIG => typebyname qw(TSIG);
 		'HMAC-SHA512'		   => 165,
 		);
 
-	my %algbyval = reverse %algbyname;
-	$algbyname{'HMAC-MD5'} = 157;
-	$algbyname{'HMAC-SHA'} = 161;
+	my @algbyalias = (
+		'HMAC-MD5' => 157,
+		'HMAC-SHA' => 161,
+		);
 
-	while ( my ( $key, $value ) = each %algbyname ) {
-		$key =~ tr /A-Za-z0-9\000-\377/A-ZA-Z0-9/d;	# alphanumeric key
-		$algbyname{$key} = $value;
-	}
+	my %algbyname = map { s /[^A-Za-z0-9]//g; $_ } @algbyalias, @algbyname;
+	my %algbyval = reverse @algbyname;
+
 
 	sub algbyname {
 		my $name = shift;
-		my $key	 = $name;
-		$key =~ tr /A-Za-z0-9\000-\377/A-ZA-Z0-9/d;	# alphanumeric key
+		my $key	 = $name;				# synthetic key
+		$key =~ s /[^A-Za-z0-9]//g;			# strip non-alphanumerics
 		return 0 + $name unless $key =~ /\D/;		# accept algorithm number
-		return $algbyname{$key};
+		return $algbyname{uc $key};
 	}
 
 	sub algbyval {
