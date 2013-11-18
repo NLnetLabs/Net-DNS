@@ -22,7 +22,7 @@ unlink("t/online.disabled");
 unlink("t/IPv6.enabled");
 unlink("t/IPv6.disabled");
 
-warn <<AMEN if $] < 5.005;
+warn <<AMEN if $] < 5.006;
 
 This version of Net::DNS has not been tested against perl v$]
 The author is confident that this package will function 
@@ -136,12 +136,12 @@ my %Makefile = (
 	AUTHOR	     => 'Olaf Kolkman <olaf@net-dns.org>',
 	LICENSE	     => 'perl',
 	PREREQ_PM    => {
-		'Test::More'	=> 0.18,
-		'IO::Socket'	=> 0,
-		'MIME::Base64'	=> 2.11,
-		'Digest::HMAC'	=> 1.00,
-		'Digest::MD5'	=> 2.12,
+		'Digest::HMAC'	=> 1.01,
+		'Digest::MD5'	=> 2.13,
 		'Digest::SHA'	=> 5.23,
+		'IO::Socket'	=> 1.24,
+		'MIME::Base64'	=> 2.11,
+		'Test::More'	=> 0.52,
 		},
 	XS    => {},
 	C     => [],

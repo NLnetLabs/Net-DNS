@@ -31,8 +31,9 @@ sub source {				## zone file builder
 	my $tag	 = ++$seq;
 	my $file = "zone$tag.txt";
 
-	my $handle = new FileHandle( $file, '>' );		# Note: encoding not specified
+	my $handle = new FileHandle( $file, '>' );		# create test file
 	die "Failed to create $file" unless $handle;
+	eval{ binmode($handle) };				# suppress encoding layer
 
 	print $handle $text;
 	close $handle;
@@ -253,18 +254,19 @@ SKIP: {				## Non-ASCII zone content
 	my $text  = pack 'U*', 949, 944, 961, 951, 954, 945;
 	is( $txtgr->txtdata, $text , 'ISO8859-7 TXT argument' );
 
+	eval{ binmode(DATA) };					# suppress encoding layer
 	my $jptxt = <DATA>;
 	my $file2 = source($jptxt);
 	my $fh2   = new FileHandle( $file2->name, '<:utf8' );	# UTF-8 character encoding
 	my $zone2 = new Net::DNS::ZoneFile($fh2);
-	my $txtrr = $zone2->read;
+	my $txtrr = $zone2->read;				# TXT RR with kanji RDATA
 	is( length( $txtrr->txtdata ), 12, 'Unicode/UTF-8 TXT argument' );
 
 	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
 
-	my $uname = <DATA>;
-	my $zone3 = source($uname);
-	my $nextr = $zone3->read;
+	my $kanji = <DATA>;
+	my $zone3 = source($kanji);
+	my $nextr = $zone3->read;				# NULL RR with kanji owner name
 	is( $nextr->name, 'xn--wgv71a', 'Unicode/UTF-8 domain name' );
 }
 

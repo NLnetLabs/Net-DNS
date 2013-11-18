@@ -718,24 +718,26 @@ found.
 
 =cut
 
+use constant DNSSIG0 => eval { require Net::DNS::RR::SIG; } || 0;
+
 sub sign_sig0 {
 	my $self = shift;
 	my $karg = shift || return undef;
 
+	croak 'SIG0: prerequisite Net::DNS::SEC not available' unless DNSSIG0;
+
 	my $sig0;
-	unless ( ref($karg) ) {
-		require Net::DNS::RR::SIG;
+	unless ( my $kref = ref($karg) ) {
 		$sig0 = Net::DNS::RR::SIG->create( '', $karg );
 
-	} elsif ( $karg->isa('Net::DNS::RR::SIG') ) {
+	} elsif ( $kref eq 'Net::DNS::RR::SIG' ) {
 		$sig0 = $karg;
 
-	} elsif ( $karg->isa('Net::DNS::SEC::Private') ) {
-		require Net::DNS::RR::SIG;
+	} elsif ( $kref eq 'Net::DNS::SEC::Private' ) {
 		$sig0 = Net::DNS::RR::SIG->create( '', $karg );
 
 	} else {
-		croak join ' ', 'Incompatible', ref($karg), 'argument to sign_sig0';
+		croak "unexpected $kref argument passed to sign_sig0";
 	}
 
 	CORE::push( @{$self->{additional}}, $sig0 ) if $sig0;
