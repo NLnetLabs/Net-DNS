@@ -145,7 +145,6 @@ t/07-zonefile.t
 t/08-online.t
 t/10-recurse.t
 t/11-inet6.t
-t/13-udp-trunc.t
 t/99-cleanup.t
 t/NonFatal.pm
 t/TestData.pm
