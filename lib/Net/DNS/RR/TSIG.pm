@@ -6,7 +6,9 @@ package Net::DNS::RR::TSIG;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -14,9 +16,7 @@ Net::DNS::RR::TSIG - DNS TSIG resource record
 
 =cut
 
-
 use integer;
-
 use Carp;
 use MIME::Base64;
 
@@ -48,16 +48,18 @@ use constant TSIG => typebyname qw(TSIG);
 		'HMAC-SHA' => 161,
 		);
 
-	my %algbyname = map { s /[^A-Za-z0-9]//g; $_ } @algbyalias, @algbyname;
 	my %algbyval = reverse @algbyname;
 
 
+	my @algbynum = map { ( $_, 0 + $_ ) } keys %algbyval;	# accept algorithm number
+
+	my %algbyname = map { s /[^A-Za-z0-9]//g; $_ } @algbyalias, @algbyname, @algbynum;
+
+
 	sub algbyname {
-		my $name = shift;
-		my $key	 = $name;				# synthetic key
-		$key =~ s /[^A-Za-z0-9]//g;			# strip non-alphanumerics
-		return 0 + $name unless $key =~ /\D/;		# accept algorithm number
-		return $algbyname{uc $key};
+		my $key = uc shift;				# synthetic key
+		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
+		return $algbyname{$key};
 	}
 
 	sub algbyval {
@@ -684,12 +686,12 @@ Portions Copyright (c)2002-2004 Chris Reinhardt.
 
 Portions Copyright (c)2013 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

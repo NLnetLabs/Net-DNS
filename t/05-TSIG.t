@@ -3,7 +3,7 @@
 use strict;
 
 BEGIN {
-	use Test::More tests => 54;
+	use Test::More tests => 57;
 
 	use_ok('Net::DNS');
 	use_ok('Digest::HMAC');
@@ -81,6 +81,7 @@ my $hash = {};
 	my $function  = $tsig->sig_function;			# default signing function
 	my $algorithm = $tsig->algorithm;			# default algorithm
 
+	is( $algorithm, 'HMAC-MD5.SIG-ALG.REG.INT', 'Check algorithm correctly identified' );
 	{
 		my $key    = "\x0b" x 16;
 		my $data   = "Hi There";
@@ -134,10 +135,11 @@ my $hash = {};
 {
 	# Check HMAC-SHA1 signing function using test cases from RFC2202, section 3.
 
-	my $tsig = new Net::DNS::RR( type => 'TSIG', algorithm => 'HMAC-SHA1' );
+	my $tsig = new Net::DNS::RR( type => 'TSIG', algorithm => 'HMAC-SHA' );	# alias HMAC-SHA1
 	my $algorithm = $tsig->algorithm;
 	my $function  = $tsig->sig_function;
 
+	is( $algorithm, 'HMAC-SHA1', 'Check algorithm correctly identified' );
 	{
 		my $key    = "\x0b" x 20;
 		my $data   = "Hi There";
@@ -191,10 +193,11 @@ my $hash = {};
 {
 	# Check HMAC-SHA224 signing function using test cases from RFC4634, section 8.4.
 
-	my $tsig = new Net::DNS::RR( type => 'TSIG', algorithm => 'HMAC-SHA224' );
+	my $tsig = new Net::DNS::RR( type => 'TSIG', algorithm => 162 );	# alias HMAC-SHA224
 	my $algorithm = $tsig->algorithm;
 	my $function  = $tsig->sig_function;
 
+	is( $algorithm, 'HMAC-SHA224', 'Check algorithm correctly identified' );
 	{
 		my $key    = "\x0b" x 20;
 		my $data   = "Hi There";
