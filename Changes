@@ -4,6 +4,10 @@ $Id$                       -*-text-*-
 
 **** 0.74 [unreleased]
 
+Fix rt.cpan.org #91306
+
+	Nameserver crashes on malformed UDP query.
+
 Fix rt.cpan.org #91241
 
 	TSIG: Fix incorrectly generated %algbyval table.
