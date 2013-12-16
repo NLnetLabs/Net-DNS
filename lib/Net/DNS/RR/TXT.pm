@@ -6,7 +6,9 @@ package Net::DNS::RR::TXT;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =encoding utf8
 
@@ -16,10 +18,7 @@ Net::DNS::RR::TXT - DNS TXT resource record
 
 =cut
 
-
-use strict;
 use integer;
-
 use Carp;
 use Net::DNS::Text;
 
@@ -30,10 +29,10 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 
 	my $limit = $offset + $self->{rdlength};
 	my $text;
-	$self->{txtdata} = [];
+	my $txtdata = $self->{txtdata} = [];
 	while ( $offset < $limit ) {
 		( $text, $offset ) = decode Net::DNS::Text( $data, $offset );
-		push @{$self->{txtdata}}, $text;
+		push @$txtdata, $text;
 	}
 
 	croak('corrupt TXT data') unless $offset == $limit;	# more or less FUBAR
@@ -59,14 +58,14 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @_];
+	$self->{txtdata} = [map Net::DNS::Text->new($_), @_];
 }
 
 
 sub txtdata {
 	my $self = shift;
 
-	@{$self}{txtdata} = [map Net::DNS::Text->new($_), @_] if scalar @_;
+	$self->{txtdata} = [map Net::DNS::Text->new($_), @_] if scalar @_;
 
 	my $txtdata = $self->{txtdata} || [];
 
@@ -76,24 +75,7 @@ sub txtdata {
 }
 
 
-sub char_str_list {			## historical
-	return (&txtdata);
-}
-
-sub rdatastr {			## SpamAssassin workaround, per CPAN RT#81760
-	my $txtdata = shift->{txtdata} || [];
-	join ' ', map $_->quoted_string, @$txtdata;
-}
-
-package Net::DNS::Text;
-
-my $QQ = _decode_utf8( pack 'C', 34 );
-
-sub quoted_string {
-	my $string = shift->string;
-	return $string if $string =~ /^$|\s|["\$'();@]/;	# should already be quoted
-	join '', $QQ, $string, $QQ;				# quote previously unquoted string
-}
+sub char_str_list { return (&txtdata); }
 
 1;
 __END__
@@ -102,17 +84,20 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR( 'name TXT    txtdata ...' );
+    $rr = new Net::DNS::RR( 'name TXT  txtdata ...' );
 
-    $rr = new Net::DNS::RR(
-	...
-	txtdata => 'single text string'
-	  or
-	txtdata => [ 'multiple', 'strings', ... ]
-	);
+    $rr = new Net::DNS::RR( name    => 'name',
+			    type    => 'TXT',
+			    txtdata => 'single text string'
+			    );
 
-    use encoding 'utf8';
-    $rr = new Net::DNS::RR( 'jp  TXT     古池や　蛙飛込む　水の音' );
+    $rr = new Net::DNS::RR( name    => 'name',
+			    type    => 'TXT',
+			    txtdata => [ 'multiple', 'strings', ... ]
+			    );
+
+    use utf8;
+    $rr = new Net::DNS::RR( 'jp TXT    古池や　蛙飛込む　水の音' );
 
 =head1 DESCRIPTION
 
@@ -133,6 +118,8 @@ other unpredictable behaviour.
     $string = $rr->txtdata;
     @list   = $rr->txtdata;
 
+    $rr->txtdata( @list );
+
 When invoked in scalar context, txtdata() returns the descriptive text
 as a single string, regardless of the number of elements.
 
@@ -143,12 +130,12 @@ In a list context, txtdata() returns a list of the text elements.
 
 Copyright (c)2011 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

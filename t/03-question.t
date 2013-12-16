@@ -11,7 +11,7 @@ BEGIN {
 
 
 {	# check type conversion functions
-	my ($anon) = grep { not defined $Net::DNS::Parameters::typebyval{$_} } ( 1  .. 1 << 16 );
+	my ($anon) = grep { not defined $Net::DNS::Parameters::typebyval{$_} } ( 1 .. 1 << 16 );
 
 	is( typebyval(1),	      'A',	   "typebyval(1)" );
 	is( typebyval($anon),	      "TYPE$anon", "typebyval($anon)" );
@@ -24,11 +24,10 @@ BEGIN {
 	ok( $exception ||= '', "typebyval($large)\t[$exception]" );
 
 	foreach ( sort keys %typebyname ) {
-		my $code      = typebyname($_);
-		my $name      = eval { typebyval($code) };
+		my $expect    = /[*]/ ? 'ANY' : uc($_);
+		my $name      = eval { typebyval(typebyname($_)) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
-		$name = $_ if $_ eq '*';
-		is( $name, uc($_), "typebyname('$_')\t$exception" );
+		is( $name, $expect, "typebyname('$_')\t$exception" );
 	}
 }
 
@@ -47,10 +46,10 @@ BEGIN {
 	ok( $exception ||= '', "classbyval($large)\t[$exception]" );
 
 	foreach ( sort keys %classbyname ) {
-		my $code      = classbyname($_);
-		my $name      = eval { classbyval($code) };
+		my $expect    = /[*]/ ? 'ANY' : uc($_);
+		my $name      = eval { classbyval(classbyname($_)) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
-		is( $name, uc($_), "classbyname('$_')\t$exception" );
+		is( $name, $expect, "classbyname('$_')\t$exception" );
 	}
 }
 
@@ -173,7 +172,7 @@ BEGIN {
 {
 	my @part = ( 1 .. 8 );
 	while (@part) {
-		my $n	   = @part * 16;
+		my $n	   = 16 * scalar(@part);
 		my $test   = 'interpret IPv6 prefix as PTR query';
 		my $prefix = join ':', @part;
 		my $actual = new Net::DNS::Question($prefix)->qname;

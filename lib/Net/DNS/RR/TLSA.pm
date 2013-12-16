@@ -6,7 +6,9 @@ package Net::DNS::RR::TLSA;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -14,6 +16,7 @@ Net::DNS::RR::TLSA - DNS TLSA resource record
 
 =cut
 
+use integer;
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -41,10 +44,10 @@ sub format_rdata {			## format rdata portion of RR string.
 
 	return '' unless defined $self->{certbin};
 	my @params = map $self->$_, qw(usage selector matchingtype);
-	my $certificate = $self->cert;
-	$certificate = "(\n$certificate )" if length $certificate > 40;
-	$certificate =~ s/(\S{64})/$1\n/g;
-	return join ' ', @params, $certificate;
+	( my $certificate = $self->cert ) =~ s/(\S{64})/$1\n/g;
+	chomp $certificate;
+	return join ' ', @params, $certificate if length $certificate < 40;
+	return join ' ', @params, "(\n", $certificate, ")";
 }
 
 
@@ -59,29 +62,29 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub usage {
 	my $self = shift;
 
-	$self->{usage} = shift if scalar @_;
-	return 0 + ( $self->{usage} || 0 );
+	$self->{usage} = 0 + shift if scalar @_;
+	return $self->{usage} || 0;
 }
 
 sub selector {
 	my $self = shift;
 
-	$self->{selector} = shift if scalar @_;
-	return 0 + ( $self->{selector} || 0 );
+	$self->{selector} = 0 + shift if scalar @_;
+	return $self->{selector} || 0;
 }
 
 sub matchingtype {
 	my $self = shift;
 
-	$self->{matchingtype} = shift if scalar @_;
-	return 0 + ( $self->{matchingtype} || 0 );
+	$self->{matchingtype} = 0 + shift if scalar @_;
+	return $self->{matchingtype} || 0;
 }
 
 sub cert {
 	my $self = shift;
 
-	$self->{certbin} = pack "H*", map { s/\s+//g; $_ } join "", @_ if scalar @_;
-	unpack "H*", $self->{certbin} || "" if defined wantarray;
+	$self->certbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	unpack "H*", $self->certbin() if defined wantarray;
 }
 
 sub certbin {
@@ -123,6 +126,7 @@ other unpredictable behaviour.
 =head2 usage
 
     $usage = $rr->usage;
+    $rr->usage( $usage );
 
 8-bit integer value which specifies the provided association that
 will be used to match the certificate presented in the TLS handshake.
@@ -130,6 +134,7 @@ will be used to match the certificate presented in the TLS handshake.
 =head2 selector
 
     $selector = $rr->selector;
+    $rr->selector( $selector );
 
 8-bit integer value which specifies which part of the TLS certificate
 presented by the server will be matched against the association data.
@@ -137,19 +142,22 @@ presented by the server will be matched against the association data.
 =head2 matchingtype
 
     $matchingtype = $rr->matchingtype;
+    $rr->matchingtype( $matchingtype );
 
-8-bit integer value  which specifies how the certificate association
+8-bit integer value which specifies how the certificate association
 is presented.
 
 =head2 cert
 
     $cert = $rr->cert;
+    $rr->cert( $cert );
 
 Hexadecimal representation of the certificate data.
 
 =head2 certbin
 
     $certbin = $rr->certbin;
+    $rr->certbin( $certbin );
 
 Binary representation of the certificate data.
 
@@ -158,12 +166,12 @@ Binary representation of the certificate data.
 
 Copyright (c)2012 Willem Toorop, NLnet Labs.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

@@ -43,13 +43,14 @@ automatically to all subsequent records.
 =cut
 
 
+use strict;
 use integer;
 use Carp;
 use File::Spec::Functions;
 
 require FileHandle;
-require Net::DNS::Domain;
-require Net::DNS::RR;
+
+use Net::DNS;
 
 use constant PERLIO => eval { require PerlIO; } || 0;
 
@@ -74,7 +75,7 @@ The optional second argument specifies $ORIGIN for the zone file.
 
 Character encoding is specified indirectly by creating a FileHandle
 with the desired encoding layer, which is then passed as an argument
-to new(). The specified encoding is applied to any files introduced
+to new(). The specified encoding is propagated to files introduced
 by $include directives.
 
 =cut
@@ -93,7 +94,7 @@ sub new {
 	}
 
 	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
-	$self->{handle} = new FileHandle($file) or croak qq(open: $! "$file");
+	$self->{handle} = new FileHandle($file) or croak qq(open: "$file" $!);
 	$self->{name} = $file;
 
 	return $self;
@@ -200,9 +201,9 @@ sub ttl {
 
 =head1 COMPATIBILITY WITH Net::DNS::ZoneFile 1.04
 
-Applications which depended on the Net::DNS::ZoneFile 1.04 package
-will continue to operate with minimal change using the compatibility
-interface described below.
+Applications which depended on the defunct Net::DNS::ZoneFile 1.04
+CPAN distribution will continue to operate with minimal change using
+the compatibility interface described below.
 
     use Net::DNS::ZoneFile;
 
@@ -218,8 +219,8 @@ interface described below.
 The optional second argument specifies the default path for filenames.
 The current working directory is used by default.
 
-Although not available in the original implementation, the RR list
-can be obtained directly by calling these methods in list context.
+Although not available in the original implementation, the RR list can
+be obtained directly by calling any of these methods in list context.
 
     @rr = Net::DNS::ZoneFile->read( $filename, $include_dir );
 
@@ -408,7 +409,7 @@ sub _generate {				## expand $GENERATE into input stream
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
 
 	delete $self->{latest};					# forbid empty owner field
-	my $parent = bless {%$self}, Net::DNS::ZoneFile;	# save state, create link
+	my $parent = bless {%$self}, ref($self);		# save state, create link
 	$self->{link} = $parent;
 	return $self->{handle} = $handle;
 }
@@ -512,7 +513,7 @@ sub _include {				## open $INCLUDE file
 	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
 
 	my @discipline = ( join ':', '<', PerlIO::get_layers $self->{handle} ) if PERLIO;
-	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: $! "$file");
+	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: "$file" $!);
 
 	delete $self->{latest};					# forbid empty owner field
 	my $include = bless {%$self}, ref($self);		# save state, create link

@@ -1,5 +1,22 @@
 $Id$                       -*-text-*-
 
+
+
+**** 0.74 [unreleased]
+
+Fix rt.cpan.org #91241
+
+	TSIG: Fix incorrectly generated %algbyval table.
+
+Fix rt.cpan.org #81760
+
+	TXT: Revert rdatastr() workaraound for SpamAssassin.
+
+Feature
+
+	Add CAA, EUI48 and EUI64 RR implementation.
+
+
 **** 0.73 Nov 29, 2013
 
 Fix rt.cpan.org #88778

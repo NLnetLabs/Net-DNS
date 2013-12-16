@@ -6,6 +6,8 @@ package Net::DNS::RR::SPF;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
 
+
+use strict;
 use base Net::DNS::RR::TXT;
 
 =head1 NAME
@@ -14,14 +16,15 @@ Net::DNS::RR::SPF - DNS SPF resource record
 
 =cut
 
-
-use strict;
 use integer;
 
 
 sub spfdata {
-	join '', shift->txtdata(@_);
+	return shift->char_str_list(@_) if wantarray;
+	join '', shift->char_str_list(@_);
 }
+
+sub txtdata { &spfdata; }
 
 1;
 __END__
@@ -31,6 +34,16 @@ __END__
 
     use Net::DNS;
     $rr = new Net::DNS::RR('name SPF spfdata ...');
+
+    $rr = new Net::DNS::RR( name    => 'name',
+			    type    => 'SPF',
+			    spfdata => 'single text string'
+			    );
+
+    $rr = new Net::DNS::RR( name    => 'name',
+			    type    => 'SPF',
+			    spfdata => [ 'multiple', 'strings', ... ]
+			    );
 
 =head1 DESCRIPTION
 
@@ -52,21 +65,27 @@ other unpredictable behaviour.
 =head2 spfdata
 
     $string = $rr->spfdata;
+    @list   = $rr->spfdata;
 
-C<spfdata> returns the policy text as a single string, regardless
-of the actual number of elements.
+    $rr->spfdata( @list );
+
+When invoked in scalar context, spfdata() returns the policy text as
+a single string, with text elements concatenated without intervening
+spaces.
+
+In a list context, spfdata() returns a list of the text elements.
 
 
 =head1 COPYRIGHT
 
 Copyright (c)2005 Olaf Kolkman, NLnet Labs.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO
