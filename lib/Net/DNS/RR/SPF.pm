@@ -8,7 +8,7 @@ $VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
 
 
 use strict;
-use base Net::DNS::RR::TXT;
+use base qw(Net::DNS::RR::TXT);
 
 =head1 NAME
 
