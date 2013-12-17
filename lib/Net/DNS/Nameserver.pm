@@ -4,7 +4,7 @@ package Net::DNS::Nameserver;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1046
+$VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME

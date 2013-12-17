@@ -4,7 +4,7 @@ package Net::DNS::Update;
 # $Id$
 #
 use vars qw($VERSION @ISA);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 970
+$VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
