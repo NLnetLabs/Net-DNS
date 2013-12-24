@@ -12,10 +12,6 @@ Fix rt.cpan.org #91241
 
 	TSIG: Fix incorrectly generated %algbyval table.
 
-Fix rt.cpan.org #81760
-
-	TXT: Revert rdatastr() workaraound for SpamAssassin.
-
 Feature
 
 	Add CAA, EUI48 and EUI64 RR implementation.
