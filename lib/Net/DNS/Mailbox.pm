@@ -99,7 +99,10 @@ canonicalisation.
 =cut
 
 package Net::DNS::Mailbox1035;
-use base qw(Net::DNS::DomainName1035);
+BEGIN {
+	our @ISA;
+	push @ISA, qw(Net::DNS::DomainName1035);
+}
 
 sub new { &Net::DNS::Mailbox::new; }
 
@@ -107,7 +110,10 @@ sub address { &Net::DNS::Mailbox::address; }
 
 
 package Net::DNS::Mailbox2535;
-use base qw(Net::DNS::DomainName2535);
+BEGIN {
+	our @ISA;
+	push @ISA, qw(Net::DNS::DomainName2535);
+}
 
 sub new { &Net::DNS::Mailbox::new; }
 
