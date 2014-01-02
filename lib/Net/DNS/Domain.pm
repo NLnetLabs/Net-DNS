@@ -36,6 +36,7 @@ partially mitigated by use of caches.
 =cut
 
 
+use strict;
 use integer;
 use Carp;
 

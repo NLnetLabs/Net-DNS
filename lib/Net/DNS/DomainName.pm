@@ -1,5 +1,4 @@
 package Net::DNS::DomainName;
-use base qw(Net::DNS::Domain);
 
 #
 # $Id$
@@ -40,10 +39,13 @@ introduced by RFC3597.
 =cut
 
 
-use integer;
-use Carp;
+use strict;
+use base qw(Net::DNS::Domain);
 
 use constant OKlc => eval { require 5.8.9; } || 0;
+
+use integer;
+use Carp;
 
 
 =head1 METHODS
