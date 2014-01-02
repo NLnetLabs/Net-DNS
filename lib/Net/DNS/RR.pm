@@ -39,6 +39,7 @@ use Carp;
 
 use Net::DNS::Parameters;
 use Net::DNS::DomainName;
+use Net::DNS::Mailbox;
 
 
 =head1 METHODS
