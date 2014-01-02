@@ -4,9 +4,10 @@ package Net::DNS::RR::SOA;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +16,6 @@ Net::DNS::RR::SOA - DNS SOA resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::DomainName;
@@ -57,63 +57,42 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	my $ttl = $self->{ttl};
-	$self->$_( @_ ? shift		  : () ) for qw(mname rname serial);
-	$self->$_( @_ ? $self->ttl(shift) : () ) for qw(refresh retry expire minimum);
-	$self->{ttl} = $ttl;
+	$self->$_( scalar @_ ? shift : () ) for qw(mname rname serial);
+
+	for (qw(refresh retry expire minimum)) {
+		$self->$_( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
+	}
 }
 
 
 sub defaults() {			## specify RR attribute default values
 	my $self = shift;
 
-	$self->parse_rdata( qw(. . 0 1d 1h 1w 3h) );
+	$self->parse_rdata(qw(. . 0 4h 1h 3w 1h));
 	$self->{serial} = undef;
 }
-
-
-########################################
-{
-
-	sub _ordered($$) {				## irreflexive 32-bit partial ordering
-		use integer;
-		my ( $a, $b ) = @_;
-
-		return defined $b unless defined $a;		# ( undef, any )
-		return 0 unless defined $b;			# ( any, undef )
-
-		# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
-		if ( $a < 0 ) {					# translate $a<0 region
-			$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;	#  0	 <= $a < 2**31
-			$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;	# -2**31 <= $b < 2**32
-		}
-
-		return $a < $b ? ( $a > ( $b - 0x80000000 ) ) : ( $b < ( $a - 0x80000000 ) );
-	}
-
-}
-########################################
 
 
 sub mname {
 	my $self = shift;
 
-	$self->{mname} = new Net::DNS::DomainName1035(shift) if @_;
+	$self->{mname} = new Net::DNS::DomainName1035(shift) if scalar @_;
 	$self->{mname}->name if defined wantarray;
 }
+
 
 sub rname {
 	my $self = shift;
 
-	$self->{rname} = new Net::DNS::Mailbox1035(shift) if @_;
+	$self->{rname} = new Net::DNS::Mailbox1035(shift) if scalar @_;
 	$self->{rname}->address if defined wantarray;
 }
 
+
 sub serial {
-	use integer;
 	my $self = shift;
 
-	return $self->{serial} || 0 unless @_;			# current/default value
+	return $self->{serial} || 0 unless scalar @_;		# current/default value
 
 	my $value = shift;					# replace if in sequence
 	return $self->{serial} = 0 + $value if _ordered( $self->{serial}, $value );
@@ -124,33 +103,58 @@ sub serial {
 	return $self->{serial} = $serial + 1;			# increment
 }
 
+
 sub refresh {
 	my $self = shift;
 
-	$self->{refresh} = shift if @_;
-	return 0 + ( $self->{refresh} || 0 );
+	$self->{refresh} = 0 + shift if scalar @_;
+	return $self->{refresh} || 0;
 }
+
 
 sub retry {
 	my $self = shift;
 
-	$self->{retry} = shift if @_;
-	return 0 + ( $self->{retry} || 0 );
+	$self->{retry} = 0 + shift if scalar @_;
+	return $self->{retry} || 0;
 }
+
 
 sub expire {
 	my $self = shift;
 
-	$self->{expire} = shift if @_;
-	return 0 + ( $self->{expire} || 0 );
+	$self->{expire} = 0 + shift if scalar @_;
+	return $self->{expire} || 0;
 }
+
 
 sub minimum {
 	my $self = shift;
 
-	$self->{minimum} = shift if @_;
-	return 0 + ( $self->{minimum} || 0 );
+	$self->{minimum} = 0 + shift if scalar @_;
+	return $self->{minimum} || 0;
 }
+
+
+########################################
+
+
+sub _ordered($$) {			## irreflexive 32-bit partial ordering
+	use integer;
+	my ( $a, $b ) = @_;
+
+	return defined $b unless defined $a;			# ( undef, any )
+	return 0 unless defined $b;				# ( any, undef )
+
+	# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
+	if ( $a < 0 ) {						# translate $a<0 region
+		$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;		#  0	 <= $a < 2**31
+		$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;		# -2**31 <= $b < 2**32
+	}
+
+	return $a < $b ? ( $a > ( $b - 0x80000000 ) ) : ( $b < ( $a - 0x80000000 ) );
+}
+
 
 1;
 __END__
@@ -159,7 +163,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name SOA mname rname 0 86400 3600 604800 10800');
+    $rr = new Net::DNS::RR('name SOA mname rname 0 14400 3600 1814400 3600');
 
 =head1 DESCRIPTION
 
@@ -178,6 +182,7 @@ other unpredictable behaviour.
 =head2 mname
 
     $mname = $rr->mname;
+    $rr->mname( $mname );
 
 The domain name of the name server that was the
 original or primary source of data for this zone.
@@ -185,6 +190,7 @@ original or primary source of data for this zone.
 =head2 rname
 
     $rname = $rr->rname;
+    $rr->rname( $rname );
 
 The mailbox which identifies the person responsible
 for maintaining this zone.
@@ -204,12 +210,14 @@ replacement value argument satisfies the ordering constraint.
 =head2 refresh
 
     $refresh = $rr->refresh;
+    $rr->refresh( $refresh );
 
 A 32 bit time interval before the zone should be refreshed.
 
 =head2 retry
 
     $retry = $rr->retry;
+    $rr->retry( $retry );
 
 A 32 bit time interval that should elapse before a
 failed refresh should be retried.
@@ -217,6 +225,7 @@ failed refresh should be retried.
 =head2 expire
 
     $expire = $rr->expire;
+    $rr->expire( $expire );
 
 A 32 bit time value that specifies the upper limit on
 the time interval that can elapse before the zone is no
@@ -225,6 +234,7 @@ longer authoritative.
 =head2 minimum
 
     $minimum = $rr->minimum;
+    $rr->minimum( $minimum );
 
 The unsigned 32 bit minimum TTL field that should be
 exported with any RR from this zone.
@@ -270,12 +280,12 @@ Portions Copyright (c)2002-2004 Chris Reinhardt.
 
 Portions Copyright (c)2010,2012 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO
