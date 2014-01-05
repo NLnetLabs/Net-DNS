@@ -34,12 +34,12 @@ See also the manual pages for each specific RR type.
 
 use constant COMPATIBLE => 1;		## enable architecture transition code
 
+use strict;
 use integer;
 use Carp;
 
 use Net::DNS::Parameters;
 use Net::DNS::DomainName;
-use Net::DNS::Mailbox;
 
 
 =head1 METHODS
@@ -757,6 +757,7 @@ sub _subclass {
 		my $number = typebyname($rrtype);
 		my $symbol = typebyval($number);
 		my $module = join '::', $class, $symbol;
+		$module =~ s/[^A-Za-z0-9:]//g;			# expect the unexpected
 		$subclass = eval("require $module") ? $module : $class;
 		$subclass = $module if $symbol eq 'OPT';	# default to OPT declared below
 		my $object = bless {type => $number}, $subclass;

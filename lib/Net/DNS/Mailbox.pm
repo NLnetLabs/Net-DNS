@@ -51,7 +51,7 @@ ASCII repertoire.
 sub new {
 	my $class = shift;
 	local $_ = shift;
-	confess 'undefined mail address' unless defined $_;
+	croak 'undefined mail address' unless defined $_;
 
 	s/^.*<//g;						# strip excess on left
 	s/>.*$//g;						# strip excess on right
@@ -102,18 +102,16 @@ canonicalisation.
 
 package Net::DNS::Mailbox1035;
 
-use Net::DNS::DomainName;
-use base qw(Net::DNS::DomainName1035 Net::DNS::Mailbox);
+use base qw(Net::DNS::Mailbox);
 
-sub new { &Net::DNS::Mailbox::new; }
+sub encode { &Net::DNS::DomainName1035::encode; }
 
 
 package Net::DNS::Mailbox2535;
 
-use Net::DNS::DomainName;
-use base qw(Net::DNS::DomainName2535 Net::DNS::Mailbox);
+use base qw(Net::DNS::Mailbox);
 
-sub new { &Net::DNS::Mailbox::new; }
+sub encode { &Net::DNS::DomainName2535::encode; }
 
 
 1;

@@ -8,11 +8,15 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 #
 #	Domain Name System (DNS) Parameters
-#	(last updated 2013-09-05)
+#	(last updated 2013-10-25)
 #
 
+use strict;
+use integer;
+use Carp;
 
-use base Exporter;
+use base qw(Exporter);
+use vars qw(@EXPORT);
 @EXPORT = qw(
 		classbyname classbyval %classbyname
 		typebyname typebyval %typebyname
@@ -20,9 +24,6 @@ use base Exporter;
 		rcodebyname rcodebyval
 		ednsoptionbyname ednsoptionbyval
 		);
-
-use integer;
-use Carp;
 
 
 # Registry: DNS CLASSes
@@ -107,8 +108,8 @@ use vars qw( %typebyname %typebyval );
 	L32	   => 105,					# RFC6742
 	L64	   => 106,					# RFC6742
 	LP	   => 107,					# RFC6742
-	EUI48	   => 108,					# RFC-jabley-dnsext-eui48-eui64-rrtypes-07
-	EUI64	   => 109,					# RFC-jabley-dnsext-eui48-eui64-rrtypes-07
+	EUI48	   => 108,					# RFC7043
+	EUI64	   => 109,					# RFC7043
 	TKEY	   => 249,					# RFC2930
 	TSIG	   => 250,					# RFC2845
 	IXFR	   => 251,					# RFC1995
