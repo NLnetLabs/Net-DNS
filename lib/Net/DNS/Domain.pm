@@ -290,7 +290,6 @@ sub _encode_ascii {
 	return pack 'a0 a*', $z, ASCII->encode($s) if ASCII;	# preserve taint
 
 	# partial transliteration for non-ASCII character encodings
-	$s = pack 'C*', unpack 'U0 C*', $s unless ASCII;	# repackage pre-5.8 Unicode
 	$s =~ tr
 	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
 	[\040-\176\077] unless ASCII;

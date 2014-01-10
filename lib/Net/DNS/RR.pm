@@ -87,7 +87,7 @@ The trailing dot (.) is optional.
 
 =cut
 
-my $PARSE_REGEX = qw/("[^"]*"|'[^']*')|;[^\n]*|\s|\)$/;
+my $PARSE_REGEX = q/("[^"]*"|'[^']*')|;[^\n]*|\s|\)$/;
 
 sub _new_string {
 	my $base;
@@ -288,7 +288,7 @@ sub encode {
 
 	if (COMPATIBLE) {
 		my ( $hash, $packet ) = @opaque;
-		$packet ||= bless {}, qw(Net::DNS::Packet);
+		$packet ||= bless {}, q(Net::DNS::Packet);
 		$packet->{compnames} = $hash || {};
 		my $name   = $self->name;
 		my $owner  = $self->{owner}->encode(@_);
@@ -687,47 +687,11 @@ sub parse_rdata {			## parse RR attributes in argument list
 sub defaults { }			## set attribute default values
 
 
-###################################################################################
-
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {				## Default method
-	my $self = shift;
-	confess "method '$AUTOLOAD' undefined" unless ref $self;
-
-	my $method = $1 if $AUTOLOAD =~ m/^.*::(.*)$/;
-
-	if (COMPATIBLE) {
-		return $self->{$method} = shift if @_;
-		return $self->{$method} if exists $self->{$method};
-	}
-
-	my $object = $self->string;
-
-	@_ = (<<"END");
-***  FATAL PROGRAM ERROR!!	Unknown method '$method'
-***  which the program has attempted to call for the object:
-***
-***  $object
-***
-***  This object does not have a method '$method'.  THIS IS A BUG
-***  IN THE CALLING SOFTWARE, which incorrectly assumes that the
-***  object would be of a particular type.  The type of an object
-***  should be checked before calling any of its methods.
-END
-	no strict;
-	goto &{'Carp::confess'};
-}
-
-
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
-
 sub dump {				## print internal data structure
-	use Data::Dumper;
+	require Data::Dumper;
 	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
-	return Dumper(shift) if defined wantarray;
-	print Dumper(shift);
+	return Data::Dumper::Dumper(shift) if defined wantarray;
+	print Data::Dumper::Dumper(shift);
 }
 
 
@@ -755,16 +719,17 @@ sub _subclass {
 		die "Usage:\t\$rr = new Net::DNS::RR( name $rrtype ... )\n"
 				unless $class eq __PACKAGE__;
 		my $number = typebyname($rrtype);
-		my $symbol = typebyval($number);
-		my $module = join '::', $class, $symbol;
+		my $mnemon = typebyval($number);
+		my $module = join '::', $class, $mnemon;
 		$module =~ s/[^A-Za-z0-9:]//g;			# expect the unexpected
 		$subclass = eval("require $module") ? $module : $class;
-		$subclass = $module if $symbol eq 'OPT';	# default to OPT declared below
+		$subclass = $module if $mnemon eq 'OPT';	# default to OPT declared below
 		my $object = bless {type => $number}, $subclass;
 		if (COMPATIBLE) {
-			my $method = "${module}::encode_rdata";
-			$object->{OLD}++ unless exists &$method;
-			$object->{type} = $symbol;
+			no strict;
+			my %stash = %{"${subclass}::"};		# symbol table hash
+			$object->{OLD}++ unless exists $stash{encode_rdata};
+			$object->{type} = $mnemon;
 		}
 		$_MINIMAL{$subclass} = [%$object];		# cache minimal content
 		$object->defaults if $subclass eq $module;
@@ -829,6 +794,42 @@ sub _name2wire {			## emulate
 sub _normalize_ownername { }
 
 sub _normalize_dnames { }
+
+
+###################################################################################
+
+use vars qw($AUTOLOAD);
+
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+
+sub AUTOLOAD {				## Default method
+	my $self = shift;
+	confess "method '$AUTOLOAD' undefined" unless ref $self;
+
+	my $method = $1 if $AUTOLOAD =~ m/^.*::(.*)$/;
+
+	if (COMPATIBLE) {
+		return $self->{$method} = shift if @_;
+		return $self->{$method} if exists $self->{$method};
+	}
+
+	my $object = $self->string;
+
+	@_ = (<<"END");
+***  FATAL PROGRAM ERROR!!	Unknown method '$method'
+***  which the program has attempted to call for the object:
+***
+***  $object
+***
+***  This object does not have a method '$method'.  THIS IS A BUG
+***  IN THE CALLING SOFTWARE, which incorrectly assumes that the
+***  object would be of a particular type.  The type of an object
+***  should be checked before calling any of its methods.
+END
+	no strict;
+	goto &{'Carp::confess'};
+}
+
 
 ###################################################################################
 

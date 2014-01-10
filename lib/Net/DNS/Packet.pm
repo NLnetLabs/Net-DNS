@@ -226,7 +226,7 @@ represents the header section of the packet.
 
 sub header {
 	my $self = shift;
-	return bless \$self, qw(Net::DNS::Header);
+	return bless \$self, q(Net::DNS::Header);
 }
 
 
@@ -864,23 +864,12 @@ sub truncate {
 
 ########################################
 
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {				## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
-}
-
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
-
 sub dump {				## print internal data structure
-	use Data::Dumper;
+	require Data::Dumper;
 	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
 	my $self = shift;
-	return Dumper($self) if defined wantarray;
-	print Dumper($self);
+	return Data::Dumper::Dumper($self) if defined wantarray;
+	print Data::Dumper::Dumper($self);
 }
 
 
@@ -892,6 +881,17 @@ sub sigrr {				## obtain packet signature RR
 	return $sig if $sig->type eq 'TSIG';
 	return $sig if $sig->type eq 'SIG';
 	return undef;
+}
+
+
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
+
+use vars qw($AUTOLOAD);
+
+sub AUTOLOAD {				## Default method
+	no strict;
+	@_ = ("method $AUTOLOAD undefined");
+	goto &{'Carp::confess'};
 }
 
 

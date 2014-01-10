@@ -32,6 +32,10 @@ I<DNS and BIND> (Albitz & Liu) for details.
 =cut
 
 
+use 5.004_05;
+use strict;
+use integer;
+use Carp;
 
 
 
@@ -111,8 +115,6 @@ BEGIN {
 }
 
 
-use strict;
-use Carp;
 use Net::DNS::RR;
 use Net::DNS::Packet;
 use Net::DNS::Update;

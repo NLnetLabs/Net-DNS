@@ -4,6 +4,25 @@
 use strict;
 $^W = 1;
 
+
+die <<RIP if $] < 5.004_05;
+
+This version of Net::DNS will not function correctly with perl $]
+
+RIP
+
+
+warn <<AMEN if $] < 5.006;
+
+This version of Net::DNS has not been tested against perl $]
+because Test::More requires version 5.6 or later.
+
+The author is confident that this package will function 
+properly with older perls such as yours, but bugs may lurk. 
+
+AMEN
+
+
 use ExtUtils::MakeMaker qw(WriteMakefile prompt);
 use IO::Socket ();
 use Config qw(%Config);
@@ -21,15 +40,6 @@ unlink("t/online.disabled");
 # clean up the IPv6 testing flag file.
 unlink("t/IPv6.enabled");
 unlink("t/IPv6.disabled");
-
-warn <<AMEN if $] < 5.006;
-
-This version of Net::DNS has not been tested against perl v$]
-The author is confident that this package will function 
-properly with older perls such as yours, but bugs may lurk. 
-
-
-AMEN
 
 
 #
@@ -51,7 +61,7 @@ my @options  = (
 	'online-tests!'		 => \$online_tests,
 	'non-fatal-online-tests' => sub { $online_tests = 2; },
 	'IPv6-tests!' => \$IPv6_tests,
-	'help|?'      => \$help,
+	'help!'       => \$help
 	);
 
 push @options, ( 'iphelper!' => \$iphelper ) if ( $^O eq 'cygwin' );
@@ -105,8 +115,8 @@ if ( $^O eq 'cygwin' ) {
 	# successfully (if available).
 	my $iphelper_present = '';
 	eval { require Net::DNS::Resolver; require Net::DNS::Resolver::Win32; };
-
 	$iphelper_present ||= $INC{'Net/DNS/Resolver/Win32.pm'} unless $@;
+
 	eval { require Net::DNS::Resolver; require Net::DNS::Resolver::MSWin32; };
 	$iphelper_present ||= $INC{'Net/DNS/Resolver/MSWin32.pm'} unless $@;
 

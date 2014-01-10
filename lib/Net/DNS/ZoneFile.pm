@@ -415,7 +415,7 @@ sub _generate {				## expand $GENERATE into input stream
 }
 
 
-my $LEX_REGEX = qw/("[^"]*")|("[^"]*)$|;[^\n]*|(^\s)|\s/;
+my $LEX_REGEX = q/("[^"]*")|("[^"]*)$|;[^\n]*|(^\s)|\s/;
 
 sub _getline {				## get line from current source
 	my $self = shift;

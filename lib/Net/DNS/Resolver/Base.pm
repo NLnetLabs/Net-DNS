@@ -238,7 +238,7 @@ sub read_config_file {
 
 	local *FILE;
 
-	open(FILE, "<", $file) or return;
+	open(FILE, $file) or return;
 	local $/ = "\n";
 	local $_;
 
@@ -393,7 +393,7 @@ sub nameserver { &nameservers }
 
 sub cname_addr {
 	# TODO 20081217
-	# This code does not follow CNAME chanes, it only looks inside the packet. Out of bailiwick will fail.
+	# This code does not follow CNAME chains, it only looks inside the packet. Out of bailiwick will fail.
 	# Also it is not IP agnostic
 	my $names  = shift;
 	my $packet = shift;
