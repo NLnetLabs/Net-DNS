@@ -91,8 +91,7 @@ my $cache2 = {};
 my $expire;
 
 sub new {
-	my $class = shift;
-	my $s = shift;
+	my ( $class, $s ) = @_;
 	croak 'domain identifier undefined' unless defined $s;
 
 	my $k = join '', $s, $class, $ORIGIN || '';		# cache key
@@ -256,20 +255,22 @@ sub origin {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {			## Default method
+sub AUTOLOAD {				## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
 
-sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 
-sub _decode_ascii {
+sub _decode_ascii {			## translate ASCII to perl string
 	my $s = shift;
 
-	return pack 'a0 a*', $s, ASCII->decode($s) if ASCII;	# preserve taint
+	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
+	my $z = length $t;
+	return pack "x$z a*", ASCII->decode($s) if ASCII;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
@@ -280,14 +281,15 @@ sub _decode_ascii {
 }
 
 
-sub _encode_ascii {
+sub _encode_ascii {			## translate perl string to ASCII
 	my $s = shift;
-	my $z = substr $s, 0, 0;
 
-	return pack 'a0 a*', $z, Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
+	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
+	my $z = length $t;
+	return pack "x$z a*", Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
 			if LIBIDN && $s =~ /[^\000-\177]/;
 
-	return pack 'a0 a*', $z, ASCII->encode($s) if ASCII;	# preserve taint
+	return pack "x$z a*", ASCII->encode($s) if ASCII;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
@@ -318,7 +320,7 @@ my %esc = eval {			## precalculated ASCII escape table
 };
 
 
-sub _escape {			## Insert escape sequences in string
+sub _escape {				## Insert escape sequences in string
 	my $s = shift;
 	$s =~ s/([^\055\101-\132\141-\172\060-\071])/$esc{$1}/eg;
 	return $s;
@@ -338,7 +340,7 @@ my %unesc = eval {			## precalculated numeric escape table
 };
 
 
-sub _unescape {			## Remove escape sequences in string
+sub _unescape {				## Remove escape sequences in string
 	my $s = shift;
 	$s =~ s/\134([\060-\071]{3})/$unesc{$1}/eg;		# numeric escape
 	$s =~ s/\134(.)/$1/g;					# character escape

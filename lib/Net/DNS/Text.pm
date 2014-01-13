@@ -69,7 +69,7 @@ interpretation.
 
 =cut
 
-my %unescape;			## precalculated numeric escape table
+my %unescape;				## precalculated numeric escape table
 
 sub new {
 	my $self = bless [], shift;
@@ -77,8 +77,8 @@ sub new {
 
 	local $_ = &_encode_utf8;
 
-	s/^\042([^\042]*)\042/$1/;				# strip paired quotes
-	s/^\047([^\047]*)\047/$1/;				# strip paired quotes
+	s/^\042(.*)\042$/$1/;					# strip paired quotes
+	s/^\047(.*)\047$/$1/;					# strip paired quotes
 
 	s/\134\134/\134\060\071\062/g;				# disguise escaped escape
 	s/\134([\060-\071]{3})/$unescape{$1}/eg;		# numeric escape
@@ -165,7 +165,7 @@ Conditionally quoted zone file representation of the text object.
 
 =cut
 
-my %escape;			## precalculated ASCII/UTF-8 escape table
+my %escape;				## precalculated ASCII/UTF-8 escape table
 
 my $QQ = _decode_utf8( pack 'C', 34 );
 
@@ -186,22 +186,24 @@ sub string {
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {			## Default method
+sub AUTOLOAD {				## Default method
 	no strict;
 	@_ = ("method $AUTOLOAD undefined");
 	goto &{'Carp::confess'};
 }
 
 
-sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 
-sub _decode_utf8 {
+sub _decode_utf8 {			## UTF-8 to perl internal encoding
 	my $s = shift;
 
-	return pack 'a0 a*', $s, UTF8->decode($s) if UTF8;	# preserve taint
+	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
+	return UTF8->decode($s) . $t if UTF8;
 
-	return pack 'a0 a*', $s, ASCII->decode($s) if ASCII && not UTF8;
+	my $z = length $t;
+	return pack "a*x$z", ASCII->decode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
@@ -212,13 +214,14 @@ sub _decode_utf8 {
 }
 
 
-sub _encode_utf8 {
+sub _encode_utf8 {			## perl internal encoding to UTF-8
 	my $s = shift;
-	my $z = substr $s, 0, 0;
 
-	return pack 'a0 a*', $z, UTF8->encode($s) if UTF8;	# preserve taint
+	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
+	my $z = length $t;
+	return pack "a*x$z", UTF8->encode($s) if UTF8;
 
-	return pack 'a0 a*', $z, ASCII->encode($s) if ASCII && not UTF8;
+	return pack "a*x$z", ASCII->encode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
