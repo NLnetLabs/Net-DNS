@@ -46,7 +46,7 @@ automatically to all subsequent records.
 use strict;
 use integer;
 use Carp;
-use File::Spec::Functions;
+use File::Spec;
 
 require FileHandle;
 
@@ -80,8 +80,6 @@ by $include directives.
 
 =cut
 
-use vars qw($DIR);
-
 sub new {
 	my $self = bless {}, shift;
 	my $file = shift;
@@ -93,10 +91,8 @@ sub new {
 		croak 'argument not a file handle';
 	}
 
-	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
 	$self->{handle} = new FileHandle($file) or croak qq(open: "$file" $!);
 	$self->{name} = $file;
-
 	return $self;
 }
 
@@ -239,12 +235,22 @@ error is encountered by the parser.
 
 =cut
 
+use vars qw($include_dir);		## dynamically scoped
+
+sub _filename {				## rebase unqualified filename
+	return shift unless $include_dir;
+	my $name = shift;
+	return $name if File::Spec->file_name_is_absolute($name);
+	return File::Spec->catfile( $include_dir, $name );
+}
+
+
 sub _read {
 	my ($arg1) = @_;
 	shift unless ref($arg1) || $arg1 ne __PACKAGE__;
-	my $filename = shift;
-	local $DIR = shift;
-	my $file = new Net::DNS::ZoneFile($filename);
+	my $name = shift;
+	local $include_dir = shift;
+	my $file = new Net::DNS::ZoneFile( _filename($name) );
 	my @zone;
 	eval {
 		my $rr;
@@ -260,16 +266,23 @@ sub _read {
 
 	package Net::DNS::ZoneFile::Text;
 
-	use overload ( '<>' => 'read' );
+	use overload ( '<>' => 'readline' );
 
 	sub new {
 		my $self = bless {}, shift;
 		my $data = shift;
 		$self->{data} = [split /\n/, ref($data) ? $$data : $data];
-		return $self;
+		no integer;
+		return $self unless $] < 5.006;
+
+		require IO::File;	## Plan B: ancient perl unable to overload <>
+		my $fh = IO::File->new_tmpfile() or die "Unable to create temporary file: $!";
+		while ( my $line = $self->readline ) { print $fh $line, "\n"; }
+		seek $fh, 0, 0;
+		return $fh;
 	}
 
-	sub read {
+	sub readline {
 		my $self = shift;
 		$self->{line}++;
 		return shift( @{$self->{data}} );
@@ -338,7 +351,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 	package Net::DNS::ZoneFile::Generator;
 
-	use overload ( '<>' => 'read' );
+	use overload ( '<>' => 'readline' );
 
 	sub new {
 		my $self = bless {}, shift;
@@ -358,7 +371,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 		return $self;
 	}
 
-	sub read {
+	sub readline {
 		my $self = shift;
 		return undef unless $self->{count}-- > 0;	# EOF
 
@@ -409,9 +422,15 @@ sub _generate {				## expand $GENERATE into input stream
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
 
 	delete $self->{latest};					# forbid empty owner field
-	my $parent = bless {%$self}, ref($self);		# save state, create link
-	$self->{link} = $parent;
-	return $self->{handle} = $handle;
+	$self->{link} = bless {%$self}, ref($self);		# save state, create link
+	no integer;
+	return $self->{handle} = $handle unless $] < 5.006;
+
+	require IO::File;		## Plan B: ancient perl unable to overload <>
+	my $fh = IO::File->new_tmpfile() or die "Unable to create temporary file: $!";
+	while ( my $line = $handle->readline ) { print $fh $line, "\n"; }
+	seek $fh, 0, 0;
+	return $self->{handle} = $fh;
 }
 
 
@@ -507,18 +526,16 @@ sub _getRR {				## get RR from current source
 
 sub _include {				## open $INCLUDE file
 	my $self = shift;
-	my $file = shift;
+	my $file = _filename(shift);
 	my $root = shift;
-
-	$file = catfile( $DIR ||= curdir(), $file ) unless file_name_is_absolute($file);
 
 	my @discipline = ( join ':', '<', PerlIO::get_layers $self->{handle} ) if PERLIO;
 	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: "$file" $!);
 
 	delete $self->{latest};					# forbid empty owner field
-	my $include = bless {%$self}, ref($self);		# save state, create link
-	@{$self}{qw(link name)} = ( $include, $file );
+	$self->{link} = bless {%$self}, ref($self);		# save state, create link
 	$self->{context} = origin Net::DNS::Domain($root) if $root;
+	$self->{name} = $file;
 	return $self->{handle} = $handle;
 }
 

@@ -76,45 +76,43 @@ BEGIN {
 #
 {
 	my %defaults = (
-		nameservers	   => ['127.0.0.1'],
-		port		   => 53,
-		srcaddr        => '0.0.0.0',
-		srcport        => 0,
-		domain	       => '',
-		searchlist	   => [],
-		retrans	       => 5,
-		retry		   => 4,
-		usevc		   => 0,
-		stayopen       => 0,
-		igntc          => 0,
-		recurse        => 1,
-		defnames       => 1,
-		dnsrch         => 1,
-		debug          => 0,
-		errorstring	   => 'unknown error or no error',
-		tsig_rr        => undef,
-		answerfrom     => '',
-		querytime      => undef,
-		tcp_timeout    => 120,
-		udp_timeout    => undef,
-		axfr_sel       => undef,
-		axfr_rr        => [],
-		axfr_soa_count => 0,
-		persistent_tcp => 0,
-		persistent_udp => 0,
-		dnssec         => 0,
-		udppacketsize  => 0,  # The actual default is lower bound by Net::DNS::PACKETSZ
-	        cdflag         => 0,  # this is only used when {dnssec} == 1
-	        adflag         => 1,  # this is only used when {dnssec} == 1
-		force_v4       => 0,  # force_v4 is only relevant when we have
-                                      # v6 support available
-		ignqrid        => 0,  # normally packets with non-matching ID
-                                      # or with the qr bit of are thrown away
-			              # in 'ignqrid' these packets are
-			              # are accepted.
-			              # USE WITH CARE, YOU ARE VULNARABLE TO
-			              # SPOOFING IF SET.
-			              # This is may be a temporary feature
+		nameservers	=> ['127.0.0.1'],
+		port		=> 53,
+		srcaddr		=> '0.0.0.0',
+		srcport		=> 0,
+		domain		=> '',
+		searchlist	=> [],
+		retrans		=> 5,
+		retry		=> 4,
+		usevc		=> 0,
+		stayopen	=> 0,
+		igntc		=> 0,
+		recurse		=> 1,
+		defnames	=> 1,
+		dnsrch		=> 1,
+		debug		=> 0,
+		errorstring	=> 'unknown error or no error',
+		tsig_rr		=> undef,
+		answerfrom	=> '',
+		querytime	=> undef,
+		tcp_timeout	=> 120,
+		udp_timeout	=> undef,
+		axfr_sel	=> undef,
+		persistent_tcp	=> 0,
+		persistent_udp	=> 0,
+		dnssec		=> 0,
+		udppacketsize	=> 0,	# The actual default is bounded below by Net::DNS::PACKETSZ
+	        cdflag		=> 0,	# this is only used when {dnssec} == 1
+	        adflag		=> 1,	# this is only used when {dnssec} == 1
+		force_v4	=> 0,	# force_v4 is only relevant when we have
+					# v6 support available
+		ignqrid		=> 0,	# normally packets with non-matching ID
+					# or with the qr bit of are thrown away
+					# in 'ignqrid' these packets are
+					# are accepted.
+					# USE WITH CARE, YOU ARE VULNERABLE TO
+					# SPOOFING IF SET.
+					# This is may be a temporary feature
 	);
 
 	# If we're running under a SOCKSified Perl, use TCP instead of UDP
@@ -1094,7 +1092,7 @@ sub bgisready {
 
 
 #
-# Keep this method around. Folk depend on it although its not documented and exported.
+# Keep this method around. Folk depend on it although it is neither documented nor exported.
 #
 sub make_query_packet {
 	my $self = shift;
@@ -1106,286 +1104,242 @@ sub make_query_packet {
 		$packet = Net::DNS::Packet->new(@_);
 	}
 
-	if ($packet->header->opcode eq 'QUERY') {
-		$packet->header->rd($self->{'recurse'});
-	}
+	my $header = $packet->header;
+
+	$header->rd( $self->{recurse} ) if $header->opcode eq 'QUERY';
 
 	if ( $self->{dnssec} ) {				# RFC 3225
 		print ";; Set EDNS DO flag and UDP packetsize $self->{udppacketsize}\n" if $self->{debug};
 		$packet->edns->size($self->{udppacketsize});	# advertise UDP payload size for local IP stack
-		$packet->header->do(1);
-
-		$packet->header->ad($self->{adflag});
-		$packet->header->cd($self->{cdflag});
+		$header->do(1);
+		$header->ad( $self->{adflag} );
+		$header->cd( $self->{cdflag} );
 
 	} elsif ($self->{udppacketsize} > Net::DNS::PACKETSZ()) {
 		print ";; Clear EDNS DO flag and set UDP packetsize $self->{udppacketsize}\n" if $self->{debug};
-		$packet->edns->size($self->{udppacketsize});	# advertise UDP payload size for local IP stack
-		$packet->header->do(0);
+		$packet->edns->size( $self->{udppacketsize} );	# advertise UDP payload size for local IP stack
+		$header->do(0);
 
 	} else {
-		$packet->header->do(0);
+		$header->do(0);
 	}
 
 
-	if ($self->{'tsig_rr'}) {
-		if (!grep { $_->type eq 'TSIG' } $packet->additional) {
-			$packet->push('additional', $self->{'tsig_rr'});
-		}
+	if ( $self->{tsig_rr} && !grep $_->type eq 'TSIG', $packet->additional ) {
+		$packet->sign_tsig( $self->{tsig_rr} );
 	}
 
 	return $packet;
 }
 
-sub axfr {
-	my $self = shift;
-	my @zone;
 
-	if ($self->axfr_start(@_)) {
-		my ($rr, $err);
-		while (($rr, $err) = $self->axfr_next, $rr && !$err) {
-			push @zone, $rr;
-		}
-		@zone = () if $err;
+
+
+sub axfr {				## zone transfer
+	my $self = shift;
+
+	my @null;
+	my $query = $self->_axfr_start(@_) || return @null;
+
+	my $reply = $self->_axfr_next() || return @null;	# initial packet
+	my $vrify = $reply->verify($query) || croak $reply->verifyerr if $query->sigrr;
+
+	my ( $soa, @rr ) = $reply->answer;
+	my @zone = ($soa);
+
+	until ( scalar grep $_->type eq 'SOA', @rr ) {		# unpack non-terminal packet(s)
+		push @zone, @rr;
+		@rr = @null;
+		$reply = $self->_axfr_next() || last;
+		$vrify = $reply->verify($vrify) || croak $reply->verifyerr if $query->sigrr;
+		@rr = $reply->answer;
 	}
 
-	return @zone;
+	$self->{axfr_sel} = undef;
+
+	foreach my $rr (@rr) {					# unpack final packet
+		return @zone if $rr->type eq 'SOA' && $rr->string eq $soa->string;
+		push @zone, $rr;
+	}
+
+	croak 'improperly terminated AXFR';
 }
 
-sub axfr_old {
-	croak "Use of Net::DNS::Resolver::axfr_old() is deprecated, use axfr() or axfr_start().";
-}
 
-
-sub axfr_start {
+sub _axfr_start {
 	my $self = shift;
-	my ($dname, $class) = @_;
-	$dname ||= $self->{'searchlist'}->[0];
+	my ( $dname, $class ) = @_;
+	$dname ||= $self->{searchlist}->[0];
 	$class ||= 'IN';
-	my $timeout = $self->{'tcp_timeout'};
+
+	my $debug   = $self->{debug};
+	my $timeout = $self->{tcp_timeout};
 
 	unless ($dname) {
-		print ";; ERROR: axfr: no zone specified\n" if $self->{'debug'};
-		$self->errorstring('no zone');
+		$self->errorstring('no zone specified');
+		print ';; ', $self->errorstring, "\n" if $debug;
 		return;
 	}
 
+	print ";; axfr_start( $dname, $class )\n" if $debug;
 
-	print ";; axfr_start($dname, $class)\n" if $self->{'debug'};
+	my $packet = $self->make_query_packet( $dname, 'AXFR', $class );
 
-	unless ($self->nameservers()) {
+	my ($ns) = $self->nameservers;
+	unless ($ns) {
 		$self->errorstring('no nameservers');
-		print ";; ERROR: no nameservers\n" if $self->{'debug'};
+		print ';; ', $self->errorstring, "\n" if $debug;
 		return;
 	}
 
-	my $packet = $self->make_query_packet($dname, 'AXFR', $class);
-	my $packet_data = $packet->data;
-
-	my $ns = ($self->nameservers())[0];
-
-
-	my $srcport = $self->{'srcport'};
-	my $srcaddr = $self->{'srcaddr'};
-	my $dstport = $self->{'port'};
-
-	print ";; axfr_start nameserver = $ns\n" if $self->{'debug'};
-	print ";; axfr_start srcport: $srcport, srcaddr: $srcaddr, dstport: $dstport\n" if $self->{'debug'};
-
+	if ($debug) {
+		my $srcport = $self->{srcport};
+		my $srcaddr = $self->{srcaddr};
+		my $dstport = $self->{port};
+		print ";; axfr_start nameserver = $ns\n";
+		print ";; axfr_start srcport: $srcport, srcaddr: $srcaddr, dstport: $dstport\n";
+	}
 
 	my $sock;
-	my $sock_key = "$ns:$self->{'port'}";
+	my $sock_key = "$ns:$self->{port}";
 
-
-	if ($self->persistent_tcp && $self->{'axfr_sockets'}[AF_UNSPEC]{$sock_key}) {
-		$sock = $self->{'axfr_sockets'}[AF_UNSPEC]{$sock_key};
-		print ";; using persistent socket\n"
-		    if $self->{'debug'};
+	if ( $self->persistent_tcp && $self->{axfr_sockets}[AF_UNSPEC]{$sock_key} ) {
+		$sock = $self->{axfr_sockets}[AF_UNSPEC]{$sock_key};
+		print ";; using persistent socket\n" if $debug;
 	} else {
-		$sock=$self->_create_tcp_socket($ns);
-
-		return unless ($sock);  # all error messages
-		                        # are set by _create_tcp_socket
-
-
-		$self->{'axfr_sockets'}[AF_UNSPEC]{$sock_key} = $sock if
-		    $self->persistent_tcp;
+		$sock = $self->_create_tcp_socket($ns) || return;
+		$self->{axfr_sockets}[AF_UNSPEC]{$sock_key} = $sock if $self->persistent_tcp;
 	}
 
-	my $lenmsg = pack('n', length($packet_data));
+	my $packet_data = $packet->data;
+	my $lenmsg = pack( 'n', length($packet_data) );
 
-	unless ($sock->send($lenmsg)) {
+	unless ( $sock->send($lenmsg) ) {
 		$self->errorstring($!);
 		return;
 	}
 
-	unless ($sock->send($packet_data)) {
+	unless ( $sock->send($packet_data) ) {
 		$self->errorstring($!);
 		return;
 	}
 
-	my $sel = IO::Select->new($sock);
+	$self->{axfr_ns}  = $ns;
+	$self->{axfr_sel} = IO::Select->new($sock);
 
-	$self->{'axfr_sel'}       = $sel;
-	$self->{'axfr_rr'}        = [];
-	$self->{'axfr_soa_count'} = 0;
-	$self->{'axfr_ns'}        = $ns;
-
-	return $sock;
+	return $packet;
 }
 
 
-sub axfr_next {
+sub _axfr_next {
 	my $self = shift;
-	my $err  = '';
 
-	unless (@{$self->{'axfr_rr'}}) {
-		unless ($self->{'axfr_sel'}) {
-			my $err = 'no zone transfer in progress';
-
-			print ";; $err\n" if $self->{'debug'};
-			$self->errorstring($err);
-
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my $sel = $self->{'axfr_sel'};
-		my $timeout = $self->{'tcp_timeout'};
-
-		#--------------------------------------------------------------
-		# Read the length of the response packet.
-		#--------------------------------------------------------------
-
-		my @ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$err = 'timeout';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my $buf = read_tcp($ready[0], Net::DNS::INT16SZ(), $self->{'debug'});
-		unless (length $buf) {
-			$err = 'truncated zone transfer';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my ($len) = unpack('n', $buf);
-		unless ($len) {
-			$err = 'truncated zone transfer';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		#--------------------------------------------------------------
-		# Read the response packet.
-		#--------------------------------------------------------------
-
-		@ready = $sel->can_read($timeout);
-		unless (@ready) {
-			$err = 'timeout';
-			$self->errorstring($err);
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		$buf = read_tcp($ready[0], $len, $self->{'debug'});
-
-		print ';; received ', length($buf), " bytes\n"
-			if $self->{'debug'};
-
-		unless (length($buf) == $len) {
-			$err = "expected $len bytes, received " . length($buf);
-			$self->errorstring($err);
-			print ";; $err\n" if $self->{'debug'};
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		my $ans = Net::DNS::Packet->new(\$buf);
-		my $err = $@;
-
-		$ans->answerfrom($self->{'axfr_ns'});
-		$ans->print if $self->{debug};
-
-		if ($ans) {
-			if ($ans->header->rcode ne 'NOERROR') {
-				$self->errorstring('Response code from server: ' . $ans->header->rcode);
-				print ';; Response code from server: ' . $ans->header->rcode . "\n" if $self->{'debug'};
-				return wantarray ? (undef, $err) : undef;
-			}
-			if ($ans->header->ancount < 1) {
-				$err = 'truncated zone transfer';
-				$self->errorstring($err);
-				print ";; $err\n" if $self->{'debug'};
-				return wantarray ? (undef, $err) : undef;
-			}
-		}
-		else {
-			$err ||= 'unknown error during packet parsing';
-			$self->errorstring($err);
-			print ";; $err\n" if $self->{'debug'};
-			return wantarray ? (undef, $err) : undef;
-		}
-
-		foreach my $rr ($ans->answer) {
-			if ($rr->type eq 'SOA') {
-				if (++$self->{'axfr_soa_count'} < 2) {
-					push @{$self->{'axfr_rr'}}, $rr;
-				}
-			}
-			else {
-				push @{$self->{'axfr_rr'}}, $rr;
-			}
-		}
-
-		if ($self->{'axfr_soa_count'} >= 2) {
-			$self->{'axfr_sel'} = undef;
-			# we need to mark the transfer as over if the response was in
-			# many answers.  Otherwise, the user will call axfr_next again
-			# and that will cause a 'no transfer in progress' error.
-			push(@{$self->{'axfr_rr'}}, undef);
-		}
+	my $debug = $self->{debug};
+	unless ( $self->{axfr_sel} ) {
+		$self->errorstring('no zone transfer in progress');
+		print ';; ', $self->errorstring, "\n" if $debug;
+		return;
 	}
 
-	my $rr = shift @{$self->{'axfr_rr'}};
+	my $sel	    = $self->{axfr_sel};
+	my $timeout = $self->{tcp_timeout};
 
-	return wantarray ? ($rr, undef) : $rr;
+	#--------------------------------------------------------------
+	# Read the length of the response packet.
+	#--------------------------------------------------------------
+
+	my @ready = $sel->can_read($timeout);
+	unless (@ready) {
+		$self->errorstring('timeout');
+		return;
+	}
+
+	my $buf = read_tcp( $ready[0], Net::DNS::INT16SZ(), $self->{debug} );
+	unless ( length $buf ) {
+		$self->errorstring('truncated zone transfer');
+		return;
+	}
+
+	my ($len) = unpack( 'n', $buf );
+	unless ($len) {
+		$self->errorstring('truncated zone transfer');
+		return;
+	}
+
+	#--------------------------------------------------------------
+	# Read the response packet.
+	#--------------------------------------------------------------
+
+	@ready = $sel->can_read($timeout);
+	unless (@ready) {
+		$self->errorstring('timeout');
+		return;
+	}
+
+	$buf = read_tcp( $ready[0], $len, $self->{debug} );
+
+	print ';; received ', length($buf), " bytes\n" if $debug;
+
+	unless ( length($buf) == $len ) {
+		$self->errorstring( "expected $len bytes, received " . length($buf) );
+		print ';; ', $self->errorstring, "\n" if $debug;
+		return;
+	}
+
+	my $ans = Net::DNS::Packet->new( \$buf );
+	my $err = $@;
+
+	if ($ans) {
+		$ans->answerfrom( $self->{axfr_ns} );
+		$ans->print if $debug;
+
+		unless ( $ans->header->rcode eq 'NOERROR' ) {
+			$self->errorstring( 'RCODE from server: ' . $ans->header->rcode );
+			print ';; ', $self->errorstring, "\n" if $debug;
+			return;
+		}
+		unless ( $ans->header->ancount ) {
+			$self->errorstring('truncated zone transfer');
+			print ';; ', $self->errorstring, "\n" if $debug;
+			return;
+		}
+
+	} else {
+		$err ||= 'unknown error during packet parsing';
+		$self->errorstring($err);
+		print ';; ', $self->errorstring, "\n" if $debug;
+		return;
+	}
+
+	return $ans;
 }
-
-
-
-
-sub dnssec {
-    my ($self, $new_val) = @_;
-    if (defined $new_val) {
-	$self->{"dnssec"} = $new_val;
-	# Setting the udppacket size to some higher default
-	$self->udppacketsize(2048) if $new_val;
-    }
-
-    Carp::carp ("You called the Net::DNS::Resolver::dnssec() method but do not have Net::DNS::SEC installed") if $self->{"dnssec"} && ! $Net::DNS::DNSSEC;
-    return $self->{"dnssec"};
-};
 
 
 
 sub tsig {
 	my $self = shift;
 
-	if (@_ == 1) {
-		if ($_[0] && ref($_[0])) {
-			$self->{'tsig_rr'} = $_[0];
-		}
-		else {
-			$self->{'tsig_rr'} = undef;
-		}
-	}
-	elsif (@_ == 2) {
-		my ($key_name, $key) = @_;
-		$self->{'tsig_rr'} = Net::DNS::RR->new("$key_name TSIG $key");
+	return $self->{tsig_rr} unless scalar @_;
+	$self->{tsig_rr} = create Net::DNS::RR::TSIG(@_);
+}
+
+
+
+sub dnssec {
+	my $self = shift;
+
+	if ( scalar @_ ) {
+		# Set dnssec flag and increase default udppacket size
+		$self->udppacketsize(2048) if $self->{dnssec} = shift;
 	}
 
-	return $self->{'tsig_rr'};
-}
+	Carp::carp ("You called the Net::DNS::Resolver::dnssec() method but do not have Net::DNS::SEC installed")
+			if $self->{dnssec} && ! $Net::DNS::DNSSEC;
+	return $self->{dnssec};
+};
+
+
+
 
 #
 # Usage:  $data = read_tcp($socket, $nbytes, $debug);
@@ -1592,7 +1546,7 @@ Net::DNS::Resolver::Base - Common Resolver Class
 
 =head1 SYNOPSIS
 
- use base qw/Net::DNS::Resolver::Base/;
+    use base qw(Net::DNS::Resolver::Base);
 
 =head1 DESCRIPTION
 
@@ -1607,15 +1561,17 @@ for all your resolving needs.
 Copyright (c) 1997-2002 Michael Fuhr.
 
 Portions Copyright (c) 2002-2004 Chris Reinhardt.
-Portions Copyright (c) 2005 Olaf Kolkman  <olaf@net-dns.org>
-Portions Copyright (c) 2006 Dick Franks.
+
+Portions Copyright (c) 2005 Olaf Kolkman.
+
+Portions Copyright (c) 2006,2014 Dick Franks.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
 
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>
+L<perl>, L<Net::DNS>, L<Net::DNS::Resolver>
 
 =cut
 

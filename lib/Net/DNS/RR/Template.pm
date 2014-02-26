@@ -1,12 +1,35 @@
+
+##
+## This is the template for specifying new RR classes.
+##
+## Before completing the template, please read any relevant RFCs and
+## add appropriate references to the document list.
+##
+## When completing the code sections, you may assume that required
+## data is defined and that unforeseen exceptions will be caught and
+## handled by the calling environment. Explicit testing for runtime
+## errors detectable by perl is inefficient and should be avoided.
+##
+## Note that RFC3597 specifically forbids domain name compression for
+## new RR subtypes. This template makes no provision for coding RR
+## subtypes with compressible RDATA or downcased canonical names.
+##
+## After completing the template, check that the RR code is specified
+## in %Net::DNS::Parameters::typesbyname and module added to MANIFEST.
+##
+
+
 package Net::DNS::RR::XXXX;
 
 #
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +38,6 @@ Net::DNS::RR::XXXX - DNS XXXX resource record
 =cut
 
 
-use strict;
 use integer;
 
 #use Net::DNS::DomainName;
@@ -90,26 +112,26 @@ sub defaults() {			## specify RR attribute default values
 sub preference {
 	my $self = shift;
 
-	$self->{preference} = shift if @_;
-	return 0 + ( $self->{preference} || 0 );
+	$self->{preference} = 0 + shift if scalar @_;
+	return $self->{preference} || 0;
 }
+
 
 sub foo {
 	my $self = shift;
 
-	$self->{foo} = new Net::DNS::DomainName(shift) if @_;
+	$self->{foo} = new Net::DNS::DomainName(shift) if scalar @_;
 	$self->{foo}->name if defined wantarray;
 }
-
 
 
 ## If you wish to offer users a sorted order then you will need to
 ## define functions similar to these, otherwise just remove them.
 
-# sort RRs in numerically ascending order
+#
 #__PACKAGE__->set_rrsort_func(
 #	'preference',
-#	sub {
+#	sub {		## numerically ascending order
 #		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
 #		$a->{preference} <=> $b->{preference};
 #	} );
@@ -120,7 +142,6 @@ sub foo {
 #	__PACKAGE__->get_rrsort_func('preference')
 #	);
 #
-
 
 1;
 __END__
@@ -148,12 +169,14 @@ other unpredictable behaviour.
 =head2 preference
 
     $preference = $rr->preference;
+    $rr->preference( $preference );
 
 Returns the server selection preference.
 
 =head2 foo
 
     $foo = $rr->foo;
+    $rr->foo( $foo );
 
 Returns the domain name of the foo server.
 
@@ -162,12 +185,12 @@ Returns the domain name of the foo server.
 
 Copyright (c)YYYY John Doe.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

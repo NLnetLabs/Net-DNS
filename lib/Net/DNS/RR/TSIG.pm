@@ -16,14 +16,15 @@ Net::DNS::RR::TSIG - DNS TSIG resource record
 
 =cut
 
+
 use integer;
+
 use Carp;
 use MIME::Base64;
 
 use Net::DNS::Parameters;
 
 require Net::DNS::DomainName;
-require Net::DNS::ZoneFile;
 
 require Digest::HMAC;
 require Digest::MD5;
@@ -69,7 +70,6 @@ use constant TSIG => typebyname qw(TSIG);
 }
 
 
-
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
@@ -99,6 +99,8 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	unless ($macbin) {
 		my ( $offset, undef, $packet ) = @_;
 
+		$self->prior_macbin( $self->{link}->macbin ) if $self->{link};
+
 		my $sigdata = $self->sig_data($packet);		# form data to be signed
 		$macbin = $self->macbin( $self->_mac_function($sigdata) );
 		$self->original_id( $packet->header->id );
@@ -124,11 +126,12 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my @lines = (
-		join( ' ', '; algorithm:  ', $self->algorithm ),
-		join( ' ', '; time signed:', $self->time_signed, 'fudge:', $self->fudge ),
-		join( ' ', '; original id:', $self->original_id ),
-		join( ' ', ';', $self->error, $self->other || '' ) );
-	join "\n", '', @lines;
+		join( "\t", 'algorithm:', $self->algorithm ),
+		join( "\t", 'time signed:', $self->time_signed, 'fudge:', $self->fudge ),
+		join( "\t", 'signature:',   $self->mac ),
+		join( "\t", 'original id:', $self->original_id ),
+		join( "\t", $self->error, $self->other || '' ) );
+	join "\n; ", '', @lines;
 }
 
 
@@ -149,7 +152,9 @@ sub encode {				## overide RR method
 	return pack 'a* n2 N n a*', $kname, TSIG, ANY, 0, length $rdata, $rdata;
 }
 
+
 sub algorithm { &_algorithm; }
+
 
 sub key {
 	my $self = shift;
@@ -158,7 +163,9 @@ sub key {
 	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
 }
 
+
 sub keybin { &_keybin; }
+
 
 sub time_signed {
 	my $self = shift;
@@ -167,12 +174,14 @@ sub time_signed {
 	return $self->{time_signed} ||= time();
 }
 
+
 sub fudge {
 	my $self = shift;
 
 	$self->{fudge} = 0 + shift if scalar @_;
 	return $self->{fudge} || 0;
 }
+
 
 sub mac {
 	my $self = shift;
@@ -181,12 +190,30 @@ sub mac {
 	unpack "H*", $self->macbin() if defined wantarray;
 }
 
+
 sub macbin {
 	my $self = shift;
 
 	$self->{macbin} = shift if scalar @_;
 	$self->{macbin} || "";
 }
+
+
+sub prior_mac {
+	my $self = shift;
+
+	$self->prior_macbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	unpack "H*", $self->prior_macbin() if defined wantarray;
+}
+
+
+sub prior_macbin {
+	my $self = shift;
+
+	$self->{prior_macbin} = shift if scalar @_;
+	$self->{prior_macbin} || "";
+}
+
 
 sub request_mac {
 	my $self = shift;
@@ -195,6 +222,7 @@ sub request_mac {
 	unpack "H*", $self->request_macbin() if defined wantarray;
 }
 
+
 sub request_macbin {
 	my $self = shift;
 
@@ -202,12 +230,6 @@ sub request_macbin {
 	$self->{request_macbin} || "";
 }
 
-sub continuation {
-	my $self = shift;
-
-	$self->{continuation} = shift if scalar @_;
-	$self->{continuation} || 0;
-}
 
 sub original_id {
 	my $self = shift;
@@ -216,11 +238,13 @@ sub original_id {
 	return $self->{original_id} || 0;
 }
 
+
 sub error {
 	my $self = shift;
 	$self->{error} = rcodebyname(shift) if scalar @_;
 	rcodebyval( $self->{error} || 0 );
 }
+
 
 sub other {
 	my $self = shift;
@@ -229,7 +253,9 @@ sub other {
 	$self->{other} || "";
 }
 
+
 sub other_data {&other}
+
 
 sub sig_function {
 	my $self = shift;
@@ -239,6 +265,7 @@ sub sig_function {
 }
 
 sub sign_func { &sig_function; }	## historical
+
 
 sub sig_data {
 	my $self = shift;
@@ -258,7 +285,10 @@ sub sig_data {
 	# Design decision: Use 32 bits, which will work until the end of time()!
 	my $time = pack 'xxN n', $self->time_signed, $self->fudge;
 
-	return pack 'a* a*', $data, $time if $self->continuation;
+	# Insert the prior MAC if present (multi-packet message).
+	if ( my $prior_mac = $self->prior_macbin ) {
+		return pack 'na* a* a*', length($prior_mac), $prior_mac, $data, $time;
+	}
 
 	# Insert the request MAC if present (used to validate responses).
 	my $sigdata = '';
@@ -282,13 +312,16 @@ sub sig_data {
 	return $sigdata;
 }
 
+
 sub create {
 	my $class = shift;
-	my $karg  = shift;
+	my $karg = shift || croak 'argument missing or undefined';
 
-	croak " Usage:	create $class( keyfile )\n\tcreate $class( keyname, key )" if ref($karg);
+	if ( ref($karg) ) {
+		return $karg if ref($karg) eq __PACKAGE__;
+		croak "Usage:	create $class( keyfile )\n\tcreate $class( keyname, key )";
 
-	if ( scalar(@_) == 1 ) {
+	} elsif ( scalar(@_) == 1 ) {
 		my $key = shift;				# ( keyname, key )
 		my $new = new Net::DNS::RR(
 			name => $karg,
@@ -298,13 +331,14 @@ sub create {
 		return $new;
 
 	} elsif ( $karg =~ /K([^+]+)[+0-9]+\.private$/ ) {	# ( keyfile, options )
-		my $kname   = $1;
+		my $kname = $1;
+		require Net::DNS::ZoneFile;
 		my $keyfile = new Net::DNS::ZoneFile($karg);
-		my ( $alg, $key );
+		my ( $alg, $key, $junk );
 		while ( my $line = $keyfile->_getline ) {
 			for ($line) {
-				( undef, $alg ) = split if /Algorithm:/;
-				( undef, $key ) = split if /Key:/;
+				( $junk, $alg ) = split if /Algorithm:/;
+				( $junk, $key ) = split if /Key:/;
 			}
 		}
 		return new Net::DNS::RR(
@@ -316,6 +350,7 @@ sub create {
 			);
 
 	} else {						# ( keyfile, options )
+		require Net::DNS::ZoneFile;
 		my $keyfile = new Net::DNS::ZoneFile($karg);
 		my $keyline = $keyfile->_getline;		# bad news: KEY is in Net::DNS::SEC
 		my ( $kname, $c, $t, $f, $p, $algorithm, @key ) = split /\s+/, $keyline;
@@ -331,47 +366,66 @@ sub create {
 	}
 }
 
+
 sub verify {
 	my $self = shift;
 	my $data = shift;
 
-	my $tsig = bless {%$self}, ref($self);
-	if ( my $query = shift ) {
-		croak 'Usage: $tsig->verify( $reply, $query )'
-				unless ref($query) && $query->isa('Net::DNS::Packet');
-		my $sigrr = $query->sigrr;
-		$tsig->request_macbin( $sigrr->macbin );
-
-		$self->error(17) && return 0 unless $tsig->name eq $sigrr->name;
-		$self->error(17) && return 0 unless lc $tsig->algorithm eq lc $sigrr->algorithm;
-	}
-
 	unless ( abs( time() - $self->time_signed ) < $self->fudge ) {
 		$self->error(18);				# bad time
 		$self->other( pack 'xxN', time() );
-		return 0;
+		return;
 	}
 
-	$tsig->original_id( $self->original_id );
-	$tsig->time_signed( $self->time_signed );
+	if ( scalar @_ ) {
 
-	my $sigdata = $tsig->sig_data($data);			# form data to be verified
-	my $tsigmac = $tsig->macbin( $self->_mac_function($sigdata) );
+		unless ( my $arg = shift ) {
+			$self->error(16);			# bad sig (multi-packet)
+			return;
 
-	my $macbin = $self->macbin || return 0;			# possibly not signed
+		} elsif ( ref($arg) && $arg->isa('Net::DNS::Packet') ) {
+			my $sigrr = $arg->sigrr;		# query TSIG
+			$self->request_macbin( $sigrr->macbin );
+			$self->error(17) && return unless $self->name eq $sigrr->name;
+			$self->error(17) && return unless lc $self->algorithm eq lc $sigrr->algorithm;
+
+		} elsif ( ref($arg) && $arg->isa(__PACKAGE__) ) {
+			my $sigrr = $arg;			# multi-packet
+			$self->prior_macbin( $sigrr->macbin );
+			$self->error(17) && return unless $self->name eq $sigrr->name;
+			$self->error(17) && return unless lc $self->algorithm eq lc $sigrr->algorithm;
+
+		} else {
+			croak 'Usage: $tsig->verify( $reply, $query )';
+		}
+
+	}
+
+	my $sigdata = $self->sig_data($data);			# form data to be verified
+	my $tsigmac = $self->_mac_function($sigdata);
+	my $tsig    = $self->chain;
+	$tsig->macbin($tsigmac);
+
+	my $macbin = $self->macbin;
 	my $maclen = length $macbin;
 	my $minlen = length($tsigmac) >> 1;			# per RFC4635, 3.1
-	$self->error(1) && return 0 if $maclen < 10;
-	$self->error(1) && return 0 if $maclen < $minlen;
-	$self->error(1) && return 0 if $maclen > length $tsigmac;
+	$self->error(1) && return if $maclen < 10;
+	$self->error(1) && return if $maclen < $minlen;
+	$self->error(1) && return if $maclen > length $tsigmac;
 
-	$self->error(16) && return 0 unless $macbin eq substr $tsigmac, 0, $maclen;
-	return 1;
+	$self->error(16) && return unless $macbin eq substr $tsigmac, 0, $maclen;
+	return $tsig;
 }
 
 sub vrfyerrstr {
 	my $self = shift;
 	return $self->error;
+}
+
+
+sub chain {
+	my $self = shift;
+	return bless {%$self, link => $self}, ref($self);
 }
 
 
@@ -455,6 +509,11 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
+    $tsig = create Net::DNS::RR::TSIG( $keyfile,
+					fudge => 300
+					);
+
+    $tsig = create Net::DNS::RR::TSIG( $keyname, $key );
 
 =head1 DESCRIPTION
 
@@ -523,6 +582,20 @@ object method before this will return anything meaningful.
 
 Binary message authentication code (MAC).
 
+=head2 prior_mac
+
+    $prior_mac = $rr->prior_mac;
+    $rr->prior_mac( $prior_mac );
+
+Prior message authentication code (MAC).
+
+=head2 prior_macbin
+
+    $prior_macbin = $rr->prior_macbin;
+    $rr->prior_macbin( $prior_macbin );
+
+Binary prior message authentication code.
+
 =head2 request_mac
 
     $request_mac = $rr->request_mac;
@@ -536,13 +609,6 @@ Request message authentication code (MAC).
     $rr->request_macbin( $request_macbin );
 
 Binary request message authentication code.
-
-=head2 continuation
-
-     $tsig->continuation(1);
-
-Flag which indicates continuation of a multi-message response.
-
 
 =head2 original_id
 
@@ -613,20 +679,29 @@ The two argument form is supported for backward compatibility.
     $verify = $tsig->verify( $data );
     $verify = $tsig->verify( $packet );
 
-    $verify = $tsig->verify( $reply, $query );
+    $verify = $tsig->verify( $reply,  $query );
+
+    $verify = $tsig->verify( $packet, $prior );
 
 The boolean verify method will return true if the hash over the
 packet data conforms to the data in the TSIG itself
+
+=head2 chain
+
+    $tsig = $tsig->chain();
+
+The chain() method creates a new TSIG object linked to the original
+RR, for the purpose of signing multi-message transfers.
 
 
 =head1 TSIG Keys
 
 TSIG keys are symmetric keys generated using dnssec-keygen:
 
-	$ dnssec-keygen -a HMAC-MD5 -b 160 -n HOST <keyname>
+	$ dnssec-keygen -a HMAC-SHA1 -b 160 -n HOST <keyname>
 
 	The key will be stored as a private and public keyfile pair
-	K<keyname>+157+<keyid>.private and K<keyname>+157+<keyid>.key
+	K<keyname>+161+<keyid>.private and K<keyname>+161+<keyid>.key
 
     where
 	<keyname> is the DNS name of the key.
@@ -634,7 +709,7 @@ TSIG keys are symmetric keys generated using dnssec-keygen:
 	<keyid> is the (generated) numerical identifier used to
 	distinguish this key.
 
-Other algorithms may be substituted for HMAC-MD5 in the above example.
+Other algorithms may be substituted for HMAC-SHA1 in the above example.
 
 It is recommended that the keyname be globally unique and incorporate
 the fully qualified domain names of the resolver and nameserver in
@@ -650,7 +725,7 @@ and both should be stored and handled as secret data.
 The following lines must be added to the /etc/named.conf file:
 
     key <keyname> {
-	algorithm HMAC-MD5;
+	algorithm HMAC-SHA1;
 	secret "<keydata>";
     };
 

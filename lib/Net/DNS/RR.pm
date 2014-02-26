@@ -143,7 +143,8 @@ sub _new_string {
 		return $self;
 	} elsif ( COMPATIBLE && $self->{OLD} ) {
 		$self->{ttl} ||= 0;
-		return ref($self)->new_from_string( $self, join( ' ', @token ), \@token );
+		die unless defined ref($self)->new_from_string( $self, "@token", \@token );
+		return $self;
 	}
 
 	$self->parse_rdata(@token);				# parse arguments
@@ -560,43 +561,36 @@ sub token {
 
 Sorting of RR arrays is done by Net::DNS::rrsort(), see documentation
 for L<Net::DNS>. This package provides class methods to set the
-sorting functions used for a particular RR based on its attributes.
+comparator function used for a particular RR based on its attributes.
 
 
 =head2 set_rrsort_func
 
-    Net::DNS::RR::SRV->set_rrsort_func(
-	'priority',
+    Net::DNS::RR::MX->set_rrsort_func(
+	'preference',
 	sub {
 	    my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-	    $a->priority <=> $b->priority
-	    || $b->weight <=> $a->weight;
+	    $a->preference <=> $b->preference
 	    }
 	);
 
-    Net::DNS::RR::SRV->set_rrsort_func(
+    Net::DNS::RR::MX->set_rrsort_func(
 	'default_sort',
-	sub {
-	    my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-	    $a->priority <=> $b->priority
-	    || $b->weight <=> $a->weight;
-	    }
+	Net::DNS::RR::MX->get_rrsort_func('preference')
 	);
 
-set_rrsort_func needs to be called as a class method. The first
-argument is the attribute name on which the sorting will need to take
-place. If you specify "default_sort" then that is the sort algorithm
-that will be used in the case that rrsort() is called without an RR
-attribute as argument.
+set_rrsort_func() must be called as a class method. The first argument is
+the attribute name on which the sorting is to take place. If you specify
+"default_sort" then that is the sort algorithm that will be used when
+rrsort() is called without an RR attribute as argument.
 
-The second argument is a reference to a comparison function that uses
-the global variables $a and $b in the C<from Net::DNS>(!!)package.
-During sorting, the variables $a and $b will contain references to
-objects of the class from which you called the set_prop_sort. In other
-words, you can rest assured that the above sorting function will only
-be applied to Net::DNS::RR::SRV objects.
+The second argument is a reference to a comparison function that uses the
+global variables $a and $b in the Net::DNS package. During sorting, the
+variables $a and $b will contain references to objects of the class whose
+set_rrsort_func() was called. The above sorting function will only be
+applied to Net::DNS::RR::MX objects.
 
-The above example is the sorting function implemented in SRV.
+The above example is the sorting function implemented in MX.
 
 =cut
 
@@ -607,45 +601,30 @@ sub set_rrsort_func {
 	my $attribute = shift;
 	my $funct     = shift;
 
-	#    print "Using ".__PACKAGE__."set_rrsort: $class\n";
-	my ($type) = $class =~ m/^.*::(.*)$/;
+	my ($type) = $class =~ m/::([^:]+)$/;
 	$Net::DNS::RR::rrsortfunct{$type}{$attribute} = $funct;
 }
 
 sub get_rrsort_func {
 	my $class     = shift;
 	my $attribute = shift;					# can be undefined.
-	my $sortsub;
-	my ($type) = $class =~ m/^.*::(.*)$/;
 
-	if (	   defined($attribute)
-		&& exists( $Net::DNS::RR::rrsortfunct{$type} )
-		&& exists( $Net::DNS::RR::rrsortfunct{$type}{$attribute} ) ) {
+	my ($type) = $class =~ m/::([^:]+)$/;
 
-		#  The default overwritten by the class variable in Net::DNS
-		return $Net::DNS::RR::rrsortfunct{$type}{$attribute};
-	} elsif ( !defined($attribute)
-		&& exists( $Net::DNS::RR::rrsortfunct{$type} )
-		&& exists( $Net::DNS::RR::rrsortfunct{$type}{default_sort} ) ) {
+	my $comparator = $attribute || 'default_sort';
+	if ( exists( $Net::DNS::RR::rrsortfunct{$type}{$comparator} ) ) {
+		return $Net::DNS::RR::rrsortfunct{$type}{$comparator};
 
-		#  The default overwritten by the class variable in Net::DNS
-		return $Net::DNS::RR::rrsortfunct{$type}{default_sort};
-	} elsif ( defined($attribute) ) {
+	} elsif ( defined($attribute) && $class->can($attribute) ) {
 
 		return sub {
-			my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-			exists( $a->{$attribute} )
-					? $a->$attribute() <=> $b->$attribute()
-					: $a->canonical() cmp $b->canonical();
-		};
-	} else {
-		return sub {
-			my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-			$a->canonical() cmp $b->canonical();
+			$Net::DNS::a->$attribute() <=> $Net::DNS::b->$attribute()
 		};
 	}
 
-	return $sortsub;
+	return sub {
+		$Net::DNS::a->canonical() cmp $Net::DNS::b->canonical();
+	};
 }
 
 
@@ -689,7 +668,7 @@ sub defaults { }			## set attribute default values
 
 sub dump {				## print internal data structure
 	require Data::Dumper;
-	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
+	$Data::Dumper::Sortkeys = $Data::Dumper::Sortkeys = 1;
 	return Data::Dumper::Dumper(shift) if defined wantarray;
 	print Data::Dumper::Dumper(shift);
 }

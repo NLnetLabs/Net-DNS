@@ -85,8 +85,8 @@ sub new {
     $packet = new Net::DNS::Packet( \$data, 1 );	# debug
 
 If passed a reference to a scalar containing DNS packet data, a new
-packet object is created by decoding the data.  The optional second
-boolean argument is used to enable debugging output.
+packet object is created by decoding the data.
+The optional second boolean argument enables debugging output.
 
 Returns undef if unable to create a packet object.
 
@@ -652,13 +652,15 @@ sub dn_expand_PP {
 
 =head2 sign_tsig
 
-    $update = new Net::DNS::Update( 'example.com' );
-    $update->push( update => rr_add( 'foo.example.com A 10.1.2.3' ) );
-    $update->sign_tsig( 'Khmac-sha512.example.+165+01018.key' );
+    $query = Net::DNS::Packet->new( 'www.example.com', 'A' );
 
-    $update->sign_tsig( 'Khmac-sha512.example.+165+01018.key',
+    $query->sign_tsig( 'Khmac-sha512.example.+165+01018.private',
 			fudge => 60
 			);
+
+    $reply = $res->send( $query );
+
+    $reply->verify( $query ) || die $reply->verifyerr;
 
 Attaches a TSIG resource record object, which will be used to sign
 the packet (see RFC 2845).
@@ -682,12 +684,25 @@ specified key.
     $packet = Net::DNS::Packet->new( 'www.example.com', 'A' );
     $packet->sign_tsig( $tsig );
 
-    $response = $res->send( $packet );
 
 The historical simplified syntax is still available, but additional
 options can not be specified.
 
     $packet->sign_tsig( $key_name, $key );
+
+
+Multi-packet transactions are signed by chaining the sign_tsig()
+calls together as follows:
+
+    $tsig_2  =	$packet1->sign_tsig( 'Kexample.+165+13281.private' );
+    $tsig_3  =	$packet2->sign_tsig( $tsig_2 );
+		$packet3->sign_tsig( $tsig_3 );
+
+The TSIG object returned by sign_tsig() is not intended to be accessed
+by the end-user application. Any such access is expressly forbidden.
+
+Note that a TSIG record is added to every packet; the implementation
+does not support the suppressed signature scheme described in RFC2845.
 
 =cut
 
@@ -695,62 +710,21 @@ sub sign_tsig {
 	my $self = shift;
 	my $karg = shift || return undef;
 
-	my $tsig;
-	unless ( ref($karg) ) {
-		require Net::DNS::RR::TSIG;
-		$tsig = Net::DNS::RR::TSIG->create( $karg, @_ );
+	my $tsig = eval {
+		unless ( my $kref = ref($karg) ) {
+			require Net::DNS::RR::TSIG;
+			return Net::DNS::RR::TSIG->create( $karg, @_ );
 
-	} elsif ( $karg->isa('Net::DNS::RR::TSIG') ) {
-		$tsig = $karg;
+		} elsif ( $kref eq 'Net::DNS::RR::TSIG' ) {
+			return $karg->chain;
 
-	} else {
-		croak join ' ', 'Incompatible', ref($karg), 'argument to sign_tsig';
-	}
+		} else {
+			die "unexpected $kref argument passed to sign_tsig";
+		}
+	} || croak "$@\nTSIG: unable to sign using specified key";
 
-	CORE::push( @{$self->{additional}}, $tsig ) if $tsig;
+	CORE::push( @{$self->{additional}}, $tsig );
 	return $tsig;
-}
-
-
-=head2 sign_sig0
-
-SIG0 support is provided through the Net::DNS::RR::SIG class. This
-class is not part of the default Net::DNS distribution but resides
-in the Net::DNS::SEC distribution.
-
-    $update = new Net::DNS::Update('example.com');
-    $update->push( update => rr_add('foo.example.com A 10.1.2.3'));
-    $update->sign_sig0('Kexample.com+003+25317.private');
-
-The method will call Carp::croak() if Net::DNS::RR::SIG can not be
-found.
-
-=cut
-
-use constant DNSSIG0 => eval { require Net::DNS::RR::SIG; } || 0;
-
-sub sign_sig0 {
-	my $self = shift;
-	my $karg = shift || return undef;
-
-	croak 'SIG0: prerequisite Net::DNS::SEC not available' unless DNSSIG0;
-
-	my $sig0;
-	unless ( my $kref = ref($karg) ) {
-		$sig0 = Net::DNS::RR::SIG->create( '', $karg );
-
-	} elsif ( $kref eq 'Net::DNS::RR::SIG' ) {
-		$sig0 = $karg;
-
-	} elsif ( $kref eq 'Net::DNS::SEC::Private' ) {
-		$sig0 = Net::DNS::RR::SIG->create( '', $karg );
-
-	} else {
-		croak "unexpected $kref argument passed to sign_sig0";
-	}
-
-	CORE::push( @{$self->{additional}}, $sig0 ) if $sig0;
-	return $sig0;
 }
 
 
@@ -761,10 +735,17 @@ sub sign_sig0 {
 
 Verify TSIG signature of packet or reply to the corresponding query.
 
-    $packet->verify( $keyrr )		|| die $packet->verifyerr;
-    $packet->verify( [$keyrr, ...] )	|| die $packet->verifyerr;
 
-Verify SIG0 packet signature against one or more specified KEY RRs.
+    $opaque  =	$packet1->verify( $query ) || die $packet1->verifyerr;
+    $opaque  =	$packet2->verify( $opaque );
+    $verifed =	$packet3->verify( $opaque ) || die $packet3->verifyerr;
+
+The opaque intermediate object references returned during multi-packet
+verify() will be undefined (Boolean false) if verification fails.
+Access to the object itself, if it exists, is expressly forbidden.
+Testing at every stage may be omitted, which results in a BADSIG error
+on the final packet in the absence of more specific information.
+
 =cut
 
 sub verify {
@@ -779,6 +760,51 @@ sub verifyerr {
 
 	my $sig = $self->sigrr || return 'not signed';
 	return $sig->vrfyerrstr;
+}
+
+
+=head2 sign_sig0
+
+SIG0 support is provided through the Net::DNS::RR::SIG class.
+This class is not integrated into Net::DNS but resides in the
+Net::DNS::SEC distribution available from CPAN.
+
+    $update = new Net::DNS::Update('example.com');
+    $update->push( update => rr_add('foo.example.com A 10.1.2.3'));
+    $update->sign_sig0('Kexample.com+003+25317.private');
+
+Execution will be terminated if Net::DNS::RR::SIG is not available.
+
+
+=head2 verify SIG0
+
+    $packet->verify( $keyrr )		|| die $packet->verifyerr;
+    $packet->verify( [$keyrr, ...] )	|| die $packet->verifyerr;
+
+Verify SIG0 packet signature against one or more specified KEY RRs.
+
+=cut
+
+sub sign_sig0 {
+	my $self = shift;
+	my $karg = shift || return undef;
+
+	my $sig0 = eval {
+		unless ( my $kref = ref($karg) ) {
+			return Net::DNS::RR::SIG->create( '', $karg );
+
+		} elsif ( $kref eq 'Net::DNS::RR::SIG' ) {
+			return $karg;
+
+		} elsif ( $kref eq 'Net::DNS::SEC::Private' ) {
+			return Net::DNS::RR::SIG->create( '', $karg );
+		} else {
+			die "unexpected $kref argument passed to sign_sig0";
+		}
+	} || croak "$@\nSIG0: Net::DNS::SEC not available";
+
+	CORE::push( @{$self->{additional}}, $sig0 );
+	return $sig0;
 }
 
 
@@ -866,10 +892,10 @@ sub truncate {
 
 sub dump {				## print internal data structure
 	require Data::Dumper;
-	$Data::Dumper::Sortkeys = sub { return [sort keys %{$_[0]}] };
-	my $self = shift;
-	return Data::Dumper::Dumper($self) if defined wantarray;
-	print Data::Dumper::Dumper($self);
+	local $Data::Dumper::Maxdepth = 6;
+	local $Data::Dumper::Sortkeys = $Data::Dumper::Sortkeys = 1;
+	return Data::Dumper::Dumper(shift) if defined wantarray;
+	print Data::Dumper::Dumper(shift);
 }
 
 

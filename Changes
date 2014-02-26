@@ -1,6 +1,21 @@
 $Id$                       -*-text-*-
 
 
+**** 0.75 [unreleased]
+
+Fix rt.cpan.org #92626
+
+	Clarify documentation surrounding SRV RR sorting
+
+Feature
+
+	Implement TSIG verified AXFR.
+
+Fix rt.cpan.org #92433 & #91241
+
+	TSIG: implement sign/verify for multi-packet message.
+
+
 **** 0.74 Jan 16, 2014
 
 Fix rt.cpan.org #91306

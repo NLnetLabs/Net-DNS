@@ -149,28 +149,25 @@ subsequent examples show only the creation of the update packet .
     $update->push( prereq => yxdomain('byebye.example.com') );
     $update->push( update => rr_del('byebye.example.com') );
 
-=head2 Perform a DNS update signed using a BIND key file
+=head2 Perform a DNS update signed using a BIND private key file
 
     my $update = new Net::DNS::Update('example.com');
     $update->push( update => rr_add('foo.example.com A 10.1.2.3') );
-    $update->push( update => rr_add('bar.example.com A 10.4.5.6') );
     $update->sign_tsig( "$dir/Khmac-sha512.example.com.+165+01018.private" );
+    my $reply = $resolver->send( $update );
+    $reply->verify( $update ) || die $reply->verifyerr;
 
-The corresponding public key file may also be used:
+=head2 Signing the DNS update using a BIND public key file
 
     $update->sign_tsig( "$dir/Khmac-sha512.example.com.+165+01018.key" );
 
-=head2 Another way to perform a signed update
+=head2 Signing the DNS update using a customised TSIG record
 
-    my $key_name = 'tsig-key';
-    my $key	 = 'awwLOtRfpGE+rRKF2+DEiw==';
+    $update->sign_tsig( "$dir/Khmac-sha512.example.com.+165+01018.private",
+                        fudge => 60
+                        );
 
-    my $update = new Net::DNS::Update('example.com');
-    $update->push( update => rr_add('foo.example.com A 10.1.2.3') );
-    $update->push( update => rr_add('bar.example.com A 10.4.5.6') );
-    $update->sign_tsig( $key_name, $key );
-
-=head2 Perform a signed update with a customized TSIG record
+=head2 Another way to sign a DNS update
 
     my $key_name = 'tsig-key';
     my $key	 = 'awwLOtRfpGE+rRKF2+DEiw==';
@@ -180,7 +177,6 @@ The corresponding public key file may also be used:
 
     my $update = new Net::DNS::Update('example.com');
     $update->push( update     => rr_add('foo.example.com A 10.1.2.3') );
-    $update->push( update     => rr_add('bar.example.com A 10.4.5.6') );
     $update->push( additional => $tsig );
 
 =head1 BUGS

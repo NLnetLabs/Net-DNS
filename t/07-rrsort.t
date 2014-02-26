@@ -29,36 +29,32 @@ is(ref($rr9),"Net::DNS::RR::A","A RR9 created");
 my @rrarray=($rr1, $rr2, $rr3, $rr4, $rr5, $rr6, $rr7, $rr8, $rr9);
 my @expectedrdata=($rr1, $rr2, $rr3, $rr7, $rr4, $rr5, $rr6,  $rr8);
 my @expectedpriority=($rr1, $rr7, $rr2, $rr3, $rr8, $rr6, $rr5, $rr4);
-my @expectedweight=($rr7, $rr8, $rr6, $rr5, $rr1, $rr2, $rr3, $rr4);
 
 
 
-is (rrsort("SRV"),undef,"rrsort returns rrerly whith undefined arguments");
+is (scalar rrsort("SRV"),undef,"rrsort returns properly with undefined arguments");
 
-is (rrsort("SRV",@rrarray),8,"rrsort returns properly whith undefined attribute (1)");
+is (scalar rrsort("SRV",@rrarray),8,"rrsort returns properly with undefined attribute (1)");
 
-is (rrsort("SRV",,@rrarray),8,"rrsort returns properly whith undefined attribute (2)");
+is (scalar rrsort("SRV",,@rrarray),8,"rrsort returns properly with undefined attribute (2)");
 
-is (rrsort("SRV","",@rrarray),8,"rrsort returns properly whith undefined attribute (3)");
+is (scalar rrsort("SRV","",@rrarray),8,"rrsort returns properly with undefined attribute (3)");
 
 my @prioritysorted= rrsort("SRV","priority",@rrarray);
-my @weightsorted= rrsort("SRV","weight",@rrarray);
 my @defaultsorted= rrsort("SRV",@rrarray);
 my @portsorted= rrsort("SRV","port",@rrarray);
 
 my @foosorted= rrsort("SRV","foo",@rrarray);
-is (@foosorted,8,"rrsort returns properly whith undefined attribute (3)");
+is (scalar @foosorted,8,"rrsort returns properly with undefined attribute (4)");
 
-is ( @prioritysorted,8,"rrsort correctly maintains RRs test 2");
-
+is (scalar @prioritysorted,8,"rrsort correctly maintains RRs test 1");
+is (scalar @portsorted,8,"rrsort correctly maintains RRs test 2");
+is (scalar rrsort("A","priority",@rrarray),1,"rrsort correctly maintains RRs test 3");
+is (scalar rrsort("MX","priority",@rrarray),0,"rrsort correctly maintains RRs test 4");
 
 ok (eq_array(\@expectedpriority, \@prioritysorted), "Sorting on SRV priority works");
 ok (eq_array(\@expectedpriority, \@defaultsorted), "Default SRV sort works");
-ok (eq_array(\@expectedweight, \@weightsorted), "Weight sorted SRV sort works");
 
-
-is (rrsort("A","priority",@rrarray),1,"rrsort correctly maintains RRs test 1");
-is (rrsort("MX","priority",@rrarray),undef,"rrsort correctly maintains RRs test 3");
 
 
 #

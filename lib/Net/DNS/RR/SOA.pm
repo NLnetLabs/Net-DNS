@@ -6,6 +6,7 @@ package Net::DNS::RR::SOA;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
+
 use strict;
 use base qw(Net::DNS::RR);
 
@@ -27,7 +28,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset, @opaque ) = @_;
 
 	( $self->{mname}, $offset ) = decode Net::DNS::DomainName1035(@_);
-	( $self->{rname}, $offset ) = decode Net::DNS::Mailbox1035($data,$offset,@opaque );
+	( $self->{rname}, $offset ) = decode Net::DNS::Mailbox1035( $data, $offset, @opaque );
 	@{$self}{qw(serial refresh retry expire minimum)} = unpack "\@$offset N5", $$data;
 }
 
@@ -39,7 +40,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	return '' unless defined $self->{rname};
 	my $rdata = $self->{mname}->encode(@_);
 	$rdata .= $self->{rname}->encode( $offset + length($rdata), @opaque );
-	$rdata .= pack "N5", map $self->$_, qw(serial refresh retry expire minimum);
+	$rdata .= pack 'N5', $self->serial, @{$self}{qw(refresh retry expire minimum)};
 }
 
 
@@ -47,10 +48,15 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{rname};
-	my $mname = $self->{mname}->string;
-	my $rname = $self->{rname}->string;
-	my @n	  = map { sprintf "%-10u\t;$_", $self->$_ } qw(serial refresh retry expire);
-	join "\n\t\t\t\t", "$mname $rname (", @n, sprintf "%-6u )\t;minimum", $self->minimum;
+	my $mname  = $self->{mname}->string;
+	my $rname  = $self->{rname}->string;
+	my $serial = $self->serial;
+	my $spacer = $serial > 9999999 ? "" : "\t";
+	join "\n\t\t\t\t", "$mname $rname (", "$serial$spacer\t;serial",
+			"$self->{refresh}\t\t;refresh",
+			"$self->{retry}\t\t;retry",
+			"$self->{expire}\t\t;expire",
+			"$self->{minimum}\t)\t;minimum";
 }
 
 
