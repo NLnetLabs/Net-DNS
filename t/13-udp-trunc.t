@@ -9,7 +9,7 @@ use Data::Dumper;
 
 my $ZONE = 'example.com';
 
-use_ok('Net::DNS::Nameserver');
+use Net::DNS::Nameserver;
 
 use vars qw(
 	    $Address
@@ -21,7 +21,7 @@ BEGIN{
     $TestPort  = 5334;
     $Address = "127.0.0.1";
 
-    $numberoftests=100;
+    $numberoftests = 99;
     
     if(
 	eval {require IO::Socket;}

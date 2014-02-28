@@ -318,17 +318,26 @@ sub create {
 	my $karg = shift || croak 'argument missing or undefined';
 
 	if ( ref($karg) ) {
-		return $karg if ref($karg) eq __PACKAGE__;
-		croak "Usage:	create $class( keyfile )\n\tcreate $class( keyname, key )";
+		return $karg->chain if ref($karg) eq __PACKAGE__;
+		croak "Usage:	create $class( keyfile )\n\tcreate $class( keyname, key )"
+				unless $karg->isa('Net::DNS::Packet');
+
+		my $sigrr = $karg->sigrr || die 'no TSIG in request packet';
+		return new Net::DNS::RR(			# ( request, options )
+			name	       => $sigrr->name,
+			type	       => 'TSIG',
+			algorithm      => $sigrr->algorithm,
+			request_macbin => $sigrr->macbin,
+			@_
+			);
 
 	} elsif ( scalar(@_) == 1 ) {
 		my $key = shift;				# ( keyname, key )
-		my $new = new Net::DNS::RR(
+		return new Net::DNS::RR(
 			name => $karg,
 			type => 'TSIG',
 			key  => $key
 			);
-		return $new;
 
 	} elsif ( $karg =~ /K([^+]+)[+0-9]+\.private$/ ) {	# ( keyfile, options )
 		my $kname = $1;
@@ -425,7 +434,7 @@ sub vrfyerrstr {
 
 sub chain {
 	my $self = shift;
-	return bless {%$self, link => $self}, ref($self);
+	return bless {%$self, macbin => undef, link => $self}, ref($self);
 }
 
 

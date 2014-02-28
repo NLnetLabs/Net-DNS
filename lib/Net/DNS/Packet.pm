@@ -691,15 +691,22 @@ options can not be specified.
     $packet->sign_tsig( $key_name, $key );
 
 
+The response to an inbound request is signed by presenting the request
+in place of the key parameter.
+    $response = $request->reply;
+    $response->sign_tsig( $request, @options );
+
+
 Multi-packet transactions are signed by chaining the sign_tsig()
 calls together as follows:
 
-    $tsig_2  =	$packet1->sign_tsig( 'Kexample.+165+13281.private' );
-    $tsig_3  =	$packet2->sign_tsig( $tsig_2 );
-		$packet3->sign_tsig( $tsig_3 );
+    $opaque  =	$packet1->sign_tsig( 'Kexample.+165+13281.private' );
+    $opaque  =	$packet2->sign_tsig( $opaque );
+		$packet3->sign_tsig( $opaque );
 
-The TSIG object returned by sign_tsig() is not intended to be accessed
-by the end-user application. Any such access is expressly forbidden.
+The opaque intermediate object references returned during multi-packet
+signing are not intended to be accessed by the end-user application.
+Any such access is expressly forbidden.
 
 Note that a TSIG record is added to every packet; the implementation
 does not support the suppressed signature scheme described in RFC2845.
@@ -708,20 +715,11 @@ does not support the suppressed signature scheme described in RFC2845.
 
 sub sign_tsig {
 	my $self = shift;
-	my $karg = shift || return undef;
 
 	my $tsig = eval {
-		unless ( my $kref = ref($karg) ) {
-			require Net::DNS::RR::TSIG;
-			return Net::DNS::RR::TSIG->create( $karg, @_ );
-
-		} elsif ( $kref eq 'Net::DNS::RR::TSIG' ) {
-			return $karg->chain;
-
-		} else {
-			die "unexpected $kref argument passed to sign_tsig";
-		}
-	} || croak "$@\nTSIG: unable to sign using specified key";
+		require Net::DNS::RR::TSIG;
+		Net::DNS::RR::TSIG->create(@_);
+	} || croak "$@\nTSIG: unable to sign packet";
 
 	CORE::push( @{$self->{additional}}, $tsig );
 	return $tsig;

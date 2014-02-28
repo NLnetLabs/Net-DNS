@@ -68,13 +68,10 @@ use Net::DNS::Resolver;
 new Net::DNS::RR( type => 'TSIG' );	## pre-load RR with create() constructor
 
 
-sub version   () { $VERSION; }
-sub PACKETSZ  () { 512; }
-sub HFIXEDSZ  () {  12; }
-sub QFIXEDSZ  () {   4; }
-sub RRFIXEDSZ () {  10; }
-sub INT32SZ   () {   4; }
-sub INT16SZ   () {   2; }
+sub version ()	{ $VERSION; }
+sub PACKETSZ () { 512; }
+sub INT32SZ ()	{ 4; }
+sub INT16SZ ()	{ 2; }
 
 
 #
@@ -114,16 +111,10 @@ sub mx {
 sub rrsort {
 	my $rrtype = uc shift;
 	my @empty;
-	my $attribute = shift;
-	my @rr_array = @_;
+	my ( $attribute, @rr_array ) = @_;
 
 	return undef unless defined $attribute;			# attribute not specified
-	if ( ref($attribute) =~ /^Net::DNS::RR/ ) {
-
-		# push the attribute back on the array.
-		push @rr_array, $attribute;
-		undef $attribute;
-	}
+	( @rr_array, $attribute ) = @_ if ref($attribute) =~ /^Net::DNS::RR/;
 
 	my @extracted_rr = grep $_->type eq $rrtype, @rr_array;
 	return @empty unless scalar @extracted_rr;
@@ -200,17 +191,28 @@ sub rr_del {
 #	Net::DNS::SEC 0.17 compatibility
 ########################################
 
-use Net::DNS::Parameters;
+BEGIN {
+	use constant DNSSEC => eval {
+		local $SIG{'__DIE__'} = 'DEFAULT';
+		require Net::DNS::SEC;
+	} || 0;
 
-if ( eval { require Net::DNS::SEC } ) {
-	eval { require Net::DNS::RR::RRSIG };
-	eval { require Net::DNS::RR::SIG };
-	eval { require Net::DNS::RR::DNSKEY };
-	eval { require Net::DNS::RR::KEY };
-	eval { require Net::DNS::RR::DS };
-	eval { require Net::DNS::RR::DLV };
+	# pre-load RRs with create() constructor
+	require Net::DNS::RR::DS;
+	require Net::DNS::RR::DLV;
+	require Net::DNS::RR::RRSIG;
+	require Net::DNS::RR::SIG;
 }
 
+sub INIT {				## safe to ignore "Too late to run" warning
+	return unless DNSSEC;		## needed for DNSSEC 00-load.t only
+
+	# pre-load remaining RRs, some of which have circular dependence problems
+	new Net::DNS::RR( type => $_ ) foreach qw(DNSKEY KEY NSEC NXT);
+	new Net::DNS::RR( type => $_ ) foreach qw(NSEC3 NSEC3PARAM);
+}
+
+use Net::DNS::Parameters;
 
 sub typesbyname {
 
