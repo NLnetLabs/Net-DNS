@@ -194,10 +194,10 @@ sub rr_del {
 ########################################
 
 use constant DNSSEC => eval {		## pre-load RRs with create() constructor
-	require Net::DNS::RR::DS;
-	require Net::DNS::RR::DLV;
 	require Net::DNS::RR::RRSIG;
 	require Net::DNS::RR::SIG;
+	require Net::DNS::RR::DS;
+	require Net::DNS::RR::DLV;
 } || 0;
 
 sub INIT {				## safe to ignore "Too late to run" warning
