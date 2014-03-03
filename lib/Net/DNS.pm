@@ -68,10 +68,12 @@ use Net::DNS::Resolver;
 new Net::DNS::RR( type => 'TSIG' );	## pre-load RR with create() constructor
 
 
-sub version ()	{ $VERSION; }
+sub version { $VERSION; }
+
 sub PACKETSZ () { 512; }
-sub INT32SZ ()	{ 4; }
-sub INT16SZ ()	{ 2; }
+
+sub INT32SZ () { 4; }
+sub INT16SZ () { 2; }
 
 
 #
@@ -191,18 +193,12 @@ sub rr_del {
 #	Net::DNS::SEC 0.17 compatibility
 ########################################
 
-BEGIN {
-	use constant DNSSEC => eval {
-		local $SIG{'__DIE__'} = 'DEFAULT';
-		require Net::DNS::SEC;
-	} || 0;
-
-	# pre-load RRs with create() constructor
+use constant DNSSEC => eval {		## pre-load RRs with create() constructor
 	require Net::DNS::RR::DS;
 	require Net::DNS::RR::DLV;
 	require Net::DNS::RR::RRSIG;
 	require Net::DNS::RR::SIG;
-}
+} || 0;
 
 sub INIT {				## safe to ignore "Too late to run" warning
 	return unless DNSSEC;		## needed for DNSSEC 00-load.t only
@@ -211,6 +207,7 @@ sub INIT {				## safe to ignore "Too late to run" warning
 	new Net::DNS::RR( type => $_ ) foreach qw(DNSKEY KEY NSEC NXT);
 	new Net::DNS::RR( type => $_ ) foreach qw(NSEC3 NSEC3PARAM);
 }
+
 
 use Net::DNS::Parameters;
 
