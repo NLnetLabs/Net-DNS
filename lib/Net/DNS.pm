@@ -4,7 +4,7 @@ package Net::DNS;
 # $Id$
 #
 use vars qw($VERSION $SVNVERSION);
-$VERSION    = '0.74_1';
+$VERSION    = '0.74_2';
 $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
@@ -43,17 +43,18 @@ use vars qw(@EXPORT);
 
 use vars qw($HAVE_XS);
 $HAVE_XS = eval {
+	my ($version) = split /[^0-9.]/, $VERSION;
 	local $SIG{'__DIE__'} = 'DEFAULT';
 
 	eval {
 		require XSLoader;
-		XSLoader::load( 'Net::DNS', $VERSION );
+		XSLoader::load( 'Net::DNS', $version );
 		1;
 	} or do {
 		use vars qw(@ISA);
 		require DynaLoader;
 		push @ISA, 'DynaLoader';
-		bootstrap Net::DNS $VERSION;
+		bootstrap Net::DNS $version;
 		1;
 	};
 

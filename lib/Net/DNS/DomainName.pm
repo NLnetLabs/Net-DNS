@@ -42,7 +42,7 @@ introduced by RFC3597.
 use strict;
 use base qw(Net::DNS::Domain);
 
-use constant OKlc => eval { require 5.8.9; } || 0;
+use constant OKlc => eval { require 5.010; } || 0;
 
 use integer;
 use Carp;
