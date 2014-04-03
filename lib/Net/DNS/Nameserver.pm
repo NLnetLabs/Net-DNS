@@ -50,21 +50,18 @@ use constant STATE_ACCEPTED   => 1;
 use constant STATE_GOT_LENGTH => 2;
 use constant STATE_SENDING    => 3;
 
+use constant PACKETSZ => 512;
+
 use vars qw($has_inet6);
 
 BEGIN {
-	if (FORCE_INET4) {
-		$has_inet6 = 0;
-	} elsif (
-		eval {
-			require IO::Socket::INET6;
-			IO::Socket::INET6->VERSION("2.01");
-		}
-		) {
-		$has_inet6 = 1;
-	} else {
-		$has_inet6 = 0;
-	}
+	$has_inet6 = eval {
+		require IO::Socket::INET6;
+		IO::Socket::INET6->VERSION("2.01");
+		1;
+	} || 0;
+
+	$has_inet6 = 0 if FORCE_INET4;
 }
 
 
@@ -223,15 +220,16 @@ sub make_reply {
 		print "query $id : $qname $qclass $qtype - " if $self->{Verbose};
 
 		my ( $rcode, $ans, $auth, $add );
+		my @arglist = ( $qname, $qclass, $qtype, $peerhost, $query, $conn );
 
 		if ( $opcode eq "QUERY" ) {
 			( $rcode, $ans, $auth, $add, $headermask ) =
-				&{$self->{ReplyHandler}}( $qname, $qclass, $qtype, $peerhost, $query, $conn );
+					&{$self->{ReplyHandler}}(@arglist);
 
 		} elsif ( $opcode eq "NOTIFY" ) {		#RFC1996
 			if ( ref $self->{NotifyHandler} eq "CODE" ) {
 				( $rcode, $ans, $auth, $add, $headermask ) =
-					&{$self->{NotifyHandler}}( $qname, $qclass, $qtype, $peerhost, $query, $conn );
+						&{$self->{NotifyHandler}}(@arglist);
 			} else {
 				$rcode = "NOTIMP";
 			}
@@ -390,7 +388,7 @@ sub udp_connection {
 
 	my $buf = "";
 
-	$sock->recv( $buf, &Net::DNS::PACKETSZ );
+	$sock->recv( $buf, PACKETSZ );
 	my ( $peerhost, $peerport, $sockhost ) = ( $sock->peerhost, $sock->peerport, $sock->sockhost );
 	unless ( defined $peerhost && defined $peerport ) {
 		print "the Peer host and sock host appear to be undefined: bailing out of handling the UDP connection"

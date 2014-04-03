@@ -131,7 +131,7 @@ sub _new_string {
 
 	return $self unless $populated;				# empty RR
 
-	if ( $token[0] =~ /#$/ ) {
+	if ( $token[0] =~ /^[\\]?#$/ ) {
 		shift @token;					# RFC3597 hexadecimal format
 		my $count = shift(@token) || 0;
 		my $rdata = pack 'H*', join '', @token;
@@ -568,10 +568,7 @@ comparator function used for a particular RR based on its attributes.
 
     Net::DNS::RR::MX->set_rrsort_func(
 	'preference',
-	sub {
-	    my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-	    $a->preference <=> $b->preference
-	    }
+	sub { $Net::DNS::a->preference <=> $Net::DNS::b->preference }
 	);
 
     Net::DNS::RR::MX->set_rrsort_func(
@@ -618,7 +615,7 @@ sub get_rrsort_func {
 	} elsif ( defined($attribute) && $class->can($attribute) ) {
 
 		return sub {
-			$Net::DNS::a->$attribute() <=> $Net::DNS::b->$attribute()
+			$Net::DNS::a->$attribute() <=> $Net::DNS::b->$attribute();
 		};
 	}
 
@@ -637,19 +634,19 @@ sub get_rrsort_func {
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $self, $data, $offset ) = @_;
 	my $rdlength = $self->{rdlength} || length $$data;
-	$self->{rdata} = substr $$data, $offset, $rdlength;
+	$self->{'rdata'} = substr $$data, $offset, $rdlength;
 }
 
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
-	$self->{rdata} || '';
+	$self->{'rdata'} || '';
 }
 
 
 sub format_rdata {			## format rdata portion of RR string
 	my $self = shift;
-	my $data = $self->{rdata} || $self->encode_rdata;	# unknown RR, per RFC3597
+	my $data = $self->{'rdata'} || $self->encode_rdata;	# unknown RR, per RFC3597
 	my $size = length $data;
 	join ' ', '\\#', $size, $size ? unpack( 'H*', $data ) : ();
 }
@@ -668,7 +665,8 @@ sub defaults { }			## set attribute default values
 
 sub dump {				## print internal data structure
 	require Data::Dumper;
-	$Data::Dumper::Sortkeys = $Data::Dumper::Sortkeys = 1;
+	local $Data::Dumper::Sortkeys;
+	$Data::Dumper::Sortkeys = 1;
 	return Data::Dumper::Dumper(shift) if defined wantarray;
 	print Data::Dumper::Dumper(shift);
 }
@@ -703,12 +701,12 @@ sub _subclass {
 		$module =~ s/[^A-Za-z0-9:]//g;			# expect the unexpected
 		$subclass = eval("require $module") ? $module : $class;
 		$subclass = $module if $mnemon eq 'OPT';	# default to OPT declared below
-		my $object = bless {type => $number}, $subclass;
+		my $object = bless {'type' => $number}, $subclass;
 		if (COMPATIBLE) {
 			no strict;
 			my %stash = %{"${subclass}::"};		# symbol table hash
-			$object->{OLD}++ unless exists $stash{encode_rdata};
-			$object->{type} = $mnemon;
+			$object->{OLD}++ unless exists $stash{'encode_rdata'};
+			$object->{'type'} = $mnemon;
 		}
 		$_MINIMAL{$subclass} = [%$object];		# cache minimal content
 		$object->defaults if $subclass eq $module;
@@ -736,7 +734,7 @@ sub _new_from_rdata {			## decode rdata from wire-format byte string
 
 
 sub new_from_string {			## parse RR attributes in argument list
-	my ( $class, $self, undef, $parse ) = @_;		# new_from_string() is a misnomer
+	my ( $class, $self, $string, $parse ) = @_;		# new_from_string() is a misnomer here
 	confess 'new_from_string() deprecated' unless ref($self);
 	$self->parse_rdata(@$parse);				# string already parsed in _new_string()
 	return $self;

@@ -46,7 +46,6 @@ automatically to all subsequent records.
 use strict;
 use integer;
 use Carp;
-use File::Spec;
 
 require FileHandle;
 
@@ -86,13 +85,13 @@ sub new {
 	$self->_origin(shift);
 
 	if ( ref($file) ) {
-		$self->{name} = $self->{handle} = $file;
+		$self->{filename} = $self->{handle} = $file;
 		return $self if ref($file) =~ /FileHandle|GLOB|Text/;
 		croak 'argument not a file handle';
 	}
 
 	$self->{handle} = new FileHandle($file) or croak qq(open: "$file" $!);
-	$self->{name} = $file;
+	$self->{filename} = $file;
 	return $self;
 }
 
@@ -148,7 +147,7 @@ argument supplied when the object was created.
 =cut
 
 sub name {
-	return shift->{name} || '<anon>';
+	return shift->{filename} || '<anon>';
 }
 
 
@@ -162,7 +161,7 @@ Returns the number of the last line read from the current zone file.
 
 sub line {
 	my $self = shift;
-	return $self->{eof} if defined $self->{eof};
+	return $self->{eom} if defined $self->{eom};
 	return $self->{handle}->input_line_number;
 }
 
@@ -191,7 +190,10 @@ Returns the default TTL as specified by the $TTL directive.
 =cut
 
 sub ttl {
-	return shift->{ttl} || 0;
+	my $self = shift;
+	my $t = shift;
+	return $self->{ttl} || 0 unless defined $t;
+	$self->{ttl} = new Net::DNS::RR(". $t IN A")->ttl;
 }
 
 
@@ -238,8 +240,9 @@ error is encountered by the parser.
 use vars qw($include_dir);		## dynamically scoped
 
 sub _filename {				## rebase unqualified filename
-	return shift unless $include_dir;
 	my $name = shift;
+	return $name unless $include_dir;
+	require File::Spec;
 	return $name if File::Spec->file_name_is_absolute($name);
 	return File::Spec->catfile( $include_dir, $name );
 }
@@ -422,7 +425,7 @@ sub _generate {				## expand $GENERATE into input stream
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
 
 	delete $self->{latest};					# forbid empty owner field
-	$self->{link} = bless {%$self}, ref($self);		# save state, create link
+	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
 	no integer;
 	return $self->{handle} = $handle unless $] < 5.006;
 
@@ -465,25 +468,25 @@ sub _getline {				## get line from current source
 
 		return $_ unless /^\$/;				# RR string
 
-		if (/^\$ORIGIN/i) {				# directive
-			my ( undef, $origin ) = split;
+		if (/^\$ORIGIN/) {				# directive
+			my ( $keyword, $origin, @etc ) = split;
 			die '$ORIGIN incomplete' unless $origin;
 			my $context = $self->{context};
 			&$context( sub { $self->_origin($origin); } );
 
-		} elsif (/^\$INCLUDE/i) {			# directive
-			my ( undef, @argument ) = split;
+		} elsif (/^\$INCLUDE/) {			# directive
+			my ( $keyword, @argument ) = split;
 			$fh = $self->_include(@argument);
 
-		} elsif (/^\$GENERATE/i) {			# directive
-			my ( undef, $range, @template ) = split;
+		} elsif (/^\$GENERATE/) {			# directive
+			my ( $keyword, $range, @template ) = split;
 			die '$GENERATE incomplete' unless $range;
 			$fh = $self->_generate( $range, "@template\n" );
 
-		} elsif (/^\$TTL/i) {				# directive
-			my ( undef, $ttl ) = split;
+		} elsif (/^\$TTL/) {				# directive
+			my ( $keyword, $ttl, @etc ) = split;
 			die '$TTL incomplete' unless defined $ttl;
-			$self->{ttl} = new Net::DNS::RR(". $ttl IN A")->ttl;
+			$self->ttl($ttl);
 
 		} else {					# unrecognised
 			chomp;
@@ -491,11 +494,11 @@ sub _getline {				## get line from current source
 		}
 	}
 
-	$self->{eof} = $self->line;				# end of file
+	$self->{eom} = $self->line;				# end of file
 	my $ok = $fh->close;
 	die "pipe: process exit status $?" if $?;
 	die "close: $!" unless $ok;
-	my $link = $self->{link} || return undef;		# end of zone
+	my $link = $self->{parent} || return undef;		# end of zone
 	%$self = %$link;					# end $INCLUDE
 	return $self->_getline;					# resume input
 }
@@ -517,8 +520,8 @@ sub _getRR {				## get RR from current source
 
 	$rr->class( $self->{class} ||= $rr->class );		# propagate RR class
 
-	$self->{ttl} ||= $rr->type eq 'SOA' ? $rr->minimum : $rr->ttl;		  # default TTL
-	$rr->ttl( $self->{ttl} ) unless defined $rr->{ttl};
+	$self->{'ttl'} ||= $rr->type eq 'SOA' ? $rr->minimum : undef;	# default TTL
+	$rr->ttl( $self->ttl ) unless defined $rr->{'ttl'};
 
 	return $self->{latest} = $rr;
 }
@@ -533,9 +536,9 @@ sub _include {				## open $INCLUDE file
 	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: "$file" $!);
 
 	delete $self->{latest};					# forbid empty owner field
-	$self->{link} = bless {%$self}, ref($self);		# save state, create link
+	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
 	$self->{context} = origin Net::DNS::Domain($root) if $root;
-	$self->{name} = $file;
+	$self->{filename} = $file;
 	return $self->{handle} = $handle;
 }
 

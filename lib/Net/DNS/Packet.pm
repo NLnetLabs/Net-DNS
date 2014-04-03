@@ -31,9 +31,7 @@ use strict;
 use integer;
 use Carp;
 
-use base qw(Exporter);
-use vars qw(@EXPORT_OK);
-@EXPORT_OK = qw(dn_expand);
+use constant UDPSZ => 512;
 
 require Net::DNS::Header;
 require Net::DNS::Question;
@@ -721,7 +719,7 @@ sub sign_tsig {
 		Net::DNS::RR::TSIG->create(@_);
 	} || croak "$@\nTSIG: unable to sign packet";
 
-	CORE::push( @{$self->{additional}}, $tsig );
+	$self->push( 'additional', $tsig );
 	return $tsig;
 }
 
@@ -801,7 +799,7 @@ sub sign_sig0 {
 		}
 	} || croak "$@\nSIG0: Net::DNS::SEC not available";
 
-	CORE::push( @{$self->{additional}}, $sig0 );
+	$self->push( 'additional', $sig0 );
 	return $sig0;
 }
 
@@ -840,7 +838,7 @@ sub truncate {
 	my $self=shift;
 	my $max_len=shift;
 	my $debug=0;
-	$max_len=$max_len>512?$max_len:512;
+	$max_len=$max_len>UDPSZ?$max_len:UDPSZ;
 
 	print "Truncating to $max_len\n" if $debug;
 
@@ -890,8 +888,10 @@ sub truncate {
 
 sub dump {				## print internal data structure
 	require Data::Dumper;
-	local $Data::Dumper::Maxdepth = 6;
-	local $Data::Dumper::Sortkeys = $Data::Dumper::Sortkeys = 1;
+	local $Data::Dumper::Maxdepth;
+	local $Data::Dumper::Sortkeys;
+	$Data::Dumper::Maxdepth = 6;
+	$Data::Dumper::Sortkeys = 1;
 	return Data::Dumper::Dumper(shift) if defined wantarray;
 	print Data::Dumper::Dumper(shift);
 }
@@ -900,7 +900,7 @@ sub dump {				## print internal data structure
 sub sigrr {				## obtain packet signature RR
 	my $self = shift;
 
-	my ($sig) = reverse @{$self->{additional}};
+	my ($sig) = reverse $self->additional;
 	return undef unless $sig;
 	return $sig if $sig->type eq 'TSIG';
 	return $sig if $sig->type eq 'SIG';
