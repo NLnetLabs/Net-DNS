@@ -6,6 +6,7 @@ package Net::DNS::RR::SRV;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
+
 use strict;
 use base qw(Net::DNS::RR);
 
@@ -36,8 +37,8 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	my ( $offset, @opaque ) = @_;
 
 	return '' unless $self->{target};
-	my $rdata = pack 'n3', map $self->$_, qw(priority weight port target);
-	$rdata .= $self->{target}->encode( $offset + length($rdata), @opaque );
+	my $nums = pack 'n3', $self->priority, $self->weight, $self->port;
+	$nums .= $self->{target}->encode( $offset + length($nums), @opaque );
 }
 
 
@@ -45,14 +46,16 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{target};
-	join ' ', map( $self->$_, qw(priority weight port) ), $self->{target}->string;
+	join ' ', $self->priority, $self->weight, $self->port, $self->{target}->string;
 }
 
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(priority weight port target);
+	foreach my $attr (qw(priority weight port target)) {
+		$self->$attr(shift);
+	}
 }
 
 
@@ -97,11 +100,7 @@ __PACKAGE__->set_rrsort_func(
 	} );
 
 
-__PACKAGE__->set_rrsort_func(
-	'default_sort',
-	__PACKAGE__->get_rrsort_func('priority')
-
-	);
+__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('priority') );
 
 1;
 __END__

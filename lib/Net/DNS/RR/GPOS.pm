@@ -19,6 +19,7 @@ Net::DNS::RR::GPOS - DNS GPOS resource record
 
 use integer;
 
+use Carp;
 use Net::DNS::Text;
 
 
@@ -30,6 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	( $self->{latitude},  $offset ) = decode Net::DNS::Text( $data, $offset ) if $offset < $limit;
 	( $self->{longitude}, $offset ) = decode Net::DNS::Text( $data, $offset ) if $offset < $limit;
 	( $self->{altitude},  $offset ) = decode Net::DNS::Text( $data, $offset ) if $offset < $limit;
+	croak('corrupt GPOS data') unless $offset == $limit;	# more or less FUBAR
 }
 
 
@@ -45,7 +47,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{altitude};
-	join ' ', map $self->$_, qw(latitude longitude altitude);
+	join ' ', map $self->{$_}->string, qw(latitude longitude altitude);
 }
 
 
@@ -68,24 +70,37 @@ sub defaults() {			## specify RR attribute default values
 
 sub latitude {
 	my $self = shift;
-
-	$self->{latitude} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{latitude}->value if defined wantarray;
+	$self->{latitude} = _fp2text(shift) if scalar @_;
+	_text2fp( $self->{latitude} ) if defined wantarray;
 }
+
 
 sub longitude {
 	my $self = shift;
-
-	$self->{longitude} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{longitude}->value if defined wantarray;
+	$self->{longitude} = _fp2text(shift) if scalar @_;
+	_text2fp( $self->{longitude} ) if defined wantarray;
 }
+
 
 sub altitude {
 	my $self = shift;
-
-	$self->{altitude} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{altitude}->value if defined wantarray;
+	$self->{altitude} = _fp2text(shift) if scalar @_;
+	_text2fp( $self->{altitude} ) if defined wantarray;
 }
+
+
+########################################
+
+
+sub _fp2text {
+	return new Net::DNS::Text( sprintf( '%1.10g', shift ) );
+}
+
+sub _text2fp {
+	no integer;
+	return 0.0 + shift->value;
+}
+
 
 1;
 __END__
@@ -115,33 +130,33 @@ other unpredictable behaviour.
     $latitude = $rr->latitude;
     $rr->latitude( $latitude );
 
-Text string representing latitude as a floating-point number.
+Floating-point representation of latitude, in degrees.
 
 =head2 longitude
 
     $longitude = $rr->longitude;
     $rr->longitude( $longitude );
 
-Text string representing longitude as a floating-point number.
+Floating-point representation of longitude, in degrees.
 
 =head2 altitude
 
     $altitude = $rr->altitude;
     $rr->altitude( $altitude );
 
-Text string representing altitude as a floating-point number.
+Floating-point representation of altitude, in metres.
 
 
 =head1 COPYRIGHT
 
 Copyright (c)1997-1998 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

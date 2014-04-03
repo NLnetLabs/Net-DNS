@@ -4,9 +4,11 @@ package Net::DNS::RR::MINFO;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::MINFO - DNS MINFO resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::Mailbox;
@@ -26,7 +27,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset, @opaque ) = @_;
 
 	( $self->{rmailbx}, $offset ) = decode Net::DNS::Mailbox1035(@_);
-	( $self->{emailbx}, $offset ) = decode Net::DNS::Mailbox1035($data,$offset,@opaque );
+	( $self->{emailbx}, $offset ) = decode Net::DNS::Mailbox1035( $data, $offset, @opaque );
 }
 
 
@@ -51,21 +52,23 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(rmailbx emailbx);
+	$self->rmailbx(shift);
+	$self->emailbx(shift);
 }
 
 
 sub rmailbx {
 	my $self = shift;
 
-	$self->{rmailbx} = new Net::DNS::Mailbox1035(shift) if @_;
+	$self->{rmailbx} = new Net::DNS::Mailbox1035(shift) if scalar @_;
 	$self->{rmailbx}->address if defined wantarray;
 }
+
 
 sub emailbx {
 	my $self = shift;
 
-	$self->{emailbx} = new Net::DNS::Mailbox1035(shift) if @_;
+	$self->{emailbx} = new Net::DNS::Mailbox1035(shift) if scalar @_;
 	$self->{emailbx}->address if defined wantarray;
 }
 
@@ -95,6 +98,7 @@ other unpredictable behaviour.
 =head2 rmailbx
 
     $rmailbx = $rr->rmailbx;
+    $rr->rmailbx( $rmailbx );
 
 A domain name  which specifies a mailbox which is
 responsible for the mailing list or mailbox.  If this
@@ -107,6 +111,7 @@ This field provides a more general mechanism.
 =head2 emailbx
 
     $emailbx = $rr->emailbx;
+    $rr->emailbx( $emailbx );
 
 A domain name  which specifies a mailbox which is to
 receive error messages related to the mailing list or
@@ -120,12 +125,12 @@ returned to the sender of the message.
 
 Copyright (c)1997-2002 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

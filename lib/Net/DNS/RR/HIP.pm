@@ -4,9 +4,11 @@ package Net::DNS::RR::HIP;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1063
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::HIP - DNS HIP resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Carp;
@@ -35,7 +36,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	$self->{servers} = [];
 	while ( $offset < $limit ) {
 		my $item;
-		( $item, $offset ) = decode Net::DNS::DomainName($data,$offset );
+		( $item, $offset ) = decode Net::DNS::DomainName( $data, $offset );
 		push @{$self->{servers}}, $item;
 	}
 	croak('corrupt HIP data') unless $offset == $limit;	# more or less FUBAR
@@ -59,7 +60,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	return '' unless $self->{hitbin};
 	my $algorithm = $self->pkalgorithm;
 	my $hit	      = $self->hit;
-	my $base64    = MIME::Base64::encode $self->keybin, "";
+	my $base64    = MIME::Base64::encode $self->keybin, '';
 	my @servers   = map $_->string, @{$self->{servers}};
 	return "$algorithm $hit (\n$base64\n@servers )";
 }
@@ -68,52 +69,56 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(pkalgorithm hit);
-	$self->key( grep { $_ !~ /[.]/ } @_ );
-	$self->servers( grep { $_ =~ /[.]/ } @_ );
+	$self->$_(shift) for qw(pkalgorithm hit key);
+	$self->servers(@_);
 }
 
 
 sub pkalgorithm {
 	my $self = shift;
 
-	$self->{pkalgorithm} = shift if @_;
-	return 0 + ( $self->{pkalgorithm} || 0 );
+	$self->{pkalgorithm} = 0 + shift if scalar @_;
+	return $self->{pkalgorithm} || 0;
 }
+
 
 sub hit {
 	my $self = shift;
 
-	$self->{hitbin} = pack "H*", join( "", map { s/\s+//g; $_ } @_ ) if @_;
-	unpack "H*", $self->{hitbin} || "" if defined wantarray;
+	$self->hitbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	unpack "H*", $self->hitbin() if defined wantarray;
 }
+
 
 sub hitbin {
 	my $self = shift;
 
-	$self->{hitbin} = shift if @_;
+	$self->{hitbin} = shift if scalar @_;
 	$self->{hitbin} || "";
 }
+
 
 sub key {
 	my $self = shift;
 
-	$self->{keybin} = MIME::Base64::decode( join "", @_ ) if @_;
-	return MIME::Base64::encode( $self->keybin, "" ) if defined wantarray;
+	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
+	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
 }
+
 
 sub keybin {
 	my $self = shift;
 
-	$self->{keybin} = shift if @_;
+	$self->{keybin} = shift if scalar @_;
 	$self->{keybin} || "";
 }
+
 
 sub servers {
 	my $self = shift;
 
 	my $servers = $self->{servers} ||= [];
-	@$servers = map Net::DNS::DomainName->new($_), @_ if @_;
+	@$servers = map Net::DNS::DomainName->new($_), @_ if scalar @_;
 	return map $_->name, @$servers if defined wantarray;
 }
 
@@ -150,6 +155,7 @@ other unpredictable behaviour.
 =head2 pkalgorithm
 
     $pkalgorithm = $rr->pkalgorithm;
+    $rr->pkalgorithm( $pkalgorithm );
 
 The PK algorithm field indicates the public key cryptographic
 algorithm and the implied public key field format.
@@ -158,24 +164,28 @@ The values are those defined for the IPSECKEY algorithm type [RFC4025].
 =head2 hit
 
     $hit = $rr->hit;
+    $rr->hit( $hit );
 
 The hexadecimal representation of the host identity tag.
 
 =head2 hitbin
 
     $hitbin = $rr->hitbin;
+    $rr->hitbin( $hitbin );
 
 The binary representation of the host identity tag.
 
 =head2 key
 
     $key = $rr->key;
+    $rr->key( $key );
 
 The hexadecimal representation of the public key.
 
 =head2 keybin
 
     $keybin = $rr->keybin;
+    $rr->keybin( $keybin );
 
 The binary representation of the public key.
 
@@ -190,12 +200,12 @@ Optional list of domain names of rendezvous servers.
 
 Copyright (c)2009 Olaf Kolkman, NLnet Labs
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

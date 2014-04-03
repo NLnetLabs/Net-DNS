@@ -16,6 +16,7 @@ Net::DNS::RR::CAA - DNS CAA resource record
 
 =cut
 
+
 use integer;
 
 
@@ -48,7 +49,10 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(flags tag value);
+	foreach my $attr (qw(flags tag value)) {
+		$self->$attr(shift) if scalar @_;
+	}
+
 }
 
 
@@ -59,6 +63,7 @@ sub tag {
 	$self->{tag} || "";
 }
 
+
 sub value {
 	my $self = shift;
 
@@ -66,12 +71,14 @@ sub value {
 	$self->{value} || "";
 }
 
+
 sub flags {
 	my $self = shift;
 
 	$self->{flags} = 0 + shift if scalar @_;
 	return $self->{flags} || 0;
 }
+
 
 sub critical {
 	my $bit = 0x0080;

@@ -16,7 +16,9 @@ Net::DNS::RR::OPT - DNS OPT resource record
 
 =cut
 
+
 use integer;
+
 use Carp;
 
 use Net::DNS::Parameters;
@@ -89,6 +91,7 @@ sub encode {				## overide RR method
 	pack 'C n n C2n n a*', 0, OPT, $size, @xttl, length($data), $data;
 }
 
+
 sub string {				## overide RR method
 	my $self = shift;
 
@@ -113,6 +116,7 @@ sub string {				## overide RR method
 QQ
 }
 
+
 my $warned;
 
 sub class {				## overide RR method
@@ -129,6 +133,7 @@ sub ttl {				## overide RR method
 	@{$self}{qw(rcode version flags)} = unpack 'C2 n', pack 'N', $mods if $mods;
 	return pack 'C2 n', @{$self}{qw(rcode version flags)} if defined wantarray;
 }
+
 
 sub version {
 	my $self = shift;
@@ -148,6 +153,7 @@ sub size {
 	}
 }
 
+
 sub rcode {
 	my $self = shift;
 	return $self->{rcode} || 0 unless scalar @_;
@@ -158,6 +164,7 @@ sub rcode {
 	return $val;
 }
 
+
 sub flags {
 	my $self = shift;
 	return $self->{flags} || 0 unless scalar @_;
@@ -165,6 +172,7 @@ sub flags {
 	$self->{flags} = $val if $val or defined $self->{flags};
 	return $val;
 }
+
 
 sub options {
 	my $self = shift;
@@ -187,6 +195,7 @@ sub option {
 	}
 }
 
+
 sub defined {
 	my $self = shift;
 
@@ -196,22 +205,23 @@ sub defined {
 	return 0;
 }
 
+
 sub do {				## historical
 	my $self = shift;
 	carp qq[Deprecated method: please use packet->header->do()] unless $warned++;
-	$self->{flags} & 0x8000;
+	$self->{'flags'} & 0x8000;
 }
 
 sub clear_do {				## historical
 	my $self = shift;
 	carp qq[Deprecated method: please use packet->header->do(0)] unless $warned++;
-	$self->{flags} = ( ~0x8000 & $self->{flags} );
+	$self->{'flags'} = ( ~0x8000 & $self->{'flags'} );
 }
 
 sub set_do {				## historical
 	my $self = shift;
 	carp qq[Deprecated method: please use packet->header->do(1)] unless $warned++;
-	$self->{flags} = ( 0x8000 | $self->{flags} );
+	$self->{'flags'} = ( 0x8000 | $self->{'flags'} );
 }
 
 sub ednsversion	  {&version}

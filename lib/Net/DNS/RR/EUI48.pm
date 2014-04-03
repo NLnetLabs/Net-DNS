@@ -16,6 +16,7 @@ Net::DNS::RR::EUI48 - DNS EUI48 resource record
 
 =cut
 
+
 use integer;
 
 

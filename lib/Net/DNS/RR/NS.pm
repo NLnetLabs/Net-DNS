@@ -4,9 +4,11 @@ package Net::DNS::RR::NS;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::NS - DNS NS resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::DomainName;
@@ -54,7 +55,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub nsdname {
 	my $self = shift;
 
-	$self->{nsdname} = new Net::DNS::DomainName1035(shift) if @_;
+	$self->{nsdname} = new Net::DNS::DomainName1035(shift) if scalar @_;
 	$self->{nsdname}->name if defined wantarray;
 }
 
@@ -90,6 +91,7 @@ other unpredictable behaviour.
 =head2 nsdname
 
     $nsdname = $rr->nsdname;
+    $rr->nsdname( $nsdname );
 
 A domain name which specifies a host which should be
 authoritative for the specified class and domain.
@@ -99,12 +101,12 @@ authoritative for the specified class and domain.
 
 Copyright (c)1997-2002 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

@@ -6,7 +6,9 @@ package Net::DNS::RR::LOC;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::LOC - DNS LOC resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Carp;
@@ -44,8 +45,8 @@ sub format_rdata {			## format rdata portion of RR string.
 
 	return '' unless defined $self->{longitude};
 	my @angular = ( $self->latitude, $self->longitude );
-	my @linear = map { $self->$_ . 'm' } qw(altitude size hp vp);
-	join ' ', @angular, @linear;
+	my @linear = ( $self->altitude, $self->size, $self->hp, $self->vp );
+	join ' ', @angular, join 'm ', @linear, '';
 }
 
 
@@ -68,7 +69,10 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	}
 	$self->longitude(@long);
 
-	$self->$_( scalar @_ ? shift : () ) for qw(altitude size hp vp);
+	foreach my $attr (qw(altitude size hp vp)) {
+		$self->$attr(shift) if scalar @_;
+	}
+
 }
 
 
@@ -76,81 +80,8 @@ sub defaults() {			## specify RR attribute default values
 	my $self = shift;
 
 	$self->version(0);
-	$self->size(1);
-	$self->hp(10000);
-	$self->vp(10);
-	$self->latitude(0);
-	$self->longitude(0);
-	$self->altitude(0);
+	$self->parse_rdata( 0, 0, 0, 1, 10000, 10 );
 }
-
-
-########################################
-{
-
-	no integer;
-
-	my $datum_alt = 10000000;
-	my $datum_loc = 0x80000000;
-
-	sub _decode_lat {
-		my $msec = shift;
-		return int( 0.5 + ( $msec - $datum_loc ) / 0.36 ) / 10000000 unless wantarray;
-		use integer;
-		my $abs = abs( $msec - $datum_loc );
-		my $deg = int( $abs / 3600000 );
-		my $min = int( $abs / 60000 ) % 60;
-		no integer;
-		my $sec = ( $abs % 60000 ) / 1000;
-		return ( $deg, $min, $sec, ( $msec < $datum_loc ? 'S' : 'N' ) );
-	}
-
-
-	sub _encode_lat {
-		my @ang = scalar @_ > 1 ? (@_) : ( split /[\s\260'"]+/, shift || '0' );
-		my $ang = ( 0 + shift @ang ) * 3600000;
-		my $neg = pop(@ang) =~ /[SWsw]/ if scalar @ang;
-		undef $neg if $ang < 0;
-		$ang += ( @ang ? shift @ang : 0 ) * 60000;
-		$ang += ( @ang ? shift @ang : 0 ) * 1000;
-		return int( 0.5 + ( $neg ? $datum_loc - $ang : $datum_loc + $ang ) );
-	}
-
-
-	sub _decode_alt {
-		my $cm = (shift) - $datum_alt;
-		return 0.01 * $cm;
-	}
-
-
-	sub _encode_alt {
-		( my $argument = shift || '0' ) =~ s/[Mm]$//;
-		$argument += 0;
-		return int( 0.5 + $datum_alt + 100 * $argument );
-	}
-
-
-	my @power10 = ( 0.01, 0.1, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8 );
-
-	sub _decode_prec {
-		my $argument = shift;
-		my $mantissa = $argument >> 4;
-		return $mantissa * $power10[$argument & 0x0F];
-	}
-
-	sub _encode_prec {
-		( my $argument = shift || '0' ) =~ s/[Mm]$//;
-		return 0x00 if $argument < 0.01;
-		foreach my $exponent ( 0 .. 9 ) {
-			next unless $argument < $power10[1 + $exponent];
-			my $mantissa = int( 0.5 + $argument / $power10[$exponent] );
-			return ( $mantissa & 0xF ) << 4 | $exponent;
-		}
-		return 0x99;
-	}
-
-}
-########################################
 
 
 sub latitude {
@@ -158,6 +89,7 @@ sub latitude {
 	$self->{latitude} = _encode_lat(@_) if scalar @_;
 	return _decode_lat( $self->{latitude} ) if defined wantarray;
 }
+
 
 sub longitude {
 	my $self = shift;
@@ -167,17 +99,20 @@ sub longitude {
 	my @long = map { s/N/E/; s/S/W/; $_ } _decode_lat( $self->{longitude} );
 }
 
+
 sub altitude {
 	my $self = shift;
 	$self->{altitude} = _encode_alt(shift) if scalar @_;
 	_decode_alt( $self->{altitude} ) if defined wantarray;
 }
 
+
 sub size {
 	my $self = shift;
 	$self->{size} = _encode_prec(shift) if scalar @_;
 	_decode_prec( $self->{size} ) if defined wantarray;
 }
+
 
 sub hp {
 	my $self = shift;
@@ -187,6 +122,7 @@ sub hp {
 
 sub horiz_pre { &hp; }
 
+
 sub vp {
 	my $self = shift;
 	$self->{vp} = _encode_prec(shift) if scalar @_;
@@ -195,6 +131,7 @@ sub vp {
 
 sub vert_pre { &vp; }
 
+
 sub latlon {
 	my $self      = shift;
 	my $latitude  = _decode_lat( $self->{latitude} );
@@ -202,12 +139,79 @@ sub latlon {
 	return ( $latitude, $longitude );
 }
 
+
 sub version {
 	my $self = shift;
 
-	$self->{version} = shift if scalar @_;
-	return 0 + ( $self->{version} || 0 );
+	$self->{version} = 0 + shift if scalar @_;
+	return $self->{version} || 0;
 }
+
+
+########################################
+
+
+no integer;
+
+my $datum_alt = 10000000;
+my $datum_loc = 0x80000000;
+
+sub _decode_lat {
+	my $msec = shift;
+	return int( 0.5 + ( $msec - $datum_loc ) / 0.36 ) / 10000000 unless wantarray;
+	use integer;
+	my $abs = abs( $msec - $datum_loc );
+	my $deg = int( $abs / 3600000 );
+	my $min = int( $abs / 60000 ) % 60;
+	no integer;
+	my $sec = ( $abs % 60000 ) / 1000;
+	return ( $deg, $min, $sec, ( $msec < $datum_loc ? 'S' : 'N' ) );
+}
+
+
+sub _encode_lat {
+	my @ang = scalar @_ > 1 ? (@_) : ( split /[\s\260'"]+/, shift || '0' );
+	my $ang = ( 0 + shift @ang ) * 3600000;
+	my $neg = pop(@ang) =~ /[SWsw]/ if scalar @ang;
+	undef $neg if $ang < 0;
+	$ang += ( @ang ? shift @ang : 0 ) * 60000;
+	$ang += ( @ang ? shift @ang : 0 ) * 1000;
+	return int( 0.5 + ( $neg ? $datum_loc - $ang : $datum_loc + $ang ) );
+}
+
+
+sub _decode_alt {
+	my $cm = (shift) - $datum_alt;
+	return 0.01 * $cm;
+}
+
+
+sub _encode_alt {
+	( my $argument = shift || '0' ) =~ s/[Mm]$//;
+	$argument += 0;
+	return int( 0.5 + $datum_alt + 100 * $argument );
+}
+
+
+my @power10 = ( 0.01, 0.1, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8 );
+
+sub _decode_prec {
+	my $argument = shift;
+	my $mantissa = $argument >> 4;
+	return $mantissa * $power10[$argument & 0x0F];
+}
+
+sub _encode_prec {
+	( my $argument = shift || '0' ) =~ s/[Mm]$//;
+	return 0x00 if $argument < 0.01;
+	foreach my $exponent ( 0 .. 9 ) {
+		next unless $argument < $power10[1 + $exponent];
+		my $mantissa = int( 0.5 + $argument / $power10[$exponent] );
+		return ( $mantissa & 0xF ) << 4 | $exponent;
+	}
+	return 0x99;
+}
+
 
 1;
 __END__
@@ -305,6 +309,7 @@ signed floating-point degrees.
 =head2 version
 
     $version = $rr->version;
+    $rr->version( $version );
 
 Version of LOC protocol.
 
@@ -315,12 +320,12 @@ Copyright (c)1997 Michael Fuhr.
 
 Portions Copyright (c)2011 Dick Franks. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

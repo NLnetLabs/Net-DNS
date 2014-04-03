@@ -6,7 +6,9 @@ package Net::DNS::RR::AAAA;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::AAAA - DNS AAAA resource record
 =cut
 
 
-use strict;
 use integer;
 
 
@@ -50,6 +51,21 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
+sub address_long {
+	return sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack 'n8', shift->{address};
+}
+
+
+sub address_short {
+	for ( sprintf ':%x:%x:%x:%x:%x:%x:%x:%x:', unpack 'n8', shift->{address} ) {
+		s/(:0[:0]+:)(?!.+:0\1)/::/;			# squash longest zero sequence
+		s/^:// unless /^::/;				# prune LH :
+		s/:$// unless /::$/;				# prune RH :
+		return $_;
+	}
+}
+
+
 sub address {
 	my $self = shift;
 
@@ -68,19 +84,6 @@ sub address {
 	# Note: pack() masks overlarge values, mostly without warning.
 	my @expand = map { /./ ? hex($_) : (0) x ( 9 - @parse ) } @parse;
 	$self->{address} = pack 'n8', @expand;
-}
-
-sub address_long {
-	return sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack 'n8', shift->{address};
-}
-
-sub address_short {
-	for ( sprintf ':%x:%x:%x:%x:%x:%x:%x:%x:', unpack 'n8', shift->{address} ) {
-		s/(:0[:0]+:)(?!.+:0\1)/::/;			# squash longest zero sequence
-		s/^:// unless /^::/;				# prune LH :
-		s/:$// unless /::$/;				# prune RH :
-		return $_;
-	}
 }
 
 1;
@@ -118,11 +121,13 @@ other unpredictable behaviour.
 
 Returns the text representation of the IPv6 address.
 
+
 =head2 address_long
 
     $IPv6_address = $rr->address_long;
 
 Returns the text representation specified in RFC3513, 2.2(1).
+
 
 =head2 address_short
 
@@ -139,12 +144,12 @@ Portions Copyright (c)2002-2004 Chris Reinhardt.
 
 Portions Copyright (c)2012 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

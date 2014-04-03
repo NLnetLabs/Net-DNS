@@ -4,9 +4,11 @@ package Net::DNS::RR::LP;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1050
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::LP - DNS LP resource record
 =cut
 
 
-use strict;
 use integer;
 
 
@@ -24,7 +25,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset ) = @_;
 
 	$self->{preference} = unpack( "\@$offset n", $$data );
-	$self->{locator} = decode Net::DNS::DomainName($data,$offset+2 );
+	$self->{locator} = decode Net::DNS::DomainName( $data, $offset + 2 );
 }
 
 
@@ -48,39 +49,37 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(preference locator);
+	$self->preference(shift);
+	$self->locator(shift);
 }
 
 
 sub preference {
 	my $self = shift;
 
-	$self->{preference} = shift if @_;
-	return 0 + ( $self->{preference} || 0 );
+	$self->{preference} = 0 + shift if scalar @_;
+	return $self->{preference} || 0;
 }
+
 
 sub locator {
 	my $self = shift;
 
-	$self->{locator} = new Net::DNS::DomainName(shift) if @_;
+	$self->{locator} = new Net::DNS::DomainName(shift) if scalar @_;
 	$self->{locator}->name if defined wantarray;
 }
 
+
 sub fqdn { &locator; }
 
-__PACKAGE__->set_rrsort_func(				## sort RRs in numerically ascending order.
+
+__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
 	'preference',
-	sub {
-		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-		$a->{preference} <=> $b->{preference};
-	} );
-
-
-__PACKAGE__->set_rrsort_func(
-	'default_sort',
-	__PACKAGE__->get_rrsort_func('preference')
+	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
 
 	);
+
+__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
 
 1;
 __END__
@@ -95,7 +94,7 @@ __END__
 	name	   => 'example.com',
 	type	   => 'LP',
 	preference => 10,
-	locator    => 'locator.example.com'
+	locator	   => 'locator.example.com'
 	);
 
 =head1 DESCRIPTION
@@ -120,6 +119,7 @@ other unpredictable behaviour.
 =head2 preference
 
     $preference = $rr->preference;
+    $rr->preference( $preference );
 
 A 16 bit unsigned integer in network byte order that indicates the
 relative preference for this LP record among other LP records
@@ -129,6 +129,7 @@ higher values.
 =head2 locator
 
     $locator = $rr->locator;
+    $rr->locator( $locator );
 
 The Locator field contains the DNS target name that is used to
 reference L32 and/or L64 records.
@@ -138,12 +139,12 @@ reference L32 and/or L64 records.
 
 Copyright (c)2012 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

@@ -4,9 +4,11 @@ package Net::DNS::RR::NAPTR;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::NAPTR - DNS NAPTR resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::DomainName;
@@ -30,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	( $self->{flags},   $offset ) = decode Net::DNS::Text( $data, $offset + 4 );
 	( $self->{service}, $offset ) = decode Net::DNS::Text( $data, $offset );
 	( $self->{regexp},  $offset ) = decode Net::DNS::Text( $data, $offset );
-	$self->{replacement} = decode Net::DNS::DomainName2535($data,$offset,@opaque );
+	$self->{replacement} = decode Net::DNS::DomainName2535( $data, $offset, @opaque );
 }
 
 
@@ -68,44 +69,50 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub order {
 	my $self = shift;
 
-	$self->{order} = shift if @_;
-	return 0 + ( $self->{order} || 0 );
+	$self->{order} = 0 + shift if scalar @_;
+	return $self->{order} || 0;
 }
+
 
 sub preference {
 	my $self = shift;
 
-	$self->{preference} = shift if @_;
-	return 0 + ( $self->{preference} || 0 );
+	$self->{preference} = 0 + shift if scalar @_;
+	return $self->{preference} || 0;
 }
+
 
 sub flags {
 	my $self = shift;
 
-	$self->{flags} = new Net::DNS::Text(shift) if @_;
+	$self->{flags} = new Net::DNS::Text(shift) if scalar @_;
 	$self->{flags}->value if defined wantarray;
 }
+
 
 sub service {
 	my $self = shift;
 
-	$self->{service} = new Net::DNS::Text(shift) if @_;
+	$self->{service} = new Net::DNS::Text(shift) if scalar @_;
 	$self->{service}->value if defined wantarray;
 }
+
 
 sub regexp {
 	my $self = shift;
 
-	$self->{regexp} = new Net::DNS::Text(shift) if @_;
+	$self->{regexp} = new Net::DNS::Text(shift) if scalar @_;
 	$self->{regexp}->value if defined wantarray;
 }
+
 
 sub replacement {
 	my $self = shift;
 
-	$self->{replacement} = new Net::DNS::DomainName2535(shift) if @_;
+	$self->{replacement} = new Net::DNS::DomainName2535(shift) if scalar @_;
 	$self->{replacement}->name if defined wantarray;
 }
+
 
 __PACKAGE__->set_rrsort_func(
 	'order',
@@ -123,11 +130,7 @@ __PACKAGE__->set_rrsort_func(
 				|| $a->{order} <=> $b->{order};
 	} );
 
-__PACKAGE__->set_rrsort_func(
-	'default_sort',
-	__PACKAGE__->get_rrsort_func('order')
-
-	);
+__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('order') );
 
 1;
 __END__
@@ -155,6 +158,7 @@ other unpredictable behaviour.
 =head2 order
 
     $order = $rr->order;
+    $rr->order( $order );
 
 A 16-bit unsigned integer specifying the order in which the NAPTR
 records must be processed to ensure the correct ordering of rules.
@@ -163,6 +167,7 @@ Low numbers are processed before high numbers.
 =head2 preference
 
     $preference = $rr->preference;
+    $rr->preference( $preference );
 
 A 16-bit unsigned integer that specifies the order in which NAPTR
 records with equal "order" values should be processed, low numbers
@@ -171,6 +176,7 @@ being processed before high numbers.
 =head2 flags
 
     $flags = $rr->flags;
+    $rr->flags( $flags );
 
 A string containing flags to control aspects of the rewriting and
 interpretation of the fields in the record.  Flags are single
@@ -179,6 +185,7 @@ characters from the set [A-Z0-9].
 =head2 service
 
     $service = $rr->service;
+    $rr->service( $service );
 
 Specifies the service(s) available down this rewrite path. It may
 also specify the protocol used to communicate with the service.
@@ -186,6 +193,7 @@ also specify the protocol used to communicate with the service.
 =head2 regexp
 
     $regexp = $rr->regexp;
+    $rr->regexp;
 
 A string containing a substitution expression that is applied to
 the original string held by the client in order to construct the
@@ -194,6 +202,7 @@ next domain name to lookup.
 =head2 replacement
 
     $replacement = $rr->replacement;
+    $rr->replacement( $replacement );
 
 The next NAME to query for NAPTR, SRV, or address records
 depending on the value of the flags field.
@@ -205,12 +214,12 @@ Copyright (c)2005 Olaf Kolkman, NLnet Labs.
 
 Based on code contributed by Ryan Moats.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

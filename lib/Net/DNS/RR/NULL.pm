@@ -17,7 +17,6 @@ Net::DNS::RR::NULL - DNS NULL resource record
 =cut
 
 
-
 1;
 __END__
 

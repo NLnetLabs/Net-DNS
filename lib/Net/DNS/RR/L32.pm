@@ -4,9 +4,11 @@ package Net::DNS::RR::L32;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1050
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::L32 - DNS L32 resource record
 =cut
 
 
-use strict;
 use integer;
 
 
@@ -46,16 +47,18 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(preference locator32);
+	$self->preference(shift);
+	$self->locator32(shift);
 }
 
 
 sub preference {
 	my $self = shift;
 
-	$self->{preference} = shift if @_;
-	return 0 + ( $self->{preference} || 0 );
+	$self->{preference} = 0 + shift if scalar @_;
+	return $self->{preference} || 0;
 }
+
 
 sub locator32 {
 	my $self = shift;
@@ -66,19 +69,14 @@ sub locator32 {
 	join '.', unpack 'C4', $self->{locator32} if defined wantarray;
 }
 
-__PACKAGE__->set_rrsort_func(				## sort RRs in numerically ascending order.
+
+__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
 	'preference',
-	sub {
-		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-		$a->{preference} <=> $b->{preference};
-	} );
-
-
-__PACKAGE__->set_rrsort_func(
-	'default_sort',
-	__PACKAGE__->get_rrsort_func('preference')
+	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
 
 	);
+
+__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
 
 1;
 __END__
@@ -116,6 +114,7 @@ other unpredictable behaviour.
 =head2 preference
 
     $preference = $rr->preference;
+    $rr->preference( $preference );
 
 A 16 bit unsigned integer in network byte order that indicates the
 relative preference for this L32 record among other L32 records
@@ -135,12 +134,12 @@ routing prefix.
 
 Copyright (c)2012 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

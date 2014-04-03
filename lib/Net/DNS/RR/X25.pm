@@ -4,9 +4,11 @@ package Net::DNS::RR::X25;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1047
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::X25 - DNS X25 resource record
 =cut
 
 
-use strict;
 use integer;
 
 
@@ -53,9 +54,10 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub address {
 	my $self = shift;
 
-	$self->{address} = shift if @_;
+	$self->{address} = shift if scalar @_;
 	$self->{address} || "";
 }
+
 
 sub psdn { &address; }
 
@@ -85,6 +87,7 @@ other unpredictable behaviour.
 =head2 address
 
     $address = $rr->address;
+    $rr->address( $address );
 
 The PSDN-address is a string of decimal digits, beginning with
 the 4 digit DNIC (Data Network Identification Code), as specified
@@ -95,12 +98,12 @@ in X.121.
 
 Copyright (c)1997 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

@@ -4,9 +4,11 @@ package Net::DNS::RR::PTR;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::PTR - DNS PTR resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::DomainName;
@@ -54,7 +55,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub ptrdname {
 	my $self = shift;
 
-	$self->{ptrdname} = new Net::DNS::DomainName1035(shift) if @_;
+	$self->{ptrdname} = new Net::DNS::DomainName1035(shift) if scalar @_;
 	$self->{ptrdname}->name if defined wantarray;
 }
 
@@ -84,6 +85,7 @@ other unpredictable behaviour.
 =head2 ptrdname
 
     $ptrdname = $rr->ptrdname;
+    $rr->ptrdname( $ptrdname );
 
 A domain name which points to some location in the
 domain name space.
@@ -93,12 +95,12 @@ domain name space.
 
 Copyright (c)1997-2002 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

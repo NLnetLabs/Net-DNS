@@ -4,9 +4,11 @@ package Net::DNS::RR::ISDN;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::ISDN - DNS ISDN resource record
 =cut
 
 
-use strict;
 use integer;
 
 
@@ -58,14 +59,15 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub address {
 	my $self = shift;
 
-	$self->{address} = shift if @_;
+	$self->{address} = shift if scalar @_;
 	$self->{address} || "";
 }
+
 
 sub sa {
 	my $self = shift;
 
-	$self->{sa} = shift if @_;
+	$self->{sa} = shift if scalar @_;
 	$self->{sa} || "";
 }
 
@@ -95,6 +97,7 @@ other unpredictable behaviour.
 =head2 address
 
     $address = $rr->address;
+    $rr->address( $address );
 
 The ISDN-address is a string of characters, normally decimal
 digits, beginning with the E.163 country code and ending with
@@ -103,6 +106,7 @@ the DDI if any.
 =head2 sa
 
     $sa = $rr->sa;
+    $rr->sa( $sa );
 
 The optional subaddress (SA) is a string of hexadecimal digits.
 
@@ -111,12 +115,12 @@ The optional subaddress (SA) is a string of hexadecimal digits.
 
 Copyright (c)1997 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

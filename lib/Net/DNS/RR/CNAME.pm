@@ -4,9 +4,11 @@ package Net::DNS::RR::CNAME;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::CNAME - DNS CNAME resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::DomainName;
@@ -54,7 +55,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub cname {
 	my $self = shift;
 
-	$self->{cname} = new Net::DNS::DomainName1035(shift) if @_;
+	$self->{cname} = new Net::DNS::DomainName1035(shift) if scalar @_;
 	$self->{cname}->name if defined wantarray;
 }
 
@@ -90,6 +91,7 @@ other unpredictable behaviour.
 =head2 cname
 
     $cname = $rr->cname;
+    $rr->cname( $cname );
 
 A domain name which specifies the canonical or primary name for
 the owner.  The owner name is an alias.
@@ -101,12 +103,12 @@ Copyright (c)1997-2002 Michael Fuhr.
 
 Portions Copyright (c)2002-2004 Chris Reinhardt.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

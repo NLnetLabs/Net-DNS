@@ -4,9 +4,11 @@ package Net::DNS::RR::DHCID;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::DHCID - DNS DHCID resource record
 =cut
 
 
-use strict;
 use integer;
 
 use MIME::Base64;
@@ -72,32 +73,36 @@ sub parse_rdata {			## populate RR from rdata in argument list
 #   |      0xffff      | Undefined; RESERVED.                           |
 #   +------------------+------------------------------------------------+
 
+
 sub identifiertype {
 	my $self = shift;
 
-	$self->{identifiertype} = shift if @_;
-	return 0 + ( $self->{identifiertype} || 0 );
+	$self->{identifiertype} = 0 + shift if scalar @_;
+	return $self->{identifiertype} || 0;
 }
+
 
 sub digesttype {
 	my $self = shift;
 
-	$self->{digesttype} = shift if @_;
-	return 0 + ( $self->{digesttype} || 0 );
+	$self->{digesttype} = 0 + shift if scalar @_;
+	return $self->{digesttype} || 0;
 }
+
 
 sub digest {
 	my $self = shift;
 
-	$self->{digest} = shift if @_;
+	$self->{digest} = shift if scalar @_;
 	$self->{digest} || "";
 }
+
 
 sub rdata {
 	my $self = shift;
 
-	if (@_) {
-		my $data = MIME::Base64::decode( join "", @_ ) if @_;
+	if ( scalar @_ ) {
+		my $data = MIME::Base64::decode( join "", @_ );
 		my $size = length($data) - 3;
 		@{$self}{qw(identifiertype digesttype digest)} = unpack "n C a$size", $data;
 	}
@@ -130,6 +135,7 @@ other unpredictable behaviour.
 =head2 identifiertype
 
     $identifiertype = $rr->identifiertype;
+    $rr->identifiertype( $identifiertype );
 
 The 16-bit identifier type describes the form of host identifier
 used to construct the DHCP identity information.
@@ -137,6 +143,7 @@ used to construct the DHCP identity information.
 =head2 digesttype
 
     $digesttype = $rr->digesttype;
+    $rr->digesttype( $digesttype );
 
 The 8-bit digest type number describes the message-digest
 algorithm used to obfuscate the DHCP identity information.
@@ -144,6 +151,7 @@ algorithm used to obfuscate the DHCP identity information.
 =head2 digest
 
     $digest = $rr->digest;
+    $rr->digest( $digest );
 
 Binary representation of the digest of DHCP identity information.
 
@@ -161,12 +169,12 @@ and will be silently ignored.
 
 Copyright (c)2009 Olaf Kolkman, NLnet Labs.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

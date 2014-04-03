@@ -6,7 +6,9 @@ package Net::DNS::RR::APL;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::APL - DNS APL resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Carp;
@@ -98,7 +99,9 @@ sub aplist {
 
 ########################################
 
+
 package Net::DNS::RR::APL::Item;
+
 
 sub negate {
 	my $bit = 0x80;
@@ -110,19 +113,22 @@ sub negate {
 	}
 }
 
+
 sub family {
 	my $self = shift;
 
-	$self->{family} = shift if scalar @_;
-	return 0 + ( $self->{family} || 0 );
+	$self->{family} = 0 + shift if scalar @_;
+	return $self->{family} || 0;
 }
+
 
 sub prefix {
 	my $self = shift;
 
-	$self->{prefix} = shift if scalar @_;
-	return 0 + ( $self->{prefix} || 0 );
+	$self->{prefix} = 0 + shift if scalar @_;
+	return $self->{prefix} || 0;
 }
+
 
 {
 	use Net::DNS::RR::A;
@@ -171,9 +177,9 @@ sub address {
 sub string {
 	my $self = shift;
 
-	my ( $not, $family, $address, $prefix ) = map $self->$_, qw(negate family address prefix);
-	my $negative = $not ? '!' : '';
-	return "$negative$family:$address/$prefix";
+	my $not = $self->negate ? '!' : '';
+	my ( $family, $address, $prefix ) = ( $self->family, $self->address, $self->prefix );
+	return "$not$family:$address/$prefix";
 }
 
 1;
@@ -238,12 +244,14 @@ Boolean attribute indicating the prefix to be an address range exclusion.
 =head2 family
 
     $family = $rr->family;
+    $rr->family( $family );
 
 Address family discriminant.
 
 =head2 prefix
 
     $prefix = $rr->prefix;
+    $rr->prefix( $prefix );
 
 Number of bits comprising the address prefix.
 
@@ -253,7 +261,6 @@ Number of bits comprising the address prefix.
     $address = $object->address;
 
 Address portion of the prefix list item.
-
 
 =head2 string
 
@@ -268,12 +275,12 @@ Copyright (c)2008 Olaf Kolkman, NLnet Labs.
 
 Portions Copyright (c)2011 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

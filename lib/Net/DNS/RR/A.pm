@@ -4,9 +4,11 @@ package Net::DNS::RR::A;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1043
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::A - DNS A resource record
 =cut
 
 
-use strict;
 use integer;
 
 
@@ -53,7 +54,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub address {
 	my $self = shift;
 
-	return join '.', unpack( 'C4', $self->{address} ) unless @_;
+	return join '.', unpack( 'C4', $self->{address} ) unless scalar @_;
 
 	# Note: pack masks overlarge values, mostly without warning
 	my @part = split /\./, shift || '';
@@ -102,12 +103,12 @@ Version 4 IP address represented using dotted-quad notation.
 
 Copyright (c)1997-1998 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

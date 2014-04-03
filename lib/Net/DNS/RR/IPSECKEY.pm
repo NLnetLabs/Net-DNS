@@ -4,9 +4,11 @@ package Net::DNS::RR::IPSECKEY;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::IPSECKEY - DNS IPSECKEY resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Carp;
@@ -46,7 +47,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 
 	} elsif ( $gatetype == 3 ) {
 		my $name;
-		( $name, $offset ) = decode Net::DNS::DomainName($data,$offset );
+		( $name, $offset ) = decode Net::DNS::DomainName( $data, $offset );
 		$self->{gateway} = $name;
 
 	} else {
@@ -100,38 +101,41 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->$_(shift) for qw(precedence gatetype algorithm gateway);
-	$self->key(@_) if @_;
+	$self->key(@_) if scalar @_;
 }
 
 
 sub precedence {
 	my $self = shift;
 
-	$self->{precedence} = shift if @_;
-	return 0 + ( $self->{precedence} || 0 );
+	$self->{precedence} = 0 + shift if scalar @_;
+	return $self->{precedence} || 0;
 }
+
 
 sub gatetype {
 	my $self = shift;
 
-	$self->{gatespec} = shift if @_;
+	$self->{gatespec} = shift if scalar @_;
 	my $gatetype = $self->{gatetype};
 	return $self->{gatespec} unless defined $gatetype;
 	return $gatetype;
 }
 
+
 sub algorithm {
 	my $self = shift;
 
-	$self->{algorithm} = shift if @_;
-	return 0 + ( $self->{algorithm} || 0 );
+	$self->{algorithm} = 0 + shift if scalar @_;
+	return $self->{algorithm} || 0;
 }
+
 
 sub gateway {
 	my $self = shift;
 
 	my $gatetype = $self->gatetype;
-	if (@_) {
+	if ( scalar @_ ) {
 		for ( shift || '.' ) {
 			( $_ eq '.' ) && do {
 				$gatetype = 0;
@@ -170,21 +174,25 @@ sub gateway {
 	}
 }
 
+
 sub key {
 	my $self = shift;
 
-	$self->{keybin} = MIME::Base64::decode( join "", @_ ) if @_;
-	return MIME::Base64::encode( $self->keybin, "" ) if defined wantarray;
+	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
+	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
 }
+
 
 sub keybin {
 	my $self = shift;
 
-	$self->{keybin} = shift if @_;
+	$self->{keybin} = shift if scalar @_;
 	$self->{keybin} || "";
 }
 
+
 sub pubkey { &key; }
+
 
 # sort RRs in numerically ascending order.
 __PACKAGE__->set_rrsort_func(
@@ -223,6 +231,7 @@ other unpredictable behaviour.
 =head2 precedence
 
     $precedence = $rr->precedence;
+    $rr->precedence( $precedence );
 
 This is an 8-bit precedence for this record.  Gateways listed in
 IPSECKEY records with lower precedence are to be attempted first.
@@ -237,6 +246,7 @@ stored in the gateway field.
 =head2 algorithm
 
     $algorithm = $rr->algorithm;
+    $rr->algorithm( $algorithm );
 
 The algorithm type field identifies the public keys cryptographic
 algorithm and determines the format of the public key field.
@@ -251,12 +261,14 @@ created in order to reach the entity named by this resource record.
 =head2 key
 
     $key = $rr->key;
+    $rr->key( $key );
 
 Base64 representation of the optional public key block for the resource record.
 
 =head2 keybin
 
     $keybin = $rr->keybin;
+    $rr->keybin( $keybin );
 
 Binary representation of the public key block for the resource record.
 
@@ -267,12 +279,12 @@ Copyright (c)2007 Olaf Kolkman, NLnet Labs.
 
 Portions Copyright (c)2012 Dick Franks.
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

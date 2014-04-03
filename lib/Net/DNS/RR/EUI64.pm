@@ -16,6 +16,7 @@ Net::DNS::RR::EUI64 - DNS EUI64 resource record
 
 =cut
 
+
 use integer;
 
 

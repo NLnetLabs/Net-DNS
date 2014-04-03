@@ -16,6 +16,7 @@ Net::DNS::RR::TLSA - DNS TLSA resource record
 
 =cut
 
+
 use integer;
 
 
@@ -43,7 +44,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{certbin};
-	my @params = map $self->$_, qw(usage selector matchingtype);
+	my @params = ( $self->usage, $self->selector, $self->matchingtype );
 	( my $certificate = $self->cert ) =~ s/(\S{64})/$1\n/g;
 	chomp $certificate;
 	return join ' ', @params, $certificate if length $certificate < 40;
@@ -54,7 +55,9 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(usage selector matchingtype);
+	$self->usage(shift);
+	$self->selector(shift);
+	$self->matchingtype(shift);
 	$self->cert(@_);
 }
 
@@ -66,12 +69,14 @@ sub usage {
 	return $self->{usage} || 0;
 }
 
+
 sub selector {
 	my $self = shift;
 
 	$self->{selector} = 0 + shift if scalar @_;
 	return $self->{selector} || 0;
 }
+
 
 sub matchingtype {
 	my $self = shift;
@@ -80,6 +85,7 @@ sub matchingtype {
 	return $self->{matchingtype} || 0;
 }
 
+
 sub cert {
 	my $self = shift;
 
@@ -87,12 +93,14 @@ sub cert {
 	unpack "H*", $self->certbin() if defined wantarray;
 }
 
+
 sub certbin {
 	my $self = shift;
 
 	$self->{certbin} = shift if scalar @_;
 	$self->{certbin} || "";
 }
+
 
 sub certificate { &cert; }
 

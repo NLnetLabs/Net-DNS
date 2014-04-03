@@ -4,9 +4,11 @@ package Net::DNS::RR::TKEY;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::TKEY - DNS TKEY resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Carp;
@@ -56,7 +57,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	return '' unless defined $self->{algorithm};
 	my $rdata = $self->{algorithm}->encode;
 
-	$rdata .= pack 'N2n2', map { $self->$_ } qw(inception expiration mode error);
+	$rdata .= pack 'N2n2', $self->inception, $self->expiration, $self->mode, $self->error;
 
 	my $key = $self->key;					# RFC2930(2.7)
 	$rdata .= pack 'na*', length $key, $key;
@@ -74,6 +75,10 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
+sub class {				## overide RR method
+	return 'ANY';
+}
+
 sub encode {				## overide RR method
 	my $self = shift;
 
@@ -82,56 +87,64 @@ sub encode {				## overide RR method
 	return pack 'a* n2 N n a*', $owner, TKEY, ANY, 0, length $rdata, $rdata;
 }
 
+
 sub algorithm {
 	my $self = shift;
 
-	$self->{algorithm} = new Net::DNS::DomainName(shift) if @_;
+	$self->{algorithm} = new Net::DNS::DomainName(shift) if scalar @_;
 	$self->{algorithm}->name if defined wantarray;
 }
+
 
 sub inception {
 	my $self = shift;
 
-	$self->{inception} = shift if @_;
-	return 0 + ( $self->{inception} || 0 );
+	$self->{inception} = 0 + shift if scalar @_;
+	return $self->{inception} || 0;
 }
+
 
 sub expiration {
 	my $self = shift;
 
-	$self->{expiration} = shift if @_;
-	return 0 + ( $self->{expiration} || 0 );
+	$self->{expiration} = 0 + shift if scalar @_;
+	return $self->{expiration} || 0;
 }
+
 
 sub mode {
 	my $self = shift;
 
-	$self->{mode} = shift if @_;
-	return 0 + ( $self->{mode} || 0 );
+	$self->{mode} = 0 + shift if scalar @_;
+	return $self->{mode} || 0;
 }
+
 
 sub error {
 	my $self = shift;
 
-	$self->{error} = shift if @_;
-	return 0 + ( $self->{error} || 0 );
+	$self->{error} = 0 + shift if scalar @_;
+	return $self->{error} || 0;
 }
+
 
 sub key {
 	my $self = shift;
 
-	$self->{key} = shift if @_;
+	$self->{key} = shift if scalar @_;
 	$self->{key} || "";
 }
+
 
 sub other {
 	my $self = shift;
 
-	$self->{other} = shift if @_;
+	$self->{other} = shift if scalar @_;
 	$self->{other} || "";
 }
 
-sub other_data {&other}				## historical
+
+sub other_data {&other}			## historical
 
 1;
 __END__
@@ -158,6 +171,7 @@ other unpredictable behaviour.
 =head2 algorithm
 
     $algorithm = $rr->algorithm;
+    $rr->algorithm( $algorithm );
 
 The algorithm name is in the form of a domain name with the same
 meaning as in [RFC 2845].  The algorithm determines how the secret
@@ -167,6 +181,7 @@ the algorithm specific key.
 =head2 inception
 
     $inception = $rr->inception;
+    $rr->inception( $inception );
 
 Time expressed as the number of non-leap seconds modulo 2**32 since the
 beginning of January 1970 GMT.
@@ -174,6 +189,7 @@ beginning of January 1970 GMT.
 =head2 expiration
 
     $expiration = $rr->expiration;
+    $rr->expiration( $expiration );
 
 Time expressed as the number of non-leap seconds modulo 2**32 since the
 beginning of January 1970 GMT.
@@ -181,6 +197,7 @@ beginning of January 1970 GMT.
 =head2 mode
 
     $mode = $rr->mode;
+    $rr->mode( $mode );
 
 The mode field specifies the general scheme for key agreement or the
 purpose of the TKEY DNS message, as defined in [RFC2930(2.5)].
@@ -188,19 +205,22 @@ purpose of the TKEY DNS message, as defined in [RFC2930(2.5)].
 =head2 error
 
     $error = $rr->error;
+    $rr->error( $error );
 
 The error code field is an extended RCODE.
 
 =head2 key
 
     $key = $rr->key;
+    $rr->key( $key );
 
-Sequence of octets representing the key exchange data.  The meaning of
-this data depends on the mode.
+Sequence of octets representing the key exchange data.
+The meaning of this data depends on the mode.
 
 =head2 other
 
     $other = $rr->other;
+    $rr->other( $other );
 
 Not defined in [RFC2930] specification but may be used in future
 extensions.
@@ -210,12 +230,12 @@ extensions.
 
 Copyright (c)2000 Andrew Tridgell. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

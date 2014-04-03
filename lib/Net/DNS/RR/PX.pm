@@ -4,9 +4,11 @@ package Net::DNS::RR::PX;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::PX - DNS PX resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::DomainName;
@@ -26,8 +27,8 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset, @opaque ) = @_;
 
 	$self->{preference} = unpack( "\@$offset n", $$data );
-	( $self->{map822},  $offset ) = decode Net::DNS::DomainName2535($data,$offset+2,@opaque );
-	( $self->{mapx400}, $offset ) = decode Net::DNS::DomainName2535($data,$offset,@opaque );
+	( $self->{map822},  $offset ) = decode Net::DNS::DomainName2535( $data, $offset + 2, @opaque );
+	( $self->{mapx400}, $offset ) = decode Net::DNS::DomainName2535( $data, $offset + 0, @opaque );
 }
 
 
@@ -53,45 +54,43 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(preference map822 mapx400);
+	$self->preference(shift);
+	$self->map822(shift);
+	$self->mapx400(shift);
 }
 
 
 sub preference {
 	my $self = shift;
 
-	$self->{preference} = shift if @_;
-	return 0 + ( $self->{preference} || 0 );
+	$self->{preference} = 0 + shift if scalar @_;
+	return $self->{preference} || 0;
 }
+
 
 sub map822 {
 	my $self = shift;
 
-	$self->{map822} = new Net::DNS::DomainName2535(shift) if @_;
+	$self->{map822} = new Net::DNS::DomainName2535(shift) if scalar @_;
 	$self->{map822}->name if defined wantarray;
 }
+
 
 sub mapx400 {
 	my $self = shift;
 
-	$self->{mapx400} = new Net::DNS::DomainName2535(shift) if @_;
+	$self->{mapx400} = new Net::DNS::DomainName2535(shift) if scalar @_;
 	$self->{mapx400}->name if defined wantarray;
 }
 
-# sort RRs in numerically ascending order.
-__PACKAGE__->set_rrsort_func(
+
+__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
 	'preference',
-	sub {
-		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-		$a->{preference} <=> $b->{preference};
-	} );
-
-
-__PACKAGE__->set_rrsort_func(
-	'default_sort',
-	__PACKAGE__->get_rrsort_func('preference')
+	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
 
 	);
+
+__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
 
 1;
 __END__
@@ -119,6 +118,7 @@ other unpredictable behaviour.
 =head2 preference
 
     $preference = $rr->preference;
+    $rr->preference( $preference );
 
 A 16 bit integer which specifies the preference
 given to this RR among others at the same owner.
@@ -127,6 +127,7 @@ Lower values are preferred.
 =head2 map822
 
     $map822 = $rr->map822;
+    $rr->map822( $map822 );
 
 A domain name element containing <rfc822-domain>, the
 RFC822 part of the MIXER Conformant Global Address Mapping.
@@ -134,6 +135,7 @@ RFC822 part of the MIXER Conformant Global Address Mapping.
 =head2 mapx400
 
     $mapx400 = $rr->mapx400;
+    $rr->mapx400( $mapx400 );
 
 A <domain-name> element containing the value of
 <x400-in-domain-syntax> derived from the X.400 part of
@@ -144,12 +146,12 @@ the MIXER Conformant Global Address Mapping.
 
 Copyright (c)1997-2002 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

@@ -16,8 +16,11 @@ Net::DNS::RR::CERT - DNS CERT resource record
 
 =cut
 
+
 use integer;
+
 use MIME::Base64;
+
 my %formats = (
 	PKIX	=> 1,						# X.509 as per PKIX
 	SPKI	=> 2,						# SPKI certificate
@@ -100,12 +103,14 @@ sub format {
 	$self->{format} = $format;
 }
 
+
 sub tag {
 	my $self = shift;
 
 	$self->{tag} = 0 + shift if scalar @_;
 	return $self->{tag} || 0;
 }
+
 
 sub algorithm {
 	my $self = shift;
@@ -119,6 +124,7 @@ sub algorithm {
 	$self->{algorithm} = $algorithm;
 }
 
+
 sub cert {
 	my $self = shift;
 
@@ -126,12 +132,14 @@ sub cert {
 	return MIME::Base64::encode( $self->certbin(), "" ) if defined wantarray;
 }
 
+
 sub certbin {
 	my $self = shift;
 
 	$self->{certbin} = shift if scalar @_;
 	$self->{certbin} || "";
 }
+
 
 sub certificate { &certbin; }		## historical
 

@@ -129,12 +129,10 @@ sub foo {
 ## define functions similar to these, otherwise just remove them.
 
 #
-#__PACKAGE__->set_rrsort_func(
+#__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
 #	'preference',
-#	sub {		## numerically ascending order
-#		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-#		$a->{preference} <=> $b->{preference};
-#	} );
+#	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
+#	);
 #
 #
 #__PACKAGE__->set_rrsort_func(

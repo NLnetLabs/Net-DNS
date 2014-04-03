@@ -63,11 +63,13 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_( scalar @_ ? shift : () ) for qw(mname rname serial);
-
-	for (qw(refresh retry expire minimum)) {
-		$self->$_( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
-	}
+	$self->mname(shift);
+	$self->rname(shift);
+	$self->serial(shift);
+	$self->refresh( Net::DNS::RR::ttl( {}, shift || return ) );
+	$self->retry( Net::DNS::RR::ttl( {}, shift || return ) );
+	$self->expire( Net::DNS::RR::ttl( {}, shift || return ) );
+	$self->minimum( Net::DNS::RR::ttl( {}, shift || return ) );
 }
 
 

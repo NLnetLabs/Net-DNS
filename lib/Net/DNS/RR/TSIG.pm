@@ -70,6 +70,7 @@ use constant TSIG => typebyname qw(TSIG);
 }
 
 
+
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
@@ -98,8 +99,6 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	my $macbin = $self->macbin;
 	unless ($macbin) {
 		my ( $offset, undef, $packet ) = @_;
-
-		$self->prior_macbin( $self->{link}->macbin ) if $self->{link};
 
 		my $sigdata = $self->sig_data($packet);		# form data to be signed
 		$macbin = $self->macbin( $self->_mac_function($sigdata) );
@@ -286,6 +285,7 @@ sub sig_data {
 	my $time = pack 'xxN n', $self->time_signed, $self->fudge;
 
 	# Insert the prior MAC if present (multi-packet message).
+	$self->prior_macbin( $self->{link}->macbin ) if $self->{link};
 	if ( my $prior_mac = $self->prior_macbin ) {
 		return pack 'na* a* a*', length($prior_mac), $prior_mac, $data, $time;
 	}
@@ -318,7 +318,7 @@ sub create {
 	my $karg = shift || croak 'argument missing or undefined';
 
 	if ( ref($karg) ) {
-		return $karg->chain if ref($karg) eq __PACKAGE__;
+		return $karg->_chain if ref($karg) eq __PACKAGE__;
 		croak "Usage:	create $class( keyfile )\n\tcreate $class( keyname, key )"
 				unless $karg->isa('Net::DNS::Packet');
 
@@ -412,7 +412,7 @@ sub verify {
 
 	my $sigdata = $self->sig_data($data);			# form data to be verified
 	my $tsigmac = $self->_mac_function($sigdata);
-	my $tsig    = $self->chain;
+	my $tsig    = $self->_chain;
 	$tsig->macbin($tsigmac);
 
 	my $macbin = $self->macbin;
@@ -429,12 +429,6 @@ sub verify {
 sub vrfyerrstr {
 	my $self = shift;
 	return $self->error;
-}
-
-
-sub chain {
-	my $self = shift;
-	return bless {%$self, macbin => undef, link => $self}, ref($self);
 }
 
 
@@ -508,6 +502,15 @@ sub chain {
 		my $function = $keyref->{key};
 		return &$function(shift);
 	}
+}
+
+
+# _chain() creates a new TSIG object linked to the original
+# RR, for the purpose of signing multi-message transfers.
+
+sub _chain {
+	my $self = shift;
+	return bless {%$self, macbin => undef, link => $self}, ref($self);
 }
 
 
@@ -694,13 +697,6 @@ The two argument form is supported for backward compatibility.
 
 The boolean verify method will return true if the hash over the
 packet data conforms to the data in the TSIG itself
-
-=head2 chain
-
-    $tsig = $tsig->chain();
-
-The chain() method creates a new TSIG object linked to the original
-RR, for the purpose of signing multi-message transfers.
 
 
 =head1 TSIG Keys

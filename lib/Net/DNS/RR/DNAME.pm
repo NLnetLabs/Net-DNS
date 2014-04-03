@@ -4,9 +4,11 @@ package Net::DNS::RR::DNAME;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::DNAME - DNS DNAME resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::DomainName;
@@ -54,11 +55,12 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub target {
 	my $self = shift;
 
-	$self->{target} = new Net::DNS::DomainName2535(shift) if @_;
+	$self->{target} = new Net::DNS::DomainName2535(shift) if scalar @_;
 	$self->{target}->name if defined wantarray;
 }
 
-sub dname { &target; }				## historical
+
+sub dname { &target; }			## historical
 
 1;
 __END__
@@ -86,6 +88,7 @@ other unpredictable behaviour.
 =head2 target
 
     $target = $rr->target;
+    $rr->target( $target );
 
 Redirection target domain name which is to be substituted
 for its owner as a suffix of a domain name.
@@ -95,12 +98,12 @@ for its owner as a suffix of a domain name.
 
 Copyright (c)2002 Andreas Gustafsson. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

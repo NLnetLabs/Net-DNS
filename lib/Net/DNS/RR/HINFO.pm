@@ -4,9 +4,11 @@ package Net::DNS::RR::HINFO;
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
+$VERSION = (qw$LastChangedRevision$)[1];
 
-use base Net::DNS::RR;
+
+use strict;
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
@@ -15,7 +17,6 @@ Net::DNS::RR::HINFO - DNS HINFO resource record
 =cut
 
 
-use strict;
 use integer;
 
 use Net::DNS::Text;
@@ -51,21 +52,22 @@ sub parse_rdata {			## populate RR from rdata in argument list
 
 	$self->cpu(shift);
 	$self->os(shift);
-	die 'too many arguments for HINFO' if @_;
+	die 'too many arguments for HINFO' if scalar @_;
 }
 
 
 sub cpu {
 	my $self = shift;
 
-	$self->{cpu} = new Net::DNS::Text(shift) if @_;
+	$self->{cpu} = new Net::DNS::Text(shift) if scalar @_;
 	$self->{cpu}->value if defined wantarray;
 }
+
 
 sub os {
 	my $self = shift;
 
-	$self->{os} = new Net::DNS::Text(shift) if @_;
+	$self->{os} = new Net::DNS::Text(shift) if scalar @_;
 	$self->{os}->value if defined wantarray;
 }
 
@@ -95,12 +97,14 @@ other unpredictable behaviour.
 =head2 cpu
 
     $cpu = $rr->cpu;
+    $rr->cpu( $cpu );
 
 Returns the CPU type for this RR.
 
 =head2 os
 
     $os = $rr->os;
+    $rr->os( $os );
 
 Returns the operating system type for this RR.
 
@@ -109,12 +113,12 @@ Returns the operating system type for this RR.
 
 Copyright (c)1997-1998 Michael Fuhr. 
 
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
-
 All rights reserved.
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO
