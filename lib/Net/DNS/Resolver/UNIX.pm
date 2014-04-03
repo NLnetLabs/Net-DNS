@@ -1,11 +1,11 @@
 package Net::DNS::Resolver::UNIX;
-use base Net::DNS::Resolver::Base;
 
 #
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1021
+$VERSION = (qw$LastChangedRevision$)[1];
+
 
 =head1 NAME
 
@@ -15,6 +15,7 @@ Net::DNS::Resolver::UNIX - UNIX Resolver Class
 
 
 use strict;
+use base qw(Net::DNS::Resolver::Base);
 
 
 my $resolv_conf = "/etc/resolv.conf";
@@ -40,7 +41,7 @@ sub init {
 	my $defaults = $class->defaults;
 
 	if ( !$defaults->{domain} && @{$defaults->{searchlist}} ) {
-		$defaults->{domain} = $defaults->{searchlist}[0];
+		( $defaults->{domain} ) = @{$defaults->{searchlist}};
 	} elsif ( !@{$defaults->{searchlist}} && $defaults->{domain} ) {
 		$defaults->{searchlist} = [$defaults->{domain}];
 	}

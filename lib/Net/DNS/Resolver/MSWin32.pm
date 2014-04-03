@@ -1,11 +1,10 @@
 package Net::DNS::Resolver::MSWin32;
-use base Net::DNS::Resolver::Base;
 
 #
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1045
+$VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
@@ -15,9 +14,27 @@ Net::DNS::Resolver::MSWin32 - MS Windows Resolver Class
 
 
 use strict;
-use Win32::IPHelper;
-use Win32::TieRegistry qw(KEY_READ REG_DWORD);
+use base qw(Net::DNS::Resolver::Base);
+
+use Carp;
 use Data::Dumper;
+
+BEGIN {
+	use vars qw($Registry);
+
+	use constant WINHLP => eval {	## use Win32::Helper;	# hidden from static analyser
+		require Win32::IPHelper;
+	} || 0;
+
+	Win32::IPHelper->import if WINHLP;
+
+	use constant WINREG => eval {	## use Win32::TieRegistry;
+		require Win32::TieRegistry;
+	} || 0;
+
+	Win32::TieRegistry->import(qw(KEY_READ REG_DWORD)) if WINREG;
+}
+
 
 sub init {
 
@@ -34,7 +51,6 @@ sub init {
 	if ( $ret == 0 ) {
 		print Dumper $FIXED_INFO if $debug;
 	} else {
-
 		Carp::croak "GetNetworkParams() error %u: %s\n", $ret, Win32::FormatMessage($ret);
 	}
 
@@ -49,31 +65,36 @@ sub init {
 	$defaults->{domain} = $domain if $domain;
 
 
-	#
-	# The Win32::IPHelper  does not return searchlist. Lets do a best effort attempt to get
-	# a searchlist from the registry.
-
 	my $usedevolution = 0;
 
-	my $root = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters';
-	my $reg_tcpip = $Registry->Open( $root, {Access => KEY_READ} );
-	if ( !defined $reg_tcpip ) {
+	if (WINREG) {
 
-		# Didn't work, maybe we are on 95/98/Me?
-		$root = 'HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VxD\MSTCP';
-		$reg_tcpip = $Registry->Open( $root, {Access => KEY_READ} );
+		# The Win32::IPHelper does not return searchlist.
+		# Make best effort attempt to get searchlist from the registry.
+
+		my @root = qw(HKEY_LOCAL_MACHINE SYSTEM CurrentControlSet Services);
+
+		my $leaf = join '\\', @root, qw(Tcpip Parameters);
+		my $reg_tcpip = $Registry->Open( $leaf, {Access => KEY_READ} );
+
+		unless ( defined $reg_tcpip ) {			# Didn't work, Win95/98/Me?
+			$leaf = join '\\', @root, qw(VxD MSTCP);
+			$reg_tcpip = $Registry->Open( $leaf, {Access => KEY_READ} );
+		}
+
+		if ( defined $reg_tcpip ) {
+			$searchlist .= ',' if $searchlist;	# $domain already in there
+			$searchlist .= ( $reg_tcpip->GetValue('SearchList') || "" );
+			my ( $value, $type ) = $reg_tcpip->GetValue('UseDomainNameDevolution');
+			$usedevolution = defined $value && $type == REG_DWORD ? hex $value : 0;
+		}
 	}
 
-	if ( defined $reg_tcpip ) {
-		$searchlist .= ',' if $searchlist;		# $domain already in there
-		$searchlist .= ( $reg_tcpip->GetValue('SearchList') || "" );
-		my ( $value, $type ) = $reg_tcpip->GetValue('UseDomainNameDevolution');
-		$usedevolution = defined $value && $type == REG_DWORD ? hex $value : 0;
-	}
 
 	if ($searchlist) {
 
-		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
+		# fix devolution if configured, and simultaneously
+		# make sure no dups (but keep the order)
 		my @a;
 		my %h;
 		foreach my $entry ( split( m/[\s,]+/, lc $searchlist ) ) {

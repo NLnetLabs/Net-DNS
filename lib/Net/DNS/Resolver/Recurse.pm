@@ -1,14 +1,22 @@
 package Net::DNS::Resolver::Recurse;
+
 #
 # $Id$
 #
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
+
+
+=head1 NAME
+
+Net::DNS::Resolver::Recurse - Perform recursive DNS lookups
+
+=cut
+
+
 use strict;
-use Net::DNS::Resolver;
+use base qw(Net::DNS::Resolver);
 
-use vars qw($VERSION @ISA);
-
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 990
-@ISA = qw(Net::DNS::Resolver);
 
 my %hardcodedhints
 	 = ( 'a.root-servers.net' => ['198.41.0.4'    , '2001:503:ba3e::2:30' ]
@@ -369,10 +377,6 @@ sub _dorecursion {
 __END__
 
 
-=head1 NAME
-
-Net::DNS::Resolver::Recurse - Perform recursive dns lookups
-
 =head1 SYNOPSIS
 
   use Net::DNS::Resolver::Recurse;
@@ -380,16 +384,19 @@ Net::DNS::Resolver::Recurse - Perform recursive dns lookups
 
 =head1 DESCRIPTION
 
-This module is a sub class of Net::DNS::Resolver. So the methods for
-Net::DNS::Resolver still work for this module as well.  There are just a
-couple methods added:
+This module is a sub class of Net::DNS::Resolver.
+
+=head1 METHODS
+
+This module inherits all the methods from Net::DNS::Resolver.
+The additional module-specific methods are described below.
 
 =head2 hints
 
 Initialize the hint servers.  Recursive queries need a starting name
-server to work off of. This method takes a list of IP addresses to use
-as the starting servers.  These name servers should be authoritative for
-the root (.) zone.
+server to work from. This method takes a list of IP addresses to use
+as the starting servers.  These name servers should be authoritative
+for the root (.) zone.
 
   $res->hints(@ips);
 
@@ -436,19 +443,20 @@ the IPv6 transport notes in the Net::DNS::Resolver documentation.
 
 Rob Brown, bbb@cpan.org
 
-=head1 SEE ALSO
-
-L<Net::DNS::Resolver>,
-
 =head1 COPYRIGHT
 
-Copyright (c) 2002, Rob Brown.  All rights reserved.
-Portions Copyright (c) 2005, Olaf M Kolkman.
+Copyright (c)2002, Rob Brown.
+
+Portions Copyright (c)2005, Olaf M Kolkman.
+
+All rights reserved.
 
 This module is free software; you can redistribute
 it and/or modify it under the same terms as Perl itself.
 
-$Id$
+=head1 SEE ALSO
+
+L<Net::DNS::Resolver>
 
 =cut
 

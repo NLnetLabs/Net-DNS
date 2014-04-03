@@ -1,11 +1,10 @@
 package Net::DNS::Resolver::os2;
-use base Net::DNS::Resolver::Base;
 
 #
 # $Id$
 #
 use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1021
+$VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
@@ -15,6 +14,7 @@ Net::DNS::Resolver::os2 - OS2 Resolver Class
 
 
 use strict;
+use base qw(Net::DNS::Resolver::Base);
 
 
 my $etc		= $ENV{ETC} || '/etc';

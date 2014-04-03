@@ -21,7 +21,7 @@ BEGIN {
 	for ($^O) {				## Perl OS identifier
 
 		/cygwin/ && do {
-			if ( eval { require Net::DNS::Resolver::MSWin32; } ) {
+			if ( eval "require Net::DNS::Resolver::MSWin32;" ) {
 				@ISA = qw(Net::DNS::Resolver::MSWin32);
 				last;
 			}
@@ -265,28 +265,28 @@ Use C<< $packet->header->ancount >> or C<< $packet->answer >> to find out
 if there were any records in the answer section.  Returns C<undef> if there
 was an error.
 
+
 =head2 axfr
 
     @zone = $res->axfr;
     @zone = $res->axfr('example.com');
-    @zone = $res->axfr('passwd.example.com', 'HS');
+    @zone = $res->axfr('example.com', 'HS');
 
 Performs a zone transfer from the first nameserver listed in C<nameservers>.
-If the zone is omitted, it defaults to the first zone listed in the resolver's
+If the zone is omitted, it defaults to the first zone listed in the resolver
 search list.  If the class is omitted, it defaults to IN.
 
-Returns a list of C<Net::DNS::RR> objects, or C<undef> if the zone
+Returns a list of C<Net::DNS::RR> objects, or empty list if the zone
 transfer failed.
 
 The redundant SOA record that terminates the zone transfer is not
 returned to the caller.
 
-See also L</axfr_start> and L</axfr_next>.
+Here's an example that uses a timeout and TSIG verification:
 
-Here's an example that uses a timeout:
-
-    $res->tcp_timeout(10);
-    my @zone = $res->axfr('example.com');
+    $res->tcp_timeout( 10 );
+    $res->tsig( 'Khmac-sha1.example.+161+24053.private' );
+    my @zone = $res->axfr( 'example.com' );
 
     if (@zone) {
         foreach my $rr (@zone) {
@@ -296,38 +296,6 @@ Here's an example that uses a timeout:
         print 'Zone transfer failed: ', $res->errorstring, "\n";
     }
 
-=head2 axfr_start
-
-    $res->axfr_start;
-    $res->axfr_start('example.com');
-    $res->axfr_start('example.com', 'HS');
-
-Starts a zone transfer from the first nameserver listed in C<nameservers>.
-If the zone is omitted, it defaults to the first zone listed in the resolver's
-search list.  If the class is omitted, it defaults to IN.
-
-B<IMPORTANT>:
-
-This method currently returns the C<IO::Socket::INET> object that will
-be used for reading, or C<undef> on error.  DO NOT DEPEND ON C<axfr_start()>
-returning a socket object.  THIS MIGHT CHANGE in future releases.
-
-Use C<axfr_next> to read the zone records one at a time.
-
-=head2 axfr_next
-
-    $res->axfr_start('example.com');
-
-    while (my $rr = $res->axfr_next) {
-	    $rr->print;
-    }
-
-Reads records from a zone transfer one at a time.
-
-Returns C<undef> at the end of the zone transfer.  The redundant
-SOA record that terminates the zone transfer is not returned.
-
-See also L</axfr>.
 
 =head2 nameservers
 
@@ -465,23 +433,27 @@ an C<IO::Socket> object returned by C<< $res->bgsend >>.
 
 Returns true if the socket is ready, false if not.
 
+
 =head2 tsig
 
-    my $tsig = $res->tsig;
+    $tsig = $res->tsig;
+    $res->tsig( $tsig );
 
-    $res->tsig(Net::DNS::RR->new("$key_name TSIG $key"));
+    $res->tsig( 'Khmac-sha1.example.+161+24053.private' );
 
-    $tsig = Net::DNS::RR->new("$key_name TSIG $key");
-    $tsig->fudge(60);
-    $res->tsig($tsig);
+    $res->tsig( 'Khmac-sha1.example.+161+24053.key' );
 
-    $res->tsig($key_name, $key);
+    $res->tsig( 'Khmac-sha1.example.+161+24053.key',
+		fudge => 60
+		);
 
-    $res->tsig(0);
+    $res->tsig( $key_name, $key );
+
+    $res->tsig( undef );
 
 Get or set the TSIG record used to automatically sign outgoing
-queries and updates.  Call with an argument of 0 or '' to turn off
-automatic signing.
+queries and updates.  Call with an undefined argument, 0 or ''
+to turn off automatic signing.
 
 The default resolver behavior is not to sign any packets.  You must
 call this method to set the key if you'd like the resolver to sign
@@ -491,6 +463,7 @@ You can also sign packets manually -- see the C<Net::DNS::Packet>
 and C<Net::DNS::Update> manual pages for examples.  TSIG records
 in manually-signed packets take precedence over those that the
 resolver would add automatically.
+
 
 =head2 retrans
 
@@ -673,11 +646,10 @@ to 1.
     print "udppacketsize: ", $res->udppacketsize, "\n";
     $res->udppacketsize(2048);
 
-udppacketsize will set or get the packet size. If set to a value greater than
-Net::DNS::PACKETSZ() an EDNS extension will be added indicating support for MTU path
-recovery.
+udppacketsize will set or get the packet size. If set to a value
+greater than the default DNS packet size, an EDNS extension will be
+added indicating support for UDP fragment reassembly.
 
-Default udppacketsize is Net::DNS::PACKETSZ() (512)
 
 =head1 CUSTOMIZING
 
