@@ -42,13 +42,23 @@ use Carp;
 
 use constant ASCII => eval {
 	require Encode;
-	Encode::find_encoding('ASCII');				# return encoding object
+	Encode::find_encoding('ascii');				# encoding object
+	1;
 } || 0;
 
 use constant UTF8 => eval {
 	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
-	Encode::find_encoding('UTF8');				# return encoding object
+	Encode::find_encoding('utf8');				# encoding object
+	1;
 } || 0;
+
+
+my ( $ascii, $utf8 );			## perlcc: initialisation deferred until object creation
+
+sub init {
+	$ascii = Encode::find_encoding('ascii') if ASCII;	# Osborn's Law:
+	$utf8  = Encode::find_encoding('utf8')	if UTF8;	# Variables won't; constants aren't.
+}
 
 
 =head1 METHODS
@@ -70,10 +80,13 @@ interpretation.
 =cut
 
 my %unescape;				## precalculated numeric escape table
+my $init;
 
 sub new {
 	my $self = bless [], shift;
 	croak 'argument undefined' unless defined $_[0];
+
+	init( $init++ ) unless defined $init;			# encoding object initialisation
 
 	local $_ = &_encode_utf8;
 
@@ -117,6 +130,8 @@ sub decode {
 	my $class  = shift;
 	my $buffer = shift;					# reference to data buffer
 	my $offset = shift || 0;				# offset within buffer
+
+	init( $init++ ) unless defined $init;			# encoding object initialisation
 
 	my $size = unpack "\@$offset C", $$buffer;
 	my $next = ++$offset + $size;
@@ -167,8 +182,6 @@ Conditionally quoted zone file representation of the text object.
 
 my %escape;				## precalculated ASCII/UTF-8 escape table
 
-my $QQ = _decode_utf8( pack 'C', 34 );
-
 sub string {
 	my $self = shift;
 
@@ -178,7 +191,7 @@ sub string {
 	# Note: Script-specific rules determine which Unicode characters match \s
 	return $string unless $string =~ /^$|\s|["\$'();@]/;	# unquoted contiguous
 
-	join '', $QQ, $string, $QQ;				# quoted string
+	join '', '"', $string, '"';				# quoted string
 }
 
 
@@ -200,10 +213,10 @@ sub _decode_utf8 {			## UTF-8 to perl internal encoding
 	my $s = shift;
 
 	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
-	return UTF8->decode($s) . $t if UTF8;
+	return $utf8->decode($s) . $t if UTF8;
 
 	my $z = length $t;
-	return pack "a*x$z", ASCII->decode($s) if ASCII && not UTF8;
+	return pack "a* x$z", $ascii->decode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
@@ -219,9 +232,9 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 
 	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
 	my $z = length $t;
-	return pack "a*x$z", UTF8->encode($s) if UTF8;
+	return pack "a* x$z", $utf8->encode($s) if UTF8;
 
-	return pack "a*x$z", ASCII->encode($s) if ASCII && not UTF8;
+	return pack "a* x$z", $ascii->encode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
@@ -245,8 +258,13 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 		$table{pack( 'C', $_ )} = pack 'C2', 92, $_;
 	}
 
-	foreach ( @C0, 127, @NA ) {				# \ddd
-		$table{pack( 'C', $_ )} = pack 'C a3', 92, _encode_utf8( sprintf '%03u', $_ );
+	foreach my $n ( @C0, 127, @NA ) {			# \ddd
+		my $codepoint = sprintf( '%03u', $n );
+
+		# partial transliteration for non-ASCII character encodings
+		$codepoint =~ tr [0-9] [\060-\071];
+
+		$table{pack( 'C', $n )} = pack 'C a3', 92, $codepoint;
 	}
 
 	return %table;
@@ -256,11 +274,15 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 %unescape = eval {			## precalculated numeric escape table
 	my %table;
 
-	foreach ( 0 .. 255 ) {
-		$table{_encode_utf8 sprintf( '%03u', $_ )} = pack 'C', $_;
-	}
+	foreach my $n ( 0 .. 255 ) {
+		my $key = sprintf( '%03u', $n );
 
-	$table{_encode_utf8('092')} = pack 'C2', 92, 92;
+		# partial transliteration for non-ASCII character encodings
+		$key =~ tr [0-9] [\060-\071];
+
+		$table{$key} = pack 'C', $n;
+		$table{$key} = pack 'C2', 92, $n if $n == 92;	# escaped escape
+	}
 
 	return %table;
 };

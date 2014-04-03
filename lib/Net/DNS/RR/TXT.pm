@@ -84,12 +84,10 @@ sub rdatastr {			## SpamAssassin workaround, per CPAN RT#81760
 
 package Net::DNS::Text;
 
-my $QQ = _decode_utf8( pack 'C', 34 );
-
 sub quoted_string {
 	my $string = shift->string;
 	return $string if $string =~ /^$|\s|["\$'();@]/;	# should already be quoted
-	join '', $QQ, $string, $QQ;				# quote previously unquoted string
+	join '', '"', $string, '"';				# quote previously unquoted string
 }
 
 1;

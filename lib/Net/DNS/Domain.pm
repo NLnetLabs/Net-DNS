@@ -43,18 +43,28 @@ use Carp;
 
 use constant ASCII => eval {
 	require Encode;
-	Encode::find_encoding('ASCII');				# return encoding object
+	Encode::find_encoding('ascii');				# encoding object
+	1;
 } || 0;
 
 use constant UTF8 => eval {
 	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
-	Encode::find_encoding('UTF8');				# return encoding object
+	Encode::find_encoding('utf8');				# encoding object
+	1;
 } || 0;
 
 use constant LIBIDN => eval {
 	require Net::LibIDN;					# tested and working
 	UTF8 && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
 } || 0;
+
+
+my ( $ascii, $utf8 );			## perlcc: initialisation deferred until object creation
+
+sub init {
+	$ascii = Encode::find_encoding('ascii') if ASCII;	# Osborn's Law:
+	$utf8  = Encode::find_encoding('utf8')	if UTF8;	# Variables won't; constants aren't.
+}
 
 
 =head1 METHODS
@@ -85,10 +95,8 @@ for zone files described in RFC1035.
 =cut
 
 use vars qw($ORIGIN);
-
-my $cache1 = {};
-my $cache2 = {};
-my $expire;
+my ( $cache1, $cache2, $limit ) = ( {}, {}, 100 );
+my $init;
 
 sub new {
 	my ( $class, $s ) = @_;
@@ -98,7 +106,9 @@ sub new {
 	my $cache = $$cache1{$k} ||= $$cache2{$k};		# two layer cache
 	return $cache if defined $cache;
 
-	( $cache1, $cache2, $expire ) = ( {}, $cache1, 500 ) unless $expire--;	  # recycle cache
+	( $cache1, $cache2, $limit ) = ( {}, $cache1, 500 ) unless $limit--;	# recycle cache
+
+	init( $init++ ) unless defined $init;			# initialise encoding object
 
 	my $self = bless {}, $class;
 
@@ -136,7 +146,7 @@ numerical escape sequence.
 
 =cut
 
-my $dot = _decode_ascii( pack 'C', 46 );
+my $dot = '.';
 
 sub name {
 	my $self = shift;
@@ -185,7 +195,7 @@ sub xname {
 	return $name unless $name =~ /xn--/;
 
 	my $self = shift;
-	return $self->{xname} ||= UTF8->decode( Net::LibIDN::idn_to_unicode( $name, 'utf-8' ) || $name );
+	return $self->{xname} ||= $utf8->decode( Net::LibIDN::idn_to_unicode( $name, 'utf-8' ) || $name );
 }
 
 
@@ -270,7 +280,7 @@ sub _decode_ascii {			## translate ASCII to perl string
 
 	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
 	my $z = length $t;
-	return pack "x$z a*", ASCII->decode($s) if ASCII;
+	return pack "a* x$z", $ascii->decode($s) if ASCII;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
@@ -286,10 +296,10 @@ sub _encode_ascii {			## translate perl string to ASCII
 
 	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
 	my $z = length $t;
-	return pack "x$z a*", Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
+	return pack "a* x$z", Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
 			if LIBIDN && $s =~ /[^\000-\177]/;
 
-	return pack "x$z a*", ASCII->encode($s) if ASCII;
+	return pack "a* x$z", $ascii->encode($s) if ASCII;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
@@ -312,8 +322,13 @@ my %esc = eval {			## precalculated ASCII escape table
 		$table{pack( 'C', $_ )} = pack 'C*', 92, $_;
 	}
 
-	foreach ( 0 .. 32, 127 .. 255 ) {			# \ddd
-		$table{pack( 'C', $_ )} = sprintf '\\%03u', $_;
+	foreach my $n ( 0 .. 32, 127 .. 255 ) {			# \ddd
+		my $codepoint = sprintf( '%03u', $n );
+
+		# partial transliteration for non-ASCII character encodings
+		$codepoint =~ tr [0-9] [\060-\071];
+
+		$table{pack( 'C', $n )} = pack 'C a3', 92, $codepoint;
 	}
 
 	return %table;
@@ -330,11 +345,15 @@ sub _escape {				## Insert escape sequences in string
 my %unesc = eval {			## precalculated numeric escape table
 	my %table;
 
-	foreach ( 0 .. 255 ) {
-		$table{_encode_ascii sprintf( '%03u', $_ )} = pack 'C', $_;
-	}
+	foreach my $n ( 0 .. 255 ) {
+		my $key = sprintf( '%03u', $n );
 
-	$table{_encode_ascii('092')} = pack 'C*', 92, 92;	# escaped escape
+		# partial transliteration for non-ASCII character encodings
+		$key =~ tr [0-9] [\060-\071];
+
+		$table{$key} = pack 'C', $n;
+		$table{$key} = pack 'C2', 92, $n if $n == 92;	# escaped escape
+	}
 
 	return %table;
 };
