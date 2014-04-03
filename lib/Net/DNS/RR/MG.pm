@@ -1,81 +1,70 @@
 package Net::DNS::RR::MG;
+
 #
 # $Id$
 #
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
+
+
 use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
-
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		($self->{"mgmname"}) = Net::DNS::Packet::dn_expand($data, $offset);
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string) {
-		$self->{"mgmname"} = Net::DNS::stripdot($string);
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return exists $self->{"mgmname"} ? "$self->{mgmname}." : '';
-}
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
-	if (exists $self->{"mgmname"}) {
-		$rdata .= $packet->dn_comp($self->{"mgmname"}, $offset);
-	}
-
-	return $rdata;
-}
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{'mgmname'}=Net::DNS::stripdot($self->{'mgmname'}) if defined $self->{'mgmname'};
-}
-
-
-sub _canonicalRdata {
-    my $self=shift;
-    my $rdata = "";
-    if (exists $self->{"mgmname"}) {
-		$rdata .= $self->_name2wire(lc($self->{"mgmname"}));
-	}
-	return $rdata;
-}
-
-
-1;
-__END__
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
 Net::DNS::RR::MG - DNS MG resource record
 
+=cut
+
+
+use integer;
+
+use Net::DNS::DomainName;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+
+	$self->{mgmname} = decode Net::DNS::DomainName1035(@_);
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	$self->{mgmname}->encode(@_);
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	$self->{mgmname}->string;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->mgmname(shift);
+}
+
+
+sub mgmname {
+	my $self = shift;
+
+	$self->{mgmname} = new Net::DNS::DomainName1035(shift) if scalar @_;
+	$self->{mgmname}->name if defined wantarray;
+}
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name MG mgmname');
 
 =head1 DESCRIPTION
 
@@ -83,24 +72,37 @@ Class for DNS Mail Group (MG) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 mgmname
 
-    print "mgmname = ", $rr->mgmname, "\n";
+    $mgmname = $rr->mgmname;
+    $rr->mgmname( $mgmname );
 
-Returns the RR's mailbox field.
+A domain name which specifies a mailbox which is a member
+of the mail group specified by the owner name.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+All rights reserved.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.6
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.3.6
 
 =cut

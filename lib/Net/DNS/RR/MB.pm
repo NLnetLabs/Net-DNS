@@ -1,82 +1,72 @@
 package Net::DNS::RR::MB;
+
 #
 # $Id$
 #
+use vars qw($VERSION);
+$VERSION = (qw$LastChangedRevision$)[1];
+
+
 use strict;
-BEGIN {
-    eval { require bytes; }
-}
-use vars qw(@ISA $VERSION);
-
-@ISA     = qw(Net::DNS::RR);
-$VERSION = (qw$LastChangedRevision$)[1]; # Unchanged since 1037
-
-sub new {
-	my ($class, $self, $data, $offset) = @_;
-
-	if ($self->{"rdlength"} > 0) {
-		($self->{"madname"}) = Net::DNS::Packet::dn_expand($data, $offset);
-	}
-
-	return bless $self, $class;
-}
-
-sub new_from_string {
-	my ($class, $self, $string) = @_;
-
-	if ($string) {
-		$self->{"madname"} = Net::DNS::stripdot($string);
-	}
-
-	return bless $self, $class;
-}
-
-sub rdatastr {
-	my $self = shift;
-
-	return $self->{"madname"} ? "$self->{madname}." : '';
-}
-
-sub rr_rdata {
-	my ($self, $packet, $offset) = @_;
-	my $rdata = "";
-
-	if (exists $self->{"madname"}) {
-		$rdata .= $packet->dn_comp($self->{"madname"}, $offset);
-	}
-
-	return $rdata;
-}
-
-
-sub _normalize_dnames {
-	my $self=shift;
-	$self->_normalize_ownername();
-	$self->{"madname"}=Net::DNS::stripdot($self->{"madname"}) if defined $self->{"madname"};
-}
-
-
-
-sub _canonicalRdata {
-    my $self=shift;
-    my $rdata = "";
-    if (exists $self->{"madname"}) {
-		$rdata .= $self->_name2wire(lc($self->{"madname"}));
-	}
-	return $rdata;
-}
-
-
-1;
-__END__
+use base qw(Net::DNS::RR);
 
 =head1 NAME
 
 Net::DNS::RR::MB - DNS MB resource record
 
+=cut
+
+
+use integer;
+
+use Net::DNS::DomainName;
+
+
+sub decode_rdata {			## decode rdata from wire-format octet string
+	my $self = shift;
+
+	$self->{madname} = decode Net::DNS::DomainName1035(@_);
+}
+
+
+sub encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return '' unless $self->{madname};
+	$self->{madname}->encode(@_);
+}
+
+
+sub format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return '' unless $self->{madname};
+	$self->{madname}->string;
+}
+
+
+sub parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	$self->madname(shift);
+}
+
+
+sub madname {
+	my $self = shift;
+
+	$self->{madname} = new Net::DNS::DomainName1035(shift) if scalar @_;
+	$self->{madname}->name if defined wantarray;
+}
+
+1;
+__END__
+
+
 =head1 SYNOPSIS
 
-C<use Net::DNS::RR>;
+    use Net::DNS;
+    $rr = new Net::DNS::RR('name MB madname');
 
 =head1 DESCRIPTION
 
@@ -84,24 +74,37 @@ Class for DNS Mailbox (MB) resource records.
 
 =head1 METHODS
 
+The available methods are those inherited from the base class augmented
+by the type-specific methods defined in this package.
+
+Use of undocumented package features or direct access to internal data
+structures is discouraged and could result in program termination or
+other unpredictable behaviour.
+
+
 =head2 madname
 
-    print "madname = ", $rr->madname, "\n";
+    $madname = $rr->madname;
+    $rr->madname( $madname );
 
-Returns the domain name of the host which has the specified mailbox.
+A domain name which specifies a host which has the
+specified mailbox.
+
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)1997-2002 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+All rights reserved.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
 =head1 SEE ALSO
 
-L<perl(1)>, L<Net::DNS>, L<Net::DNS::Resolver>, L<Net::DNS::Packet>,
-L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-RFC 1035 Section 3.3.3
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 3.3.3
 
 =cut

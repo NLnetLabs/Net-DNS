@@ -42,7 +42,6 @@ lib/Net/DNS/RR/CERT.pm
 lib/Net/DNS/RR/CNAME.pm
 lib/Net/DNS/RR/DHCID.pm
 lib/Net/DNS/RR/DNAME.pm
-lib/Net/DNS/RR/EID.pm
 lib/Net/DNS/RR/EUI48.pm
 lib/Net/DNS/RR/EUI64.pm
 lib/Net/DNS/RR/GPOS.pm
@@ -62,9 +61,7 @@ lib/Net/DNS/RR/MR.pm
 lib/Net/DNS/RR/MX.pm
 lib/Net/DNS/RR/NAPTR.pm
 lib/Net/DNS/RR/NID.pm
-lib/Net/DNS/RR/NIMLOC.pm
 lib/Net/DNS/RR/NS.pm
-lib/Net/DNS/RR/NSAP.pm
 lib/Net/DNS/RR/NULL.pm
 lib/Net/DNS/RR/OPT.pm
 lib/Net/DNS/RR/PTR.pm
