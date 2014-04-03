@@ -5,7 +5,7 @@ use strict;
 $^W = 1;
 
 
-die <<RIP if $] < 5.004_05;
+die <<RIP if $] < 5.004_04;
 
 This version of Net::DNS will not function correctly with perl $]
 
@@ -137,29 +137,39 @@ EOT
 
 
 #
+# List of files to be removed by make clean
+#
+my @debris = qw(
+		t/IPv6.enabled
+		t/online.enabled t/online.nonfatal
+		compile.* DNS.o DNS.c DNS.bs
+		lib/Net/DNS/Resolver/MSWin32
+		zone[0-9].txt zone[0-9][0-9].txt
+		);
+
+
+#
 # Get our makefile started...
 #
 my %Makefile = (
-	NAME	     => 'Net::DNS',
-	VERSION_FROM => 'lib/Net/DNS.pm',
-	ABSTRACT     => 'Perl DNS resolver module',
-	AUTHOR	     => 'Olaf Kolkman <olaf@net-dns.org>',
-	LICENSE	     => 'perl',
-	PREREQ_PM    => {
-		'Digest::HMAC'	=> 1.01,
-		'Digest::MD5'	=> 2.13,
-		'Digest::SHA'	=> 5.23,
-		'IO::Socket'	=> 1.24,
-		'MIME::Base64'	=> 2.11,
-		'Test::More'	=> 0.52,
+	NAME		 => 'Net::DNS',
+	VERSION_FROM	 => 'lib/Net/DNS.pm',
+	ABSTRACT	 => 'Perl DNS resolver module',
+	AUTHOR		 => 'Olaf Kolkman <olaf@net-dns.org>',
+	LICENSE		 => 'perl',
+	MIN_PERL_VERSION => 5.004005,
+	PREREQ_PM	 => {
+		'Digest::HMAC' => 1.01,
+		'Digest::MD5'  => 2.13,
+		'Digest::SHA'  => 5.23,
+		'IO::Socket'   => 1.24,
+		'MIME::Base64' => 2.11,
+		'Test::More'   => 0.52,
 		},
 	XS    => {},
 	C     => [],
-	clean => {
-		FILES =>
-'t/IPv6.enabled t/online.enabled t/online.nonfatal compile.* DNS.o DNS.c DNS.bs lib/Net/DNS/Resolver/MSWin32 zone[0-9].txt zone[0-9][0-9].txt'
-				},
-			);
+	clean => {FILES => "@debris"},
+	);
 
 
 if ( $^O eq 'MSWin32' || $^O eq "cygwin" && $iphelper ) {

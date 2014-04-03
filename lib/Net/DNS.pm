@@ -10,7 +10,7 @@ $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS - Perl interface to the Domain Name System
+Net::DNS - Perl Interface to the Domain Name System
 
 =head1 SYNOPSIS
 
@@ -29,7 +29,7 @@ details.
 =cut
 
 
-use 5.004_05;
+use 5.004_04;
 use strict;
 use integer;
 use Carp;
@@ -43,8 +43,10 @@ use vars qw(@EXPORT);
 
 use vars qw($HAVE_XS);
 $HAVE_XS = eval {
-	my ($version) = split /[^0-9.]/, $VERSION;
 	local $SIG{'__DIE__'} = 'DEFAULT';
+
+	my $version = $VERSION;
+	$version =~ s/[^0-9.]//g;
 
 	eval {
 		require XSLoader;
@@ -66,15 +68,8 @@ use Net::DNS::Packet;
 use Net::DNS::Update;
 use Net::DNS::Resolver;
 
-new Net::DNS::RR( type => 'TSIG' );	## pre-load RR with create() constructor
-
 
 sub version { $VERSION; }
-
-sub PACKETSZ () { 512; }
-
-sub INT32SZ () { 4; }
-sub INT16SZ () { 2; }
 
 
 #
@@ -194,19 +189,23 @@ sub rr_del {
 #	Net::DNS::SEC 0.17 compatibility
 ########################################
 
-use constant DNSSEC => eval {		## pre-load RRs with create() constructor
+eval {					## pre-load RRs
 	require Net::DNS::RR::RRSIG;
 	require Net::DNS::RR::SIG;
 	require Net::DNS::RR::DS;
-	require Net::DNS::RR::DLV;
-} || 0;
+
+	foreach my $type (qw(DLV DNSKEY KEY NXT NSEC)) {
+		new Net::DNS::RR( type => $type );
+	}
+};
 
 sub INIT {				## safe to ignore "Too late to run" warning
-	return unless DNSSEC;		## needed for DNSSEC 00-load.t only
+					## only needed to satisfy DNSSEC t/00-load.t
 
-	# pre-load remaining RRs, some of which have circular dependence problems
-	new Net::DNS::RR( type => $_ ) foreach qw(DNSKEY KEY NSEC NXT);
-	new Net::DNS::RR( type => $_ ) foreach qw(NSEC3 NSEC3PARAM);
+	# attempt to pre-load RRs which have circular dependence problems
+	foreach my $type (qw(NSEC3 NSEC3PARAM)) {
+		new Net::DNS::RR( type => $type );
+	}
 }
 
 
@@ -226,7 +225,7 @@ use vars qw(%typesbyname %typesbyval);
 
 
 use vars qw(@EXPORT_OK);
-@EXPORT_OK = qw(name2labels wire2presentation stripdot);
+@EXPORT_OK = qw(name2labels presentation2wire wire2presentation stripdot);
 
 #
 # name2labels()
@@ -371,8 +370,8 @@ section of a DNS packet.
 
 =head2 Question Objects
 
-L<Net::DNS::Question|Net::DNS::Question> objects represent the question
-section of a DNS packet.
+L<Net::DNS::Question|Net::DNS::Question> objects represent the content
+of the question section of a DNS packet.
 
 =head2 RR Objects
 
@@ -380,8 +379,8 @@ L<Net::DNS::RR|Net::DNS::RR> is the base class for DNS resource record
 (RR) objects in the answer, authority, and additional sections of a DNS
 packet.
 
-Don't assume that RR objects will be of the type you requested -- always
-check an RR object's type before calling any of its methods.
+Do not assume that RR objects will be of the type you requested -- always
+check the type of an RR object before calling any of its methods.
 
 
 =head1 METHODS
@@ -732,13 +731,18 @@ distribution please use the CPAN bug reporting system.
 
 Copyright (c)1997-2002 Michael Fuhr.
 
-Portions Copyright(c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002-2004 Chris Reinhardt.
 
-Portions Copyright(c)2005 Olaf Kolkman (RIPE NCC)
+Portions Copyright (c)2005 Olaf Kolkman (RIPE NCC)
 
-Portions Copyright(c)2006 Olaf Kolkman (NLnet Labs)
+Portions Copyright (c)2006 Olaf Kolkman (NLnet Labs)
+
+Portions Copyright (c)2014 Dick Franks
 
 All rights reserved.
+
+
+=head1 LICENSE
 
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.

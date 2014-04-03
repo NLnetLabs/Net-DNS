@@ -5,6 +5,8 @@ use Test::More "no_plan";
 
 
 BEGIN {
+	use constant DNSSEC => eval { require Net::DNS::SEC; } || 0;
+
 	use_ok('Net::DNS');
 	use_ok('Net::DNS::Resolver::Recurse');
 	use_ok('Net::DNS::Nameserver');
@@ -12,8 +14,8 @@ BEGIN {
 
 
 diag("\nThese tests were run using:\n");
-diag("Net::DNS::VERSION:\t$Net::DNS::VERSION");
-diag("Net::DNS::SEC seems to be available") if $Net::DNS::DNSSEC;
+diag("Net::DNS\t$Net::DNS::VERSION");
+diag("Net::DNS::SEC\t$Net::DNS::SEC::VERSION seems to be available") if DNSSEC;
 diag("set environment variable NET_DNS_DEBUG to get all versions");
 
 

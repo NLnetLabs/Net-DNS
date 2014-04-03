@@ -15,7 +15,8 @@ my %manifest;
 open MANIFEST, 'MANIFEST' or plan skip_all => "MANIFEST: $!";
 while (<MANIFEST>) {
 	chomp;
-	$manifest{lc "$1"}++ if /([^\/]+)$/;
+	my ( $volume, $directory, $name ) = File::Spec->splitpath($_);
+	$manifest{lc $name}++ if $name;
 }
 close MANIFEST;
 
