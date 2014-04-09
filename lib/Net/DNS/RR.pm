@@ -87,7 +87,7 @@ The trailing dot (.) is optional.
 
 =cut
 
-my $PARSE_REGEX = q/("[^"]*"|'[^']*')|;[^\n]*|\s|\)$/;
+my $PARSE_REGEX = q/("[^"]*"|'[^']*')|;[^\n]*|[\s()]/;
 
 sub _new_string {
 	my $base;
@@ -101,8 +101,7 @@ sub _new_string {
 	s/\\'/\\039/g;						# disguise escaped single quote
 	s/\\;/\\059/g;						# disguise escaped semicolon
 	s/\n(\S)/$1/g if COMPATIBLE;				# gloss over syntax errors in Net::DNS::SEC test data
-	my @parse = grep defined && length, split /$PARSE_REGEX/o;
-	my ( $name, @token ) = grep !/^[()]$/, @parse;		# discard brackets
+	my ( $name, @token ) = grep defined && length, split /$PARSE_REGEX/o;
 
 	my ( $t1, $t2, $t3 ) = @token;
 	croak 'unable to parse RR string' unless defined $t1;

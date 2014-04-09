@@ -86,7 +86,7 @@ sub new {
 
 	if ( ref($file) ) {
 		$self->{filename} = $self->{handle} = $file;
-		return $self if ref($file) =~ /FileHandle|GLOB|Text/;
+		return $self if ref($file) =~ /FileHandle|IO::File|GLOB|Text/;
 		croak 'argument not a file handle';
 	}
 
@@ -191,9 +191,9 @@ Returns the default TTL as specified by the $TTL directive.
 
 sub ttl {
 	my $self = shift;
-	my $t = shift;
-	return $self->{ttl} || 0 unless defined $t;
-	$self->{ttl} = new Net::DNS::RR(". $t IN A")->ttl;
+	my $time = shift;
+	return $self->{ttl} || 0 unless defined $time;
+	$self->{ttl} = new Net::DNS::RR(". $time IN A")->ttl;
 }
 
 
@@ -242,6 +242,7 @@ use vars qw($include_dir);		## dynamically scoped
 sub _filename {				## rebase unqualified filename
 	my $name = shift;
 	return $name unless $include_dir;
+	return $name if ref($name);	## file handle
 	require File::Spec;
 	return $name if File::Spec->file_name_is_absolute($name);
 	return File::Spec->catfile( $include_dir, $name );
@@ -251,9 +252,8 @@ sub _filename {				## rebase unqualified filename
 sub _read {
 	my ($arg1) = @_;
 	shift unless ref($arg1) || $arg1 ne __PACKAGE__;
-	my $name = shift;
+	my $file = new Net::DNS::ZoneFile( _filename(shift) );
 	local $include_dir = shift;
-	my $file = new Net::DNS::ZoneFile( _filename($name) );
 	my @zone;
 	eval {
 		my $rr;
@@ -437,7 +437,7 @@ sub _generate {				## expand $GENERATE into input stream
 }
 
 
-my $LEX_REGEX = q/("[^"]*")|("[^"]*)$|;[^\n]*|(^\s)|\s/;
+my $LEX_REGEX = q/("[^"]*"|"[^"]*$)|;[^\n]*|(^\s)|\s/;
 
 sub _getline {				## get line from current source
 	my $self = shift;
@@ -452,15 +452,14 @@ sub _getline {				## get line from current source
 			s/\\"/\\034/g;				# disguise escaped quote
 			s/\\;/\\059/g;				# disguise escaped semicolon
 			my @token = grep defined && length, split /$LEX_REGEX/o;
-			if ( grep $_ eq '(', @token ) {
-				return $_ if grep $_ eq ')', @token;	# question user sanity
+			if ( grep( s/^\(//, @token ) && !grep( s/\)$//, @token ) ) {
 				while (<$fh>) {
 					s/\\\\/\\092/g;		# disguise escaped escape
 					s/\\"/\\034/g;		# disguise escaped quote
 					s/\\;/\\059/g;		# disguise escaped semicolon
 					substr( $_, 0, 0 ) = join ' ', @token;	  # need to handle multi-line quote
 					@token = grep defined && length, split /$LEX_REGEX/o;
-					last if grep $_ eq ')', @token;
+					last if grep s/\)$//, @token;
 				}
 				$_ = join ' ', @token;		# reconstitute RR string
 			}
