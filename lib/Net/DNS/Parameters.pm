@@ -36,7 +36,7 @@ use vars qw( %classbyname %classbyval );
 	ANY  => 255,						# RFC1035
 	);
 %classbyval = reverse %classbyname;
-%classbyname = ( %classbyname, map /\D/ ? lc($_) : $_, %classbyname );
+%classbyname = ( '*' => 255, %classbyname, map /\D/ ? lc($_) : $_, %classbyname );
 
 
 # Registry: Resource Record (RR) TYPEs
@@ -123,7 +123,7 @@ use vars qw( %typebyname %typebyval );
 	DLV	   => 32769,					# RFC4431
 	);
 %typebyval = reverse %typebyname;
-%typebyname = ( %typebyname, map /\D/ ? lc($_) : $_, %typebyname );
+%typebyname = ( '*' => 255, %typebyname, map /\D/ ? lc($_) : $_, %typebyname );
 
 
 # Registry: DNS OpCodes
@@ -330,7 +330,7 @@ modify it under the same terms as Perl itself.
 
 
 =head1 SEE ALSO
- 
+
 L<perl>, L<Net::DNS>,
 L<IANA Registry|http://www.iana.org/assignments/dns-parameters>
 

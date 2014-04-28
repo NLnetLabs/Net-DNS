@@ -18,7 +18,6 @@ Net::DNS::RR::OPT - DNS OPT resource record
 
 
 use integer;
-
 use Carp;
 
 use Net::DNS::Parameters;
@@ -346,6 +345,6 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC2671 Section 4
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC6891, RFC3225
 
 =cut

@@ -26,6 +26,10 @@ Fix rt.cpan.org #92433 & #91241
 
 	TSIG: implement sign/verify for multi-packet message.
 
+Fix rt.cpan.org #79569
+
+	Iterate nameservers in AXFR
+
 
 **** 0.74 Jan 16, 2014
 

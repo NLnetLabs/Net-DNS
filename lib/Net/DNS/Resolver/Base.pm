@@ -1151,10 +1151,9 @@ sub axfr {				## zone transfer
 
 
 sub _axfr_start {
-	my $self = shift;
-	my ( $dname, $class ) = @_;
-	$dname ||= $self->{'searchlist'}->[0];
-	$class ||= 'IN';
+	my $self  = shift;
+	my $dname = shift || $self->{'searchlist'}->[0];
+	my $class = shift || 'IN';
 
 	my $debug   = $self->{debug};
 	my $timeout = $self->{tcp_timeout};
@@ -1169,48 +1168,47 @@ sub _axfr_start {
 
 	my $packet = $self->make_query_packet( $dname, 'AXFR', $class );
 
-	my ($ns) = $self->nameservers;
-	unless ($ns) {
-		print ';; ', $self->errorstring, "\n" if $debug;
-		return;
+	foreach my $ns ( $self->nameservers ) {
+		if ($debug) {
+			my $srcport = $self->{srcport};
+			my $srcaddr = $self->{srcaddr};
+			my $dstport = $self->{port};
+			print ";; axfr_start nameserver [$ns]:$dstport\n";
+			print ";; axfr_start srcaddress [$srcaddr]:$srcport\n";
+		}
+
+		my $sock;
+		my $sock_key = "$ns:$self->{port}";
+
+		if ( $self->persistent_tcp && $self->{axfr_sockets}[AF_UNSPEC]{$sock_key} ) {
+			$sock = $self->{axfr_sockets}[AF_UNSPEC]{$sock_key};
+			print ";; using persistent socket\n" if $debug;
+		} else {
+			$sock = $self->_create_tcp_socket($ns) || next;
+			$self->{axfr_sockets}[AF_UNSPEC]{$sock_key} = $sock if $self->persistent_tcp;
+		}
+
+		my $packet_data = $packet->data;
+		my $lenmsg = pack( 'n', length($packet_data) );
+
+		unless ( $sock->send($lenmsg) ) {
+			$self->errorstring($!);
+			next;
+		}
+
+		unless ( $sock->send($packet_data) ) {
+			$self->errorstring($!);
+			next;
+		}
+
+		$self->{axfr_ns}  = $ns;
+		$self->{axfr_sel} = IO::Select->new($sock);
+
+		return $packet;
 	}
 
-	if ($debug) {
-		my $srcport = $self->{srcport};
-		my $srcaddr = $self->{srcaddr};
-		my $dstport = $self->{port};
-		print ";; axfr_start nameserver [$ns]:$dstport\n";
-		print ";; axfr_start srcaddress [$srcaddr]:$srcport\n";
-	}
-
-	my $sock;
-	my $sock_key = "$ns:$self->{port}";
-
-	if ( $self->persistent_tcp && $self->{axfr_sockets}[AF_UNSPEC]{$sock_key} ) {
-		$sock = $self->{axfr_sockets}[AF_UNSPEC]{$sock_key};
-		print ";; using persistent socket\n" if $debug;
-	} else {
-		$sock = $self->_create_tcp_socket($ns) || return;
-		$self->{axfr_sockets}[AF_UNSPEC]{$sock_key} = $sock if $self->persistent_tcp;
-	}
-
-	my $packet_data = $packet->data;
-	my $lenmsg = pack( 'n', length($packet_data) );
-
-	unless ( $sock->send($lenmsg) ) {
-		$self->errorstring($!);
-		return;
-	}
-
-	unless ( $sock->send($packet_data) ) {
-		$self->errorstring($!);
-		return;
-	}
-
-	$self->{axfr_ns}  = $ns;
-	$self->{axfr_sel} = IO::Select->new($sock);
-
-	return $packet;
+	print ';; ', $self->errorstring, "\n" if $debug;
+	return;
 }
 
 

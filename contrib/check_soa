@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-$VERSION = (qw$LastChangedRevision$)[1] || 0.35;
+$VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
@@ -56,6 +56,10 @@ Turn on resolver diagnostics.
 =item B<-n>
 
 Report negative cache TTL.
+
+=item B<-s>
+
+Request DNSSEC resource records.
 
 =item B<-t>
 
@@ -147,7 +151,7 @@ use strict;
 
 my $self = $0;							# script
 
-my $options = 'dntv';						# options
+my $options = 'dnstv';						# options
 my %option;
 eval { require Getopt::Std; Getopt::Std::getopts( $options, \%option ) };
 warn "Can't locate Getopt::Std\n" if $@;
@@ -165,8 +169,6 @@ my ( $domain, @nameserver ) = @ARGV;
 
 require Net::DNS;
 
-no warnings;				## Sometimes cheating is the only way to be portable!
-
 
 my @conf = (
 	debug => ( $option{d} || 0 ),				# -d	enable diagnostics
@@ -174,6 +176,7 @@ my @conf = (
 	);
 
 my $negtest = $option{n};					# -n	report NCACHE TTL
+my $dnssec  = $option{s};					# -s	request DNSSEC RRs
 my $verbose = $option{v};					# -v	verbose
 
 my $neg_min = 300;						# NCACHE TTL reporting threshold
@@ -185,6 +188,7 @@ my $udp_wait	= 0.020;					# minimum polling interval
 
 my $resolver = new Net::DNS::Resolver(@conf);			# create resolver object
 $resolver->nameservers(@nameserver) or die $resolver->string;
+$resolver->dnssec(1) if $dnssec;
 
 
 my ($question) = new Net::DNS::Packet($domain)->question;	# invert IP address/prefix
@@ -205,7 +209,7 @@ my @nsname = grep { $_ ne $zone } map { $_->nsdname } @ns;	# extract server name
 my @server = @nameserver ? (@nameserver) : ( sort @nsname );
 
 
-my @soa = displayRR( $zone, 'SOA' );
+my @soa = grep { $_->type eq 'SOA' } displayRR( $zone, 'SOA' );
 foreach my $soa (@soa) {					# simple sanity check
 	my $owner = lc $soa->name;				# zone name
 	my $mname = lc $soa->mname;				# primary server
@@ -219,7 +223,7 @@ foreach my $soa (@soa) {					# simple sanity check
 
 	for ($mname) {						# locally served zone insanity
 		last unless $_ eq $owner;			# RFC6303
-		displayRR( $zone, 'NS' ) unless @nameserver;	# ensure NS always listed
+		displayRR( $zone, 'NS' )  unless @nameserver;	# ensure NS always listed
 		displayRR( $zone, 'ANY' ) unless $_ eq $name;	# ensure other RRs listed
 		last unless /(in-addr|ip6)\.arpa/i;
 		report('unexpected address record in locally served zone [RFC6303]') if $resolved;
@@ -262,6 +266,7 @@ displayRR( $zone, 'NS' )  if @nameserver;			# show NS if testing specific namese
 print "----\n";
 
 my ( $bad, $seq, $iphash ) = checkNS( $zone, @server );		# report status
+$iphash->{$seq} ||= '<unidentified>';
 print "\n";
 my $s = $bad != 1 ? 's' : '';
 print "Unsatisfactory response from $bad nameserver$s\n\n" if $bad and @server > 1;
@@ -269,24 +274,28 @@ print "Unsatisfactory response from $bad nameserver$s\n\n" if $bad and @server >
 my %mname  = reverse %$iphash;					# invert address hash
 my $mcount = keys %mname;					# number of distinct MNAMEs
 if ( $mcount > 1 ) {
-	report("unable to identify unique primary nameserver"); # RFC1034, 4.3.5
-	foreach ( sort keys %mname ) { report( '', $_, $mname{$_} ? '' : "\tserial\t$seq" ) }
+	report('SOAs do not identify unique primary server');	# RFC1034, 4.3.5
+	foreach my $mname ( sort keys %mname ) {
+		foreach ( $mname, $resolver->nameservers($mname) ) { delete $iphash->{$_} }
+	}
+	my %serial = map { ( $iphash->{$_} => $_ ) } sort { $a <=> $b } keys %$iphash;
+	foreach ( sort keys %mname ) { report( sprintf '%10s  %s', $serial{$_}, $_ ) }
 }
 
 exit;
 
 
 sub checkNS0 {				## initial status vector for checkNS
-	my $serial = 0;
+	my $serial = undef;
 	my $hash   = {};
 	my $res	   = new Net::DNS::Resolver(@conf);
 
-	foreach my $soa ( @soa, @ncache ) {
+	foreach my $soa ( grep { $_->type eq 'SOA' } @ncache, @soa ) {
 		my $mname = lc $soa->mname;			# populate hash with name/IP of primary
-		foreach my $id ( $mname, $res->nameservers($mname) ) {
-			$hash->{$id} = $mname;
-		}
-		$serial = $soa->serial;
+		foreach ( $mname, $res->nameservers($mname) ) { $hash->{$_} = $mname }
+		my $s = $soa->serial;
+		$hash->{$s} = $mname;
+		$serial = $s if ordered( $serial, $s );
 	}
 
 	return ( 0, $serial, $hash );
@@ -405,17 +414,18 @@ sub checkNS {				## query nameservers (concurrently) and report status
 	my ($serial) = map { $_->serial } @soa;			# check serial number
 
 	if ( $primary && ordered( $serial, $latest ) ) {	# primary should have latest data
-		my $retest = $res->send( $zone, 'SOA' );	# retest before pointing finger
-		($serial) = map { $_->serial } $retest->answer if $retest;
+		my $response = $res->send( $zone, 'SOA' );	# repeat test before pointing finger
+		my ($retest) = grep { $_->type eq 'SOA' } $response->answer if $response;
+		$serial = $retest->serial if ordered( $serial, $retest->serial );
 	}
 
 	print "\t\t\tzone serial\t", $serial, "\n";
+	$hash->{$serial} = $hash->{$ip} if $primary;
 
 	if ( ordered( $serial, $latest ) ) {
 		report('serial number not current');
 		return @fail unless $primary;
 		report('discredited as unique primary nameserver');
-		$hash->{0} = '<unidentified>';
 		return @fail;
 	}
 
@@ -455,6 +465,8 @@ sub displayRR {				## print specified RRs or error code
 
 		next if $qtype eq 'ANY' && $rr->type =~ /^(SOA|NS)$/;
 
+		local $SIG{__WARN__} = sub { };			# suppress "wide character" warning
+
 		print @annotation if $rr->name eq $qname;	# annotate IDN
 
 		for ( $rr->string ) {
@@ -480,18 +492,20 @@ sub NCACHE {				## report observed NCACHE TTL for domain
 	}
 	my @ncache = grep { $_->type eq 'SOA' } $reply->authority;
 	for (@ncache) {
-		report( 'negative cache data', ttl( $_->ttl ) );
+		report( 'negative cache data', ttl( $_->ttl ), '( SOA:', $_->serial . ' )' );
 	}
 	return @ncache;
 }
 
 
 sub NS {				## find NS records for domain
-	my $domain = lc shift;
+	my $name = shift;
 
-	my $packet = $resolver->send( $domain, 'NS' ) or die $resolver->string;
+	my $packet = $resolver->send( $name, 'NS' ) or die $resolver->string;
 	my @answer = grep { $_->type eq 'NS' } $packet->answer;
 	return @answer if @answer;
+
+	my $domain = lc $name;
 
 	if ( my ($ncache) = grep { $_->type eq 'SOA' } $packet->authority ) {
 		my $apex = lc $ncache->name;
@@ -502,7 +516,7 @@ sub NS {				## find NS records for domain
 	my @referral = grep { $_->type eq 'NS' } $packet->authority;
 	return @referral if grep { $domain eq lc $_->name } @referral;
 
-	my ( undef, $parent ) = split /\./, $domain, 2;
+	my ( $x, $parent ) = split /\./, $domain, 2;
 	return NS( $parent || return () );
 }
 
