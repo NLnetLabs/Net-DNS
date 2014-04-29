@@ -99,6 +99,8 @@ sub _new_string {
 	s/\\\\/\\092/g;						# disguise escaped escape
 	s/\\"/\\034/g;						# disguise escaped double quote
 	s/\\'/\\039/g;						# disguise escaped single quote
+	s/\\\(/\\040/g;						# disguise escaped bracket
+	s/\\\)/\\041/g;						# disguise escaped bracket
 	s/\\;/\\059/g;						# disguise escaped semicolon
 	s/\n(\S)/$1/g if COMPATIBLE;				# gloss over syntax errors in Net::DNS::SEC test data
 	my ( $name, @token ) = grep defined && length, split /$PARSE_REGEX/o;

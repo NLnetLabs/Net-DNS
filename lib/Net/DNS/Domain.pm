@@ -229,7 +229,7 @@ represented by the appropriate escape sequence.
 =cut
 
 sub string {
-	( my $name = &name ) =~ s/(['"\$;@])/\\$1/;		# escape special char
+	( my $name = &name ) =~ s/(["'\$();@])/\\$1/;		# escape special char
 	return $name =~ /[$dot]$/o ? $name : $name . $dot;	# append trailing dot
 }
 
