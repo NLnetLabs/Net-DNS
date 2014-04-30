@@ -1532,9 +1532,6 @@ sub DESTROY {}
 
 __END__
 
-=head1 NAME
-
-Net::DNS::Resolver::Base - Common Resolver Class
 
 =head1 SYNOPSIS
 

@@ -437,7 +437,7 @@ sub _generate {				## expand $GENERATE into input stream
 }
 
 
-my $LEX_REGEX = q/("[^"]*"|"[^"]*$)|;[^\n]*|(^\s)|\s/;
+my $LEX_REGEX = q/("[^"]*"|"[^"]*$)|;[^\n]*|([()])|(^\s)|\s/;
 
 sub _getline {				## get line from current source
 	my $self = shift;
@@ -450,16 +450,20 @@ sub _getline {				## get line from current source
 		if (/\(/) {					# concatenate multi-line RR
 			s/\\\\/\\092/g;				# disguise escaped escape
 			s/\\"/\\034/g;				# disguise escaped quote
+			s/\\\(/\\040/g;				# disguise escaped bracket
+			s/\\\)/\\041/g;				# disguise escaped bracket
 			s/\\;/\\059/g;				# disguise escaped semicolon
 			my @token = grep defined && length, split /$LEX_REGEX/o;
-			if ( grep( s/^\(//, @token ) && !grep( s/\)$//, @token ) ) {
+			if ( grep( $_ eq '(', @token ) && !grep( $_ eq ')', @token ) ) {
 				while (<$fh>) {
 					s/\\\\/\\092/g;		# disguise escaped escape
 					s/\\"/\\034/g;		# disguise escaped quote
+					s/\\\(/\\040/g;		# disguise escaped bracket
+					s/\\\)/\\041/g;		# disguise escaped bracket
 					s/\\;/\\059/g;		# disguise escaped semicolon
-					substr( $_, 0, 0 ) = join ' ', @token;	  # need to handle multi-line quote
-					@token = grep defined && length, split /$LEX_REGEX/o;
-					last if grep s/\)$//, @token;
+					substr( $_, 0, 0 ) = pop @token || '';	  # splice multi-line token
+					push @token, grep defined && length, split /$LEX_REGEX/o;
+					last if grep $_ eq ')', @token;
 				}
 				$_ = join ' ', @token;		# reconstitute RR string
 			}
