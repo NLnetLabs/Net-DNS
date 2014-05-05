@@ -7,13 +7,6 @@ use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
 
-=head1 NAME
-
-Net::DNS::Resolver - DNS resolver class
-
-=cut
-
-
 use strict;
 use integer;
 use Carp;
@@ -1533,6 +1526,10 @@ sub DESTROY {}
 __END__
 
 
+=head1 NAME
+
+Net::DNS::Resolver - DNS resolver class
+
 =head1 SYNOPSIS
 
     use base qw(Net::DNS::Resolver::Base);
@@ -1540,9 +1537,9 @@ __END__
 =head1 DESCRIPTION
 
 This class is the common base class for the different platform
-sub-classes of L<Net::DNS::Resolver|Net::DNS::Resolver>.
+sub-classes of L<Net::DNS::Resolver>.
 
-No user serviceable parts inside, see L<Net::DNS::Resolver|Net::DNS::Resolver>
+No user serviceable parts inside, see L<Net::DNS::Resolver>
 for all your resolving needs.
 
 =head1 COPYRIGHT
