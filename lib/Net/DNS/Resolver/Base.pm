@@ -1485,11 +1485,11 @@ sub _ip_is_ipv6 {
 }
 
 
-
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 use vars qw($AUTOLOAD);
 
-sub AUTOLOAD {
+sub AUTOLOAD {				## Default method
 	my ($self) = @_;
 
 	my $name = $AUTOLOAD;
@@ -1513,12 +1513,6 @@ sub AUTOLOAD {
 
 	goto &{$AUTOLOAD};
 }
-
-#
-# Some people have reported that Net::DNS dies because AUTOLOAD picks up
-# calls to DESTROY.
-#
-sub DESTROY {}
 
 
 1;
