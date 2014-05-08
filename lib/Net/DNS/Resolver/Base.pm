@@ -1522,7 +1522,7 @@ __END__
 
 =head1 NAME
 
-Net::DNS::Resolver - DNS resolver class
+Net::DNS::Resolver::Base - Common Resolver Class
 
 =head1 SYNOPSIS
 
