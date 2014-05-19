@@ -60,8 +60,8 @@ sub init {
 	$searchlist .= getregkey( $root, 'SearchList' );
 
 	# This is (probably) adequate on NT4
-	my $nt4nameservers = getregkey( $root, 'NameServer' ) || getregkey( $root, 'DhcpNameServer' );
-	my $nameservers = "";
+	my @nt4nameservers = split getregkey( $root, 'NameServer' ) || getregkey( $root, 'DhcpNameServer' );
+	my @nameservers;
 
 	#
 	# but on W2K/XP the registry layout is more advanced due to dynamically
@@ -80,7 +80,7 @@ sub init {
 				my $ns = getregkey( $regadapter, 'DNSServerAddresses' ) || '';
 				while ( length($ns) >= 4 ) {
 					my $addr = join( '.', unpack( "C4", substr( $ns, 0, 4, "" ) ) );
-					$nameservers .= " $addr";
+					push @nameservers, $addr;
 				}
 			}
 		}
@@ -103,12 +103,13 @@ sub init {
 					|| ''
 					unless !$ip || ( $ip =~ /0\.0\.0\.0/ );
 
-				$nameservers .= " $ns" if $ns;
+				push @nameservers, $ns if $ns;
 			}
 		}
 	}
 
-	$nameservers = $nt4nameservers if !$nameservers;
+	@nameservers = @nt4nameservers unless @nameservers;
+	$defaults->nameservers(@nameservers);
 
 	$defaults->{domain} = $domain if $domain;
 
@@ -131,17 +132,6 @@ sub init {
 			}
 		}
 		$defaults->{searchlist} = [@a];
-	}
-
-	if ($nameservers) {
-
-		# just in case dups were introduced...
-		my @a;
-		my %h;
-		foreach my $ns ( split( m/[\s,]+/, $nameservers ) ) {
-			push @a, $ns unless ( !$ns || $h{$ns}++ );
-		}
-		$defaults->{nameservers} = [@a];
 	}
 
 

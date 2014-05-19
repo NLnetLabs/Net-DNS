@@ -37,8 +37,6 @@ BEGIN {
 	}
 }
 
-__PACKAGE__->init();
-
 
 1;
 

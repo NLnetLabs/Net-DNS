@@ -43,10 +43,8 @@ use constant PACKETSZ => 512;
 #  call to translate IP addresses to socketaddress
 
 
-
-#  Set the $force_inet4_only variable inside the BEGIN block to force
-#  not to use the IPv6 stuff. You can use this for compatibility
-#  test. We do not see a need to do this from the calling code.
+#  Two configuration flags, force_v4 and prefer_v6, are provided to
+#  control IPv6 behaviour for test purposes.
 
 
 # Olaf Kolkman, RIPE NCC, December 2003.
@@ -72,7 +70,8 @@ BEGIN {
 #
 {
 	my %defaults = (
-		nameservers	=> ['127.0.0.1'],
+		nameserver4	=> ['127.0.0.1'],
+		nameserver6	=> ['::1'],
 		port		=> 53,
 		srcaddr		=> '0.0.0.0',
 		srcport		=> 0,
@@ -100,15 +99,15 @@ BEGIN {
 		udppacketsize	=> 0,	# value bounded below by PACKETSZ
 	        cdflag		=> 0,	# this is only used when {dnssec} == 1
 	        adflag		=> 1,	# this is only used when {dnssec} == 1
-		force_v4	=> 0,	# force_v4 is only relevant when we have
-					# v6 support available
+		force_v4	=> 0,	# only relevant when we have v6 support
+		prefer_v6	=> 0,	# prefer v6, otherwise prefer v4
 		ignqrid		=> 0,	# normally packets with non-matching ID
-					# or with the qr bit of are thrown away
-					# in 'ignqrid' these packets are
+					# or with the qr bit on are thrown away,
+					# but with 'ignqrid' these packets
 					# are accepted.
 					# USE WITH CARE, YOU ARE VULNERABLE TO
 					# SPOOFING IF SET.
-					# This is may be a temporary feature
+					# This may be a temporary feature
 	);
 
 	# If we're running under a SOCKSified Perl, use TCP instead of UDP
@@ -118,7 +117,9 @@ BEGIN {
 		$defaults{'persistent_tcp'} = 1;
 	}
 
-	sub defaults { \%defaults }
+	my $defaults = bless \%defaults, __PACKAGE__;
+
+	sub defaults { return $defaults; }
 }
 
 # These are the attributes that we let the user specify in the new().
@@ -148,61 +149,59 @@ my %public_attr = map { $_ => 1 } qw(
 );
 
 
+my $initial;
+
 sub new {
 	my $class = shift;
-	my $self = bless {%{$class->defaults}}, $class;
+	my %args = @_ unless scalar(@_) % 2;
 
-	$self->_process_args(@_) if @_ and @_ % 2 == 0;
+	my $self;
+	if ( my $file = $args{'config_file'} ) {
+		my $base = $initial || $class->defaults;
+		$self = bless {%$base}, $class;
+		$self->read_config_file($file);			# user specified config
+
+	} else {
+		my $base = $class->defaults;
+		$initial ||= {%$base} && do {
+			$class->init();				# system-wide config
+		};
+		$self = bless {%$base}, $class;
+	}
+
+
+	while ( my ( $attr, $value ) = each %args ) {
+		next unless $public_attr{$attr};
+
+		if ( $attr eq 'nameservers' || $attr eq 'searchlist' ) {
+
+			croak "usage: Net::DNS::Resolver->new( $attr => [ ... ] )"
+					unless UNIVERSAL::isa( $value, 'ARRAY' );
+		}
+
+		if ( $attr eq 'nameservers' ) {
+			$self->nameservers(@$value);
+		} else {
+			$self->{$attr} = $value;
+		}
+	}
+
 	return $self;
 }
 
 
-
-sub _process_args {
-	my ($self, %args) = @_;
-
-	if ($args{'config_file'}) {
-		my $file = $args{'config_file'};
-		$self->read_config_file($file) or croak "Could not open $file: $!";
-	}
-
-	foreach my $attr (keys %args) {
-		next unless $public_attr{$attr};
-
-		if ($attr eq 'nameservers' || $attr eq 'searchlist') {
-
-			die "Net::DNS::Resolver->new(): $attr must be an arrayref\n" unless
-			  defined($args{$attr}) &&  UNIVERSAL::isa($args{$attr}, 'ARRAY');
-
-		}
-
-		if ($attr eq 'nameservers') {
-			$self->nameservers(@{$args{$attr}});
-		} else {
-			$self->{$attr} = $args{$attr};
-		}
-	}
-
-
-}
-
-
-
 sub read_env {
 	my ($invocant) = @_;
-	my $config     = ref $invocant ? $invocant : $invocant->defaults;
+	my $config = ref($invocant) ? $invocant : $invocant->defaults;
 
-	$config->{'nameservers'} = [ $ENV{'RES_NAMESERVERS'} =~ m/(\S+)/g ]
-		if exists $ENV{'RES_NAMESERVERS'};
+	$config->nameservers( map split, $ENV{RES_NAMESERVERS} ) if exists $ENV{RES_NAMESERVERS};
 
-	$config->{'searchlist'}  = [ split(' ', $ENV{'RES_SEARCHLIST'})  ]
-		if exists $ENV{'RES_SEARCHLIST'};
+	$config->searchlist( map split, $ENV{RES_SEARCHLIST} ) if exists $ENV{RES_SEARCHLIST};
 
-	$config->{'domain'} = $ENV{'LOCALDOMAIN'}
-		if exists $ENV{'LOCALDOMAIN'};
+	$config->domain( $ENV{LOCALDOMAIN} ) if exists $ENV{LOCALDOMAIN};
 
-	if (exists $ENV{'RES_OPTIONS'}) {
-		foreach ($ENV{'RES_OPTIONS'} =~ m/(\S+)/g) {
+	if ( exists $ENV{RES_OPTIONS} ) {
+		foreach ( map split, $ENV{RES_OPTIONS} ) {
 			my ($name, $val) = split(m/:/,$_,2);
 			$val = 1 unless defined $val;
 			$config->{$name} = $val if exists $config->{$name};
@@ -210,84 +209,76 @@ sub read_env {
 	}
 }
 
+
 #
-# $class->read_config_file($filename) or $self->read_config_file($file)
+# $class->read_config_file($filename) or $object->read_config_file($file)
 #
 sub read_config_file {
-	my ($invocant, $file) = @_;
-	my $config            = ref $invocant ? $invocant : $invocant->defaults;
-
+	my ( $invocant, $file ) = @_;
+	my $config = ref($invocant) ? $invocant : $invocant->defaults;
 
 	my @ns;
-	my @searchlist;
 
 	local *FILE;
 
-	open(FILE, $file) or return;
+	open( FILE, $file ) or croak "Could not open $file: $!";
 	local $/ = "\n";
-	local $_;
 
 	while (<FILE>) {
- 		s/\s*[;#].*$//;					# strip comment
-
+		s/\s*[;#].*$//;					# strip comment
 		next unless m/\S/;				# skip empty line
-
 		s/^\s+//;					# strip leading space
 
-		my $keyword;
-		SWITCH: {
-			/^domain/ && do {
-				( $keyword, $config->{domain} ) = split;
-				next;
-			};
+		/^nameserver/ && do {
+			my ( $keyword, @ip ) = split;
+			push @ns, map { $_ eq '0' ? '0.0.0.0' : $_ } @ip;
+			next;
+		};
 
-			/^search/ && do {
-				( $keyword, @searchlist ) = split;
-				next;
-			};
+		/^domain/ && do {
+			my $keyword;
+			( $keyword, $config->{domain} ) = split;
+			next;
+		};
 
-			/^nameserver/ && do {
-				( $keyword, @ns ) = split;
-				foreach my $ns (@ns) {
-					$ns = '0.0.0.0' if $ns eq '0';
-				}
-				next;
-			};
-		    }
-		  }
-		close FILE || croak "Could not close $file: $!";
+		/^search/ && do {
+			my ( $keyword, @searchlist ) = split;
+			$config->{searchlist} = \@searchlist;
+			next;
+		};
+	}
 
-		$config->{nameservers} = [@ns];
-		$config->{searchlist}  = [@searchlist];
+	close FILE || croak "Could not close $file: $!";
 
-		return 1;
-	    }
+	$config->nameservers(@ns);
+}
 
 
+sub print { print shift->string; }
 
-
-sub print { print $_[0]->string }
 
 sub string {
 	my $self = shift;
 
-	my $timeout = defined $self->{'tcp_timeout'} ? $self->{'tcp_timeout'} : 'indefinite';
-	my $hasINET6line= $has_inet6 ?" (IPv6 Transport is available)":" (IPv6 Transport is not available)";
-	my $ignqrid=$self->{'ignqrid'} ? "\n;; ACCEPTING ALL PACKETS (IGNQRID)":"";
+	my $timeout   = $self->{'tcp_timeout'} ? $self->{'tcp_timeout'}		   : 'indefinite';
+	my $INET6line = $has_inet6	       ? "prefer_v6 = $self->{prefer_v6}"  : '(no IPv6 transport)';
+	my $ignqrid   = $self->{'ignqrid'}     ? 'ACCEPTING ALL PACKETS (IGNQRID)' : '';
+	my @nslist    = $self->nameservers();
 	return <<END;
 ;; RESOLVER state:
-;;  domain       = $self->{domain}
-;;  searchlist   = @{$self->{searchlist}}
-;;  nameservers  = @{$self->{nameservers}}
-;;  port         = $self->{port}
-;;  srcport      = $self->{srcport}
-;;  srcaddr      = $self->{srcaddr}
-;;  tcp_timeout  = $timeout
-;;  retrans  = $self->{retrans}  retry    = $self->{retry}
-;;  usevc    = $self->{usevc}  stayopen = $self->{stayopen}    igntc = $self->{igntc}
-;;  defnames = $self->{defnames}  dnsrch   = $self->{dnsrch}
-;;  recurse  = $self->{recurse}  debug    = $self->{debug}
-;;  force_v4 = $self->{force_v4} $hasINET6line $ignqrid
+;;  domain	= $self->{domain}
+;;  searchlist	= @{$self->{searchlist}}
+;;  nameservers = @nslist
+;;  port	= $self->{port}
+;;  srcport	= $self->{srcport}
+;;  srcaddr	= $self->{srcaddr}
+;;  tcp_timeout = $timeout
+;;  retrans	= $self->{retrans}	retry     = $self->{retry}
+;;  usevc	= $self->{usevc}	stayopen  = $self->{stayopen}
+;;  defnames	= $self->{defnames}	dnsrch    = $self->{dnsrch}
+;;  recurse	= $self->{recurse}	igntc     = $self->{igntc}
+;;  force_v4	= $self->{force_v4}	$INET6line
+;;  debug	= $self->{debug}	$ignqrid
 END
 
 }
@@ -295,8 +286,8 @@ END
 
 sub searchlist {
 	my $self = shift;
-	$self->{'searchlist'} = [ @_ ] if @_;
-	return @{$self->{'searchlist'}};
+	$self->{'searchlist'} = [@_] if scalar @_;
+	my @searchlist = @{$self->{'searchlist'}};
 }
 
 sub empty_searchlist {
@@ -306,85 +297,75 @@ sub empty_searchlist {
 }
 
 sub nameservers {
-    my $self   = shift;
+	my $self = shift;
 
-    if (@_) {
-	my @a;
+	my ( @ipv4, @ipv6 );
 	foreach my $ns (@_) {
-	    next unless defined($ns);
-	    if ( _ip_is_ipv4($ns) ) {
-		push @a, ($ns eq '0') ? '0.0.0.0' : $ns;
-
-	    } elsif ( _ip_is_ipv6($ns) ) {
-		push @a, ($ns eq '0') ? '::0' : $ns;
-
-	    } else  {
+		next unless length($ns);
+		push( @ipv6, $ns ) && next if _ip_is_ipv6($ns);
+		push( @ipv4, $ns ) && next if _ip_is_ipv4($ns);
 
 		my $defres = Net::DNS::Resolver->new(
-			    udp_timeout => $self->udp_timeout,
-			    tcp_timeout => $self->tcp_timeout
+			udp_timeout => $self->udp_timeout,
+			tcp_timeout => $self->tcp_timeout
 			);
-		$defres->{"debug"}=$self->{"debug"};
-
-
+		$defres->{debug} = $self->{debug};
 
 		my @names;
-
-		if ($ns !~ /\./) {
-		    if (defined $defres->searchlist) {
-			@names = map { $ns . '.' . $_ }
-			$defres->searchlist;
-		    } elsif (defined $defres->domain) {
-			@names = ($ns . '.' . $defres->domain);
-		    }
-		}
-		else {
-		    @names = ($ns);
+		if ( $ns =~ /\./ ) {
+			@names = ($ns);
+		} else {
+			my @suffix = $defres->searchlist;
+			@suffix = grep length, ( $defres->domain ) unless @suffix;
+			@names = map "$ns.$_", @suffix;
 		}
 
-		my $packet = $defres->search($ns);
-		$self->errorstring($defres->errorstring);
-		if (defined($packet) && (my @adresses = cname_addr([@names], $packet))) {
-		    push @a, @adresses;
+		my $packet = $defres->search( $ns, 'A' );
+		$self->errorstring( $defres->errorstring );
+		my @address = cname_addr( [@names], $packet ) if defined $packet;
+
+		if ($has_inet6) {
+			$packet = $defres->search( $ns, 'AAAA' );
+			$self->errorstring( $defres->errorstring );
+			push @address, cname_addr( [@names], $packet ) if defined $packet;
 		}
-		else {
-		    $packet = $defres->search($ns, 'AAAA');
-		    $self->errorstring($defres->errorstring);
-		    if (defined($packet)) {
-			push @a, cname_addr([@names], $packet);
-		    }
-		}
-	    }
+
+		my %address = map { $_ => 1 } @address;
+		my @unique = keys %address;
+		push @ipv4, grep _ip_is_ipv4($_), @unique; 
+		push @ipv6, grep _ip_is_ipv6($_), @unique; 
 	}
 
+	if ( scalar @_ ) {
+		$self->{nameserver4} = \@ipv4;
+		$self->{nameserver6} = \@ipv6;
+		return unless defined wantarray;
+	}
 
-	$self->{'nameservers'} = [ @a ];
-    }
+	my @returnval = @{$self->{nameserver6}} if $has_inet6 && !$self->force_v4();
+	if ( $self->prefer_v6() ) {
+		push @returnval, @{$self->{nameserver4}};
+	} else {
+		unshift @returnval, @{$self->{nameserver4}};
+	}
 
-    my @ns = @{$self->{'nameservers'}};
-    my @returnval;
-    foreach my $ns (@ns) {
-	next if _ip_is_ipv6($ns) && (! $has_inet6 || $self->force_v4() );
-	push @returnval, $ns;
-    }
+	return @returnval if scalar @returnval;
 
-    return @returnval if scalar @returnval;
-
-    $self->errorstring('no nameservers');
-    if ( scalar(@ns) ) {
-	$self->errorstring('IPv6 transport not available') unless $has_inet6;
-	$self->errorstring('unable to use IPv6 transport') if $self->force_v4();
-    }
-    return @returnval;
+	$self->errorstring('no nameservers');
+	if ( scalar( @{$self->{nameserver6}} ) ) {
+		$self->errorstring('IPv6 transport not available') unless $has_inet6;
+		$self->errorstring('unable to use IPv6 transport') if $self->force_v4();
+	}
+	return @returnval;
 }
 
 sub empty_nameservers {
 	my $self = shift;
-	$self->{'nameservers'} = [];
-	return $self->nameservers();
+	$self->{nameserver4} = $self->{nameserver6} = [];
+	my @empty;
 }
 
-sub nameserver { &nameservers }
+sub nameserver { &nameservers; }
 
 sub cname_addr {
 	# TODO 20081217
@@ -703,9 +684,9 @@ sub send_udp {
 	}
 
 	# Always set up an AF_INET socket.
-	# It will be used if the address familly of for the endpoint is V4.
+	# It will be used if the address family of for the endpoint is V4.
 
-	if ( !defined( $sock[AF_INET] ) ) {
+	unless ( defined( $sock[AF_INET] ) ) {
 	    print ";; setting up an AF_INET  UDP socket with srcaddr [$srcaddr] ... "
 		if $self->{'debug'};
 
@@ -744,7 +725,7 @@ sub send_udp {
 	      # we can use getaddrinfo
 	      no strict 'subs';   # Because of the eval statement in the BEGIN
 	      # AI_NUMERICHOST is not available at compile time.
-	      # The AI_NUMERICHOST surpresses lookups.
+	      # The AI_NUMERICHOST suppresses lookups.
 
 	      my $old_wflag = $^W; 		#circumvent perl -w warnings about 'udp'
 	      $^W = 0;
@@ -784,7 +765,7 @@ sub send_udp {
 
 
  	my $sel = IO::Select->new() ;
-	# We allready tested that one of the two socket exists
+	# We already tested that one of the two socket exists
 
  	$sel->add($sock[AF_INET]) if defined ($sock[AF_INET]);
  	$sel->add($sock[AF_INET6()]) if $has_inet6 &&  defined ($sock[AF_INET6()]) && ! $self->force_v4();
@@ -829,9 +810,7 @@ sub send_udp {
 			    $self->errorstring("Send error: cannot reach $nsname (" .
 					       ( ($has_inet6 && $nssockfamily == AF_INET6()) ? "IPv6" : "" ).
 					       ( ($nssockfamily == AF_INET) ? "IPv4" : "" ).
-					       ") not available"
-
-);
+					       ") not available" );
 			    next NAMESERVER ;
 			    }
 
@@ -854,10 +833,11 @@ sub send_udp {
 			      my $buf = '';
 
 			      if ($ready->recv($buf, $self->_packetsz)) {
+				  my $peerhost = $ready->peerhost;
 
-				  $self->answerfrom($ready->peerhost);
+				  $self->answerfrom($peerhost);
 
-				  print ';; answer from [', $ready->peerhost, ']',
+				  print ';; answer from [', $peerhost, ']',
 					'  (', length($buf), " bytes)\n"
 						if $self->{'debug'};
 
@@ -873,7 +853,7 @@ sub send_udp {
 				      my $rcode = $header->rcode;
 				      $self->errorstring( $error || $rcode);
 
-				      $ans->answerfrom($self->answerfrom);
+				      $ans->answerfrom($peerhost);
 				      if ($rcode ne "NOERROR" && $rcode ne "NXDOMAIN"){
 					  # Remove this one from the stack
 
@@ -965,7 +945,7 @@ sub bgsend {
 	      $^W = 0;
 
 
-	    # The AI_NUMERICHOST surpresses lookups.
+	    # The AI_NUMERICHOST suppresses lookups.
 	    my @res = Socket6::getaddrinfo($ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM,
 				  0 , AI_NUMERICHOST);
 
@@ -983,7 +963,7 @@ sub bgsend {
 	}else{
 	    $sockfamily=AF_INET;
 
-	    if (! _ip_is_ipv4($ns_address)){
+	    unless ( _ip_is_ipv4($ns_address) ) {
 		$self->errorstring("bgsend(ipv4 only):$ns_address does not seem to be a valid IPv4 address");
 		return;
 	    }
@@ -1020,14 +1000,11 @@ sub bgsend {
 	print ";; bgsend [$ns_address]:$dstport\n" if $self->{debug};
 
 	foreach my $socket (@socket){
-	    next if !defined $socket;
+	    next unless defined $socket;
 
 	    unless ($socket->send($packet_data,0,$dst_sockaddr)){
-		my $err = $!;
-		print ";; send ERROR [$ns_address]:$dstport  $err\n" if $self->{'debug'};
-
-		$self->errorstring("Send: ".$err);
-		return;
+		$self->errorstring("Send: [$ns_address]:$dstport  $!");
+		print ";; ", $self->errorstring(), "\n" if $self->{'debug'};
 	    }
 	    return $socket;
 	}
@@ -1163,11 +1140,8 @@ sub _axfr_start {
 
 	foreach my $ns ( $self->nameservers ) {
 		if ($debug) {
-			my $srcport = $self->{srcport};
-			my $srcaddr = $self->{srcaddr};
 			my $dstport = $self->{port};
 			print ";; axfr_start nameserver [$ns]:$dstport\n";
-			print ";; axfr_start srcaddress [$srcaddr]:$srcport\n";
 		}
 
 		my $sock;
@@ -1310,8 +1284,8 @@ sub dnssec {
 		$self->udppacketsize(2048) if $self->{dnssec} = shift;
 	}
 
-	carp 'resolver->dnssec() called without Net::DNS::SEC installed'
-			unless DNSSEC || ! $self->{dnssec};
+	carp 'resolver->dnssec() set without Net::DNS::SEC installed'
+			if $self->{dnssec} && ! DNSSEC;
 	return $self->{dnssec};
 };
 
@@ -1339,7 +1313,7 @@ sub read_tcp {
 			if (length($read_buf) < 1) {
 				my $errstr = $!;
 
-				print ";; ERROR: read_tcp: recv failed: $!\n"
+				print ";; ERROR: read_tcp: recv failed: $errstr\n"
 					if $debug;
 
 				if ($errstr eq 'Resource temporarily unavailable') {
@@ -1491,25 +1465,18 @@ use vars qw($AUTOLOAD);
 
 sub AUTOLOAD {				## Default method
 	my ($self) = @_;
+	confess "method '$AUTOLOAD' undefined" unless ref $self;
 
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
-
 	croak "$name: no such method" unless exists $self->{$name};
 
 	no strict q/refs/;
-
-
 	*{$AUTOLOAD} = sub {
-		my ($self, $new_val) = @_;
-
-		if (defined $new_val) {
-			$self->{"$name"} = $new_val;
-		}
-
-		return $self->{"$name"};
+		my $self = shift;
+		$self->{$name} = shift if scalar @_;
+		return $self->{$name};
 	};
-
 
 	goto &{$AUTOLOAD};
 }
