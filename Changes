@@ -3,7 +3,12 @@ $Id$                       -*-text-*-
 
 **** 0.76 [unreleased]
 
-Fix rt.cpan.org #95569
+Fix rt.cpan.org #95738
+
+	Test failure with IPv6 address in resolver.conf but without
+	prerequisite IO::Socket::INET6 package installed.
+
+Fix rt.cpan.org #95596
 
 	Incorrect parsing of nameserver lines in resolv.conf
 

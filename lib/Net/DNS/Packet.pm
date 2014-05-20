@@ -897,7 +897,7 @@ sub dump {				## print internal data structure
 	require Data::Dumper;
 	local $Data::Dumper::Maxdepth = 6;
 	local $Data::Dumper::Sortkeys = 1;
-	Data::Dumper::Dumper(@_);
+	print Data::Dumper::Dumper(@_);
 }
 
 
