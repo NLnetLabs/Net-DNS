@@ -1,6 +1,27 @@
 $Id$                       -*-text-*-
 
 
+**** 0.76 [unreleased]
+
+Fix rt.cpan.org #95569
+
+	Incorrect parsing of nameserver lines in resolv.conf
+
+Fix rt.cpan.org #81760
+
+	Reverted workaround for TXT issue preventing propagation of
+	rule updates for SpamAssassin versions earlier than 3.4.0
+
+Feature rt.cpan.org #79568
+
+	Implement prefer_v6 resolver configuration attribute.
+
+Fix rt.cpan.org #67602
+
+	Set resolver configuration defaults at first instantiation
+	instead of module load time.
+
+
 **** 0.75 May 8, 2014
 
 Fix rt.cpan.org #94069

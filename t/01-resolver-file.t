@@ -1,39 +1,38 @@
 # $Id$
 
 
-use Test::More tests => 8;
 use strict;
+use Test::More;
 
-BEGIN { 
-	chdir 't/' || die "Couldn't chdir to t/\n";  
-	unshift(@INC, '../blib/lib', '../blib/arch');
-	use_ok('Net::DNS');	
-}
+chdir 't/' || die "Couldn't chdir to t/\n";			# t/.resolv.conf
+unshift( @INC, '../blib/lib', '../blib/arch' );
 
-SKIP: {
+use Net::DNS;
 
-	skip 'File parsing only supported on unix.', 7
-		unless $Net::DNS::Resolver::ISA[0] eq 'Net::DNS::Resolver::UNIX';
-		
-	skip 'Could not read configuration file', 7
+my $res = Net::DNS::Resolver->new;
+
+plan skip_all => 'File parsing only supported on Unix'
+		unless $res->isa('Net::DNS::Resolver::UNIX');
+
+plan skip_all => 'Could not read configuration file'
 		unless -r '.resolv.conf' && -o _;
 
-	my $res = Net::DNS::Resolver->new;
-
-	ok($res,                "new() returned something");
-	ok($res->nameservers,   "nameservers() works");
-
-	my @servers = $res->nameservers;
-
-	is($servers[0], '10.0.1.128',  'Nameserver set correctly');
-	is($servers[1], '10.0.2.128',  'Nameserver set correctly');
+plan tests => 7;
 
 
-	my @search = $res->searchlist;
-	is($search[0], 'net-dns.org',     'Search set correctly' );
-	is($search[1], 'lib.net-dns.org', 'Search set correctly' );
+isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );
 
-	is($res->domain,  't.net-dns.org', 'Local domain works'  );
-}
+my @servers = $res->nameservers;
+ok( scalar(@servers), "nameservers() works" );
+is( $servers[0], '10.0.1.128', 'nameservers list correct' );
+is( $servers[1], '10.0.2.128', 'nameservers list correct' );
 
- 
+my @search = $res->searchlist;
+is( $search[0], 'net-dns.org',	   'searchlist correct' );
+is( $search[1], 'lib.net-dns.org', 'searchlist correct' );
+
+is( $res->domain, 't.net-dns.org', 'domain works' );
+
+
+exit;
+

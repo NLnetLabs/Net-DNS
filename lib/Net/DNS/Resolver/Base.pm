@@ -1279,13 +1279,16 @@ sub tsig {
 sub dnssec {
 	my $self = shift;
 
-	if ( scalar @_ ) {
-		# Set dnssec flag and increase default udppacket size
-		$self->udppacketsize(2048) if $self->{dnssec} = shift;
+	unless (DNSSEC) {
+		carp 'resolver->dnssec(1) without Net::DNS::SEC installed' if shift;
+		return $self->{dnssec} = 0;
 	}
 
-	carp 'resolver->dnssec() set without Net::DNS::SEC installed'
-			if $self->{dnssec} && ! DNSSEC;
+	return $self->{dnssec} unless scalar @_;
+
+	# set flag and increase default udppacket size
+	$self->udppacketsize(2048) if $self->{dnssec} = shift;
+
 	return $self->{dnssec};
 };
 

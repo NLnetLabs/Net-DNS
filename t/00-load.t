@@ -1,35 +1,37 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More "no_plan";
+use Test::More tests => 32;
+
+use Net::DNS;
+
+use constant DNSSEC => eval { require Net::DNS::SEC; } || 0;
+use constant INET6  => eval { require IO::Socket::INET6; } || 0;
+use constant LibIDN => eval { require Net::LibIDN; } || 0;
 
 
-BEGIN {
-	use constant DNSSEC => eval { require Net::DNS::SEC; } || 0;
-
-	use_ok('Net::DNS');
-	use_ok('Net::DNS::Resolver::Recurse');
-	use_ok('Net::DNS::Nameserver');
-}
-
-
-diag("\nThese tests were run using:\n");
+diag("\n\nThese tests were run using:\n");
+diag("$^O, perl\t$]");
 diag("Net::DNS\t$Net::DNS::VERSION");
-diag("Net::DNS::SEC\t$Net::DNS::SEC::VERSION seems to be available") if DNSSEC;
-diag("set environment variable NET_DNS_DEBUG to get all versions");
+diag("optional: Net::DNS::SEC\t$Net::DNS::SEC::VERSION") if DNSSEC;
+diag("optional: Net::LibIDN\t\t$Net::LibIDN::VERSION") if LibIDN;
+diag("optional: IO::Socket::INET6\t$IO::Socket::INET6::VERSION") if INET6;
+diag("set environment variable NET_DNS_DEBUG to get all versions\n\n");
 
 
-sub is_rr_loaded {
-	my $rr = shift;
-
-	return $INC{"Net/DNS/RR/$rr.pm"} ? 1 : 0;
-}
+use_ok('Net::DNS');
+use_ok('Net::DNS::Resolver::Recurse');
+use_ok('Net::DNS::Nameserver');
 
 
 #
 # Check on-demand loading using this (incomplete) list of RR packages
 my @rrs = qw( A AAAA CNAME MX NS NULL PTR SOA TXT );
 
+sub is_rr_loaded {
+	my $rr = shift;
+	return $INC{"Net/DNS/RR/$rr.pm"} ? 1 : 0;
+}
 
 #
 # Make sure that we start with none of the RR packages loaded
@@ -59,6 +61,5 @@ foreach my $rr (@rrs) {
 }
 
 
-##############
-#done_testing()
-##############
+exit;
+

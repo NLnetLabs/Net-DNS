@@ -32,7 +32,11 @@ See also the manual pages for each specific RR type.
 =cut
 
 
-use constant COMPATIBLE => 1;		## enable architecture transition code
+use constant COMPATIBLE => eval {	## enable architecture transition code
+	require Net::DNS::RR::DS;	## Net::DNS::SEC 0.17 compatible
+	$Net::DNS::RR::DS::VERSION < 1179;
+} || 0;
+
 
 use strict;
 use integer;
@@ -127,8 +131,8 @@ sub _new_string {
 
 	my $self = $base->_subclass( $type, $populated );	# create RR object
 	$self->name($name);
-	$self->ttl($ttl) if defined $ttl;			# undefined TTL meaningful in zone file
-	$self->class($class) if defined $class;
+	$self->class($class) if defined $class;			# specify CLASS
+	$self->ttl($ttl)     if defined $ttl;			# specify TTL
 
 	return $self unless $populated;				# empty RR
 
@@ -423,12 +427,12 @@ my %unit = ( W => 604800, D => 86400, H => 3600, M => 60, S => 1 );
 %unit = ( %unit, map { /\D/ ? lc($_) : $_ } %unit );
 
 sub ttl {
-	my $self = shift;
+	my ( $self, $time ) = @_;
 
-	return $self->{ttl} || 0 unless scalar @_;		# avoid defining rr->{ttl}
+	return $self->{ttl} || 0 unless defined $time;		# avoid defining rr->{ttl}
 
 	my $ttl = 0;
-	my %time = reverse split /(\D)\D*/, shift() . 'S';
+	my %time = reverse split /(\D)\D*/, $time . 'S';
 	while ( my ( $u, $t ) = each %time ) {
 		$ttl += $t * ( $unit{$u} || croak qq(bad time: $t$u) );
 	}
@@ -666,10 +670,8 @@ sub defaults { }			## set attribute default values
 
 sub dump {				## print internal data structure
 	require Data::Dumper;
-	local $Data::Dumper::Sortkeys;
-	$Data::Dumper::Sortkeys = 1;
-	return Data::Dumper::Dumper(shift) if defined wantarray;
-	print Data::Dumper::Dumper(shift);
+	local $Data::Dumper::Sortkeys = 1;
+	print Data::Dumper::Dumper(@_);
 }
 
 

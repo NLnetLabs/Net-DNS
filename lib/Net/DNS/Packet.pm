@@ -37,6 +37,13 @@ require Net::DNS::Header;
 require Net::DNS::Question;
 require Net::DNS::RR;
 
+use constant DNSSEC17 => eval {
+	require Net::DNS::RR::DS;	## Net::DNS::SEC 0.17 compatible
+	$Net::DNS::RR::DS::VERSION < 1179;
+} || 0;
+
+my @dummy_header = (header => {}) if DNSSEC17;
+
 
 =head1 METHODS
 
@@ -65,7 +72,7 @@ sub new {
 		answer	   => [],
 		authority  => [],
 		additional => [],
-		header	   => {}	## Compatibility with Net::DNS::SEC
+		@dummy_header		## Net::DNS::SEC 0.17 compatible
 		}, $class;
 
 	$self->{question} = [Net::DNS::Question->new(@_)] if scalar @_;
@@ -129,7 +136,7 @@ sub decode {
 			authority  => [],
 			additional => [],
 			answersize => length $$data,
-			header	   => {}## Compatibility with Net::DNS::SEC
+			@dummy_header	## Net::DNS::SEC 0.17 compatible
 			}, $class;
 
 		# question/zone section
@@ -888,12 +895,9 @@ sub truncate {
 
 sub dump {				## print internal data structure
 	require Data::Dumper;
-	local $Data::Dumper::Maxdepth;
-	local $Data::Dumper::Sortkeys;
-	$Data::Dumper::Maxdepth = 6;
-	$Data::Dumper::Sortkeys = 1;
-	return Data::Dumper::Dumper(shift) if defined wantarray;
-	print Data::Dumper::Dumper(shift);
+	local $Data::Dumper::Maxdepth = 6;
+	local $Data::Dumper::Sortkeys = 1;
+	Data::Dumper::Dumper(@_);
 }
 
 

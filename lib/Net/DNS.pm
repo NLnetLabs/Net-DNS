@@ -189,39 +189,56 @@ sub rr_del {
 #	Net::DNS::SEC 0.17 compatibility
 ########################################
 
-eval {					## pre-load RRs
+use constant OLDDNSSEC => eval {	## pre-load RRs
+	return 0 if $] < 5.006;
+	require Net::DNS::RR::DS;
+	return 0 unless $Net::DNS::RR::DS::VERSION < 1179;	# 0.17
 	require Net::DNS::RR::RRSIG;
 	require Net::DNS::RR::SIG;
-	require Net::DNS::RR::DS;
 
 	foreach my $type (qw(DLV DNSKEY KEY NXT NSEC)) {
 		new Net::DNS::RR( type => $type );
 	}
-};
+	return 1;
+} || 0;
 
 sub INIT {				## safe to ignore "Too late to run" warning
 					## only needed to satisfy DNSSEC t/00-load.t
 
 	# attempt to pre-load RRs which have circular dependence problems
 	foreach my $type (qw(NSEC3 NSEC3PARAM)) {
+		last unless OLDDNSSEC;
 		new Net::DNS::RR( type => $type );
 	}
 }
 
 
-use Net::DNS::Parameters;
+my $warned;
 
-sub typesbyname {
-
-	# preserve historical behaviour for TYPE0	[OMK]
-	typebyname(shift) || '00';
+sub deprecated {
+	carp "deprecated @_" unless $warned++;
 }
 
-sub typesbyval { typebyval(shift); }
 
-use vars qw(%typesbyname %typesbyval);
-%typesbyname = %Net::DNS::Parameters::typebyname;
-%typesbyval  = %Net::DNS::Parameters::typebyval;
+require Net::DNS::Parameters;
+
+sub typesbyname {
+	deprecated('typesbyname; use Net::DNS::Parameters::typebyname') unless OLDDNSSEC;
+
+	# preserve historical behaviour for TYPE0	[OMK]
+	Net::DNS::Parameters::typebyname(shift) || '00';
+}
+
+sub typesbyval {
+	deprecated('typesbyval; use Net::DNS::Parameters::typebyval') unless OLDDNSSEC;
+	Net::DNS::Parameters::typebyval(shift);
+}
+
+unless (OLDDNSSEC) {
+	use vars qw(%typesbyname %typesbyval);
+	%typesbyname = %Net::DNS::Parameters::typebyname;
+	%typesbyval  = %Net::DNS::Parameters::typebyval;
+}
 
 
 use vars qw(@EXPORT_OK);
@@ -238,6 +255,7 @@ use vars qw(@EXPORT_OK);
 # out: an array of labels in wire format.
 
 sub name2labels {
+	deprecated('name2labels') unless OLDDNSSEC;
 	my $dname = shift;
 	my @names;
 	my $j = 0;
@@ -251,6 +269,7 @@ sub name2labels {
 
 
 sub wire2presentation {
+	deprecated('wire2presentation') unless OLDDNSSEC;
 	my $presentation = shift;				# Really wire...
 
 	# Prepend these with a backslash
@@ -264,6 +283,7 @@ sub wire2presentation {
 
 
 sub stripdot {
+	deprecated('stripdot') unless OLDDNSSEC;
 
 	# Code courtesy of JMEHNLE <JMEHNLE@cpan.org>
 	# rt.cpan.org #51009
@@ -287,6 +307,7 @@ sub stripdot {
 # all that has not been parsed yet in the 2nd argument.
 
 sub presentation2wire {
+	deprecated('presentation2wire') unless OLDDNSSEC;
 	my $presentation = shift;
 	my $wire	 = "";
 

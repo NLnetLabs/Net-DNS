@@ -1,39 +1,38 @@
 # $Id$    -*-perl-*-
 
 
-use Test::More tests => 62;
+use Test::More tests => 59;
 use strict;
 use File::Spec;
 
+use Net::DNS;
 
-BEGIN { use_ok('Net::DNS'); }
 
 # .txt because this test will run under windows, unlike the other file
 # configuration tests.
-my $test_file = File::Spec->catfile('t', 'custom.txt');
+my $test_file = File::Spec->catfile( 't', 'custom.txt' );
 
-my $res = Net::DNS::Resolver->new(config_file => $test_file);
+my $res = Net::DNS::Resolver->new( config_file => $test_file );
+isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );
 
-ok($res,                           'new() returned something');
-isa_ok($res, 'Net::DNS::Resolver', 'new() returns an object of the correct class.');
-ok(scalar $res->nameservers,       'nameservers() works');
 
 my @servers = $res->nameservers;
+ok( scalar(@servers), 'nameservers() works' );
 
-is($servers[0], '10.0.1.42',  'Nameserver set correctly');
-is($servers[1], '10.0.2.42',  'Nameserver set correctly');
+is( $servers[0], '10.0.1.42', 'nameserver list correct' );
+is( $servers[1], '10.0.2.42', 'nameserver list correct' );
 
 
 my @search = $res->searchlist;
-is($search[0],   'alt.net-dns.org', 'Search set correctly' );
-is($search[1],   'ext.net-dns.org', 'Search set correctly' );
+is( $search[0], 'alt.net-dns.org', 'searchlist correct' );
+is( $search[1], 'ext.net-dns.org', 'searchlist correct' );
 
-is($res->domain, 't2.net-dns.org',  'Local domain works'  );
+is( $res->domain, 't2.net-dns.org', 'domain works' );
 
-undef $res;
-eval { $res = Net::DNS::Resolver->new(config_file => 'nosuch.txt'); };
-ok($@,    'Error thrown trying to open non-existant file.');
-ok(!$res, 'Net::DNS::Resolver->new returned undef');
+my $bad = eval { Net::DNS::Resolver->new( config_file => 'nosuch.txt' ); };
+ok( $@,	   'error thrown trying to open non-existent file' );
+ok( !$bad, 'Net::DNS::Resolver->new returned undef' );
+
 
 #
 # Check that we can set things in new()
@@ -41,27 +40,29 @@ ok(!$res, 'Net::DNS::Resolver->new returned undef');
 undef $res;
 
 my %test_config = (
-	nameservers	   => ['10.0.0.1', '10.0.0.2'],
-	port		   => 54,
-	srcaddr        => '10.1.0.1',
-	srcport        => 53,
-	domain	       => 'net-dns.org',
-	searchlist	   => ['net-dns.org', 't.net-dns.org'],
-	retrans	       => 6,
-	retry		   => 5,
-	usevc		   => 1,
-	stayopen       => 1,
-	igntc          => 1,
-	recurse        => 0,
-	defnames       => 0,
-	dnsrch         => 0,
-	debug          => 1,
-	tcp_timeout    => 60,
-	udp_timeout    => 60,
-	persistent_tcp => 1,
-	dnssec         => 1,
-        cdflag         => 0,
-        adflag         => 1,
+	# NOTE: test breaks encapsulation, which limits what you can test
+	#
+	#nameservers	   => ['10.0.0.1', '10.0.0.2'],
+	port		=> 54,
+	srcaddr		=> '10.1.0.1',
+	srcport 	=> 53,
+	domain		=> 'net-dns.org',
+	searchlist	=> ['net-dns.org', 't.net-dns.org'],
+	retrans		=> 6,
+	retry		=> 5,
+	usevc		=> 1,
+	stayopen	=> 1,
+	igntc		=> 1,
+	recurse		=> 0,
+	defnames	=> 0,
+	dnsrch		=> 0,
+	debug		=> 1,
+	tcp_timeout	=> 60,
+	udp_timeout	=> 60,
+	persistent_tcp	=> 1,
+	dnssec		=> 0,
+	cdflag		=> 0,
+	adflag		=> 1,
 );
 
 $res = Net::DNS::Resolver->new(%test_config);
@@ -110,6 +111,5 @@ foreach my $key (keys %bad_input) {
 }
 
 
-
-
+exit;
 
