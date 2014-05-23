@@ -12,11 +12,6 @@ Fix rt.cpan.org #95596
 
 	Incorrect parsing of nameserver lines in resolv.conf
 
-Fix rt.cpan.org #81760
-
-	Reverted workaround for TXT issue preventing propagation of
-	rule updates for SpamAssassin versions earlier than 3.4.0
-
 Feature rt.cpan.org #79568
 
 	Implement prefer_v6 resolver configuration attribute.
