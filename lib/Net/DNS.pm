@@ -189,26 +189,23 @@ sub rr_del {
 #	Net::DNS::SEC 0.17 compatibility
 ########################################
 
-use constant OLDDNSSEC => eval {	## pre-load RRs
-	return 0 if $] < 5.006;
-	require Net::DNS::RR::DS;
-	return 0 unless $Net::DNS::RR::DS::VERSION < 1179;	# 0.17
-	require Net::DNS::RR::RRSIG;
-	require Net::DNS::RR::SIG;
+use constant OLDDNSSEC => Net::DNS::RR->COMPATIBLE;
 
-	foreach my $type (qw(DLV DNSKEY KEY NXT NSEC)) {
+if (OLDDNSSEC) {
+	require Net::DNS::RR::RRSIG;	## pre-load RRs
+	foreach my $type (qw(SIG DS DLV DNSKEY KEY NXT NSEC)) {
 		new Net::DNS::RR( type => $type );
 	}
-	return 1;
-} || 0;
+}
 
 sub INIT {				## safe to ignore "Too late to run" warning
 					## only needed to satisfy DNSSEC t/00-load.t
 
 	# attempt to pre-load RRs which have circular dependence problems
-	foreach my $type (qw(NSEC3 NSEC3PARAM)) {
-		last unless OLDDNSSEC;
-		new Net::DNS::RR( type => $type );
+	if (OLDDNSSEC) {
+		foreach my $type (qw(NSEC3 NSEC3PARAM)) {
+			new Net::DNS::RR( type => $type );
+		}
 	}
 }
 
@@ -234,7 +231,7 @@ sub typesbyval {
 	Net::DNS::Parameters::typebyval(shift);
 }
 
-unless (OLDDNSSEC) {
+if (OLDDNSSEC) {
 	use vars qw(%typesbyname %typesbyval);
 	%typesbyname = %Net::DNS::Parameters::typebyname;
 	%typesbyval  = %Net::DNS::Parameters::typebyval;
@@ -627,10 +624,10 @@ dynamic updates.
 
     use Net::DNS;
     my $res   = Net::DNS::Resolver->new;
-    my $query = $res->search("host.example.com");
+    my $reply = $res->search("host.example.com");
 
-    if ($query) {
-	foreach my $rr ($query->answer) {
+    if ($reply) {
+	foreach my $rr ($reply->answer) {
 	    next unless $rr->type eq "A";
 	    print $rr->address, "\n";
 	}
@@ -643,10 +640,10 @@ dynamic updates.
 
     use Net::DNS;
     my $res   = Net::DNS::Resolver->new;
-    my $query = $res->query("example.com", "NS");
+    my $reply = $res->query("example.com", "NS");
 
-    if ($query) {
-	foreach $rr (grep { $_->type eq 'NS' } $query->answer) {
+    if ($reply) {
+	foreach $rr (grep { $_->type eq 'NS' } $reply->answer) {
 	    print $rr->nsdname, "\n";
 	}
     }
@@ -675,10 +672,10 @@ dynamic updates.
 
     use Net::DNS;
     my $res   = Net::DNS::Resolver->new;
-    my $query = $res->query("example.com", "SOA");
+    my $reply = $res->query("example.com", "SOA");
 
-    if ($query) {
-	($query->answer)[0]->print;
+    if ($reply) {
+	($reply->answer)[0]->print;
     } else {
 	print "query failed: ", $res->errorstring, "\n";
     }

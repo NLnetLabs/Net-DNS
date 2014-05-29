@@ -37,12 +37,7 @@ require Net::DNS::Header;
 require Net::DNS::Question;
 require Net::DNS::RR;
 
-use constant DNSSEC17 => eval {
-	require Net::DNS::RR::DS;	## Net::DNS::SEC 0.17 compatible
-	$Net::DNS::RR::DS::VERSION < 1179;
-} || 0;
-
-my @dummy_header = (header => {}) if DNSSEC17;
+my @dummy_header = ( header => {} ) if Net::DNS::RR->COMPATIBLE;
 
 
 =head1 METHODS

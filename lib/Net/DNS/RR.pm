@@ -33,8 +33,9 @@ See also the manual pages for each specific RR type.
 
 
 use constant COMPATIBLE => eval {	## enable architecture transition code
+	return 0 if $] < 5.006;
 	require Net::DNS::RR::DS;	## Net::DNS::SEC 0.17 compatible
-	$Net::DNS::RR::DS::VERSION < 1179;
+	( $Net::DNS::RR::DS::VERSION || 0 ) < 1133;
 } || 0;
 
 

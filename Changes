@@ -1,6 +1,15 @@
 $Id$                       -*-text-*-
 
 
+**** 0.77 [unreleased]
+
+Fix rt.cpan.org #96035
+ 
+ 	Insert missing plan 'no-plan' in 10-recurse.t
+
+Fix inefficient Net::DNS::SEC compatibility code
+
+
 **** 0.76 May 23, 2014
 
 Fix rt.cpan.org #95738

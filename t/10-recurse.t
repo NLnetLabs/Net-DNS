@@ -62,6 +62,8 @@ eval {
 }
 
 
+plan 'no_plan';
+
 NonFatalBegin();
 
 use_ok('Net::DNS::Resolver::Recurse');
