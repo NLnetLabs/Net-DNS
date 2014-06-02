@@ -3,9 +3,13 @@ $Id$                       -*-text-*-
 
 **** 0.77 [unreleased]
 
+Fix rt.cpan.org #96119
+
+	"Too late to run INIT block" warning for require Net::DNS
+ 
 Fix rt.cpan.org #96035
  
- 	Insert missing plan 'no-plan' in 10-recurse.t
+	Insert missing plan 'no-plan' in 10-recurse.t
 
 Fix inefficient Net::DNS::SEC compatibility code
 

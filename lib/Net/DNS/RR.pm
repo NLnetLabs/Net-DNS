@@ -114,8 +114,8 @@ sub _new_string {
 	croak 'unable to parse RR string' unless defined $t1;
 
 	my ( $ttl, $class );
-	unless ( defined $t2 ) {
-		$token[0] = 'ANY' unless $typebyname{$t1};	# <name> <type>
+	unless ( defined $t2 ) {				# <name> <type>
+		@token = ('ANY') if $classbyname{$t1};		# <name> <class>
 	} elsif ( defined $t3 && $classbyname{$t2} ) {
 		$ttl   = shift @token;				# <name> <ttl> <class> <type>
 		$class = shift @token;
@@ -704,7 +704,6 @@ sub _subclass {
 		my $module = join '::', $class, $mnemon;
 		$module =~ s/[^A-Za-z0-9:]//g;			# expect the unexpected
 		$subclass = eval("require $module") ? $module : $class;
-		$subclass = $module if $mnemon eq 'OPT';	# default to OPT declared below
 		my $object = bless {'type' => $number}, $subclass;
 		if (COMPATIBLE) {
 			no strict;
@@ -712,13 +711,16 @@ sub _subclass {
 			$object->{OLD}++ unless exists $stash{'encode_rdata'};
 			$object->{'type'} = $mnemon;
 		}
-		$_MINIMAL{$subclass} = [%$object];		# cache minimal content
-		$object->defaults if $subclass eq $module;
-		$_DEFAULT{$subclass} = [%$object];		# cache default content
-		$_LOADED{$rrtype}    = $subclass;
+
+		# cache pre-built minimal and populated default object images
+		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon} ||= [%$object];
+		$_DEFAULT{$rrtype} = $_DEFAULT{$mnemon} ||= do { $object->defaults; [%$object] };
+
+		$subclass = $module if $mnemon eq 'OPT';	# default to OPT declared below
+		$_LOADED{$rrtype} = $_LOADED{$mnemon} = $subclass;
 	}
 
-	my $prebuilt = $default ? $_DEFAULT{$subclass} : $_MINIMAL{$subclass};
+	my $prebuilt = $default ? $_DEFAULT{$rrtype} : $_MINIMAL{$rrtype};
 	return bless {@$prebuilt}, $subclass;			# create object
 }
 
@@ -785,7 +787,9 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 sub AUTOLOAD {				## Default method
 	my $self = shift;
-	confess "method '$AUTOLOAD' undefined" unless ref $self;
+	my $oref = ref($self);
+	confess 'undefined method ', $AUTOLOAD unless $oref;
+	confess 'unimplemented type ', $self->type if $oref eq __PACKAGE__;
 
 	my $method = $1 if $AUTOLOAD =~ m/^.*::(.*)$/;
 
