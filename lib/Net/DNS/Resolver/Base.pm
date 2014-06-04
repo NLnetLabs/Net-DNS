@@ -1102,24 +1102,31 @@ sub axfr {				## zone transfer
 		return @zone;
 	}
 
-	return sub {
-		return shift @rr if @rr;			# iterate over RRs
+	return sub {			## iterator over RRs
+		my $rr = shift @rr;
+		croak 'improperly terminated AXFR' unless $rr;
+		return $rr if scalar @rr;
+
+		if ( $rr->type eq 'SOA' ) {
+			unless ( $rr eq $soa ) {		# start of zone
+				$self->{axfr_sel} = undef;	# end of zone
+				croak 'improperly terminated AXFR' unless $rr->encode eq $soa->encode;
+				return undef;
+			}
+		}
 
 		$reply = $self->_axfr_next() || return undef;	# end of packet
 		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $query->sigrr;
 		@rr = $reply->answer;
-		my $rr = shift @rr;
-		return $rr unless $rr->type eq 'SOA';
-		$self->{axfr_sel} = undef;			# end of zone
-		croak 'improperly terminated AXFR' unless $rr->encode eq $soa->encode;
-		return undef;
+		return $rr;
 	};
 }
 
 
 sub axfr_start {			## historical
 	my $self = shift;
-	$self->{axfr_iter} = $self->axfr(@_);
+	my $iter = $self->{axfr_iter} = $self->axfr(@_);
+	return defined $iter;
 }
 
 
