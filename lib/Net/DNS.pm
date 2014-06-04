@@ -201,6 +201,7 @@ if (OLDDNSSEC) {
 		no warnings 'void';	## suppress "Too late to run INIT block ..."
 
 		sub INIT {		## only needed to satisfy DNSSEC t/00-load.t
+			return unless OLDDNSSEC;
 
 			# attempt to pre-load RRs which have circular dependence problems
 			foreach my $type (qw(NSEC3 NSEC3PARAM)) {

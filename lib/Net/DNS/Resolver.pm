@@ -270,17 +270,29 @@ was an error.
     @zone = $res->axfr('example.com');
     @zone = $res->axfr('example.com', 'HS');
 
-Performs a zone transfer from the first nameserver listed in C<nameservers>.
+    $iterator = $res->axfr;
+    $iterator = $res->axfr('example.com');
+    $iterator = $res->axfr('example.com', 'HS');
+
+    $rr = $iterator->();
+
+Performs a zone transfer using the resolver nameservers list, attempted in
+the order listed.
+
 If the zone is omitted, it defaults to the first zone listed in the resolver
-search list.  If the class is omitted, it defaults to IN.
+search list.
 
-Returns a list of C<Net::DNS::RR> objects, or empty list if the zone
-transfer failed.
+If the class is omitted, it defaults to IN.
 
+When called in list context axfr() returns a list of L<Net::DNS::RR> objects,
+or an empty list if the zone transfer failed.
 The redundant SOA record that terminates the zone transfer is not
 returned to the caller.
 
-Here's an example that uses a timeout and TSIG verification:
+When called in scalar context axfr() returns an iterator object which returns
+a single L<Net::DNS::RR> object, or undef when the zone is exhausted.
+
+Here is an example that uses a timeout and TSIG verification:
 
     $res->tcp_timeout( 10 );
     $res->tsig( 'Khmac-sha1.example.+161+24053.private' );
@@ -288,6 +300,21 @@ Here's an example that uses a timeout and TSIG verification:
 
     if (@zone) {
         foreach my $rr (@zone) {
+            $rr->print;
+        }
+    } else {
+        print 'Zone transfer failed: ', $res->errorstring, "\n";
+    }
+
+
+Here is the same example implemented using an iterator object:
+
+    $res->tcp_timeout( 10 );
+    $res->tsig( 'Khmac-sha1.example.+161+24053.private' );
+    my $iterator = $res->axfr( 'example.com' );
+
+    if ($iterator) {
+        while ( my $rr = $iterator->() ) {
             $rr->print;
         }
     } else {

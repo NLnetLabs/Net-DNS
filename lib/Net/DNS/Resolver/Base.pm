@@ -1076,31 +1076,57 @@ sub make_query_packet {
 sub axfr {				## zone transfer
 	my $self = shift;
 
+	my $whole = wantarray;
 	my @null;
-	my $query = $self->_axfr_start(@_) || return @null;
+	my $query = $self->_axfr_start(@_) || return $whole ? @null : sub {undef};
+	my $reply = $self->_axfr_next()	   || return $whole ? @null : sub {undef};
+	my $verfy = $reply->verify($query) || croak $reply->verifyerr if $query->sigrr;
+	my @rr	  = $reply->answer;
+	my $soa	  = $rr[0];
 
-	my $reply = $self->_axfr_next() || return @null;	# initial packet
-	my $vrify = $reply->verify($query) || croak $reply->verifyerr if $query->sigrr;
+	if ($whole) {
+		my @zone = shift @rr;
 
-	my ( $soa, @rr ) = $reply->answer;
-	my @zone = ($soa);
+		until ( scalar grep $_->type eq 'SOA', @rr ) {	# unpack non-terminal packets
+			push @zone, @rr;
+			@rr    = @null;
+			$reply = $self->_axfr_next() || last;
+			$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $query->sigrr;
+			@rr    = $reply->answer;
+		}
 
-	until ( scalar grep $_->type eq 'SOA', @rr ) {		# unpack non-terminal packet(s)
+		my $last = pop @rr;				# unpack final packet
 		push @zone, @rr;
-		@rr    = @null;
-		$reply = $self->_axfr_next() || last;
-		$vrify = $reply->verify($vrify) || croak $reply->verifyerr if $query->sigrr;
-		@rr    = $reply->answer;
+		$self->{axfr_sel} = undef;
+		croak 'improperly terminated AXFR' unless $last->encode eq $soa->encode;
+		return @zone;
 	}
 
-	$self->{axfr_sel} = undef;
+	return sub {
+		return shift @rr if @rr;			# iterate over RRs
 
-	foreach my $rr (@rr) {					# unpack final packet
-		return @zone if $rr->type eq 'SOA' && $rr->string eq $soa->string;
-		push @zone, $rr;
-	}
+		$reply = $self->_axfr_next() || return undef;	# end of packet
+		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $query->sigrr;
+		@rr = $reply->answer;
+		my $rr = shift @rr;
+		return $rr unless $rr->type eq 'SOA';
+		$self->{axfr_sel} = undef;			# end of zone
+		croak 'improperly terminated AXFR' unless $rr->encode eq $soa->encode;
+		return undef;
+	};
+}
 
-	croak 'improperly terminated AXFR';
+
+sub axfr_start {			## historical
+	my $self = shift;
+	$self->{axfr_iter} = $self->axfr(@_);
+}
+
+
+sub axfr_next {				## historical
+	my $self = shift;
+	my $iter = $self->{axfr_iter} || return undef;
+	$iter->() || return $self->{axfr_iter} = undef;
 }
 
 
@@ -1109,8 +1135,7 @@ sub _axfr_start {
 	my $dname = shift || $self->{'searchlist'}->[0];
 	my $class = shift || 'IN';
 
-	my $debug   = $self->{debug};
-	my $timeout = $self->{tcp_timeout};
+	my $debug = $self->{debug};
 
 	unless ($dname) {
 		$self->errorstring('no zone specified');
@@ -1167,20 +1192,19 @@ sub _axfr_next {
 	my $self = shift;
 
 	my $debug = $self->{debug};
-	unless ( $self->{axfr_sel} ) {
+	my $sel	  = $self->{axfr_sel};
+	unless ($sel) {
 		$self->errorstring('no zone transfer in progress');
 		print ';; ', $self->errorstring, "\n" if $debug;
 		return;
 	}
 
-	my $sel	    = $self->{axfr_sel};
-	my $timeout = $self->{tcp_timeout};
-
 	#--------------------------------------------------------------
 	# Read the length of the response packet.
 	#--------------------------------------------------------------
 
-	my @ready = $sel->can_read($timeout);
+	my $timeout = $self->{tcp_timeout};
+	my @ready   = $sel->can_read($timeout);
 	unless (@ready) {
 		$self->errorstring('timeout');
 		return;
