@@ -103,7 +103,7 @@ sub init {
 					|| ''
 					unless !$ip || ( $ip =~ /0\.0\.0\.0/ );
 
-				push @nameservers, $ns if $ns;
+				push @nameservers, split $ns if $ns;
 			}
 		}
 	}

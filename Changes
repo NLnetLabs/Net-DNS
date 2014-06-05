@@ -3,6 +3,14 @@ $Id$                       -*-text-*-
 
 **** 0.77 [unreleased]
 
+Fix rt.cpan.org #96151
+
+	Unlocalised $_ modified when reading config file
+
+Fix rt.cpan.org #96135
+
+	Deep recursion problem on Cygwin
+
 Fix rt.cpan.org #96119
 
 	"Too late to run INIT block" warning for require Net::DNS

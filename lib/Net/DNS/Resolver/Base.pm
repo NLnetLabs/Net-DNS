@@ -152,19 +152,17 @@ sub new {
 	my %args = @_ unless scalar(@_) % 2;
 
 	my $self;
+	my $base = $class->defaults;
+	my $init = $initial;
+	$initial ||= bless {%$base}, $class;
 	if ( my $file = $args{'config_file'} ) {
-		my $base = $initial || $class->defaults;
-		$self = bless {%$base}, $class;
+		$self = bless {%$initial}, $class;
 		$self->read_config_file($file);			# user specified config
 
 	} else {
-		my $base = $class->defaults;
-		$initial ||= {%$base} && do {
-			$class->init();				# system-wide config
-		};
+		$class->init() unless $init;			# system-wide config
 		$self = bless {%$base}, $class;
 	}
-
 
 	while ( my ( $attr, $value ) = each %args ) {
 		next unless $public_attr{$attr};
@@ -219,6 +217,7 @@ sub read_config_file {
 
 	open( FILE, $file ) or croak "Could not open $file: $!";
 	local $/ = "\n";
+	local $_;
 
 	while (<FILE>) {
 		s/\s*[;#].*$//;					# strip comment
@@ -1087,8 +1086,8 @@ sub axfr {				## zone transfer
 	if ($whole) {
 		my @zone = shift @rr;
 
-		until ( scalar grep $_->type eq 'SOA', @rr ) {	# unpack non-terminal packets
-			push @zone, @rr;
+		until ( scalar @rr && $rr[$#rr]->type eq 'SOA' ) {
+			push @zone, @rr;			# unpack non-terminal packet
 			@rr    = @null;
 			$reply = $self->_axfr_next() || last;
 			$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $query->sigrr;
@@ -1098,7 +1097,7 @@ sub axfr {				## zone transfer
 		my $last = pop @rr;				# unpack final packet
 		push @zone, @rr;
 		$self->{axfr_sel} = undef;
-		croak 'improperly terminated AXFR' unless $last->encode eq $soa->encode;
+		croak 'improperly terminated AXFR' unless $last && $last->encode eq $soa->encode;
 		return @zone;
 	}
 
@@ -1126,7 +1125,7 @@ sub axfr {				## zone transfer
 sub axfr_start {			## historical
 	my $self = shift;
 	my $iter = $self->{axfr_iter} = $self->axfr(@_);
-	return defined $iter;
+	return defined($iter) || undef;
 }
 
 
