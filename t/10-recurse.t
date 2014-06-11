@@ -71,7 +71,7 @@ use_ok('Net::DNS::Resolver::Recurse');
 {
 	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
 
-	isa_ok( $res, 'new() created object' );
+	isa_ok( $res, 'Net::DNS::Resolver::Recurse', 'new() created object' );
 
 	$res->udp_timeout(20);
 

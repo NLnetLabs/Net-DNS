@@ -503,21 +503,21 @@ sub _getline {				## get line from current source
 	die "close: $!" unless $ok;
 	my $link = $self->{parent} || return undef;		# end of zone
 	%$self = %$link;					# end $INCLUDE
-	return $self->_getline;					# resume input
+	$self->_getline;					# resume input
 }
 
 
 sub _getRR {				## get RR from current source
 	my $self = shift;
 
-	my $line = $self->_getline;
-	return undef unless defined $line;
+	local $_;
+	$self->_getline || return undef;			# line already in $_
 
-	my $noname = $line =~ s/^\s/\@\t/;			# RR name empty
+	my $noname = s/^\s/\@\t/;				# placeholder for empty RR name
 
 	# construct RR object with context specific dynamically scoped $ORIGIN
 	my $context = $self->{context};
-	my $rr = &$context( sub { Net::DNS::RR->_new_string($line) } );
+	my $rr = &$context( sub { Net::DNS::RR->_new_string($_) } );
 
 	$rr->{owner} = $self->{latest}->{owner} if $noname && $self->{latest};	  # overwrite placeholder
 

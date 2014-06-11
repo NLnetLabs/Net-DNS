@@ -139,11 +139,11 @@ arguments to new() are supported:
 
 =item nameservers
 
-An array reference of nameservers to query.
+A reference to an array of nameservers to query.
 
 =item searchlist
 
-An array reference of domains.
+A reference to an array of domains to search for unqualified names.
 
 =item recurse
 
@@ -276,21 +276,19 @@ was an error.
 
     $rr = $iterator->();
 
-Performs a zone transfer using the resolver nameservers list, attempted in
-the order listed.
+Performs a zone transfer using the resolver nameservers list,
+attempted in the order listed.
 
-If the zone is omitted, it defaults to the first zone listed in the resolver
-search list.
+If the zone is omitted, it defaults to the first zone listed
+in the resolver search list.
 
 If the class is omitted, it defaults to IN.
 
-When called in list context axfr() returns a list of L<Net::DNS::RR> objects,
-or an empty list if the zone transfer failed.
+
+When called in list context, axfr() returns a list of L<Net::DNS::RR>
+objects or an empty list if the zone transfer failed.
 The redundant SOA record that terminates the zone transfer is not
 returned to the caller.
-
-When called in scalar context axfr() returns an iterator object which returns
-a single L<Net::DNS::RR> object, or undef when the zone is exhausted.
 
 Here is an example that uses a timeout and TSIG verification:
 
@@ -298,27 +296,29 @@ Here is an example that uses a timeout and TSIG verification:
     $res->tsig( 'Khmac-sha1.example.+161+24053.private' );
     my @zone = $res->axfr( 'example.com' );
 
-    if (@zone) {
-        foreach my $rr (@zone) {
-            $rr->print;
-        }
-    } else {
-        print 'Zone transfer failed: ', $res->errorstring, "\n";
+    die 'Zone transfer failed: ', $res->errorstring unless @zone;
+
+    foreach my $rr (@zone) {
+        $rr->print;
     }
 
 
-Here is the same example implemented using an iterator object:
+When called in scalar context, axfr() returns an iterator object.
+Each invocation of the iterator returns a single L<Net::DNS::RR>
+or undef when the zone is exhausted.
+The redundant SOA record that terminates the zone transfer is not
+returned to the caller.
+
+Here is the example above, implemented using an iterator:
 
     $res->tcp_timeout( 10 );
     $res->tsig( 'Khmac-sha1.example.+161+24053.private' );
     my $iterator = $res->axfr( 'example.com' );
 
-    if ($iterator) {
-        while ( my $rr = $iterator->() ) {
-            $rr->print;
-        }
-    } else {
-        print 'Zone transfer failed: ', $res->errorstring, "\n";
+    die 'Zone transfer failed: ', $res->errorstring unless $iterator;
+
+    while ( my $rr = $iterator->() ) {
+        $rr->print;
     }
 
 
