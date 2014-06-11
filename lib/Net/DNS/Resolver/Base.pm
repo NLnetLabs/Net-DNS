@@ -141,6 +141,7 @@ my %public_attr = map { $_ => 1 } qw(
 		persistent_tcp
 		persistent_udp
 		dnssec
+		prefer_v6
 		ignqrid
 		);
 
@@ -158,6 +159,7 @@ sub new {
 	if ( my $file = $args{'config_file'} ) {
 		$self = bless {%$initial}, $class;
 		$self->read_config_file($file);			# user specified config
+		%$base = %$self unless $init;
 
 	} else {
 		$class->init() unless $init;			# system-wide config
@@ -184,6 +186,16 @@ sub new {
 }
 
 
+#
+# $class->read_env() or $object->read_env()
+#
+my %netdns_conf = ( %public_attr, map { $_ => 0 } qw(nameservers domain searchlist ignqrid) );
+my %resolv_conf = (
+	attempts => 'retry',
+	inet6	 => 'prefer_v6',
+	timeout	 => 'retrans',
+	);
+
 sub read_env {
 	my ($invocant) = @_;
 	my $config = ref($invocant) ? $invocant : $invocant->defaults;
@@ -197,15 +209,17 @@ sub read_env {
 	if ( exists $ENV{RES_OPTIONS} ) {
 		foreach ( map split, $ENV{RES_OPTIONS} ) {
 			my ( $name, $val ) = split( m/:/, $_, 2 );
+			my $attribute = $resolv_conf{$name};
 			$val = 1 unless defined $val;
-			$config->{$name} = $val if exists $config->{$name};
+			$config->$attribute($val) if $attribute;
+			$config->$name($val) if $netdns_conf{$name};
 		}
 	}
 }
 
 
 #
-# $class->read_config_file($filename) or $object->read_config_file($file)
+# $class->read_config_file($filename) or $object->read_config_file($filename)
 #
 sub read_config_file {
 	my ( $invocant, $file ) = @_;
@@ -220,25 +234,30 @@ sub read_config_file {
 	local $_;
 
 	while (<FILE>) {
-		s/\s*[;#].*$//;					# strip comment
-		next unless m/\S/;				# skip empty line
-		s/^\s+//;					# strip leading space
-
 		/^nameserver/ && do {
 			my ( $keyword, @ip ) = split;
 			push @ns, map { $_ eq '0' ? '0.0.0.0' : $_ } @ip;
 			next;
 		};
 
+		/^option/ && do {
+			my ( $keyword, $option ) = split;
+			my ( $name, $val ) = split( m/:/, $option, 2 );
+			my $attribute = $resolv_conf{$name};
+			$val = 1 unless defined $val;
+			$config->$attribute($val) if $attribute;
+			next;
+		};
+
 		/^domain/ && do {
-			my $keyword;
-			( $keyword, $config->{domain} ) = split;
+			my ( $keyword, $domain ) = split;
+			$config->domain($domain);
 			next;
 		};
 
 		/^search/ && do {
 			my ( $keyword, @searchlist ) = split;
-			$config->{searchlist} = \@searchlist;
+			$config->searchlist(@searchlist);
 			next;
 		};
 	}
