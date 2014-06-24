@@ -52,7 +52,21 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $txtdata = $self->{txtdata} || [];
-	join ' ', map $_->string, @$txtdata;
+	my @txtdata = map $_->string, @$txtdata;
+	my @line;
+	my $size = 60;
+	while (@txtdata) {
+		my @group;
+		while ( $size > 0 ) {
+			my $string = shift @txtdata;
+			push @group, $string || last;
+			$size -= length($string);
+		}
+		push @line, join ' ', @group;
+		$size = 100;
+	}
+	my $rdata = join "\n", @line;
+	return $rdata =~ /\n/ ? "( $rdata )" : $rdata;
 }
 
 
@@ -87,7 +101,7 @@ package Net::DNS::Text;
 
 sub quoted_string {
 	my $string = shift->string;
-	return $string if $string =~ /^$|\s|["\$'();@]/;	# should already be quoted
+	return $string if $string =~ /^"/;			# string already quoted
 	join '', '"', $string, '"';				# quote previously unquoted string
 }
 

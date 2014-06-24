@@ -3,7 +3,7 @@
 use strict;
 use FileHandle;
 
-use Test::More tests => 56;
+use Test::More tests => 57;
 
 use constant UTF8 => eval {
 	require Encode;						# expect this to fail pre-5.8.0
@@ -51,11 +51,14 @@ sub source {				## zone file builder
 	ok( defined $zonefile->origin, 'zonefile->origin always defined' );
 	ok( defined $zonefile->ttl,    'zonefile->ttl always defined' );
 	my @rr = $zonefile->read;
-	is( scalar @rr,	     0, 'zonefile->read to end of file' );
+	is( scalar(@rr),     0, 'zonefile->read to end of file' );
 	is( $zonefile->line, 0, 'zonefile->line zero if file empty' );
 
-	is( $zonefile->origin, '.', 'new ZoneFile origin defaults to DNS root' );
+	is( $zonefile->origin, '.', 'zonefile->origin defaults to DNS root' );
+}
 
+
+{				## initial origin
 	my $tld = 'test';
 	my $absolute = source( '', "$tld." );
 	is( $absolute->origin, "$tld.", 'new ZoneFile with absolute origin' );
@@ -253,7 +256,7 @@ SKIP: {				## Non-ASCII zone content
 	my $zone1 = new Net::DNS::ZoneFile($fh1);
 	my $txtgr = $zone1->read;
 	my $text  = pack 'U*', 949, 944, 961, 951, 954, 945;
-	is( $txtgr->txtdata, $text , 'ISO8859-7 TXT argument' );
+	is( $txtgr->txtdata, $text , 'ISO8859-7 TXT rdata' );
 
 	eval{ binmode(DATA) };					# suppress encoding layer
 	my $jptxt = <DATA>;
@@ -261,7 +264,10 @@ SKIP: {				## Non-ASCII zone content
 	my $fh2   = new FileHandle( $file2->name, '<:utf8' );	# UTF-8 character encoding
 	my $zone2 = new Net::DNS::ZoneFile($fh2);
 	my $txtrr = $zone2->read;				# TXT RR with kanji RDATA
-	is( length( $txtrr->txtdata ), 12, 'Unicode/UTF-8 TXT argument' );
+	my @rdata = $txtrr->txtdata;
+	my $rdata = $txtrr->txtdata;
+	is( length($rdata), 12, 'Unicode/UTF-8 TXT rdata' );
+	is( scalar(@rdata), 1,  'Unicode/UTF-8 TXT contiguous' );
 
 	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
 
@@ -275,6 +281,6 @@ SKIP: {				## Non-ASCII zone content
 exit;
 
 __END__
-jp	TXT	"古池や　蛙飛込む　水の音"		; Unicode text string
+jp	TXT	古池や　蛙飛込む　水の音		; Unicode text string
 日本	NULL						; Unicode domain name
 

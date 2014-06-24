@@ -42,7 +42,8 @@ introduced by RFC3597.
 use strict;
 use base qw(Net::DNS::Domain);
 
-use constant OKlc => eval { require 5.010; } || 0;
+use constant FIXlc => eval { $] < 5.010; } || 0;
+
 
 use integer;
 use Carp;
@@ -68,7 +69,7 @@ as defined in RFC2535(8.1).
 =cut
 
 sub canonical {
-	join '', map pack( 'C a*', length($_), OKlc ? lc($_) : _lc($_) ), shift->_wire, '';
+	join '', map pack( 'C a*', length($_), FIXlc ? _lc($_) : lc($_) ), shift->_wire, '';
 }
 
 

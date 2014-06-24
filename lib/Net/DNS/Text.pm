@@ -53,12 +53,9 @@ use constant UTF8 => eval {
 } || 0;
 
 
-my ( $ascii, $utf8 );			## perlcc: initialisation deferred until object creation
-
-sub init {
-	$ascii = Encode::find_encoding('ascii') if ASCII;	# Osborn's Law:
-	$utf8  = Encode::find_encoding('utf8')	if UTF8;	# Variables won't; constants aren't.
-}
+# perlcc: eddress of encoding objects must be determined at runtime
+my $ascii = Encode::find_encoding('ascii') if ASCII;		# Osborn's Law:
+my $utf8  = Encode::find_encoding('utf8')  if UTF8;		# Variables won't; constants aren't.
 
 
 =head1 METHODS
@@ -80,13 +77,10 @@ interpretation.
 =cut
 
 my %unescape;				## precalculated numeric escape table
-my $init;
 
 sub new {
 	my $self = bless [], shift;
 	croak 'argument undefined' unless defined $_[0];
-
-	init( $init++ ) unless defined $init;			# encoding object initialisation
 
 	local $_ = &_encode_utf8;
 
@@ -130,8 +124,6 @@ sub decode {
 	my $class  = shift;
 	my $buffer = shift;					# reference to data buffer
 	my $offset = shift || 0;				# offset within buffer
-
-	init( $init++ ) unless defined $init;			# encoding object initialisation
 
 	my $size = unpack "\@$offset C", $$buffer;
 	my $next = ++$offset + $size;
@@ -188,8 +180,7 @@ sub string {
 	my @s = map split( '', $_ ), @$self;			# escape non-printable
 	my $string = _decode_utf8( join '', map $escape{$_}, @s );
 
-	# Note: Script-specific rules determine which Unicode characters match \s
-	return $string unless $string =~ /^$|\s|["\$'();@]/;	# unquoted contiguous
+	return $string unless $string =~ /^$|[ \t\n\$"'();@]/;	# unquoted contiguous
 
 	join '', '"', $string, '"';				# quoted string
 }

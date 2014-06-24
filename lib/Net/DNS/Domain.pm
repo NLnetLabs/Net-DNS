@@ -59,12 +59,9 @@ use constant LIBIDN => eval {
 } || 0;
 
 
-my ( $ascii, $utf8 );			## perlcc: initialisation deferred until object creation
-
-sub init {
-	$ascii = Encode::find_encoding('ascii') if ASCII;	# Osborn's Law:
-	$utf8  = Encode::find_encoding('utf8')	if UTF8;	# Variables won't; constants aren't.
-}
+# perlcc: eddress of encoding objects must be determined at runtime
+my $ascii = Encode::find_encoding('ascii') if ASCII;		# Osborn's Law:
+my $utf8  = Encode::find_encoding('utf8')  if UTF8;		# Variables won't; constants aren't.
 
 
 =head1 METHODS
@@ -96,7 +93,6 @@ for zone files described in RFC1035.
 
 use vars qw($ORIGIN);
 my ( $cache1, $cache2, $limit ) = ( {}, {}, 100 );
-my $init;
 
 sub new {
 	my ( $class, $s ) = @_;
@@ -107,8 +103,6 @@ sub new {
 	return $cache if defined $cache;
 
 	( $cache1, $cache2, $limit ) = ( {}, $cache1, 500 ) unless $limit--;	# recycle cache
-
-	init( $init++ ) unless defined $init;			# initialise encoding object
 
 	my $self = bless {}, $class;
 

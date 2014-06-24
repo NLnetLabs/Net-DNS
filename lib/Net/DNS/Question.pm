@@ -30,8 +30,8 @@ use integer;
 use Carp;
 
 use Net::DNS::Parameters;
-
-require Net::DNS::DomainName;
+use Net::DNS::Domain;
+use Net::DNS::DomainName;
 
 
 =head1 METHODS

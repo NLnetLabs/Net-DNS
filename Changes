@@ -1,6 +1,26 @@
 $Id$                       -*-text-*-
 
 
+**** 0.78 [unreleased]
+
+Fix rt.cpan.org #96608
+
+	"Insecure dependency in connect" with Net::DNS::Resolver over TCP
+
+Fix rt.cpan.org #96535
+
+	Net::DNS::Resolver warns "Use of uninitialized value in length"
+
+Fix rt.cpan.org #96531
+
+	Calling $resolver->nameservers multiple times returns an
+	increasingly-long list (on some perl installations)
+
+Fix rt.cpan.org #96439
+
+	Uninitialised decoding object when printing packet
+
+
 **** 0.77 Jun 13, 2014
 
 Fix rt.cpan.org #96151

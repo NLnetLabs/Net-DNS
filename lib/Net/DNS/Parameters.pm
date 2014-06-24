@@ -6,10 +6,14 @@ package Net::DNS::Parameters;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
-#
-#	Domain Name System (DNS) Parameters
-#	(last updated 2013-10-25)
-#
+
+################################################
+##
+##	Domain Name System (DNS) Parameters
+##	(last updated 2014-06-16)
+##
+################################################
+
 
 use strict;
 use integer;
@@ -98,8 +102,9 @@ use vars qw( %typebyname %typebyval );
 	NINFO	   => 56,					#
 	RKEY	   => 57,					#
 	TALINK	   => 58,					#
-	CDS	   => 59,					#
-	SPF	   => 99,					# RFC4408
+	CDS	   => 59,					# RFC-ietf-dnsop-delegation-trust-maintainance-14
+	CDNSKEY	   => 60,					# RFC-ietf-dnsop-delegation-trust-maintainance-14
+	SPF	   => 99,					# RFC7208
 	UINFO	   => 100,					# IANA-Reserved
 	UID	   => 101,					# IANA-Reserved
 	GID	   => 102,					# IANA-Reserved
@@ -177,6 +182,7 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	DHU		     => 6,				# RFC6975
 	N3U		     => 7,				# RFC6975
 	'EDNS-CLIENT-SUBNET' => 8,				# draft-vandergaast-edns-client-subnet
+	'EDNS-EXPIRE'	     => 9,				# RFC-andrews-dnsext-expire-04
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
 %ednsoptionbyname = ( %ednsoptionbyname, map /\D/ ? lc($_) : $_, %ednsoptionbyname );
@@ -208,50 +214,44 @@ use vars qw( %ednsflagbyname );
 sub classbyname {
 	my $name = shift;
 
-	return $classbyname{$name} if defined $classbyname{$name};
-
-	confess "unknown class $name" unless $name =~ m/CLASS(\d+)/;
-
-	my $val = 0 + $1;
-	return $val unless $val > 0xffff;
-
-	confess "classbyname( $name ) out of range";
+	$classbyname{$name} || do {
+		confess "unknown type $name" unless $name =~ m/CLASS(\d+)/;
+		my $val = 0 + $1;
+		confess "classbyname( $name ) out of range" if $val > 0xffff;
+		return $val;
+			}
 }
 
 sub classbyval {
 	my $val = shift;
 
-	return $classbyval{$val} if defined $classbyval{$val};
-
-	$val += 0;
-	confess "classbyval( $val ) out of range" if $val > 0xffff;
-
-	return "CLASS$val";
+	$classbyval{$val} || do {
+		$val += 0;
+		confess "classbyval( $val ) out of range" if $val > 0xffff;
+		return "CLASS$val";
+			}
 }
 
 
 sub typebyname {
 	my $name = shift;
 
-	return $typebyname{$name} if defined $typebyname{$name};
-
-	confess "unknown type $name" unless $name =~ m/TYPE(\d+)/;
-
-	my $val = 0 + $1;
-	confess "typebyname( $name ) out of range" if $val > 0xffff;
-
-	return $val;
+	$typebyname{$name} || do {
+		confess "unknown type $name" unless $name =~ m/TYPE(\d+)/;
+		my $val = 0 + $1;
+		confess "typebyname( $name ) out of range" if $val > 0xffff;
+		return $val;
+			}
 }
 
 sub typebyval {
 	my $val = shift;
 
-	return $typebyval{$val} if defined $typebyval{$val};
-
-	$val += 0;
-	confess "typebyval( $val ) out of range" if $val > 0xffff;
-
-	return "TYPE$val";
+	$typebyval{$val} || do {
+		$val += 0;
+		confess "typebyval( $val ) out of range" if $val > 0xffff;
+		return "TYPE$val";
+			}
 }
 
 
@@ -312,7 +312,7 @@ __END__
 
 Net::DNS::Parameters is a Perl package representing the DNS parameter
 allocation (key,value) tables as recorded in the definitive registry
-file maintained and published by IANA.
+maintained and published by IANA.
 
 
 =head1 COPYRIGHT

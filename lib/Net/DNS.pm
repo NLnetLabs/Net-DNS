@@ -32,7 +32,6 @@ details.
 use 5.004_04;
 use strict;
 use integer;
-use Carp;
 
 use base qw(Exporter);
 use vars qw(@EXPORT);
@@ -212,14 +211,14 @@ if (OLDDNSSEC) {
 }
 
 
+require Carp;
+require Net::DNS::Parameters;
+
 my $warned;
 
 sub deprecated {
-	carp "deprecated @_" unless $warned++;
+	Carp::carp "deprecated @_" unless $warned++;
 }
-
-
-require Net::DNS::Parameters;
 
 sub typesbyname {
 	deprecated('typesbyname; use Net::DNS::Parameters::typebyname') unless OLDDNSSEC;

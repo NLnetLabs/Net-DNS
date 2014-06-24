@@ -15,8 +15,8 @@ use Socket;
 use IO::Socket;
 use IO::Select;
 
-require Net::DNS::Packet;
-require Net::DNS::RR;
+use Net::DNS::RR;
+use Net::DNS::Packet;
 
 use constant DNSSEC => eval { require Net::DNS::RR::DS; } || 0;
 use constant INT16SZ  => 2;
@@ -159,6 +159,8 @@ sub new {
 	if ( my $file = $args{'config_file'} ) {
 		$self = bless {%$initial}, $class;
 		$self->read_config_file($file);			# user specified config
+		$self->$_( map { /^(.+)$/; $1 } $self->$_ )	# presumed to be kosher
+				for (qw(nameservers domain searchlist));
 		%$base = %$self unless $init;
 
 	} else {
@@ -312,10 +314,11 @@ sub empty_searchlist {
 
 sub nameservers {
 	my $self = shift;
+	$self = $self->defaults unless ref($self);
 
 	my ( @ipv4, @ipv6 );
 	foreach my $ns (@_) {
-		next unless length($ns);
+		croak 'nameservers: invalid argument' unless $ns;
 		push( @ipv6, $ns ) && next if _ip_is_ipv6($ns);
 		push( @ipv4, $ns ) && next if _ip_is_ipv4($ns);
 
@@ -344,8 +347,8 @@ sub nameservers {
 			push @address, cname_addr( [@names], $packet ) if defined $packet;
 		}
 
-		my %address = map { $_ => 1 } @address;
-		my @unique = keys %address;
+		my %address = map { $_ => $_ } @address;	# tainted
+		my @unique = values %address;
 		push @ipv4, grep _ip_is_ipv4($_), @unique;
 		push @ipv6, grep _ip_is_ipv6($_), @unique;
 	}
@@ -356,7 +359,8 @@ sub nameservers {
 		return unless defined wantarray;
 	}
 
-	my @returnval = @{$self->{nameserver6}} if $has_inet6 && !$self->force_v4();
+	my @returnval;
+	@returnval = @{$self->{nameserver6}} if $has_inet6 && !$self->force_v4();
 	if ( $self->prefer_v6() ) {
 		push @returnval, @{$self->{nameserver4}};
 	} else {

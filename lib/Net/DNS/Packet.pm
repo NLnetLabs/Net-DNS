@@ -33,9 +33,11 @@ use Carp;
 
 use constant UDPSZ => 512;
 
-require Net::DNS::Header;
-require Net::DNS::Question;
-require Net::DNS::RR;
+BEGIN {
+	require Net::DNS::Header;
+	require Net::DNS::Question;
+	require Net::DNS::RR;
+}
 
 my @dummy_header = ( header => {} ) if Net::DNS::RR->COMPATIBLE;
 

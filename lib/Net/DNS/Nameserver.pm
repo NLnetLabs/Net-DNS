@@ -89,7 +89,7 @@ sub new {
 			: ( $self{LocalAddr} || DEFAULT_ADDR );
 	my $resolver = new Net::DNS::Resolver;
 	$resolver->force_v4(1) unless $has_inet6;
-	$resolver->nameservers(undef);
+	$resolver->empty_nameservers;
 	my @localaddresses = $resolver->nameservers(@LocalAddr);
 
 	my $port = $self{LocalPort} || DEFAULT_PORT;

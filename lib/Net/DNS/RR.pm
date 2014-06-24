@@ -32,19 +32,20 @@ See also the manual pages for each specific RR type.
 =cut
 
 
-use constant COMPATIBLE => eval {	## enable architecture transition code
-	return 0 if $] < 5.006;
-	require Net::DNS::RR::DS;	## Net::DNS::SEC 0.17 compatible
-	( $Net::DNS::RR::DS::VERSION || 0 ) < 1133;
-} || 0;
-
-
 use strict;
 use integer;
 use Carp;
 
 use Net::DNS::Parameters;
+use Net::DNS::Domain;
 use Net::DNS::DomainName;
+
+
+use constant COMPATIBLE => eval {	## enable architecture transition code
+	return 0 if $] < 5.006;
+	require Net::DNS::RR::DS;	## Net::DNS::SEC 0.17 compatible
+	( $Net::DNS::RR::DS::VERSION || 0 ) < 1133;
+} || 0;
 
 
 =head1 METHODS
@@ -60,7 +61,7 @@ sub new {
 	return &_new_from_rdata if COMPATIBLE && ref $_[1];	# resolve new() usage conflict
 
 	return eval { scalar @_ > 2 ? &_new_hash : &_new_string; } || do {
-		my $error = $@	  || 'eval{} aborted without setting $@, contrary to Perl specification' . "\n";
+		my $error = $@	  || 'eval{} aborted without setting $@' . "\n";
 		my $class = shift || __PACKAGE__;
 		my @parse = split /\s+/, shift || '';
 		croak join ' ', "${error}in new $class(", substr( "@parse @_", 0, 50 ), '... )';
@@ -92,7 +93,7 @@ The trailing dot (.) is optional.
 
 =cut
 
-my $PARSE_REGEX = q/("[^"]*"|'[^']*')|;[^\n]*|[\s()]/;
+my $PARSE_REGEX = q/("[^"]*"|'[^']*')|;[^\n]*|[ \t\n\r\f()]/;
 
 sub _new_string {
 	my $base;
@@ -351,9 +352,9 @@ sub canonical {
 }
 
 
-=head2 name
+=head2 owner name
 
-    $name = $rr->name;
+    $owner = $rr->name;
 
 Returns the owner name of the record.
 
@@ -371,6 +372,8 @@ sub name {
 	$self->{owner} = new Net::DNS::DomainName1035(shift) if scalar @_;
 	$self->{owner}->name if defined wantarray;
 }
+
+sub owner { &name; }			## compatibility with RFC1034
 
 
 =head2 type
