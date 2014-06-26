@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 0.78 [unreleased]
 
+Fix rt.cpan.org #96708
+
+	TXT "0" argument wrongly terminates formatting loop
+
 Fix rt.cpan.org #96608
 
 	"Insecure dependency in connect" with Net::DNS::Resolver over TCP

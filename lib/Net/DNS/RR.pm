@@ -138,7 +138,7 @@ sub _new_string {
 
 	return $self unless $populated;				# empty RR
 
-	if ( $token[0] =~ /^[\\]?#$/ ) {
+	if ( $#token && $token[0] =~ /^[\\]?#$/ ) {
 		shift @token;					# RFC3597 hexadecimal format
 		my $count = shift(@token) || 0;
 		my $rdata = pack 'H*', join '', @token;
@@ -520,10 +520,10 @@ sub rdstring {
 	my $rdata = eval {
 		return $self->rdatastr if COMPATIBLE;
 		return $self->format_rdata;
-	} || '';
+	};
 	carp $@ if $@;
 
-	return $rdata;
+	return defined $rdata ? $rdata : '';
 }
 
 

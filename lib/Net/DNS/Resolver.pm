@@ -73,11 +73,11 @@ recursion is desired, etc.
 
 =head2 new
 
-  # Use the system defaults
+  # Use the default configuration
   my $res = Net::DNS::Resolver->new;
 
   # Use my own configuration file
-  my $res = Net::DNS::Resolver->new(config_file => '/my/dns.conf');
+  my $res = Net::DNS::Resolver->new( config_file => '/my/dns.conf' );
 
   # Set options in the constructor
   my $res = Net::DNS::Resolver->new(
@@ -86,9 +86,11 @@ recursion is desired, etc.
   	debug       => 1,
   );
 
-Returns a resolver object.  If given no arguments, C<new()> returns an
-object configured to your system's defaults.  On UNIX systems the
-defaults are read from the following files, in the order indicated:
+Returns a resolver object.  If no arguments are supplied, new()
+returns an object having the default configuration.
+
+On UNIX systems, the default values are read from the following files,
+in the order indicated:
 
     /etc/resolv.conf
     $HOME/.resolv.conf
@@ -112,14 +114,15 @@ A space-separated list of nameservers to query.
 
 =back
 
-Files except for F</etc/resolv.conf> must be owned by the effective
+Except for F</etc/resolv.conf>, files must be owned by the effective
 userid running the program or they won't be read.  In addition, several
 environment variables can also contain configuration information; see
 L</ENVIRONMENT>.
 
 On Windows systems, an attempt is made to determine the system defaults
-using the registry.  This is still a work in progress; systems with many
-dynamically configured network interfaces may confuse Net::DNS.
+using the registry.  Systems with many dynamically configured network
+interfaces may confuse Net::DNS.
+
 
 You can include a configuration file of your own when creating a
 resolver object:
@@ -127,13 +130,14 @@ resolver object:
  # Use my own configuration file
  my $res = Net::DNS::Resolver->new(config_file => '/my/dns.conf');
 
-This is supported on both UNIX and Windows.  Values pulled from a custom
-configuration file override the the system's defaults, but can still be
-overridden by the other arguments to new().
+This is supported on both UNIX and Windows.
 
-Explicit arguments to new override both the system's defaults and the
-values of the custom configuration file, if any.  The following
-arguments to new() are supported:
+
+If a custom configuration file is specified at first instantiation,
+both the system configuration and environment variables are ignored.
+
+Explicit arguments to new() override the corresponding configuration
+variables.  The following arguments are supported:
 
 =over 4
 

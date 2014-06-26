@@ -159,10 +159,8 @@ sub new {
 	if ( my $file = $args{'config_file'} ) {
 		$self = bless {%$initial}, $class;
 		$self->read_config_file($file);			# user specified config
-		$self->$_( map { /^(.+)$/; $1 } $self->$_ )	# presumed to be kosher
+		$self->$_( map { /^(.+)$/; $1 } $self->$_ )	# untaint config values
 				for (qw(nameservers domain searchlist));
-		%$base = %$self unless $init;
-
 	} else {
 		$class->init() unless $init;			# system-wide config
 		$self = bless {%$base}, $class;
@@ -184,6 +182,7 @@ sub new {
 		}
 	}
 
+	%$base = %$self unless $init;				# default configuration
 	return $self;
 }
 
@@ -319,8 +318,8 @@ sub nameservers {
 	my ( @ipv4, @ipv6 );
 	foreach my $ns (@_) {
 		croak 'nameservers: invalid argument' unless $ns;
-		push( @ipv6, $ns ) && next if _ip_is_ipv6($ns);
-		push( @ipv4, $ns ) && next if _ip_is_ipv4($ns);
+		do { push @ipv6, $ns; next } if _ip_is_ipv6($ns);
+		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
 		my $defres = Net::DNS::Resolver->new(
 			udp_timeout => $self->udp_timeout,
@@ -360,11 +359,12 @@ sub nameservers {
 	}
 
 	my @returnval;
-	@returnval = @{$self->{nameserver6}} if $has_inet6 && !$self->force_v4();
-	if ( $self->prefer_v6() ) {
-		push @returnval, @{$self->{nameserver4}};
+	if ( $self->force_v4() ) {
+		@returnval = @{$self->{nameserver4}};
+	} elsif ( $self->prefer_v6() ) {
+		@returnval = ( @{$self->{nameserver6}}, @{$self->{nameserver4}} );
 	} else {
-		unshift @returnval, @{$self->{nameserver4}};
+		@returnval = ( @{$self->{nameserver4}}, @{$self->{nameserver6}} );
 	}
 
 	return @returnval if scalar @returnval;

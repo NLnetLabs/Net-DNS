@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 47;
+use Test::More tests => 50;
 
 
 use Net::DNS;
@@ -79,6 +79,11 @@ my $wire = '0e6172626974726172795f74657874';
 		q|_|,		q|`|,
 		q|{|,		q(|),
 		q|}|,		q|~|,
+		q|0|,		q|1|,
+		join( q|\227\128\128|,
+			q|\229\143\164\230\177\160\227\130\132|,
+			q|\232\155\153\233\163\155\232\190\188\227\130\128|,
+			q|\230\176\180\227\129\174\233\159\179| )
 		) {
 		my $string = "$name.	TXT	$testcase";
 		my $expect = new Net::DNS::RR($string)->string; # test for consistent parsing
