@@ -463,7 +463,7 @@ sub _getline {				## get line from current source
 					s/\\;/\\059/g;		# disguise escaped semicolon
 					substr( $_, 0, 0 ) = pop @token || '';	  # splice multi-line token
 					push @token, grep defined && length, split /$LEX_REGEX/o;
-					last if grep $_ eq ')', @token;
+					last if $token[$#token] eq ')';
 				}
 				$_ = join ' ', @token;		# reconstitute RR string
 			}

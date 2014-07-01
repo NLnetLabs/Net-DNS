@@ -3,6 +3,18 @@ $Id$                       -*-text-*-
 
 **** 0.78 [unreleased]
 
+Fix rt.cpan.org #96814
+
+	Trailing comments not stripped in /etc/resolv.conf
+
+Fix rt.cpan.org #96812
+
+	Net::DNS::Resolver->new() hangs if nameserver :: exists
+
+Fix rt.cpan.org #96755
+
+	RFC 3597 (hex) parsing mistake
+
 Fix rt.cpan.org #96708
 
 	TXT "0" argument wrongly terminates formatting loop

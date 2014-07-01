@@ -117,6 +117,7 @@ sub decode {
 	my $offset = 0;
 	my $self;
 	eval {
+		local $SIG{__WARN__} = sub { die @_ };
 		die 'corrupt wire-format data' if length($$data) < HEADER_LENGTH;
 
 		# header section

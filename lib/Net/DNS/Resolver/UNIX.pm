@@ -27,24 +27,18 @@ push( @config_path, '.' );
 
 
 sub init {
-	my ($class) = @_;
+	my $self = shift->defaults;
 
-	$class->read_config_file($resolv_conf) if -f $resolv_conf && -r _;
+	$self->read_config_file($resolv_conf) if -f $resolv_conf && -r _;
+	$self->$_( map /^(.+)$/ ? $1 : (), $self->$_ )		# untaint config values
+			for (qw(nameservers domain searchlist));
 
 	foreach my $dir (@config_path) {
 		my $file = "$dir/$dotfile";
-		$class->read_config_file($file) if -f $file && -r _ && -o _;
+		$self->read_config_file($file) if -f $file && -r _ && -o _;
 	}
 
-	$class->read_env;
-
-	my $defaults = $class->defaults;
-
-	if ( !$defaults->{domain} && @{$defaults->{searchlist}} ) {
-		( $defaults->{domain} ) = @{$defaults->{searchlist}};
-	} elsif ( !@{$defaults->{searchlist}} && $defaults->{domain} ) {
-		$defaults->{searchlist} = [$defaults->{domain}];
-	}
+	$self->read_env;
 }
 
 

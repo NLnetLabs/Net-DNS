@@ -180,7 +180,7 @@ sub string {
 	my @s = map split( '', $_ ), @$self;			# escape non-printable
 	my $string = _decode_utf8( join '', map $escape{$_}, @s );
 
-	return $string unless $string =~ /^$|[ \t\n\$"'();@]/;	# unquoted contiguous
+	return $string unless $string =~ /^$|[ \t\n\$"();@]/;	# unquoted contiguous
 
 	join '', '"', $string, '"';				# quoted string
 }

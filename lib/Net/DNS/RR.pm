@@ -60,7 +60,10 @@ you will get an error message and execution will be terminated.
 sub new {
 	return &_new_from_rdata if COMPATIBLE && ref $_[1];	# resolve new() usage conflict
 
-	return eval { scalar @_ > 2 ? &_new_hash : &_new_string; } || do {
+	return eval {
+		local $SIG{__WARN__} = sub { die @_ };
+		scalar @_ > 2 ? &_new_hash : &_new_string;
+	} or do {
 		my $error = $@	  || 'eval{} aborted without setting $@' . "\n";
 		my $class = shift || __PACKAGE__;
 		my @parse = split /\s+/, shift || '';
