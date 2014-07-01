@@ -162,8 +162,6 @@ sub decode {
 		}
 
 		return $self;
-	} or do {
-		die 'eval{} aborted without setting $@, contrary to Perl specification' unless $@;
 	};
 
 	if ( $debug && $self ) {

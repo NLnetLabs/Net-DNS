@@ -63,12 +63,11 @@ sub new {
 	return eval {
 		local $SIG{__WARN__} = sub { die @_ };
 		scalar @_ > 2 ? &_new_hash : &_new_string;
-	} or do {
-		my $error = $@	  || 'eval{} aborted without setting $@' . "\n";
+	} || do {
 		my $class = shift || __PACKAGE__;
 		my @parse = split /\s+/, shift || '';
-		croak join ' ', "${error}in new $class(", substr( "@parse @_", 0, 50 ), '... )';
-			}
+		croak join ' ', "$@in new $class(", substr( "@parse @_", 0, 50 ), '... )';
+	};
 }
 
 

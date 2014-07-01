@@ -37,14 +37,6 @@ sub init {
 	}
 
 	$class->read_env;
-
-	my $defaults = $class->defaults;
-
-	if ( !$defaults->{domain} && @{$defaults->{searchlist}} ) {
-		$defaults->{domain} = $defaults->{searchlist}[0];
-	} elsif ( !@{$defaults->{searchlist}} && $defaults->{domain} ) {
-		$defaults->{searchlist} = [$defaults->{domain}];
-	}
 }
 
 

@@ -112,16 +112,6 @@ sub init {
 
 
 	$class->read_env;
-
-
-	if ( !$defaults->{domain} && @{$defaults->{searchlist}} ) {
-		$defaults->{domain} = $defaults->{searchlist}[0];
-	} elsif ( !@{$defaults->{searchlist}} && $defaults->{domain} ) {
-		$defaults->{searchlist} = [$defaults->{domain}];
-	}
-
-	print Dumper $defaults if $debug;
-
 }
 
 1;
