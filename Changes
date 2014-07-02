@@ -17,7 +17,7 @@ Fix rt.cpan.org #96755
 
 Fix rt.cpan.org #96708
 
-	TXT "0" argument wrongly terminates formatting loop
+	String treated as boolean in TXT
 
 Fix rt.cpan.org #96608
 
