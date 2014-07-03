@@ -247,8 +247,7 @@ EOF
 
 
 SKIP: {				## Non-ASCII zone content
-	skip( 'Unicode/UTF-8 not supported', 3 ) unless UTF8;
-	skip( 'Non-ASCII file encoding not supported', 3 ) if eval{ $] < 5.010 };
+	skip( 'Unicode/UTF-8 not supported', 4 ) unless UTF8;
 
 	my $greek = pack 'C*', 103, 114, 9, 84, 88, 84, 9, 229, 224, 241, 231, 234, 225, 10;
 	my $file1 = source($greek);
