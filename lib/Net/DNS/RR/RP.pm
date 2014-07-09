@@ -45,7 +45,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $mbx = $self->{mbox} || return '';
+	my $mbx = $self->{mbox}	    || return '';
 	my $txt = $self->{txtdname} || return '';
 	join ' ', $mbx->string, $txt->string;
 }
@@ -54,7 +54,8 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(mbox txtdname);
+	$self->mbox(shift);
+	$self->txtdname(shift);
 }
 
 
@@ -101,23 +102,22 @@ other unpredictable behaviour.
     $mbox = $rr->mbox;
     $rr->mbox( $mbox );
 
-A domain name which specifies the mailbox for the person
-responsible for this domain.  Its format in master files uses the
-DNS convention for mailbox encoding, identical to that used for
-the RNAME mailbox field in the SOA RR.  The root domain name (just
-".") may be specified to indicate that no mailbox is available.
+A domain name which specifies the mailbox for the person responsible for
+this domain. The format in master files uses the DNS encoding convention
+for mailboxes, identical to that used for the RNAME mailbox field in the
+SOA RR. The root domain name (just ".") may be specified to indicate that
+no mailbox is available.
 
 =head2 txtdname
 
     $txtdname = $rr->txtdname;
     $rr->txtdname( $txtdname );
 
-A domain name identifying TXT RRs.  A subsequent
-query can be performed to retrieve the associated TXT records.
-This provides a level of indirection so that the entity can be
-referred to from multiple places in the DNS.  The root domain
-name (just ".") may be specified to indicate that no associated
-TXT RR exists.
+A domain name identifying TXT RRs. A subsequent query can be performed to
+retrieve the associated TXT records. This provides a level of indirection
+so that the entity can be referred to from multiple places in the DNS. The
+root domain name (just ".") may be specified to indicate that there is no
+associated TXT RR.
 
 
 =head1 COPYRIGHT

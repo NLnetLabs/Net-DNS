@@ -18,8 +18,8 @@ Net::DNS::RR::OPT - DNS OPT resource record
 
 
 use integer;
-use Carp;
 
+use Carp;
 use Net::DNS::Parameters;
 
 use constant CLASS_TTL_RDLENGTH => length pack 'n N n', (0) x 3;
@@ -36,6 +36,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $index = $offset - CLASS_TTL_RDLENGTH;		# OPT redefines class and TTL fields
 	@{$self}{qw(size rcode version flags)} = unpack "\@$index n C2 n", $$data;
 	@{$self}{rcode} = @{$self}{rcode} << 4;
+	delete @{$self}{qw(class ttl)};
 
 	while ( $offset <= $limit - 4 ) {
 		my ( $code, $length ) = unpack "\@$offset nn", $$data;
@@ -71,13 +72,6 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	croak 'zone file representation not defined for OPT' if shift;
-}
-
-
-sub defaults() {			## specify RR attribute default values
-	my $self = shift;
-
-	delete $self->{class};
 }
 
 
@@ -245,12 +239,11 @@ __END__
 
 EDNS OPT pseudo resource record.
 
-The OPT record supports EDNS protocol extensions and is not intended
-to be created, accessed or modified directly by user applications.
+The OPT record supports EDNS protocol extensions and is not intended to be
+created, accessed or modified directly by user applications.
 
-All access to EDNS features is performed indirectly by operations on
-the packet header.  The underlying mechanism is entirely hidden from
-the user.
+All access to EDNS features is performed indirectly by operations on the
+packet header. The underlying mechanism is entirely hidden from the user.
 
 =head1 METHODS
 
@@ -282,9 +275,9 @@ reassembled in the network stack of the originating host.
 	$extended_rcode	  = $packet->header->rcode;
 	$incomplete_rcode = $packet->edns->rcode;
 
-The 12 bit extended RCODE. The most significant 8 bits reside in
-the OPT record.  The least significant 4 bits can only be obtained
-from the packet header.
+The 12 bit extended RCODE. The most significant 8 bits reside in the OPT
+record. The least significant 4 bits can only be obtained from the packet
+header.
 
 =head2 flags
 

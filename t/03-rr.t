@@ -119,7 +119,7 @@ BEGIN {
 	my $expect  = $A->string;
 	is( $rr->string, $expect, "encode/decode $example" );
 
-	isa_ok( $rr, 'Net::DNS::RR::A', 'check decoded object' );
+	is( ref($rr), 'Net::DNS::RR::A', 'type of decoded object' );
 
 	my $uncompressed = new Net::DNS::Packet('example.net');
 	$uncompressed->push( 'answer', $A );

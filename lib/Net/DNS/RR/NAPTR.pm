@@ -40,11 +40,11 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	my ( $offset, @opaque ) = @_;
 
 	return '' unless $self->{replacement};
-	my $rdata .= pack 'n2', @{$self}{qw(order preference)};
-	$rdata	  .= $self->{flags}->encode;
-	$rdata	  .= $self->{service}->encode;
-	$rdata	  .= $self->{regexp}->encode;
-	$rdata	  .= $self->{replacement}->encode( $offset + length($rdata), @opaque );
+	my $rdata = pack 'n2', @{$self}{qw(order preference)};
+	$rdata .= $self->{flags}->encode;
+	$rdata .= $self->{service}->encode;
+	$rdata .= $self->{regexp}->encode;
+	$rdata .= $self->{replacement}->encode( $offset + length($rdata), @opaque );
 }
 
 

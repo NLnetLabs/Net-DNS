@@ -180,8 +180,9 @@ sub string {
 	my @s = map split( '', $_ ), @$self;			# escape non-printable
 	my $string = _decode_utf8( join '', map $escape{$_}, @s );
 
-	return $string unless $string =~ /^$|[ \t\n\$"();@]/;	# unquoted contiguous
+	return $string unless $string =~ /^$|[ \t\n\r\f]/;	# unquoted contiguous
 
+	$string =~ s/\\([$();@])/$1/g;				# nothing special within quotes
 	join '', '"', $string, '"';				# quoted string
 }
 
@@ -245,7 +246,7 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 		$table{pack( 'C', $_ )} = pack 'C', $_;
 	}
 
-	foreach ( 34, 92 ) {					# escape character
+	foreach ( 34, 36, 40, 41, 59, 64, 92 ) {		# escape character
 		$table{pack( 'C', $_ )} = pack 'C2', 92, $_;
 	}
 

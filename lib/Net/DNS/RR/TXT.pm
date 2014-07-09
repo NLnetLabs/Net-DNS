@@ -20,6 +20,7 @@ Net::DNS::RR::TXT - DNS TXT resource record
 
 
 use integer;
+
 use Carp;
 use Net::DNS::Text;
 
@@ -92,6 +93,7 @@ sub txtdata {
 
 sub char_str_list { return (&txtdata); }
 
+
 sub rdatastr {			## SpamAssassin workaround, per CPAN RT#81760
 	my $txtdata = shift->{txtdata} || [];
 	join ' ', map $_->quoted_string, @$txtdata;
@@ -102,6 +104,7 @@ package Net::DNS::Text;
 sub quoted_string {
 	my $string = shift->string;
 	return $string if $string =~ /^"/;			# string already quoted
+	$string =~ s/\\([$();@])/$1/g;				# nothing special within quotes
 	join '', '"', $string, '"';				# quote previously unquoted string
 }
 

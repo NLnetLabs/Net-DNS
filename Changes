@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 0.78 [unreleased]
 
+Fix rt.cpan.org #97036
+
+	Nameserver identification on Cygwin
+
 Fix rt.cpan.org #96814
 
 	Trailing comments not stripped in /etc/resolv.conf
