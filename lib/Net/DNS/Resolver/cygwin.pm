@@ -19,7 +19,7 @@ use base qw(Net::DNS::Resolver::Base);
 
 sub getregkey {
 	my $key	  = $_[0] . $_[1];
-	my $value = '';
+	my $value;
 
 	local *LM;
 
@@ -29,7 +29,7 @@ sub getregkey {
 		close(LM);
 	}
 
-	return $value;
+	return $value || '';
 }
 
 
@@ -51,7 +51,7 @@ sub init {
 	# Best effort to find a useful domain name for the current host
 	# if domain ends up blank, we're probably (?) not connected anywhere
 	# a DNS server is interesting either...
-	my $domain = getregkey( $root, 'Domain' ) || getregkey( $root, 'DhcpDomain' ) || '';
+	my $domain = getregkey( $root, 'Domain' ) || getregkey( $root, 'DhcpDomain' );
 
 	# If nothing else, the searchlist should probably contain our own domain
 	# also see below for domain name devolution if so configured
@@ -59,8 +59,15 @@ sub init {
 	my $searchlist = "$domain ";
 	$searchlist .= getregkey( $root, 'SearchList' );
 
+
 	# This is (probably) adequate on NT4
-	my @nt4nameservers = split getregkey( $root, 'NameServer' ) || getregkey( $root, 'DhcpNameServer' );
+	my @nt4nameservers;
+	foreach ( grep length, getregkey( $root, 'NameServer' ), getregkey( $root, 'DhcpNameServer' ) ) {
+		push @nt4nameservers, split;
+		last;
+	}
+
+
 	my @nameservers;
 
 	#
@@ -72,15 +79,15 @@ sub init {
 	# drop any duplicates later
 	my $dnsadapters = $root . 'DNSRegisteredAdapters/';
 	if ( opendir( LM, $dnsadapters ) ) {
-		my @adapters = grep( $_ ne "." && $_ ne "..", readdir(LM) );
+		my @adapters = grep !/^\.\.?$/, readdir(LM);
 		closedir(LM);
 		foreach my $adapter (@adapters) {
 			my $regadapter = $dnsadapters . $adapter . '/';
 			if ( -e $regadapter ) {
-				my $ns = getregkey( $regadapter, 'DNSServerAddresses' ) || '';
-				while ( length($ns) >= 4 ) {
-					my $addr = join( '.', unpack( "C4", substr( $ns, 0, 4, "" ) ) );
-					push @nameservers, $addr;
+				my $ns = getregkey( $regadapter, 'DNSServerAddresses' );
+				until ( length($ns) < 4 ) {
+					push @nameservers, join '.', unpack( 'C4', $ns );
+					substr( $ns, 0, 4 ) = '';
 				}
 			}
 		}
@@ -88,7 +95,7 @@ sub init {
 
 	my $interfaces = $root . 'Interfaces/';
 	if ( opendir( LM, $interfaces ) ) {
-		my @ifacelist = grep !/^\./, readdir(LM);
+		my @ifacelist = grep !/^\.\.?$/, readdir(LM);
 		closedir(LM);
 		foreach my $iface (@ifacelist) {
 			my $regiface = $interfaces . $iface . '/';
@@ -101,7 +108,7 @@ sub init {
 			next if $ip eq '0.0.0.0';
 
 			foreach (
-				grep defined,
+				grep length,
 				getregkey( $regiface, 'NameServer' ),
 				getregkey( $regiface, 'DhcpNameServer' )
 				) {
