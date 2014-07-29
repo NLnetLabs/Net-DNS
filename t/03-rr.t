@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 52;
+use Test::More tests => 47;
 
 
 BEGIN {
@@ -63,11 +63,6 @@ BEGIN {
 		q(example.com		IN	TXT	txt-data),
 		q(example.com			TXT	txt-data),
 		q(example.com	IN	0	TXT	txt-data),
-		q(example.com	0	IN	TXT	'txt-data'	; 'quoted'),
-		q(example.com	0		TXT	'txt-data'),
-		q(example.com		IN	TXT	'txt-data'),
-		q(example.com			TXT	'txt-data'),
-		q(example.com	IN	0	TXT	'txt-data'),
 		q(example.com	0	IN	TXT	"txt-data"	; "quoted"),
 		q(example.com	0		TXT	"txt-data"),
 		q(example.com		IN	TXT	"txt-data"),

@@ -36,19 +36,17 @@ BEGIN {
 }
 
 
+sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
+
+
 sub init {
+	my $defaults = shift->defaults;
 
 	my $debug = 0;
-	my ($class) = @_;
-
-	my $defaults = $class->defaults;
-
 
 	my $FIXED_INFO = {};
 
-	my $ret = Win32::IPHelper::GetNetworkParams($FIXED_INFO);
-
-	if ( $ret == 0 ) {
+	unless ( my $ret = Win32::IPHelper::GetNetworkParams($FIXED_INFO) ) {
 		print Dumper $FIXED_INFO if $debug;
 	} else {
 		Carp::croak "GetNetworkParams() error %u: %s\n", $ret, Win32::FormatMessage($ret);
@@ -56,12 +54,10 @@ sub init {
 
 
 	my @nameservers = map { $_->{IpAddress} } @{$FIXED_INFO->{DnsServersList}};
-	$defaults->nameservers(@nameservers) if scalar @nameservers;
+	$defaults->nameservers( _untaint @nameservers );
 
-	my $domain = $FIXED_INFO->{DomainName} || '';
-	my $searchlist = $domain;
-	$defaults->{domain} = $domain if $domain;
-
+	my @searchlist = _untaint lc $FIXED_INFO->{DomainName};
+	$defaults->domain(@searchlist);
 
 	my $usedevolution = 0;
 
@@ -81,38 +77,36 @@ sub init {
 		}
 
 		if ( defined $reg_tcpip ) {
-			$searchlist .= ',' if $searchlist;	# $domain already in there
-			$searchlist .= ( $reg_tcpip->GetValue('SearchList') || "" );
+			my $searchlist = lc $reg_tcpip->GetValue('SearchList') || '';
+			push @searchlist, split m/[\s,]+/, $searchlist;
+
 			my ( $value, $type ) = $reg_tcpip->GetValue('UseDomainNameDevolution');
 			$usedevolution = defined $value && $type == REG_DWORD ? hex $value : 0;
 		}
 	}
 
 
-	if ($searchlist) {
+	# fix devolution if configured, and simultaneously
+	# make sure no dups (but keep the order)
+	my @a;
+	my %h;
+	foreach my $entry (@searchlist) {
+		push( @a, $entry ) unless $h{$entry}++;
 
-		# fix devolution if configured, and simultaneously
-		# make sure no dups (but keep the order)
-		my @a;
-		my %h;
-		foreach my $entry ( split( m/[\s,]+/, lc $searchlist ) ) {
-			push( @a, $entry ) unless $h{$entry}++;
+		if ($usedevolution) {
 
-			if ($usedevolution) {
-
-				# as long there are more than two pieces, cut
-				while ( $entry =~ m#\..+\.# ) {
-					$entry =~ s#^[^\.]+\.(.+)$#$1#;
-					push( @a, $entry ) unless $h{$entry}++;
-				}
+			# as long there are more than two pieces, cut
+			while ( $entry =~ m#\..+\.# ) {
+				$entry =~ s#^[^\.]+\.(.+)$#$1#;
+				push( @a, $entry ) unless $h{$entry}++;
 			}
 		}
-		$defaults->{searchlist} = [@a];
 	}
+	$defaults->searchlist( _untaint @a );
 
-
-	$class->read_env;
+	$defaults->read_env;
 }
+
 
 1;
 __END__

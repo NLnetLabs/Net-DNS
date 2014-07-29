@@ -35,25 +35,25 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	return '' unless $self->{exchange};
+	my $exchange = $self->{exchange} || return '';
 	my $rdata = pack 'n', $self->preference;
-	$rdata .= $self->{exchange}->encode( $offset + length($rdata), @opaque );
+	$rdata .= $exchange->encode( $offset + length($rdata), @opaque );
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{exchange};
-	join ' ', $self->preference, $self->{exchange}->string;
+	my $exchange = $self->{exchange} || return '';
+	join ' ', $self->preference, $exchange->string;
 }
 
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->preference( shift || return );
-	$self->exchange( shift	 || return );
+	$self->preference(shift) if @_;
+	$self->exchange( shift || return );
 }
 
 

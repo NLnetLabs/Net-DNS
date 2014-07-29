@@ -65,8 +65,8 @@ sub new {
 		scalar @_ > 2 ? &_new_hash : &_new_string;
 	} || do {
 		my $class = shift || __PACKAGE__;
-		my @parse = split /\s+/, shift || '';
-		croak join ' ', "$@in new $class(", substr( "@parse @_", 0, 50 ), '... )';
+		my @param = map { !defined($_) ? 'undef': split; } @_;
+		croak join ' ', "$@in new $class(", substr( "@param", 0, 50 ), '... )';
 	};
 }
 
@@ -95,7 +95,7 @@ The trailing dot (.) is optional.
 
 =cut
 
-my $PARSE_REGEX = q/("[^"]*"|'[^']*')|;[^\n]*|[ \t\n\r\f()]/;
+my $PARSE_REGEX = q/("[^"]*")|;[^\n]*|[ \t\n\r\f()]/;
 
 sub _new_string {
 	my $base;
@@ -105,8 +105,7 @@ sub _new_string {
 
 	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
 	s/\\\\/\\092/g;						# disguise escaped escape
-	s/\\"/\\034/g;						# disguise escaped double quote
-	s/\\'/\\039/g;						# disguise escaped single quote
+	s/\\"/\\034/g;						# disguise escaped quote
 	s/\\\(/\\040/g;						# disguise escaped bracket
 	s/\\\)/\\041/g;						# disguise escaped bracket
 	s/\\;/\\059/g;						# disguise escaped semicolon
@@ -354,6 +353,47 @@ sub canonical {
 }
 
 
+=head2 print
+
+    $rr->print;
+
+Prints the record to the standard output.  Calls the B<string>
+method to get the RR string representation.
+
+=cut
+
+sub print {
+	print shift->string, "\n";
+}
+
+
+=head2 string
+
+    print $rr->string, "\n";
+
+Returns a string representation of the RR using the zone file format
+described in RFC1035.  All domain names are fully qualified with
+trailing dot.  This differs from RR attribute methods, which omit
+the trailing dot.
+
+=cut
+
+sub string {
+	my $self = shift;
+
+	my $name = $self->name if COMPATIBLE;
+	my @core = ( $self->{owner}->string, $self->ttl, $self->class, $self->type );
+
+	my $rdata = $self->rdstring;
+
+	return join "\t", @core, '; no data' unless length $rdata;
+
+	chomp $rdata;
+	$rdata =~ s/\n+/\n\t/g;
+	return join "\t", @core, $rdata;
+}
+
+
 =head2 owner name
 
     $owner = $rr->name;
@@ -467,47 +507,6 @@ sub rdata {
 }
 
 
-=head2 print
-
-    $rr->print;
-
-Prints the record to the standard output.  Calls the B<string>
-method to get the RR string representation.
-
-=cut
-
-sub print {
-	print shift->string, "\n";
-}
-
-
-=head2 string
-
-    print $rr->string, "\n";
-
-Returns a string representation of the RR using the zone file format
-described in RFC1035.  All domain names are fully qualified with
-trailing dot.  This differs from RR attribute methods, which omit
-the trailing dot.
-
-=cut
-
-sub string {
-	my $self = shift;
-
-	my $name = $self->name if COMPATIBLE;
-	my @core = ( $self->{owner}->string, $self->ttl, $self->class, $self->type );
-
-	my $rdata = $self->rdstring;
-
-	return join "\t", @core, '; no data' unless length $rdata;
-
-	chomp $rdata;
-	$rdata =~ s/\n+/\n\t/g;
-	return join "\t", @core, $rdata;
-}
-
-
 =head2 rdstring
 
     $rdstring = $rr->rdstring;
@@ -553,16 +552,15 @@ Returns a token list representation of the RR zone file string.
 =cut
 
 sub token {
-	my $self = shift;
+	local $_ = shift->string;
 
-	my @core = ( $self->{owner}->string, $self->ttl, $self->class, $self->type );
-	local $_ = $self->rdstring;
+	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
 	s/\\\\/\\092/g;						# disguise escaped escape
-	s/\\"/\\034/g;						# disguise escaped double quote
-	s/\\'/\\039/g;						# disguise escaped single quote
+	s/\\"/\\034/g;						# disguise escaped quote
+	s/\\\(/\\040/g;						# disguise escaped bracket
+	s/\\\)/\\041/g;						# disguise escaped bracket
 	s/\\;/\\059/g;						# disguise escaped semicolon
-	my @parse = grep defined && length, split /$PARSE_REGEX/o;
-	my @token = @core, grep !/^[()]$/, @parse;		# discard brackets
+	my @token = grep defined && length, split /$PARSE_REGEX/o;
 }
 
 

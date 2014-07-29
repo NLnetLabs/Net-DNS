@@ -1,6 +1,18 @@
 $Id$                       -*-text-*-
 
 
+**** 0.79 [unreleased]
+
+Fix rt.cpan.org #97502
+
+	Net::DNS::Resolver->retrans does not accept a value of 1 (uses 2 instead)
+
+Fix rt.cpan.org #81760
+
+	Reverted workaround for TXT issue preventing propagation of
+	rule updates for SpamAssassin versions earlier than 3.4.0
+
+
 **** 0.78 Jul 10, 2014
 
 Fix rt.cpan.org #97036

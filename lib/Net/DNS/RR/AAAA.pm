@@ -71,7 +71,7 @@ sub address {
 
 	return $self->address_long unless scalar @_;
 
-	my $argument = shift;
+	my $argument = shift || '';
 	my @parse = split /:/, "0$argument";
 
 	if ( (@parse)[$#parse] =~ /\./ ) {			# embedded IPv4

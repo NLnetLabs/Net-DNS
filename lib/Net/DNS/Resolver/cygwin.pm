@@ -33,9 +33,11 @@ sub getregkey {
 }
 
 
+sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
+
+
 sub init {
-	my ($class) = @_;
-	my $defaults = $class->defaults;
+	my $defaults = shift->defaults;
 
 	local *LM;
 
@@ -144,8 +146,13 @@ sub init {
 		$defaults->searchlist(@a);
 	}
 
-	$class->read_env;
+	$defaults->domain( _untaint $default->domain );		# untaint config values
+	$defaults->searchlist( _untaint $default->searchlist );
+	$defaults->nameservers( _untaint $default->nameservers );
+
+	$defaults->read_env;
 }
+
 
 1;
 __END__

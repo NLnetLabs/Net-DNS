@@ -26,19 +26,24 @@ push( @config_path, $ENV{HOME} ) if exists $ENV{HOME};
 push( @config_path, '.' );
 
 
-sub init {
-	my $self = shift->defaults;
+sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
 
-	$self->read_config_file($resolv_conf) if -f $resolv_conf && -r _;
-	$self->$_( map /^(.+)$/ ? $1 : (), $self->$_ )		# untaint config values
-			for (qw(nameservers domain searchlist));
+
+sub init {
+	my $defaults = shift->defaults;
+
+	$defaults->read_config_file($resolv_conf) if -f $resolv_conf && -r _;
+
+	$defaults->domain( _untaint $defaults->domain );	# untaint config values
+	$defaults->searchlist( _untaint $defaults->searchlist );
+	$defaults->nameservers( _untaint $defaults->nameservers );
 
 	foreach my $dir (@config_path) {
 		my $file = "$dir/$dotfile";
-		$self->read_config_file($file) if -f $file && -r _ && -o _;
+		$defaults->read_config_file($file) if -f $file && -r _ && -o _;
 	}
 
-	$self->read_env;
+	$defaults->read_env;
 }
 
 

@@ -148,6 +148,8 @@ my %public_attr = map { $_ => 1 } qw(
 
 my $initial;
 
+sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
+
 sub new {
 	my $class = shift;
 	my %args = @_ unless scalar(@_) % 2;
@@ -159,8 +161,9 @@ sub new {
 	if ( my $file = $args{'config_file'} ) {
 		$self = bless {%$initial}, $class;
 		$self->read_config_file($file);			# user specified config
-		$self->$_( map /^(.+)$/ ? $1 : (), $self->$_ )	# untaint config values
-				for (qw(nameservers domain searchlist));
+		$self->domain( _untaint $self->domain );	# untaint config values
+		$self->searchlist( _untaint $self->searchlist );
+		$self->nameservers( _untaint $self->nameservers );
 	} else {
 		$class->init() unless $init;			# system-wide config
 		$self = bless {%$base}, $class;
@@ -184,8 +187,9 @@ sub new {
 
 	return $self if $init;
 								# define default configuration
-	$self->searchlist( $self->domain || () ) unless @{$self->{searchlist}};
-	$self->domain( $self->searchlist ) unless $self->{domain};
+	my @searchlist = $self->searchlist;
+	$self->searchlist( $self->domain || () ) unless scalar @searchlist;
+	$self->domain( @searchlist ) unless $self->domain;
 	%$base = %$self;
 	return $self;
 }
@@ -235,7 +239,6 @@ sub read_config_file {
 	local *FILE;
 
 	open( FILE, $file ) or croak "Could not open $file: $!";
-	local $/ = "\n";
 	local $_;
 
 	while (<FILE>) {
@@ -785,12 +788,10 @@ NSADDRESS: foreach my $ns_address ( $self->nameservers() ) {
 	$sel->add( $sock[AF_INET6()] ) if $has_inet6 && defined( $sock[AF_INET6()] ) && !$self->force_v4();
 
 	# Perform each round of retries.
-	for (	my $i = 0 ;
-		$i < $self->{'retry'} ;
-		++$i, $retrans *= 2, $timeout = int( $retrans / ( @ns || 1 ) )
-		) {
+	for ( my $i = 0 ; $i < $self->{'retry'} ; ++$i, $retrans *= 2 ) {
 
-		$timeout = 1 if ( $timeout < 1 );
+		$timeout = int( $retrans / ( scalar @ns || 1 ) );
+		$timeout = 1 if $timeout < 1;
 
 		# Try each nameserver.
 NAMESERVER: foreach my $ns (@ns) {
@@ -840,9 +841,9 @@ NAMESERVER: foreach my $ns (@ns) {
 				next;
 			}
 
-			# See ticket 11931 but this works not quite yet
-			my $oldpacket_timeout = time + $timeout;
-			until ( $oldpacket_timeout && ( $oldpacket_timeout < time() ) ) {
+			# See tickets #11931 and #97502
+			my $time_limit = time + $timeout;
+			while ( time() < $time_limit ) {
 				my @ready = $sel->can_read($timeout);
 		SELECTOR: foreach my $ready (@ready) {
 					my $buf = '';

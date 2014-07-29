@@ -447,7 +447,7 @@ sub _getline {				## get line from current source
 		next unless /\S/;				# discard blank line
 		next if /^\s*;/;				# discard comment line
 
-		if (/\(/) {					# concatenate multi-line RR
+		if (/["(]/) {					# concatenate multi-line RR
 			s/\\\\/\\092/g;				# disguise escaped escape
 			s/\\"/\\034/g;				# disguise escaped quote
 			s/\\\(/\\040/g;				# disguise escaped bracket
@@ -464,6 +464,19 @@ sub _getline {				## get line from current source
 					substr( $_, 0, 0 ) = pop @token || '';	  # splice multi-line token
 					push @token, grep defined && length, split /$LEX_REGEX/o;
 					last if $token[$#token] eq ')';
+				}
+				$_ = join ' ', @token;		# reconstitute RR string
+
+			} elsif ( $token[$#token] =~ /^"[^"]+$/ ) {
+				while (<$fh>) {
+					s/\\\\/\\092/g;		# disguise escaped escape
+					s/\\"/\\034/g;		# disguise escaped quote
+					s/\\\(/\\040/g;		# disguise escaped bracket
+					s/\\\)/\\041/g;		# disguise escaped bracket
+					s/\\;/\\059/g;		# disguise escaped semicolon
+					substr( $_, 0, 0 ) = pop @token || '';	  # splice multi-line string
+					push @token, grep defined && length, split /$LEX_REGEX/o;
+					last unless $token[$#token] =~ /^"[^"]+$/;
 				}
 				$_ = join ' ', @token;		# reconstitute RR string
 			}
