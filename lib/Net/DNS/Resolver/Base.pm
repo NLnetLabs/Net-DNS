@@ -1025,6 +1025,9 @@ sub bgsend {
 			$self->errorstring("Send: [$ns_address]:$dstport  $!");
 			print ";; ", $self->errorstring(), "\n" if $self->{'debug'};
 		}
+
+		# handle failure to detect taint inside socket->send()
+		die 'Insecure dependency while running with -T switch' if tainted($dst_sockaddr);
 		return $socket;
 	}
 	$self->errorstring("Could not find a socket to send on");
