@@ -22,6 +22,10 @@ use constant DNSSEC => eval { require Net::DNS::RR::DS; } || 0;
 use constant INT16SZ  => 2;
 use constant PACKETSZ => 512;
 
+use constant UTIL => eval { require Scalar::Util; } || 0;
+sub tainted { return UTIL ? Scalar::Util::tainted(shift) : undef }
+sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
+
 
 #
 #  A few implementation notes wrt IPv6 support.
@@ -148,8 +152,6 @@ my %public_attr = map { $_ => 1 } qw(
 
 my $initial;
 
-sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
-
 sub new {
 	my $class = shift;
 	my %args = @_ unless scalar(@_) % 2;
@@ -186,10 +188,10 @@ sub new {
 	}
 
 	return $self if $init;
-								# define default configuration
-	my @searchlist = $self->searchlist;
+
+	my @searchlist = $self->searchlist;			# define default configuration
 	$self->searchlist( $self->domain || () ) unless scalar @searchlist;
-	$self->domain( @searchlist ) unless $self->domain;
+	$self->domain(@searchlist) unless $self->domain;
 	%$base = %$self;
 	return $self;
 }
@@ -528,12 +530,11 @@ sub send_tcp {
 
 
 NAMESERVER: foreach my $ns (@ns) {
-
-		print ";; attempt to send_tcp [$ns]:$dstport  (src port = $srcport)\n"
-				if $self->{'debug'};
 		my $sock;
 		my $sock_key = "$ns:$dstport";
-		my ( $host, $port );
+
+		print ";; send_tcp [$ns]:$dstport  (src port = $srcport)\n" if $self->{'debug'};
+
 		if ( $self->persistent_tcp && $self->{'sockets'}[AF_UNSPEC]{$sock_key} ) {
 			$sock = $self->{'sockets'}[AF_UNSPEC]{$sock_key};
 			print ";; using persistent socket\n"
@@ -679,7 +680,7 @@ sub send_udp {
 
 		my $srcaddr6 = $srcaddr eq '0.0.0.0' ? '::' : $srcaddr;
 
-		print ";; setting up an AF_INET6 UDP socket with srcaddr [$srcaddr6] ... "
+		print ";; setting up AF_INET6 UDP socket with srcaddr [$srcaddr6] ... "
 				if $self->{'debug'};
 
 		# IO::Socket carps on errors if Perl's -w flag is turned on.
@@ -699,10 +700,10 @@ sub send_udp {
 	}
 
 	# Always set up an AF_INET socket.
-	# It will be used if the address family of for the endpoint is V4.
+	# It will be used if the address family of the endpoint is V4.
 
 	unless ( defined( $sock[AF_INET] ) ) {
-		print ";; setting up an AF_INET	 UDP socket with srcaddr [$srcaddr] ... "
+		print ";; setting up AF_INET  UDP socket with srcaddr [$srcaddr] ... "
 				if $self->{'debug'};
 
 		#my $old_wflag = $^W;
@@ -740,8 +741,8 @@ NSADDRESS: foreach my $ns_address ( $self->nameservers() ) {
 
 		# The logic below determines the $dst_sockaddr.
 		# If getaddrinfo is available that is used for both INET4 and INET6
-		# If getaddrinfo is not avialable (Socket6 failed to load) we revert
-		# to the 'classic mechanism
+		# If getaddrinfo is not available (Socket6 failed to load) we revert
+		# to the 'classic' mechanism
 		if ( $has_inet6 && !$self->force_v4() ) {
 
 			# we can use getaddrinfo
@@ -795,7 +796,9 @@ NSADDRESS: foreach my $ns_address ( $self->nameservers() ) {
 
 		# Try each nameserver.
 NAMESERVER: foreach my $ns (@ns) {
-			next if defined $ns->[3];
+			my ( $nsname, $nsaddr, $nssockfamily, $err ) = @$ns;
+			next if defined $err;
+
 			if ($stop_time) {
 				my $now = time;
 				if ( $stop_time < $now ) {
@@ -806,9 +809,6 @@ NAMESERVER: foreach my $ns (@ns) {
 					$timeout = $stop_time - $now;
 				}
 			}
-			my $nsname	 = $ns->[0];
-			my $nsaddr	 = $ns->[1];
-			my $nssockfamily = $ns->[2];
 
 			# If we do not have a socket for the transport
 			# we are supposed to reach the namserver on we
@@ -830,16 +830,18 @@ NAMESERVER: foreach my $ns (@ns) {
 				next NAMESERVER;
 			}
 
-			print ";; send_udp [$nsname]:$dstport\n"
-					if $self->{'debug'};
+			print ";; send_udp [$nsname]:$dstport\n" if $self->{'debug'};
 
 			unless ( $sock[$nssockfamily]->send( $packet_data, 0, $nsaddr ) ) {
-				print ";; send error: $!\n" if $self->{'debug'};
-				$self->errorstring("Send error: $!");
+				my $err = $ns->[3] = $self->errorstring("Send error: $!");
+				print ";; $err\n" if $self->{'debug'};
 				$nmbrnsfailed++;
-				$ns->[3] = "Send error" . $self->errorstring();
 				next;
 			}
+
+			# handle failure to detect taint inside socket->send()
+			die 'Insecure dependency while running with -T switch' if tainted($nsaddr);
+
 
 			# See tickets #11931 and #97502
 			my $time_limit = time + $timeout;
