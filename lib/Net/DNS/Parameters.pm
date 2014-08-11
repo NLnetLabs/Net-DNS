@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2014-06-16)
+##	(last updated 2014-08-06)
 ##
 ################################################
 
@@ -175,14 +175,14 @@ use vars qw( %rcodebyname %rcodebyval );
 # Registry: DNS EDNS0 Option Codes (OPT)
 use vars qw( %ednsoptionbyname %ednsoptionbyval );
 %ednsoptionbyname = (
-	LLQ		     => 1,				# http://files.dns-sd.org/draft-sekar-dns-llq.txt
-	UL		     => 2,				# http://files.dns-sd.org/draft-sekar-dns-ul.txt
-	NSID		     => 3,				# RFC5001
-	DAU		     => 5,				# RFC6975
-	DHU		     => 6,				# RFC6975
-	N3U		     => 7,				# RFC6975
-	'EDNS-CLIENT-SUBNET' => 8,				# draft-vandergaast-edns-client-subnet
-	'EDNS-EXPIRE'	     => 9,				# RFC-andrews-dnsext-expire-04
+	LLQ		=> 1,					# http://files.dns-sd.org/draft-sekar-dns-llq.txt
+	UL		=> 2,					# http://files.dns-sd.org/draft-sekar-dns-ul.txt
+	NSID		=> 3,					# RFC5001
+	DAU		=> 5,					# RFC6975
+	DHU		=> 6,					# RFC6975
+	N3U		=> 7,					# RFC6975
+	'CLIENT-SUBNET' => 8,					# draft-vandergaast-edns-client-subnet
+	EXPIRE		=> 9,					# RFC7314
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
 %ednsoptionbyname = ( %ednsoptionbyname, map /\D/ ? lc($_) : $_, %ednsoptionbyname );

@@ -125,7 +125,8 @@ A random value is assigned if the argument value is undefined.
 sub id {
 	my $self = shift;
 	$$self->{id} = shift if scalar @_;
-	$$self->{id} ||= int rand(0xffff);
+	return $$self->{id} if defined $$self->{id};
+	$$self->{id} = int rand(0xffff);
 }
 
 

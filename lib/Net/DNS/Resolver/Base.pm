@@ -332,15 +332,15 @@ sub nameservers {
 
 	my ( @ipv4, @ipv6 );
 	foreach my $ns (@_) {
-		carp 'nameservers: invalid argument' unless $ns;
+		croak 'nameservers: invalid argument' unless $ns;
 		do { push @ipv6, $ns; next } if _ip_is_ipv6($ns);
 		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
 		my $defres = ref($self)->new(
 			udp_timeout => $self->udp_timeout,
 			tcp_timeout => $self->tcp_timeout,
-			debug	    => $self->{debug}
-			);
+			debug	    => $self->{debug} );
+		$defres->{cache} = $self->{cache} if $self->{cache};
 
 		my @names;
 		if ( $ns =~ /\./ ) {
@@ -921,8 +921,7 @@ NAMESERVER: foreach my $ns (@ns) {
 
 	if ( $sel->handles ) {
 
-		# If there are valid handles than we have either a timeout or
-		# a send error.
+		# If there are valid handles then we have either a timeout or a send error.
 		$self->errorstring('query timed out') unless ( $self->errorstring =~ /Send error:/ );
 	} else {
 		if ( $nmbrnsfailed < @ns ) {
