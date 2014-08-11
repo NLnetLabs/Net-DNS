@@ -77,8 +77,6 @@ use_ok('Net::DNS::Resolver::Recurse');
 
 	ok( $res->hints(@HINTS), "hints() set" );
 
-	ok( %{$res->{'hints'}}, 'sanity check worked' );
-
 	my $packet;
 
 	# Try a domain that is a CNAME
@@ -100,7 +98,7 @@ use_ok('Net::DNS::Resolver::Recurse');
 
 	$res->hints(@HINTS);
 
-	my $count;
+	my $count = 0;
 
 	$res->recursion_callback(
 		sub {
@@ -115,3 +113,5 @@ use_ok('Net::DNS::Resolver::Recurse');
 
 
 NonFatalEnd();
+
+exit;

@@ -163,11 +163,20 @@ sub new {
 	if ( my $file = $args{'config_file'} ) {
 		$self = bless {%$initial}, $class;
 		$self->read_config_file($file);			# user specified config
-		$self->domain( _untaint $self->domain );	# untaint config values
-		$self->searchlist( _untaint $self->searchlist );
 		$self->nameservers( _untaint $self->nameservers );
+		my @searchlist = _untaint $base->searchlist;
+		$base->searchlist( _untaint $base->domain || () ) unless @searchlist;
+		$base->domain(@searchlist) unless $base->domain;
+		%$base = %$self unless $init;			# define default configuration
+
+	} elsif ($init) {
+		$self = bless {%$base}, $class;
+
 	} else {
-		$class->init() unless $init;			# system-wide config
+		$class->init();					# define default configuration
+		my @searchlist = $base->searchlist;
+		$base->searchlist( $base->domain || () ) unless @searchlist;
+		$base->domain(@searchlist) unless $base->domain;
 		$self = bless {%$base}, $class;
 	}
 
@@ -187,12 +196,6 @@ sub new {
 		}
 	}
 
-	return $self if $init;
-
-	my @searchlist = $self->searchlist;			# define default configuration
-	$self->searchlist( $self->domain || () ) unless scalar @searchlist;
-	$self->domain(@searchlist) unless $self->domain;
-	%$base = %$self;
 	return $self;
 }
 
@@ -241,8 +244,9 @@ sub read_config_file {
 	local *FILE;
 
 	open( FILE, $file ) or croak "Could not open $file: $!";
-	local $_;
 
+	local $SIG{__WARN__} = sub { die @_ };
+	local $_;
 	while (<FILE>) {
 		s/[;#].*$//;					# strip comments
 
@@ -274,7 +278,7 @@ sub read_config_file {
 		};
 	}
 
-	close FILE || croak "Could not close $file: $!";
+	close(FILE) || croak "close $file: $!";
 
 	$config->nameservers(@ns);
 }
@@ -328,15 +332,15 @@ sub nameservers {
 
 	my ( @ipv4, @ipv6 );
 	foreach my $ns (@_) {
-		croak 'nameservers: invalid argument' unless $ns;
+		carp 'nameservers: invalid argument' unless $ns;
 		do { push @ipv6, $ns; next } if _ip_is_ipv6($ns);
 		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
-		my $defres = Net::DNS::Resolver->new(
+		my $defres = ref($self)->new(
 			udp_timeout => $self->udp_timeout,
-			tcp_timeout => $self->tcp_timeout
+			tcp_timeout => $self->tcp_timeout,
+			debug	    => $self->{debug}
 			);
-		$defres->{debug} = $self->{debug};
 
 		my @names;
 		if ( $ns =~ /\./ ) {
@@ -359,6 +363,7 @@ sub nameservers {
 
 		my %address = map { $_ => $_ } @address;	# tainted
 		my @unique = values %address;
+		carp "unresolvable name: $ns" unless @unique;
 		push @ipv4, grep _ip_is_ipv4($_), @unique;
 		push @ipv6, grep _ip_is_ipv6($_), @unique;
 	}

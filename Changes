@@ -3,6 +3,11 @@ $Id$                       -*-text-*-
 
 **** 0.79 [unreleased]
 
+Fix rt.cpan.org #97736
+
+	Net::DNS::Resolver->new mistakenly copies supplied arguments
+	into default configuration on first instantiation.
+
 Fix rt.cpan.org #97502
 
 	Net::DNS::Resolver->retrans does not accept a value of 1 (uses 2 instead)
