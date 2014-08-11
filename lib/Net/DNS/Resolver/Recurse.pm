@@ -11,6 +11,22 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 Net::DNS::Resolver::Recurse - Perform recursive DNS lookups
 
+
+=head1 SYNOPSIS
+
+    use Net::DNS::Resolver::Recurse;
+
+    $resolver = new Net::DNS::Resolver::Recurse();
+
+    $packet = $resolver->query ( 'www.example.com', 'A' );
+    $packet = $resolver->search( 'www.example.com', 'A' );
+    $packet = $resolver->send  ( 'www.example.com', 'A' );
+
+
+=head1 DESCRIPTION
+
+This module is a subclass of Net::DNS::Resolver.
+
 =cut
 
 
@@ -18,441 +34,233 @@ use strict;
 use base qw(Net::DNS::Resolver);
 
 
-my %hardcodedhints
-	 = ( 'a.root-servers.net' => ['198.41.0.4'    , '2001:503:ba3e::2:30' ]
-	   , 'b.root-servers.net' => ['192.228.79.201']
-	   , 'c.root-servers.net' => ['192.33.4.12'   ]
-	   , 'd.root-servers.net' => ['128.8.10.90'   , '2001:500:2d::d'      ]
-	   , 'e.root-servers.net' => ['192.203.230.10']
-	   , 'f.root-servers.net' => ['192.5.5.241'   , '2001:500:2f::f'      ]
-	   , 'g.root-servers.net' => ['192.112.36.4'  ]
-	   , 'h.root-servers.net' => ['128.63.2.53'   , '2001:500:1::803f:235']
-	   , 'i.root-servers.net' => ['192.36.148.17' , '2001:7fe::53'        ]
-	   , 'j.root-servers.net' => ['192.58.128.30' , '2001:503:c27::2:30'  ]
-	   , 'k.root-servers.net' => ['193.0.14.129'  , '2001:7fd::1'         ]
-	   , 'l.root-servers.net' => ['199.7.83.42'   , '2001:500:3::42'      ]
-	   , 'm.root-servers.net' => ['202.12.27.33'  , '2001:dc3::35'        ]
-	   );
-
-sub hints {
-  my $self = shift;
-  my @hints = @_;
-  print ";; hints(@hints)\n" if $self->{'debug'};
-
-  if (!@hints && !$self->nameservers){
-	  return $self->hints( map { @{ $_ } } values %hardcodedhints )
-  }elsif (!@hints && $self->nameservers) {
-	  return $self->hints($self->nameservers);
-  } else {
-	  $self->nameservers(@hints);
-  }
-
-  print ";; verifying (root) zone...\n" if $self->{'debug'};
-  # bind always asks one of the hint servers
-  # for who it thinks is authoritative for
-  # the (root) zone as a sanity check.
-  # Nice idea.
-
-  $self->recurse(1);
-  my $packet=$self->query(".", "NS", "IN");
-  $self->recurse(0);
-  my %hints = ();
-  if ($packet) {
-    if (my @ans = $packet->answer) {
-      foreach my $rr (@ans) {
-        if ($rr->name =~ /^\.?$/ and
-            $rr->type eq "NS") {
-          # Found root authority
-          my $server = lc $rr->rdatastr;
-          $server =~ s/\.$//;
-          print ";; FOUND HINT: $server\n" if $self->{'debug'};
-          $hints{$server} = [];
-        }
-      }
-      foreach my $rr ($packet->additional) {
-	print ";; ADDITIONAL: ",$rr->string,"\n" if $self->{'debug'};
-	if (my $server = lc $rr->name){
-	  if ( $rr->type eq "A") {
-	    #print ";; ADDITIONAL HELP: $server -> [".$rr->rdatastr."]\n" if $self->{'debug'};
-	    if ($hints{$server}) {
-	      print ";; STORING IP: $server IN A ",$rr->rdatastr,"\n" if $self->{'debug'};
-	      push @{ $hints{$server} }, $rr->rdatastr;
-	    }
-	  }
-	  if ( $rr->type eq "AAAA") {
-	    #print ";; ADDITIONAL HELP: $server -> [".$rr->rdatastr."]\n" if $self->{'debug'};
-	    if ($hints{$server}) {
-	      print ";; STORING IP6: $server IN AAAA ",$rr->rdatastr,"\n" if $self->{'debug'};
-	      push @{ $hints{$server} }, $rr->rdatastr;
-	    }
-	  }
-
-	}
-      }
-    }
-    foreach my $server (keys %hints) {
-      if (!@{ $hints{$server} }) {
-      	if (exists $hardcodedhints{ lc $server }) {
-	  # Not all root servers provide glue and we know the answers.
-	  $hints{$server} = $hardcodedhints{ lc $server };
-	} else {
-          # Wipe the servers without lookups
-          delete $hints{$server};
-	}
-      }
-    }
-    $self->{'hints'} = \%hints;
-  } else {
-    $self->{'hints'} = {};
-  }
-  if (%{ $self->{'hints'} }) {
-    if ($self->{'debug'}) {
-      print ";; USING THE FOLLOWING HINT IPS:\n";
-      foreach my $ips (values %{ $self->{'hints'} }) {
-	foreach my $server (@{ $ips }) {
-	  print ";;  $server\n";
-	}
-      }
-    }
-  } else {
-    warn "Servers [". join " ",($self->nameservers),"] did not give answers";
-    print ";; Unsetting hints and nameservers, trying with hardcoded nameservers\n" if  $self->{'debug'};
-    print $self->empty_nameservers();
-    return $self->hints();
-  }
-
-  # Disable recursion flag.
-
-
-  return $self->nameservers( map { @{ $_ } } values %{ $self->{'hints'} } );
-}
-
-
-sub recursion_callback {
-	my ($self, $sub) = @_;
-
-	if ($sub && UNIVERSAL::isa($sub, 'CODE')) {
-		$self->{'callback'} = $sub;
-	}
-
-	return $self->{'callback'};
-}
-
-
-# $res->query_dorecursion( args );
-# Takes same args as Net::DNS::Resolver->query
-# Purpose: Do that "hot pototo dance" on args.
-sub query_dorecursion {
-  my $self = shift;
-  my @query = @_;
-
-  # Make sure the hint servers are initialized.
-  $self->hints unless $self->{'hints'};
-  $self->recurse(0);
-  # Make sure the authority cache is clean.
-  # It is only used to store A and AAAA records of
-  # the suposedly authoritative name servers.
-  $self->{'authority_cache'} = {};
-
-  # Obtain real question Net::DNS::Packet
-  my $query_packet = $self->make_query_packet(@query);
-
-  # Seed name servers with hints
-  return $self->_dorecursion( $query_packet, ".", $self->{'hints'}, 0);
-}
-
-sub _dorecursion {
-  my $self = shift;
-  my $query_packet = shift;
-  my $known_zone = shift;
-  my $known_authorities = shift;
-  my $depth = shift;
-  my $cache = $self->{'authority_cache'};
-
-  # die "Recursion too deep, aborting..." if $depth > 255;
-  if ( $depth > 255 ) {
-      print ";; _dorecursion() Recursion too deep, aborting...\n" if
-	  $self->{'debug'};
-      $self->errorstring("Recursion too deep, abborted");
-      return undef;
-  }
-
-  $known_zone =~ s/\.*$/./;
-
-  # Get IPs from authorities
-  my @ns = ();
-  foreach my $ns (keys %{ $known_authorities }) {
-    if (scalar @{ $known_authorities->{$ns} }) {
-      $cache->{$ns} = $known_authorities->{$ns};
-      push (@ns, @{ $cache->{$ns} });
-    } elsif ($cache->{$ns}) {
-      $known_authorities->{$ns} = $cache->{$ns};
-      push (@ns, @{ $cache->{$ns} });
-    }
-  }
-
-  if (!@ns) {
-    my $found_auth = 0;
-    if ($self->{'debug'}) {
-      require Data::Dumper;
-      print ";; _dorecursion() Failed to extract nameserver IPs:\n";
-      print Data::Dumper::Dumper([$known_authorities,$cache]);
-    }
-    foreach my $ns (keys %{ $known_authorities }) {
-      if (!@{ $known_authorities->{$ns} }) {
-        print ";; _dorecursion() Manual lookup for authority [$ns]\n" if $self->{'debug'};
-
-        my $auth_packet;
-	my @ans;
-
-	# Don't query for V6 if its not there.
-	if ($Net::DNS::Resolver::Base::has_inet6 && ! $self->{force_v4}){
-	    $auth_packet =
-		$self->_dorecursion
-		($self->make_query_packet($ns,"AAAA"),  # packet
-		 ".",               # known_zone
-		 $self->{'hints'},  # known_authorities
-		 $depth+1);         # depth
-	    @ans = $auth_packet->answer if $auth_packet;
-	}
-
-	$auth_packet =
-	    $self->_dorecursion
-	    ($self->make_query_packet($ns,"A"),  # packet
-	     ".",               # known_zone
-	     $self->{'hints'},  # known_authorities
-	     $depth+1);         # depth
-
-	push (@ans,$auth_packet->answer ) if $auth_packet;
-
-        if ( @ans ) {
-          print ";; _dorecursion() Answers found for [$ns]\n" if $self->{'debug'};
-          foreach my $rr (@ans) {
-	    print ";; RR:".$rr->string."\n" if $self->{'debug'};
-            if ($rr->type eq "CNAME") {
-              # Follow CNAME
-              if (my $server = lc $rr->name) {
-                $server =~ s/\.*$/./;
-                if ($server eq $ns) {
-                  my $cname = lc $rr->rdatastr;
-                  $cname =~ s/\.*$/./;
-                  print ";; _dorecursion() Following CNAME ns [$ns] -> [$cname]\n" if $self->{'debug'};
-                  $known_authorities->{$cname} ||= [];
-                  delete $known_authorities->{$ns};
-                  next;
-                }
-              }
-            } elsif ($rr->type eq "A" ||$rr->type eq "AAAA" ) {
-              if (my $server = lc $rr->name) {
-                $server =~ s/\.*$/./;
-                if ($known_authorities->{$server}) {
-                  my $ip = $rr->rdatastr;
-                  print ";; _dorecursion() Found ns: $server IN A $ip\n" if $self->{'debug'};
-                  $cache->{$server} = $known_authorities->{$server};
-                  push (@{ $cache->{$ns} }, $ip);
-                  $found_auth++;
-                  next;
-                }
-              }
-            }
-            print ";; _dorecursion() Ignoring useless answer: ",$rr->string,"\n" if $self->{'debug'};
-          }
-        } else {
-          print ";; _dorecursion() Could not find A records for [$ns]\n" if $self->{'debug'};
-        }
-      }
-    }
-    if ($found_auth) {
-      print ";; _dorecursion() Found $found_auth new NS authorities...\n" if $self->{'debug'};
-      return $self->_dorecursion( $query_packet, $known_zone, $known_authorities, $depth+1);
-    }
-    print ";; _dorecursion() No authority information could be obtained.\n" if $self->{'debug'};
-    return undef;
-  }
-
-  # Cut the deck of IPs in a random place.
-  print ";; _dorecursion() cutting deck of (".scalar(@ns).") authorities...\n" if $self->{'debug'};
-  splice(@ns, 0, 0, splice(@ns, int(rand @ns)));
-
-
- LEVEL:  foreach my $levelns (@ns){
-   print ";; _dorecursion() Trying nameserver [$levelns]\n" if $self->{'debug'};
-   $self->nameservers($levelns);
-
-   if (my $packet = $self->send( $query_packet )) {
-
-     if ($self->{'callback'}) {
-       $self->{'callback'}->($packet);
-     }
-
-     my $of = undef;
-     print ";; _dorecursion() Response received from [",$self->answerfrom,"]\n" if $self->{'debug'};
-     if (my $status = $packet->header->rcode) {
-       if ($status eq "NXDOMAIN") {
-	 # I guess NXDOMAIN is the best we'll ever get
-	 print ";; _dorecursion() returning NXDOMAIN\n" if $self->{'debug'};
-	 return $packet;
-       } elsif (my @ans = $packet->answer) {
-	 print ";; _dorecursion() Answers were found.\n" if $self->{'debug'};
-	 return $packet;
-       } elsif (my @authority = $packet->authority) {
-	 my %auth = ();
-	 foreach my $rr (@authority) {
-	   if ($rr->type =~ /^(NS|SOA)$/) {
-	     my $server = lc ($1 eq "NS" ? $rr->nsdname : $rr->mname);
-	     $server =~ s/\.*$/./;
-	     $of = lc $rr->name;
-	     $of =~ s/\.*$/./;
-	     print ";; _dorecursion() Received authority [$of] [",$rr->type(),"] [$server]\n" if $self->{'debug'};
-	     if (length $of <= length $known_zone) {
-	       print ";; _dorecursion() Deadbeat name server did not provide new information.\n" if $self->{'debug'};
-	       next LEVEL;
-	     } elsif ($of =~ /$known_zone$/) {
-	       print ";; _dorecursion() FOUND closer authority for [$of] at [$server].\n" if $self->{'debug'};
-	       $auth{$server} ||= [];
-	     } else {
-	       print ";; _dorecursion() Confused name server [",$self->answerfrom,"] thinks [$of] is closer than [$known_zone]?\n" if $self->{'debug'};
-	       last;
-	     }
-	   } else {
-	     print ";; _dorecursion() Ignoring NON NS entry found in authority section: ",$rr->string,"\n" if $self->{'debug'};
-	   }
-	 }
-	 foreach my $rr ($packet->additional) {
-	   if ($rr->type eq "CNAME") {
-	     # Store this CNAME into %auth too
-	     if (my $server = lc $rr->name) {
-	       $server =~ s/\.*$/./;
-	       if ($auth{$server}) {
-		 my $cname = lc $rr->rdatastr;
-		 $cname =~ s/\.*$/./;
-		 print ";; _dorecursion() FOUND CNAME authority: ",$rr->string,"\n" if $self->{'debug'};
-		 $auth{$cname} ||= [];
-		 $auth{$server} = $auth{$cname};
-		 next;
-	       }
-	     }
-	   } elsif ($rr->type eq "A" || $rr->type eq "AAAA") {
-	     if (my $server = lc $rr->name) {
-	       $server =~ s/\.*$/./;
-	       if ($auth{$server}) {
-		 print ";; _dorecursion() STORING: $server IN A    ",$rr->rdatastr,"\n" if $self->{'debug'} &&  $rr->type eq "A";
-		 print ";; _dorecursion() STORING: $server IN AAAA ",$rr->rdatastr,"\n" if $self->{'debug'}&&  $rr->type eq "AAAA";
-		 push @{ $auth{$server} }, $rr->rdatastr;
-		 next;
-	       }
-	     }
-	   }
-	   print ";; _dorecursion() Ignoring useless: ",$rr->string,"\n" if $self->{'debug'};
-	 }
-	 if ($of =~ /$known_zone$/) {
-	   return $self->_dorecursion( $query_packet, $of, \%auth, $depth+1 );
-	 } else {
-	   return $self->_dorecursion( $query_packet, $known_zone, $known_authorities, $depth+1 );
-	 }
-      }
-     }
-   }
- }
-  # None of the authorities with IP worked. Are there still some without IP?
-  foreach my $ns (keys %{ $known_authorities }) {
-    if (scalar @{ $known_authorities->{$ns} }) {
-      delete $known_authorities->{$ns};
-    }
-  }
-  if (%{ $known_authorities }) {
-    print ";; _dorecursion() None of the authorities with IP worked, "
-                          . "retry with the others...\n" if $self->{'debug'};
-    return $self->_dorecursion( $query_packet
-                              , $known_zone
-			      , $known_authorities
-			      , $depth+1
-			      );
-  }
-  return undef;
-}
-
-1;
-
-__END__
-
-
-=head1 SYNOPSIS
-
-  use Net::DNS::Resolver::Recurse;
-  my $res = Net::DNS::Resolver::Recurse->new;
-
-=head1 DESCRIPTION
-
-This module is a sub class of Net::DNS::Resolver.
-
 =head1 METHODS
 
-This module inherits all the methods from Net::DNS::Resolver.
-The additional module-specific methods are described below.
+This module inherits almost all the methods from Net::DNS::Resolver.
+Additional module-specific methods are described below.
+
 
 =head2 hints
 
-Initialize the hint servers.  Recursive queries need a starting name
-server to work from. This method takes a list of IP addresses to use
-as the starting servers.  These name servers should be authoritative
-for the root (.) zone.
+This method specifies a list of the IP addresses used to locate
+the authoritative name servers for the root (.) zone.
 
-  $res->hints(@ips);
+    $resolver->hints(@ip);
 
-If no hints are passed, the default nameserver is asked for the hints.
-Normally these IPs can be obtained from the following location:
+If no hints are passed, the default nameserver is used to discover
+the addresses of the root nameservers.
 
-  ftp://ftp.internic.net/domain/named.root
+If the default nameserver not been configured correctly,
+or at all, a built-in list of IP addresses is used.
 
-=head2 recursion_callback
+=cut
 
-This method is takes a code reference, which is then invoked each time a
-packet is received during the recursive lookup.  For example to emulate
-dig's C<+trace> function:
+my @hints;
+my $root;
 
- $res->recursion_callback(sub {
-     my $packet = shift;
+sub hints {
+	my $self = shift;
 
-     $_->print for $packet->additional;
-
-     printf(";; Received %d bytes from %s\n\n",
-         $packet->answersize,
-         $packet->answerfrom
-     );
- });
-
-=head2 query_dorecursion
-
-This method is much like the normal query() method except it disables
-the recurse flag in the packet and explicitly performs the recursion.
-
-  $packet = $res->query_dorecursion( "www.netscape.com.", "A");
+	@hints = @_ if scalar @_;
+	return @hints;
+}
 
 
-=head1 IPv6 transport
+=head2 query, search, send
 
-If the appropriate IPv6 libraries are installed the recursive resolver
-will randomly choose between IPv6 and IPv4 addresses of the
-nameservers it encounters during recursion.
+The query(), search() and send() methods produce the same result
+as their counterparts in Net::DNS::Resolver.
 
-If you want to force IPv4 transport use the force_v4() method. Also see
-the IPv6 transport notes in the Net::DNS::Resolver documentation.
+    $packet = $resolver->send( 'www.example.com.', 'A' );
 
-=head1 AUTHOR
+Server-side recursion is suppressed by clearing the recurse flag
+in the packet and recursive name resolution is performed explicitly.
 
-Rob Brown, bbb@cpan.org
+The query() and search() methods are inherited from Net::DNS::Resolver
+and invoke send() indirectly.
+
+=cut
+
+sub send {
+	return &Net::DNS::Resolver::Base::send if ref $_[1];	# send Net::DNS::Packet
+
+	my $self = shift;
+	my $res	 = bless {cache => {}, %$self}, ref($self);	# Note: cache discarded after query
+
+	my $question = new Net::DNS::Question(@_);
+	my $original = pop(@_);					# sneaky extra argument needed
+	$original = $question unless ref($original);		# to preserve original request
+
+	my ( $head, @tail ) = $question->{owner}->label;
+	unless ($head) {
+		return $root if $root;				# root servers cached indefinitely
+
+		my $defres = new Net::DNS::Resolver( debug => 0 );
+		$defres->nameservers( $res->hints ) || $defres->nameservers( $res->_hints );
+
+		my $packet = $defres->send( '.', 'NS' );	# specified hint server
+		$res->{callback}->($packet) if $res->{callback};
+		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
+		my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
+		my @glue = grep $auth{lc $_->name}, $packet->additional;
+		my %glue;
+		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'A',    @glue;
+		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'AAAA', @glue;
+		my @ip = map @$_, values %glue;
+		return $root = $packet if @ip && $packet->header->aa;
+
+		$defres->nameservers(@ip);
+		$defres->recurse(0);
+		foreach my $ns ( map $_->nsdname, @auth ) {
+			$defres->nameservers($ns) unless @ip;
+			$packet = $defres->send( '.', 'NS' );	# authoritative root server
+			$res->{callback}->($packet) if $res->{callback};
+			my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
+			my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
+			my @glue = grep $auth{lc $_->name}, $packet->additional;
+			my @ip = grep $_->type eq 'A', @glue;
+			push @ip, grep $_->type eq 'AAAA', @glue;
+			return $root = $packet if @ip && @auth;
+		}
+		return $packet;
+	}
+
+	my $parent = join '.', @tail;
+	my $nslist = $res->{cache}->{$parent} ||= [];
+	if ( scalar @$nslist ) {
+		print ";; using cached nameservers for $parent.\n" if $res->{debug};
+	} else {
+		my $qname = $original->qname;
+		$parent = $qname if $question->qtype ne 'ANY';	# plus one to resolve zone apex
+		my $packet = $res->send( $parent, 'ANY', 'ANY', $original ) || return;
+		return $packet unless $packet->header->rcode eq 'NOERROR';
+
+		my @answer = $packet->answer;			# return authoritative answer
+		return $packet if $packet->header->aa && grep $_->name eq $qname, @answer;
+
+		print ";; found nameservers for $parent.\n" if $res->{debug};
+		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
+		my @name = map lc( $_->nsdname ), @auth;
+		my %auth = map { ( $_ => 1 ) } @name;
+		my @glue = grep $auth{lc $_->name}, $packet->additional;
+
+		my %glue;
+		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'A',    @glue;
+		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'AAAA', @glue;
+		@$nslist = values %glue;
+
+		my @noglue = grep !$glue{$_}, @name;
+		splice @noglue, 0, 0, splice( @noglue, int( rand scalar @noglue ) );
+		push @$nslist, @noglue;
+	}
+
+	my $query = new Net::DNS::Packet();
+	$query->push( question => $original );
+	$res->recurse(0);
+
+	my @a = grep ref($_), @$nslist;
+	splice @a, 0, 0, splice( @a, int( rand scalar @a ) );	# cut deck
+
+	while ( scalar @a ) {
+		$res->nameservers( map @$_, @a );
+		my $reply = $res->send($query) || last;
+		$res->{callback}->($reply) if $res->{callback};
+		last unless $reply->header->rcode eq 'NOERROR';
+		return $reply;
+	}
+
+	my @noglue = grep !ref($_), @$nslist;
+	while (@noglue) {
+		my $name = shift @noglue;
+		print ";; find missing glue for $parent. ($name)\n" if $res->{debug};
+		$res->empty_nameservers();
+		my @ip = $res->nameservers($name);
+		next unless @ip;
+		push @$nslist, [@ip];
+		my $reply = $res->send($query) || next;
+		$res->{callback}->($reply) if $res->{callback};
+		next unless $reply->header->rcode eq 'NOERROR';
+		return $reply;
+	}
+	return;
+}
+
+sub query_dorecursion { &send; }	## historical
+
+
+=head2 callback
+
+This method specifies a code reference to a subroutine,
+which is then invoked at each stage of the recursive lookup.
+
+For example to emulate dig's C<+trace> function:
+
+    my $coderef = sub {
+	my $packet = shift;
+
+	$_->print for $packet->additional;
+
+	printf ";; Received %d bytes from %s\n\n",
+		$packet->answersize, $packet->answerfrom;
+    };
+
+    $resolver->callback($coderef);
+
+The callback subroutine is not called
+for queries for missing glue records.
+
+=cut
+
+sub callback {
+	my ( $self, $sub ) = @_;
+
+	$self->{callback} = $sub if $sub && UNIVERSAL::isa( $sub, 'CODE' );
+	return $self->{callback};
+}
+
+sub recursion_callback { &callback; }	## historical
+
+
+sub bgsend { croak("method bgsend undefined"); }
+
+
+########################################
+
+sub _hints {				## default hints
+	require Net::DNS::ZoneFile;
+
+	my $dug = new Net::DNS::ZoneFile( \*DATA );
+	my @rr	= $dug->read;
+
+	my @auth = grep $_->type eq 'NS', @rr;
+	my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
+	my @glue = grep $auth{lc $_->name}, @rr;
+	my %glue;
+	push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'A',    @glue;
+	push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'AAAA', @glue;
+	my @ip = map @$_, values %glue;
+}
+
+
+=head1 ACKNOWLEDGEMENT
+
+This package is an improved and compatible reimplementation of the
+Net::DNS::Resolver::Recurse.pm created by Rob Brown in 2002.
+
+The contribution of Rob Brown is gratefully acknowledged.
+
 
 =head1 COPYRIGHT
 
-Copyright (c)2002, Rob Brown.
+Copyright (c)2014 Dick Franks 
 
-Portions Copyright (c)2005, Olaf M Kolkman.
+Portions Copyright (c)2002 Rob Brown 
 
 All rights reserved.
 
-This module is free software; you can redistribute
-it and/or modify it under the same terms as Perl itself.
+This program is free software; you may redistribute it and/or
+modify it under the same terms as Perl itself.
+
 
 =head1 SEE ALSO
 
@@ -460,75 +268,68 @@ L<Net::DNS::Resolver>
 
 =cut
 
-Example lookup process:
 
-[root@box root]# dig +trace www.rob.com.au.
+1;
 
-; <<>> DiG 9.2.0 <<>> +trace www.rob.com.au.
-;; global options:  printcmd
-.                       507343  IN      NS      C.ROOT-SERVERS.NET.
-.                       507343  IN      NS      D.ROOT-SERVERS.NET.
-.                       507343  IN      NS      E.ROOT-SERVERS.NET.
-.                       507343  IN      NS      F.ROOT-SERVERS.NET.
-.                       507343  IN      NS      G.ROOT-SERVERS.NET.
-.                       507343  IN      NS      H.ROOT-SERVERS.NET.
-.                       507343  IN      NS      I.ROOT-SERVERS.NET.
-.                       507343  IN      NS      J.ROOT-SERVERS.NET.
-.                       507343  IN      NS      K.ROOT-SERVERS.NET.
-.                       507343  IN      NS      L.ROOT-SERVERS.NET.
-.                       507343  IN      NS      M.ROOT-SERVERS.NET.
-.                       507343  IN      NS      A.ROOT-SERVERS.NET.
-.                       507343  IN      NS      B.ROOT-SERVERS.NET.
-;; Received 436 bytes from 127.0.0.1#53(127.0.0.1) in 9 ms
-  ;;; But these should be hard coded as the hints
 
-  ;;; Ask H.ROOT-SERVERS.NET gave:
-au.                     172800  IN      NS      NS2.BERKELEY.EDU.
-au.                     172800  IN      NS      NS1.BERKELEY.EDU.
-au.                     172800  IN      NS      NS.UU.NET.
-au.                     172800  IN      NS      BOX2.AUNIC.NET.
-au.                     172800  IN      NS      SEC1.APNIC.NET.
-au.                     172800  IN      NS      SEC3.APNIC.NET.
-;; Received 300 bytes from 128.63.2.53#53(H.ROOT-SERVERS.NET) in 322 ms
-  ;;; A little closer than before
+__DATA__	## DEFAULT HINTS
 
-  ;;; Ask NS2.BERKELEY.EDU gave:
-com.au.                 259200  IN      NS      ns4.ausregistry.net.
-com.au.                 259200  IN      NS      dns1.telstra.net.
-com.au.                 259200  IN      NS      au2ld.CSIRO.au.
-com.au.                 259200  IN      NS      audns01.syd.optus.net.
-com.au.                 259200  IN      NS      ns.ripe.net.
-com.au.                 259200  IN      NS      ns1.ausregistry.net.
-com.au.                 259200  IN      NS      ns2.ausregistry.net.
-com.au.                 259200  IN      NS      ns3.ausregistry.net.
-com.au.                 259200  IN      NS      ns3.melbourneit.com.
-;; Received 387 bytes from 128.32.206.12#53(NS2.BERKELEY.EDU) in 10312 ms
-  ;;; A little closer than before
+; <<>> DiG 9.9.4-P2-RedHat-9.9.4-15.P2.fc20 <<>> @a.root-servers.net . -t NS
+; (2 servers found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4589
+;; flags: qr aa rd; QUERY: 1, ANSWER: 13, AUTHORITY: 0, ADDITIONAL: 25
+;; WARNING: recursion requested but not available
 
-  ;;; Ask ns4.ausregistry.net gave:
-com.au.                 259200  IN      NS      ns1.ausregistry.net.
-com.au.                 259200  IN      NS      ns2.ausregistry.net.
-com.au.                 259200  IN      NS      ns3.ausregistry.net.
-com.au.                 259200  IN      NS      ns4.ausregistry.net.
-com.au.                 259200  IN      NS      ns3.melbourneit.com.
-com.au.                 259200  IN      NS      dns1.telstra.net.
-com.au.                 259200  IN      NS      au2ld.CSIRO.au.
-com.au.                 259200  IN      NS      ns.ripe.net.
-com.au.                 259200  IN      NS      audns01.syd.optus.net.
-;; Received 259 bytes from 137.39.1.3#53(ns4.ausregistry.net) in 606 ms
-  ;;; Uh... yeah... I already knew this
-  ;;; from what NS2.BERKELEY.EDU told me.
-  ;;; ns4.ausregistry.net must have brain damage
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;.				IN	NS
 
-  ;;; Ask ns1.ausregistry.net gave:
-rob.com.au.             86400   IN      NS      sy-dns02.tmns.net.au.
-rob.com.au.             86400   IN      NS      sy-dns01.tmns.net.au.
-;; Received 87 bytes from 203.18.56.41#53(ns1.ausregistry.net) in 372 ms
-  ;;; Ah, much better.  Something more useful.
+;; ANSWER SECTION:
+.			518400	IN	NS	c.root-servers.net.
+.			518400	IN	NS	k.root-servers.net.
+.			518400	IN	NS	l.root-servers.net.
+.			518400	IN	NS	j.root-servers.net.
+.			518400	IN	NS	b.root-servers.net.
+.			518400	IN	NS	g.root-servers.net.
+.			518400	IN	NS	h.root-servers.net.
+.			518400	IN	NS	d.root-servers.net.
+.			518400	IN	NS	a.root-servers.net.
+.			518400	IN	NS	f.root-servers.net.
+.			518400	IN	NS	i.root-servers.net.
+.			518400	IN	NS	m.root-servers.net.
+.			518400	IN	NS	e.root-servers.net.
 
-  ;;; Ask sy-dns02.tmns.net.au gave:
-www.rob.com.au.         7200    IN      A       139.134.5.123
-rob.com.au.             7200    IN      NS      sy-dns01.tmns.net.au.
-rob.com.au.             7200    IN      NS      sy-dns02.tmns.net.au.
-;; Received 135 bytes from 139.134.2.18#53(sy-dns02.tmns.net.au) in 525 ms
-  ;;; FINALLY, THE ANSWER!
+;; ADDITIONAL SECTION:
+c.root-servers.net.	3600000	IN	A	192.33.4.12
+c.root-servers.net.	3600000	IN	AAAA	2001:500:2::c
+k.root-servers.net.	3600000	IN	A	193.0.14.129
+k.root-servers.net.	3600000	IN	AAAA	2001:7fd::1
+l.root-servers.net.	3600000	IN	A	199.7.83.42
+l.root-servers.net.	3600000	IN	AAAA	2001:500:3::42
+j.root-servers.net.	3600000	IN	A	192.58.128.30
+j.root-servers.net.	3600000	IN	AAAA	2001:503:c27::2:30
+b.root-servers.net.	3600000	IN	A	192.228.79.201
+b.root-servers.net.	3600000	IN	AAAA	2001:500:84::b
+g.root-servers.net.	3600000	IN	A	192.112.36.4
+h.root-servers.net.	3600000	IN	A	128.63.2.53
+h.root-servers.net.	3600000	IN	AAAA	2001:500:1::803f:235
+d.root-servers.net.	3600000	IN	A	199.7.91.13
+d.root-servers.net.	3600000	IN	AAAA	2001:500:2d::d
+a.root-servers.net.	3600000	IN	A	198.41.0.4
+a.root-servers.net.	3600000	IN	AAAA	2001:503:ba3e::2:30
+f.root-servers.net.	3600000	IN	A	192.5.5.241
+f.root-servers.net.	3600000	IN	AAAA	2001:500:2f::f
+i.root-servers.net.	3600000	IN	A	192.36.148.17
+i.root-servers.net.	3600000	IN	AAAA	2001:7fe::53
+m.root-servers.net.	3600000	IN	A	202.12.27.33
+m.root-servers.net.	3600000	IN	AAAA	2001:dc3::35
+e.root-servers.net.	3600000	IN	A	192.203.230.10
+
+;; Query time: 29 msec
+;; SERVER: 198.41.0.4#53(198.41.0.4)
+;; WHEN: Mon Aug 11 14:39:19 BST 2014
+;; MSG SIZE  rcvd: 755
+

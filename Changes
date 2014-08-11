@@ -17,6 +17,10 @@ Fix rt.cpan.org #81760
 	Reverted workaround for TXT issue preventing propagation of
 	rule updates for SpamAssassin versions earlier than 3.4.0
 
+Fix rt.cpan.org #16630
+
+	Net::DNS::Resolver::Recurse issues lots of IMHO unnecessary DNS requests.
+
 
 **** 0.78 Jul 10, 2014
 
