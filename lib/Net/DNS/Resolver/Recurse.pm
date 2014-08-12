@@ -104,8 +104,8 @@ sub send {
 		my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
 		my %glue;
-		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'A',    @glue;
-		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'AAAA', @glue;
+		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'A',    @glue );
+		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'AAAA', @glue );
 		my @ip = map @$_, values %glue;
 		return $root = $packet if @ip && $packet->header->aa;
 
@@ -125,28 +125,26 @@ sub send {
 		return $packet;
 	}
 
-	my $parent = join '.', @tail;
-	my $nslist = $res->{cache}->{$parent} ||= [];
+	my $domain = $question->qtype ne 'ANY' ? $original->qname : join '.', @tail;
+	my $nslist = $res->{cache}->{$domain} ||= [];
 	if ( scalar @$nslist ) {
-		print ";; using cached nameservers for $parent.\n" if $res->{debug};
+		print ";; using cached nameservers for $domain.\n" if $res->{debug};
 	} else {
-		my $qname = $original->qname;
-		$parent = $qname if $question->qtype ne 'ANY';	# plus one to resolve zone apex
-		my $packet = $res->send( $parent, 'ANY', 'ANY', $original ) || return;
+		my $packet = $res->send( $domain, 'ANY', 'ANY', $original ) || return;
 		return $packet unless $packet->header->rcode eq 'NOERROR';
 
 		my @answer = $packet->answer;			# return authoritative answer
-		return $packet if $packet->header->aa && grep $_->name eq $qname, @answer;
+		return $packet if $packet->header->aa && grep $_->name eq $original->qname, @answer;
 
-		print ";; found nameservers for $parent.\n" if $res->{debug};
+		print ";; found nameservers for $domain.\n" if $res->{debug};
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
 		my @name = map lc( $_->nsdname ), @auth;
 		my %auth = map { ( $_ => 1 ) } @name;
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
 
 		my %glue;
-		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'A',    @glue;
-		push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'AAAA', @glue;
+		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'A',    @glue );
+		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'AAAA', @glue );
 		@$nslist = values %glue;
 
 		my @noglue = grep !$glue{$_}, @name;
@@ -169,14 +167,12 @@ sub send {
 		return $reply;
 	}
 
-	my @noglue = grep !ref($_), @$nslist;
-	while (@noglue) {
-		my $name = shift @noglue;
-		print ";; find missing glue for $parent. ($name)\n" if $res->{debug};
+	foreach my $ns ( grep !ref($_), @$nslist ) {
+		print ";; find missing glue for $domain. ($ns)\n" if $res->{debug};
 		$res->empty_nameservers();
-		my @ip = $res->nameservers($name);
+		my @ip = $res->nameservers($ns);
 		next unless @ip;
-		push @$nslist, [@ip];
+		$ns = [@ip];					# substitute IP list in situ
 		my $reply = $res->send($query) || next;
 		$res->{callback}->($reply) if $res->{callback};
 		next unless $reply->header->rcode eq 'NOERROR';
@@ -236,8 +232,8 @@ sub _hints {				## default hints
 	my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
 	my @glue = grep $auth{lc $_->name}, @rr;
 	my %glue;
-	push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'A',    @glue;
-	push @{$glue{lc $_->name} ||= []}, $_->address for grep $_->type() eq 'AAAA', @glue;
+	push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'A',    @glue );
+	push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'AAAA', @glue );
 	my @ip = map @$_, values %glue;
 }
 

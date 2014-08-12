@@ -197,7 +197,7 @@ if (OLDDNSSEC) {
 	}
 
 	eval {
-		no warnings 'void';	## suppress "Too late to run INIT block ..."
+		#no warnings 'void';	## DIY patch to suppress "Too late to run INIT block ..."
 
 		sub INIT {		## only needed to satisfy DNSSEC t/00-load.t
 			return unless OLDDNSSEC;
