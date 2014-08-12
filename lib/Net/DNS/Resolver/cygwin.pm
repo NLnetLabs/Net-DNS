@@ -146,9 +146,9 @@ sub init {
 		$defaults->searchlist(@a);
 	}
 
-	$defaults->domain( _untaint $default->domain );		# untaint config values
-	$defaults->searchlist( _untaint $default->searchlist );
-	$defaults->nameservers( _untaint $default->nameservers );
+	$defaults->domain( _untaint $defaults->domain );	# untaint config values
+	$defaults->searchlist( _untaint $defaults->searchlist );
+	$defaults->nameservers( _untaint $defaults->nameservers );
 
 	$defaults->read_env;
 }

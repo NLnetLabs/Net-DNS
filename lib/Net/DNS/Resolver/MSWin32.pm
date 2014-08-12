@@ -17,7 +17,6 @@ use strict;
 use base qw(Net::DNS::Resolver::Base);
 
 use Carp;
-use Data::Dumper;
 
 BEGIN {
 	use vars qw($Registry);
@@ -46,10 +45,11 @@ sub init {
 
 	my $FIXED_INFO = {};
 
-	unless ( my $ret = Win32::IPHelper::GetNetworkParams($FIXED_INFO) ) {
-		print Dumper $FIXED_INFO if $debug;
-	} else {
+	if ( my $ret = Win32::IPHelper::GetNetworkParams($FIXED_INFO) ) {
 		Carp::croak "GetNetworkParams() error %u: %s\n", $ret, Win32::FormatMessage($ret);
+	} elsif ($debug) {
+		require Data::Dumper;
+		print Data::Dumper::Dumper $FIXED_INFO;
 	}
 
 

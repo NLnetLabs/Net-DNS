@@ -104,8 +104,8 @@ sub send {
 		my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
 		my %glue;
-		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'A',    @glue );
-		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'AAAA', @glue );
+		foreach ( grep $_->type eq 'A', @glue ) { push @{$glue{lc $_->name}}, $_->address };
+		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address };
 		my @ip = map @$_, values %glue;
 		return $root = $packet if @ip && $packet->header->aa;
 
@@ -143,8 +143,8 @@ sub send {
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
 
 		my %glue;
-		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'A',    @glue );
-		push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'AAAA', @glue );
+		foreach ( grep $_->type eq 'A', @glue ) { push @{$glue{lc $_->name}}, $_->address };
+		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address };
 		@$nslist = values %glue;
 
 		my @noglue = grep !$glue{$_}, @name;
@@ -232,8 +232,8 @@ sub _hints {				## default hints
 	my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
 	my @glue = grep $auth{lc $_->name}, @rr;
 	my %glue;
-	push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'A',    @glue );
-	push @{$glue{lc $_->name}}, $_->address foreach ( grep $_->type() eq 'AAAA', @glue );
+	foreach ( grep $_->type eq 'A', @glue ) { push @{$glue{lc $_->name}}, $_->address };
+	foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address };
 	my @ip = map @$_, values %glue;
 }
 
