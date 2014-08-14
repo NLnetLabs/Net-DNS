@@ -159,11 +159,10 @@ sub send {
 	my @a = grep ref($_), @$nslist;
 	splice @a, 0, 0, splice( @a, int( rand scalar @a ) );	# cut deck
 
-	while ( scalar @a ) {
+	foreach (@a) {
 		$res->nameservers( map @$_, @a );
 		my $reply = $res->send($query) || last;
 		$res->{callback}->($reply) if $res->{callback};
-		last unless $reply->header->rcode eq 'NOERROR';
 		return $reply;
 	}
 
@@ -175,7 +174,6 @@ sub send {
 		$ns = [@ip];					# substitute IP list in situ
 		my $reply = $res->send($query) || next;
 		$res->{callback}->($reply) if $res->{callback};
-		next unless $reply->header->rcode eq 'NOERROR';
 		return $reply;
 	}
 	return;
