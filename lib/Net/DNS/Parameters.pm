@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2014-08-06)
+##	(last updated 2014-08-12)
 ##
 ################################################
 
@@ -104,6 +104,7 @@ use vars qw( %typebyname %typebyval );
 	TALINK	   => 58,					#
 	CDS	   => 59,					# RFC-ietf-dnsop-delegation-trust-maintainance-14
 	CDNSKEY	   => 60,					# RFC-ietf-dnsop-delegation-trust-maintainance-14
+	OPENPGPKEY => 61,					# draft-ietf-dane-openpgpkey
 	SPF	   => 99,					# RFC7208
 	UINFO	   => 100,					# IANA-Reserved
 	UID	   => 101,					# IANA-Reserved
