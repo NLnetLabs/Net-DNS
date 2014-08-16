@@ -63,6 +63,7 @@ lib/Net/DNS/RR/NAPTR.pm
 lib/Net/DNS/RR/NID.pm
 lib/Net/DNS/RR/NS.pm
 lib/Net/DNS/RR/NULL.pm
+lib/Net/DNS/RR/OPENPGPKEY.pm
 lib/Net/DNS/RR/OPT.pm
 lib/Net/DNS/RR/PTR.pm
 lib/Net/DNS/RR/PX.pm
