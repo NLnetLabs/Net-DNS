@@ -2,6 +2,7 @@ Changes
 contrib/check_soa
 contrib/check_zone
 contrib/dnswalk.README
+contrib/find_zonecut
 contrib/loc2earth.fcgi
 contrib/loclist.pl
 contrib/README

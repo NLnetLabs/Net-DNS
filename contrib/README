@@ -9,7 +9,7 @@ check_soa		Dick Franks <rwfranks@acm.org>
 
 check_zone              Dennis Glatting <dennis.glatting@software-munitions.com>
 
-dnswalk	                Dave Barr <barr@cis.ohio-state.edu>
+find_zonecut		Dick Franks <rwfranks@acm.org>
 
 loc2earth.fcgi	        Christopher Davis <ckd@kei.com>
 
