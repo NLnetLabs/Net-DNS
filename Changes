@@ -12,6 +12,10 @@ Fix rt.cpan.org #97502
 
 	Net::DNS::Resolver->retrans does not accept a value of 1 (uses 2 instead)
 
+Fix rt.cpan.org #83642
+
+	Configure CD flag in Net::DNS::Resolver->new
+
 Fix rt.cpan.org #81760
 
 	Reverted workaround for TXT issue preventing propagation of

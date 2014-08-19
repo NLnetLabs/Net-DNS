@@ -96,9 +96,9 @@ BEGIN {
 		persistent_tcp	=> 0,
 		persistent_udp	=> 0,
 		dnssec		=> 0,
-		udppacketsize	=> 0,	# value bounded below by PACKETSZ
 		cdflag		=> 0,	# this is only used when {dnssec} == 1
 		adflag		=> 1,	# this is only used when {dnssec} == 1
+		udppacketsize	=> 0,	# value bounded below by PACKETSZ
 		force_v4	=> 0,	# only relevant when we have v6 support
 		prefer_v6	=> 0,	# prefer v6, otherwise prefer v4
 		ignqrid		=> 0,	# normally packets with non-matching ID
@@ -145,6 +145,7 @@ my %public_attr = map { $_ => 1 } qw(
 		persistent_tcp
 		persistent_udp
 		dnssec
+		cdflag
 		prefer_v6
 		ignqrid
 		);
@@ -187,12 +188,9 @@ sub new {
 
 			croak "usage: Net::DNS::Resolver->new( $attr => [ ... ] )"
 					unless UNIVERSAL::isa( $value, 'ARRAY' );
-		}
-
-		if ( $attr eq 'nameservers' ) {
-			$self->nameservers(@$value);
+			$self->$attr(@$value);
 		} else {
-			$self->{$attr} = $value;
+			$self->$attr($value);			# attribute => value
 		}
 	}
 

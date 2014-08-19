@@ -95,17 +95,17 @@ sub send {
 	unless ($head) {
 		return $root if $root;				# root servers cached indefinitely
 
-		my $defres = new Net::DNS::Resolver( debug => 0 );
+		my $defres = new Net::DNS::Resolver();
 		$defres->nameservers( $res->hints ) || $defres->nameservers( $res->_hints );
 
 		my $packet = $defres->send( '.', 'NS' );	# specified hint server
 		$res->{callback}->($packet) if $res->{callback};
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
-		my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
+		my %auth = map { lc $_->nsdname => 1 } @auth;
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
 		my %glue;
-		foreach ( grep $_->type eq 'A', @glue ) { push @{$glue{lc $_->name}}, $_->address };
-		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address };
+		foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
+		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
 		my @ip = map @$_, values %glue;
 		return $root = $packet if @ip && $packet->header->aa;
 
@@ -116,7 +116,7 @@ sub send {
 			$packet = $defres->send( '.', 'NS' );	# authoritative root server
 			$res->{callback}->($packet) if $res->{callback};
 			my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
-			my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
+			my %auth = map { lc $_->nsdname => 1 } @auth;
 			my @glue = grep $auth{lc $_->name}, $packet->additional;
 			my @ip = grep $_->type eq 'A', @glue;
 			push @ip, grep $_->type eq 'AAAA', @glue;
@@ -125,30 +125,28 @@ sub send {
 		return $packet;
 	}
 
-	my $domain = $question->qtype ne 'ANY' ? $original->qname : join '.', @tail;
+	my $domain = $question->qtype ne 'NULL' ? $original->qname : join '.', @tail;
 	my $nslist = $res->{cache}->{$domain} ||= [];
 	if ( scalar @$nslist ) {
 		print ";; using cached nameservers for $domain.\n" if $res->{debug};
 	} else {
-		my $packet = $res->send( $domain, 'ANY', 'ANY', $original ) || return;
+		my $packet = $res->send( $domain, 'NULL', 'ANY', $original ) || return;
 		return $packet unless $packet->header->rcode eq 'NOERROR';
 
 		my @answer = $packet->answer;			# return authoritative answer
 		return $packet if $packet->header->aa && grep $_->name eq $original->qname, @answer;
 
-		print ";; found nameservers for $domain.\n" if $res->{debug};
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
-		my @name = map lc( $_->nsdname ), @auth;
-		my %auth = map { ( $_ => 1 ) } @name;
+		print ";; cache nameservers for $domain.\n" if $res->{debug} && scalar(@auth);
+		my %auth = map { lc $_->nsdname => 1 } @auth;
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
 
 		my %glue;
-		foreach ( grep $_->type eq 'A', @glue ) { push @{$glue{lc $_->name}}, $_->address };
-		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address };
+		foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
+		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
 		@$nslist = values %glue;
 
-		my @noglue = grep !$glue{$_}, @name;
-		splice @noglue, 0, 0, splice( @noglue, int( rand scalar @noglue ) );
+		my @noglue = grep !$glue{$_}, keys %auth;
 		push @$nslist, @noglue;
 	}
 
@@ -215,7 +213,11 @@ sub callback {
 sub recursion_callback { &callback; }	## historical
 
 
-sub bgsend { croak("method bgsend undefined"); }
+sub bgsend {
+	my $self = shift;
+	my $class = ref($self) || $self;
+	Carp::croak "method ${class}::bgsend undefined";
+}
 
 
 ########################################
@@ -227,13 +229,16 @@ sub _hints {				## default hints
 	my @rr	= $dug->read;
 
 	my @auth = grep $_->type eq 'NS', @rr;
-	my %auth = map { ( lc $_->nsdname => 1 ) } @auth;
+	my %auth = map { lc $_->nsdname => 1 } @auth;
 	my @glue = grep $auth{lc $_->name}, @rr;
 	my %glue;
-	foreach ( grep $_->type eq 'A', @glue ) { push @{$glue{lc $_->name}}, $_->address };
-	foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address };
+	foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
+	foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
 	my @ip = map @$_, values %glue;
 }
+
+
+1;
 
 
 =head1 ACKNOWLEDGEMENT
@@ -261,9 +266,6 @@ modify it under the same terms as Perl itself.
 L<Net::DNS::Resolver>
 
 =cut
-
-
-1;
 
 
 __DATA__	## DEFAULT HINTS

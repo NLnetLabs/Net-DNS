@@ -1,7 +1,7 @@
 # $Id$    -*-perl-*-
 
 
-use Test::More tests => 59;
+use Test::More tests => 52;
 use strict;
 use File::Spec;
 
@@ -42,7 +42,7 @@ undef $res;
 my %test_config = (
 	# NOTE: test breaks encapsulation, which limits what you can test
 	#
-	#nameservers	   => ['10.0.0.1', '10.0.0.2'],
+	#nameservers	=> ['10.0.0.1', '10.0.0.2'],
 	port		=> 54,
 	srcaddr		=> '10.1.0.1',
 	srcport 	=> 53,
@@ -92,16 +92,9 @@ foreach my $test (qw(nameservers searchlist)) {
 undef $res;
 
 my %bad_input = (
-	tsig_rr        => 'set',
 	errorstring    => 'set',
 	answerfrom     => 'set',
 	answersize     => 'set',
-	querytime      => 'set',
-	axfr_sel       => 'set',
-	axfr_rr        => 'set',
-	axfr_soa_count => 'set',
-	udppacketsize  => 'set',
-	cdflag         => 'set',
 );	
 
 $res = Net::DNS::Resolver->new(%bad_input);
