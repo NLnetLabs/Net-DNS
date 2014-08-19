@@ -27,21 +27,21 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset ) = @_;
 
 	my $length = $self->{rdlength};
-	$self->keybin( substr $$data, $offset, $length );
+	$self->keysbin( substr $$data, $offset, $length );
 }
 
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	pack 'a*', $self->keybin || '';
+	pack 'a*', $self->keysbin || '';
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $base64 = MIME::Base64::encode $self->keybin || return '';
+	my $base64 = MIME::Base64::encode $self->keysbin || return '';
 	chomp $base64;
 	return "(\n$base64 )";
 }
@@ -50,26 +50,23 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->key(@_);
+	$self->keys(@_);
 }
 
 
-sub key {
+sub keys {
 	my $self = shift;
 
-	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
+	$self->keysbin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
+	return MIME::Base64::encode( $self->keysbin(), "" ) if defined wantarray;
 }
 
 
-sub publickey { &key; }
-
-
-sub keybin {
+sub keysbin {
 	my $self = shift;
 
-	$self->{keybin} = shift if scalar @_;
-	$self->{keybin} || "";
+	$self->{keysbin} = shift if scalar @_;
+	$self->{keysbin} || "";
 }
 
 1;
@@ -79,7 +76,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name OPENPGPKEY publickey');
+    $rr = new Net::DNS::RR('name OPENPGPKEY keys');
 
 =head1 DESCRIPTION
 
@@ -95,19 +92,20 @@ structures is discouraged and could result in program termination or
 other unpredictable behaviour.
 
 
-=head2 key
+=head2 keys
 
-    $key = $rr->key;
-    $rr->key( $key );
+    $keys = $rr->keys;
+    $rr->keys( $keys );
 
-Base64 encoded representation of the OpenPGP public key.
+Base64 encoded representation of the binary OpenPGP public key material.
 
-=head2 keybin
+=head2 keysbin
 
-    $keybin = $rr->keybin;
-    $rr->keybin( $keybin );
+    $keysbin = $rr->keysbin;
+    $rr->keysbin( $keysbin );
 
-Binary octet representation of the OpenPGP public key.
+Binary representation of the public key material.
+The key material is a simple concatenation of OpenPGP keys in RFC4880 format.
 
 
 =head1 COPYRIGHT

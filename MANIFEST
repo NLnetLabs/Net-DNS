@@ -27,6 +27,7 @@ lib/Net/DNS/Packet.pm
 lib/Net/DNS/Parameters.pm
 lib/Net/DNS/Question.pm
 lib/Net/DNS/Resolver.pm
+lib/Net/DNS/Resolver/android.pm
 lib/Net/DNS/Resolver/Base.pm
 lib/Net/DNS/Resolver/cygwin.pm
 lib/Net/DNS/Resolver/MSWin32.pm

@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 0.79 [unreleased]
 
+Feature rt.cpan.org #98149
+
+	Add support for Android platform.
+
 Fix rt.cpan.org #97736
 
 	Net::DNS::Resolver->new mistakenly copies supplied arguments
