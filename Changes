@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 0.80 [unreleased]
+
+Rework rt.cpan.org #96119
+
+	"Too late to run INIT block" warning for require Net::DNS
+ 
+
 **** 0.79 Aug 22, 2014
 
 Feature rt.cpan.org #98149

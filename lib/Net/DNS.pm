@@ -4,7 +4,7 @@ package Net::DNS;
 # $Id$
 #
 use vars qw($VERSION $SVNVERSION);
-$VERSION    = '0.79';
+$VERSION    = '0.79_1';
 $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
@@ -196,18 +196,16 @@ if (OLDDNSSEC) {
 		new Net::DNS::RR( type => $type );
 	}
 
-	eval {
-		#no warnings 'void';	## DIY patch to suppress "Too late to run INIT block ..."
+	eval <<EOT;
+		no warnings 'void';	## suppress "Too late to run INIT block ..."
 
-		sub INIT {		## only needed to satisfy DNSSEC t/00-load.t
-			return unless OLDDNSSEC;
-
-			# attempt to pre-load RRs which have circular dependence problems
-			foreach my $type (qw(NSEC3 NSEC3PARAM)) {
-				new Net::DNS::RR( type => $type );
-			}
+		sub INIT {
+			# deferred pre-load of RRs with intractable dependence problems
+			# required to satisfy Net::DNS::SEC t/00-load.t
+			new Net::DNS::RR( type => 'NSEC3' );
+			new Net::DNS::RR( type => 'NSEC3PARAM' );
 		}
-	};
+EOT
 }
 
 
