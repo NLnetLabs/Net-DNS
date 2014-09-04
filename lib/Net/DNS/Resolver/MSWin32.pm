@@ -56,10 +56,9 @@ sub init {
 	my @nameservers = map { $_->{IpAddress} } @{$FIXED_INFO->{DnsServersList}};
 	$defaults->nameservers( _untaint @nameservers );
 
+	my $devolution = 0;
 	my @searchlist = _untaint lc $FIXED_INFO->{DomainName};
 	$defaults->domain(@searchlist);
-
-	my $usedevolution = 0;
 
 	if (WINREG) {
 
@@ -81,28 +80,27 @@ sub init {
 			push @searchlist, split m/[\s,]+/, $searchlist;
 
 			my ( $value, $type ) = $reg_tcpip->GetValue('UseDomainNameDevolution');
-			$usedevolution = defined $value && $type == REG_DWORD ? hex $value : 0;
+			$devolution = defined $value && $type == REG_DWORD ? hex $value : 0;
 		}
 	}
 
 
 	# fix devolution if configured, and simultaneously
 	# make sure no dups (but keep the order)
-	my @a;
-	my %h;
+	my @list;
+	my %seen;
 	foreach my $entry (@searchlist) {
-		push( @a, $entry ) unless $h{$entry}++;
+		push( @list, $entry ) unless $seen{$entry}++;
 
-		if ($usedevolution) {
+		next unless $devolution;
 
-			# as long there are more than two pieces, cut
-			while ( $entry =~ m#\..+\.# ) {
-				$entry =~ s#^[^\.]+\.(.+)$#$1#;
-				push( @a, $entry ) unless $h{$entry}++;
-			}
+		# as long there are more than two pieces, cut
+		while ( $entry =~ m#\..+\.# ) {
+			$entry =~ s#^[^\.]+\.(.+)$#$1#;
+			push( @list, $entry ) unless $seen{$entry}++;
 		}
 	}
-	$defaults->searchlist( _untaint @a );
+	$defaults->searchlist( _untaint @list );
 
 	$defaults->read_env;
 }

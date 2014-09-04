@@ -65,7 +65,7 @@ sub new {
 		scalar @_ > 2 ? &_new_hash : &_new_string;
 	} || do {
 		my $class = shift || __PACKAGE__;
-		my @param = map { !defined($_) ? 'undef': split; } @_;
+		my @param = map { !defined($_) ? 'undef' : split; } @_;
 		croak join ' ', "$@in new $class(", substr( "@param", 0, 50 ), '... )';
 	};
 }
@@ -655,9 +655,9 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 
 sub format_rdata {			## format rdata portion of RR string
 	my $self = shift;
-	my $data = $self->{'rdata'} || $self->encode_rdata;	# unknown RR, per RFC3597
-	my $size = length $data;
-	join ' ', '\\#', $size, $size ? unpack( 'H*', $data ) : ();
+	my $data = $self->{'rdata'} || $self->encode_rdata;
+	my $size = length($data) || return '';
+	join ' ', '\\#', $size, unpack 'H*', $data;		# RFC3597 unknown RR format
 }
 
 

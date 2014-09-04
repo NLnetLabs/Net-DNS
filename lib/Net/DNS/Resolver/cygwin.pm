@@ -18,16 +18,13 @@ use base qw(Net::DNS::Resolver::Base);
 
 
 sub getregkey {
-	my $key	  = $_[0] . $_[1];
-	my $value;
+	my $key = join '/', @_;
 
 	local *LM;
-
-	if ( open( LM, "<$key" ) ) {
-		$value = <LM>;
-		$value =~ s/\0+$// if $value;
-		close(LM);
-	}
+	open( LM, "<$key" ) or return '';
+	my $value = <LM>;
+	$value =~ s/\0+$// if $value;
+	close(LM);
 
 	return $value || '';
 }
@@ -41,12 +38,12 @@ sub init {
 
 	local *LM;
 
-	my $root = '/proc/registry/HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Services/Tcpip/Parameters/';
+	my $root = '/proc/registry/HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Services/Tcpip/Parameters';
 
 	unless ( -d $root ) {
 
 		# Doesn't exist, maybe we are on 95/98/Me?
-		$root = '/proc/registry/HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Services/VxD/MSTCP/';
+		$root = '/proc/registry/HKEY_LOCAL_MACHINE/SYSTEM/CurrentControlSet/Services/VxD/MSTCP';
 		-d $root || Carp::croak "can't read registry: $!";
 	}
 
@@ -58,8 +55,11 @@ sub init {
 	# If nothing else, the searchlist should probably contain our own domain
 	# also see below for domain name devolution if so configured
 	# (also remove any duplicates later)
-	my $searchlist = "$domain ";
-	$searchlist .= getregkey( $root, 'SearchList' );
+	my $devolution = getregkey( $root, 'UseDomainNameDevolution' );
+	my $searchlist = getregkey( $root, 'SearchList' );
+	my @searchlist = _untaint $domain;
+	$defaults->domain(@searchlist);
+	push @searchlist, split m/[\s,]+/, $searchlist;
 
 
 	# This is (probably) adequate on NT4
@@ -70,49 +70,41 @@ sub init {
 	}
 
 
-	my @nameservers;
-
-	#
 	# but on W2K/XP the registry layout is more advanced due to dynamically
 	# appearing connections. So we attempt to handle them, too...
 	# opt to silently fail if something isn't ok (maybe we're on NT4)
 	# If this doesn't fail override any NT4 style result we found, as it
 	# may be there but is not valid.
 	# drop any duplicates later
-	my $dnsadapters = $root . 'DNSRegisteredAdapters/';
+	my @nameservers;
+
+	my $dnsadapters = join '/', $root, 'DNSRegisteredAdapters';
 	if ( opendir( LM, $dnsadapters ) ) {
 		my @adapters = grep !/^\.\.?$/, readdir(LM);
 		closedir(LM);
 		foreach my $adapter (@adapters) {
-			my $regadapter = $dnsadapters . $adapter . '/';
-			if ( -e $regadapter ) {
-				my $ns = getregkey( $regadapter, 'DNSServerAddresses' );
-				until ( length($ns) < 4 ) {
-					push @nameservers, join '.', unpack( 'C4', $ns );
-					substr( $ns, 0, 4 ) = '';
-				}
+			my $ns = getregkey( $dnsadapters, $adapter, 'DNSServerAddresses' );
+			until ( length($ns) < 4 ) {
+				push @nameservers, join '.', unpack( 'C4', $ns );
+				substr( $ns, 0, 4 ) = '';
 			}
 		}
 	}
 
-	my $interfaces = $root . 'Interfaces/';
+	my $interfaces = join '/', $root, 'Interfaces';
 	if ( opendir( LM, $interfaces ) ) {
 		my @ifacelist = grep !/^\.\.?$/, readdir(LM);
 		closedir(LM);
 		foreach my $iface (@ifacelist) {
-			my $regiface = $interfaces . $iface . '/';
-			opendir( LM, $regiface ) || next;
-			closedir(LM);
-
-			my $ip = getregkey( $regiface, 'DhcpIPAddress' )
-					|| getregkey( $regiface, 'IPAddress' );
+			my $ip = getregkey( $interfaces, $iface, 'DhcpIPAddress' )
+					|| getregkey( $interfaces, $iface, 'IPAddress' );
 			next unless $ip;
 			next if $ip eq '0.0.0.0';
 
 			foreach (
 				grep length,
-				getregkey( $regiface, 'NameServer' ),
-				getregkey( $regiface, 'DhcpNameServer' )
+				getregkey( $interfaces, $iface, 'NameServer' ),
+				getregkey( $interfaces, $iface, 'DhcpNameServer' )
 				) {
 				push @nameservers, split;
 				last;
@@ -121,34 +113,25 @@ sub init {
 	}
 
 	@nameservers = @nt4nameservers unless @nameservers;
-	$defaults->nameservers(@nameservers);
+	$defaults->nameservers( _untaint @nameservers );
 
-	$defaults->domain($domain) if $domain;
 
-	my $usedevolution = getregkey( $root, 'UseDomainNameDevolution' );
-	if ($searchlist) {
+	# fix devolution if configured, and simultaneously
+	# make sure no dups (but keep the order)
+	my @list;
+	my %seen;
+	foreach my $entry (@searchlist) {
+		push @list, $entry unless $seen{$entry}++;
 
-		# fix devolution if configured, and simultaneously make sure no dups (but keep the order)
-		my @a;
-		my %h;
-		foreach my $entry ( split( m/[\s,]+/, $searchlist ) ) {
-			push( @a, $entry ) unless $h{$entry}++;
+		next unless $devolution;
 
-			if ($usedevolution) {
-
-				# as long there are more than two pieces, cut
-				while ( $entry =~ m#\..+\.# ) {
-					$entry =~ s#^[^\.]+\.(.+)$#$1#;
-					push( @a, $entry ) unless $h{$entry}++;
-				}
-			}
+		# as long there are more than two pieces, cut
+		while ( $entry =~ m#\..+\.# ) {
+			$entry =~ s#^[^\.]+\.(.+)$#$1#;
+			push @list, $entry unless $seen{$entry}++;
 		}
-		$defaults->searchlist(@a);
 	}
-
-	$defaults->domain( _untaint $defaults->domain );	# untaint config values
-	$defaults->searchlist( _untaint $defaults->searchlist );
-	$defaults->nameservers( _untaint $defaults->nameservers );
+	$defaults->searchlist( _untaint @list );
 
 	$defaults->read_env;
 }

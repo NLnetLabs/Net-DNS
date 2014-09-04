@@ -47,8 +47,8 @@ sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
 #  call to translate IP addresses to socketaddress
 
 
-#  Two configuration flags, force_v4 and prefer_v6, are provided to
-#  control IPv6 behaviour for test purposes.
+#  Three configuration flags, force_v4, prefer_v6 and force_v6,
+#  are provided to control IPv6 behaviour for test purposes.
 
 
 # Olaf Kolkman, RIPE NCC, December 2003.
@@ -89,10 +89,8 @@ BEGIN {
 		errorstring	=> 'unknown error or no error',
 		tsig_rr		=> undef,
 		answerfrom	=> '',
-		querytime	=> undef,
 		tcp_timeout	=> 120,
 		udp_timeout	=> undef,
-		axfr_sel	=> undef,
 		persistent_tcp	=> 0,
 		persistent_udp	=> 0,
 		dnssec		=> 0,
@@ -100,6 +98,7 @@ BEGIN {
 		adflag		=> 1,	# this is only used when {dnssec} == 1
 		udppacketsize	=> 0,	# value bounded below by PACKETSZ
 		force_v4	=> 0,	# only relevant when we have v6 support
+		force_v6	=> 0,	#
 		prefer_v6	=> 0,	# prefer v6, otherwise prefer v4
 		ignqrid		=> 0,	# normally packets with non-matching ID
 					# or with the qr bit on are thrown away,
@@ -288,10 +287,11 @@ sub print { print shift->string; }
 sub string {
 	my $self = shift;
 
-	my $timeout   = $self->{'tcp_timeout'} ? $self->{'tcp_timeout'}		   : 'indefinite';
-	my $INET6line = $has_inet6	       ? "prefer_v6 = $self->{prefer_v6}"  : '(no IPv6 transport)';
-	my $ignqrid   = $self->{'ignqrid'}     ? 'ACCEPTING ALL PACKETS (IGNQRID)' : '';
-	my @nslist    = $self->nameservers();
+	my $timeout = $self->{'tcp_timeout'} || 'indefinite';
+	my $IP6line = "prefer_v6\t= $self->{prefer_v6}\tforce_v6 = $self->{force_v6}";
+	my $IP6conf = $has_inet6 ? $IP6line : '(no IPv6 transport)';
+	my @nslist  = $self->nameservers();
+	my $ignqrid = $self->{'ignqrid'} ? 'ACCEPTING ALL PACKETS (IGNQRID)' : '';
 	return <<END;
 ;; RESOLVER state:
 ;;  domain	= $self->{domain}
@@ -301,12 +301,12 @@ sub string {
 ;;  srcport	= $self->{srcport}
 ;;  srcaddr	= $self->{srcaddr}
 ;;  tcp_timeout = $timeout
-;;  retrans	= $self->{retrans}	retry     = $self->{retry}
-;;  usevc	= $self->{usevc}	stayopen  = $self->{stayopen}
-;;  defnames	= $self->{defnames}	dnsrch    = $self->{dnsrch}
-;;  recurse	= $self->{recurse}	igntc     = $self->{igntc}
-;;  force_v4	= $self->{force_v4}	$INET6line
-;;  debug	= $self->{debug}	$ignqrid
+;;  retrans	= $self->{retrans}	retry    = $self->{retry}
+;;  usevc	= $self->{usevc}	stayopen = $self->{stayopen}
+;;  defnames	= $self->{defnames}	dnsrch   = $self->{dnsrch}
+;;  recurse	= $self->{recurse}	igntc    = $self->{igntc}
+;;  debug	= $self->{debug}	force_v4 = $self->{force_v4}	$ignqrid
+;;  $IP6conf
 END
 
 }
@@ -372,22 +372,15 @@ sub nameservers {
 		return unless defined wantarray;
 	}
 
-	my @returnval;
-	if ( $self->force_v4() ) {
-		@returnval = @{$self->{nameserver4}};
-	} elsif ( $self->prefer_v6() ) {
-		@returnval = ( @{$self->{nameserver6}}, @{$self->{nameserver4}} );
-	} else {
-		@returnval = ( @{$self->{nameserver4}}, @{$self->{nameserver6}} );
-	}
+	my @ns4 = @{$self->{nameserver4}} unless $self->force_v6;
+	my @ns6 = @{$self->{nameserver6}} if $has_inet6 && !$self->force_v4;
+	my @returnval = $self->prefer_v6 ? ( @ns6, @ns4 ) : ( @ns4, @ns6 );
 
 	return @returnval if scalar @returnval;
 
 	$self->errorstring('no nameservers');
-	if ( scalar( @{$self->{nameserver6}} ) ) {
-		$self->errorstring('IPv6 transport not available') unless $has_inet6;
-		$self->errorstring('unable to use IPv6 transport') if $self->force_v4();
-	}
+	$self->errorstring('IPv4 transport not available') if scalar(@ns4) < scalar @{$self->{nameserver4}};
+	$self->errorstring('IPv6 transport not available') if scalar(@ns6) < scalar @{$self->{nameserver6}};
 	return @returnval;
 }
 
@@ -430,8 +423,20 @@ sub _packetsz {
 	return $udpsize > PACKETSZ ? $udpsize : PACKETSZ;
 }
 
+sub answerfrom {
+	my $self = shift;
+	$self->{answerfrom} = shift if scalar @_;
+	return $self->{answerfrom};
+}
+
+sub errorstring {
+	my $self = shift;
+	$self->{errorstring} = shift if scalar @_;
+	return $self->{errorstring};
+}
+
 sub _reset_errorstring {
-	my ($self) = @_;
+	my $self = shift;
 
 	$self->errorstring( $self->defaults->{'errorstring'} );
 }
@@ -1484,6 +1489,49 @@ sub _ip_is_ipv6 {
 }
 
 
+sub adflag {
+	my $self = shift;
+	$self->{adflag} = shift if scalar @_;
+	return $self->{adflag};
+}
+
+
+sub force_v4 {
+	my $self = shift;
+	return $self->{force_v4} unless scalar @_;
+	my $value = shift() ? 1 : 0;
+	$self->force_v6(0) if $value;
+	$self->{force_v4} = $value;
+}
+
+sub force_v6 {
+	my $self = shift;
+	return $self->{force_v6} unless scalar @_;
+	my $value = shift() ? 1 : 0;
+	$self->force_v4(0) if $value;
+	$self->{force_v6} = $value;
+}
+
+sub prefer_v4 {
+	my $self = shift;
+	$self->{prefer_v6} = shift() ? 0 : 1 if scalar @_;
+	return $self->{prefer_v6} ? 0 : 1;
+}
+
+sub prefer_v6 {
+	my $self = shift;
+	return $self->{prefer_v6} unless scalar @_;
+	$self->{prefer_v6} = shift() ? 1 : 0;
+}
+
+
+sub udppacketsize {
+	my $self = shift;
+	$self->{udppacketsize} = shift if scalar @_;
+	return $self->_packetsz;
+}
+
+
 sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 use vars qw($AUTOLOAD);
@@ -1494,7 +1542,7 @@ sub AUTOLOAD {				## Default method
 
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
-	croak "$name: no such method" unless exists $self->{$name};
+	croak "$name: no such method" unless exists $public_attr{$name};
 
 	no strict q/refs/;
 	*{$AUTOLOAD} = sub {
