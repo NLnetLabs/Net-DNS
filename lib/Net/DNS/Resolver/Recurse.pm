@@ -168,8 +168,8 @@ sub send {
 		print ";; find missing glue for $domain. ($ns)\n" if $res->{debug};
 		$res->empty_nameservers();
 		my @ip = $res->nameservers($ns);
-		next unless @ip;
 		$ns = [@ip];					# substitute IP list in situ
+		next unless @ip;
 		my $reply = $res->send($query) || next;
 		$res->{callback}->($reply) if $res->{callback};
 		return $reply;
