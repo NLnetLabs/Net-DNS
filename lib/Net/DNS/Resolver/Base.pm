@@ -30,7 +30,7 @@ sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
 #
 #  A few implementation notes wrt IPv6 support.
 #
-#  In general we try to be gracious to those stacks that do not have ipv6 support.
+#  In general we try to be gracious to those stacks that do not have IPv6 support.
 #  We test that by means of the availability of Socket6 and IO::Socket::INET6
 #
 
@@ -94,10 +94,10 @@ BEGIN {
 		persistent_tcp	=> 0,
 		persistent_udp	=> 0,
 		dnssec		=> 0,
+		adflag		=> 0,	# this is only used when {dnssec} == 1
 		cdflag		=> 0,	# this is only used when {dnssec} == 1
-		adflag		=> 1,	# this is only used when {dnssec} == 1
 		udppacketsize	=> 0,	# value bounded below by PACKETSZ
-		force_v4	=> 0,	# only relevant when we have v6 support
+		force_v4	=> 0,	# only relevant if IPv6 is supported
 		force_v6	=> 0,	#
 		prefer_v6	=> 0,	# prefer v6, otherwise prefer v4
 		ignqrid		=> 0,	# normally packets with non-matching ID
@@ -109,7 +109,7 @@ BEGIN {
 					# This may be a temporary feature
 		);
 
-	# If we're running under a SOCKSified Perl, use TCP instead of UDP
+	# If running under a SOCKSified Perl, use TCP instead of UDP
 	# and keep the sockets open.
 	if ( $Config::Config{'usesocks'} ) {
 		$defaults{'usevc'}	    = 1;
@@ -121,8 +121,7 @@ BEGIN {
 	sub defaults { return $defaults; }
 }
 
-# These are the attributes that we let the user specify in the new().
-# We also deprecate access to these with AUTOLOAD (some may be useful).
+# These are the attributes that the user may specify in the new() constructor.
 my %public_attr = map { $_ => 1 } qw(
 		nameservers
 		port
@@ -144,6 +143,7 @@ my %public_attr = map { $_ => 1 } qw(
 		persistent_tcp
 		persistent_udp
 		dnssec
+		adflag
 		cdflag
 		prefer_v6
 		ignqrid
@@ -419,7 +419,7 @@ sub cname_addr {
 # then we use EDNS and $self->{udppacketsize}
 # should be taken as the maximum packet_data length
 sub _packetsz {
-	my $udpsize = shift->{udppacketsize} || PACKETSZ;
+	my $udpsize = shift->{udppacketsize} || 0;
 	return $udpsize > PACKETSZ ? $udpsize : PACKETSZ;
 }
 
@@ -1090,21 +1090,24 @@ sub make_query_packet {
 
 	$header->rd( $self->{recurse} ) if $header->opcode eq 'QUERY';
 
-	if ( $self->dnssec ) {					# RFC 3225
-		print ";; Set EDNS DO flag and UDP packetsize $self->{udppacketsize}\n" if $self->{debug};
-		$packet->edns->size( $self->{udppacketsize} );	# advertise UDP payload size for local IP stack
-		$header->do(1);
-		$header->ad( $self->{adflag} );
-		$header->cd( $self->{cdflag} );
+	unless ( $self->dnssec ) {
+		$header->ad(0);
+		$header->do(0);
 
-	} elsif ( $self->{udppacketsize} > PACKETSZ ) {
-		print ";; Clear EDNS DO flag and set UDP packetsize $self->{udppacketsize}\n" if $self->{debug};
-		$packet->edns->size( $self->{udppacketsize} );	# advertise UDP payload size for local IP stack
+	} elsif ( $self->{adflag} ) {
+		print ";; Set AD flag\n" if $self->{debug};
+		$header->ad(1);
+		$header->cd(0);
 		$header->do(0);
 
 	} else {
-		$header->do(0);
+		print ";; Set EDNS DO flag\n" if $self->{debug};
+		$header->ad(0);
+		$header->cd( $self->{cdflag} );
+		$header->do(1);
 	}
+
+	$packet->edns->size( $self->{udppacketsize} );		# advertise payload size for local stack
 
 	if ( $self->{tsig_rr} && !grep $_->type eq 'TSIG', $packet->additional ) {
 		$packet->sign_tsig( $self->{tsig_rr} );
@@ -1489,33 +1492,28 @@ sub _ip_is_ipv6 {
 }
 
 
-sub adflag {
-	my $self = shift;
-	$self->{adflag} = shift if scalar @_;
-	return $self->{adflag};
-}
-
-
 sub force_v4 {
 	my $self = shift;
 	return $self->{force_v4} unless scalar @_;
-	my $value = shift() ? 1 : 0;
+	my $value = shift;
 	$self->force_v6(0) if $value;
-	$self->{force_v4} = $value;
+	$self->{force_v4} = $value ? 1 : 0;
 }
 
 sub force_v6 {
 	my $self = shift;
 	return $self->{force_v6} unless scalar @_;
-	my $value = shift() ? 1 : 0;
+	my $value = shift;
 	$self->force_v4(0) if $value;
-	$self->{force_v6} = $value;
+	$self->{force_v6} = $value ? 1 : 0;
 }
 
 sub prefer_v4 {
 	my $self = shift;
-	$self->{prefer_v6} = shift() ? 0 : 1 if scalar @_;
-	return $self->{prefer_v6} ? 0 : 1;
+	return $self->{prefer_v6} ? 0 : 1 unless scalar @_;
+	my $value = shift;
+	$self->{prefer_v6} = $value ? 0 : 1;
+	return $value;
 }
 
 sub prefer_v6 {

@@ -1,7 +1,7 @@
 # $Id$  -*-perl-*-
 
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 12;
 
 use Net::DNS;
 
@@ -22,7 +22,7 @@ ok( scalar(@warning), "expected warning: [@warning]" ) unless DNSSEC;
 
 
 SKIP: {
-	skip( 'Net::DNS::SEC not installed', 4 ) unless DNSSEC;
+	skip( 'Net::DNS::SEC not installed', 3 ) unless DNSSEC;
 
 	ok( $res->dnssec(), "dnssec flag toggles on" );
 	my $size = $res->udppacketsize();
@@ -31,9 +31,14 @@ SKIP: {
 	$res->dnssec(0);
 
 	ok( !$res->dnssec(), "dnssec flag toggles off" );
-
-	ok( $res->adflag(), "default adflag on" );
 }
+
+
+ok( !$res->adflag(), "default adflag  off" );
+$res->adflag(1);
+ok( $res->adflag(), "toggle adflag  on" );
+$res->adflag(0);
+ok( !$res->adflag(), "toggle adflag  off" );
 
 
 ok( !$res->cdflag(), "default cdflag  off" );

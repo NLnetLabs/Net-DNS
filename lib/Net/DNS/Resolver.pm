@@ -260,7 +260,7 @@ nor the default domain will be appended.
 
 The argument list can be either a C<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
-A and IN.  If the name looks like an IP address (Ipv4 or IPv6),
+A and IN.  If the name looks like an IP address (IPv4 or IPv6),
 an appropriate PTR query will be performed.
 
 Returns a C<Net::DNS::Packet> object whether there were any answers or not.
@@ -409,7 +409,7 @@ then perform other tasks while awaiting the response from the nameserver.
 
 The argument list can be either a C<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
-A and IN.  If the name looks like an IP address (4 dot-separated numbers),
+A and IN.  If the name looks like an IP address (IPv4 or IPv6),
 an appropriate PTR query will be performed.
 
 Returns an C<IO::Socket::INET> object or C<undef> on error in which
@@ -417,13 +417,13 @@ case the reason for failure can be found through a call to the
 errorstring method.
 
 The program must determine when the socket is ready for reading and
-call C<bgread> to get the response packet.  You can use C<bgisready>
-or C<IO::Select> to find out if the socket is ready before reading it.
+call C<bgread> to get the response packet.  Either C<bgisready> or
+C<IO::Select> may be used to find out if the socket is ready.
 
-bgsend does not support persistent sockets.
+C<bgsend> does not support persistent sockets.
 
 B<BEWARE>:
-bgsend does not support the usevc option (TCP) and operates on UDP only;
+C<bgsend> does not support the usevc option (TCP) and operates on UDP only.
 Answers may not fit in an UDP packet and might be truncated. Truncated 
 packets will B<not> be retried over TCP automatically and should be handled
 by the caller.
@@ -676,52 +676,6 @@ greater than the default DNS packet size, an EDNS extension will be
 added indicating support for UDP fragment reassembly.
 
 
-=head1 CUSTOMISED RESOLVERS
-
-Net::DNS::Resolver is actually an empty subclass.  At compile time a
-super class is chosen based on the current platform.  A side benefit of
-this allows for easy modification of the methods in Net::DNS::Resolver.
-You can simply add a method to the namespace!
-
-For example, if we wanted to cache lookups:
-
-    package Net::DNS::Resolver;
-
-    my %cache;
-
-    sub search {
-	$self = shift;
-
-	$cache{"@_"} ||= $self->SUPER::search(@_);
-    }
-
-
-=head1 IPv6 transport
-
-The Net::DNS::Resolver library will use IPv6 transport if the
-appropriate libraries (Socket6 and IO::Socket::INET6) are available
-and the address the server tries to connect to is an IPv6 address.
-
-The print() will method will report if IPv6 transport is available.
-
-You can use the force_v4() method with a non-zero argument
-to force IPv4 transport.
-
-The nameserver() method has IPv6 dependent behaviour. If IPv6 is not
-available or IPv4 transport has been forced, the nameserver() method
-will only return IPv4 addresses.
-
-For example
-
-    $resolver->nameservers( '192.0.2.1', '192.0.2.2', '2001:DB8::3' );
-    $resolver->force_v4(1);
-    print join ' ', $resolver->nameservers();
-
-Will print: 192.0.2.1 192.0.2.2
-
-
-
-
 =head1 ENVIRONMENT
 
 The following environment variables can also be used to configure
@@ -771,6 +725,49 @@ The default domain.
 
 A space-separated list of resolver options to set.  Options that
 take values are specified as C<option:value>.
+
+
+=head1 IPv6 TRANSPORT
+
+The Net::DNS::Resolver library will use IPv6 transport if the
+appropriate libraries (Socket6 and IO::Socket::INET6) are available
+and the address the server tries to connect to is an IPv6 address.
+
+The force_v4(), force_v6() and prefer_v6() methods with a non-zero
+argument may be used to configure transport selection.
+
+The behaviour of the nameserver() method illustrates the transport
+selection mechanism.  If, for example, IPv6 is not available or IPv4
+transport has been forced, the nameserver() method will only return
+IPv4 addresses:
+
+    $resolver->nameservers( '192.0.2.1', '192.0.2.2', '2001:DB8::3' );
+    $resolver->force_v4(1);
+    print join ' ', $resolver->nameservers();
+
+will print
+
+    192.0.2.1 192.0.2.2
+
+
+=head1 CUSTOMISED RESOLVERS
+
+Net::DNS::Resolver is actually an empty subclass.  At compile time a
+super class is chosen based on the current platform.  A side benefit of
+this allows for easy modification of the methods in Net::DNS::Resolver.
+You can simply add a method to the namespace!
+
+For example, if we wanted to cache lookups:
+
+    package Net::DNS::Resolver;
+
+    my %cache;
+
+    sub search {
+	$self = shift;
+
+	$cache{"@_"} ||= $self->SUPER::search(@_);
+    }
 
 
 =head1 BUGS

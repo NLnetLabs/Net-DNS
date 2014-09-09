@@ -118,15 +118,12 @@ sub _new_string {
 	my ( $ttl, $class );
 	unless ( defined $t2 ) {				# <name> <type>
 		@token = ('ANY') if $classbyname{$t1};		# <name> <class>
-	} elsif ( defined $t3 && $classbyname{$t2} ) {
-		$ttl   = shift @token;				# <name> <ttl> <class> <type>
-		$class = shift @token;
-	} elsif ( $t1 =~ /^\d/ ) {
-		$ttl = shift @token;				# <name> <ttl> [<class>] <type>
-		$class = shift @token if $t2 =~ /^CLASS\d/;
 	} elsif ( $classbyname{$t1} || $t1 =~ /^CLASS\d/ ) {
 		$class = shift @token;				# <name> <class> [<ttl>] <type>
 		$ttl = shift @token if $t2 =~ /^\d/;
+	} elsif ( $t1 =~ /^\d/ ) {
+		$ttl = shift @token;				# <name> <ttl> [<class>] <type>
+		$class = shift @token if $classbyname{$t2} || $t2 =~ /^CLASS\d/;
 	}
 
 	my $type      = shift(@token);
