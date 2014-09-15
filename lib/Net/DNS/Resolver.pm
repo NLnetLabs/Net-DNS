@@ -18,23 +18,11 @@ use strict;
 use vars qw(@ISA);
 
 BEGIN {
-	for ($^O) {				## Perl OS identifier
-
-		/cygwin/ && do {
-			if ( eval "require Net::DNS::Resolver::MSWin32;" ) {
-				@ISA = qw(Net::DNS::Resolver::MSWin32);
-				last;
-			}
-		};
-
-		if ( eval "require Net::DNS::Resolver::$_;" ) {
-			@ISA = ("Net::DNS::Resolver::$_");
-			last;
-		}
-
-		require Net::DNS::Resolver::UNIX;
-		@ISA = qw(Net::DNS::Resolver::UNIX);
+	for ( $^O, 'UNIX' ) {
+		my $class = join '::', __PACKAGE__, $_;
+		return @ISA = ($class) if eval "require $class;";
 	}
+	die 'failed to load platform specific resolver component';
 }
 
 

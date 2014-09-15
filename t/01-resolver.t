@@ -9,7 +9,7 @@ use Net::DNS;
 my $res = Net::DNS::Resolver->new();
 
 for (@Net::DNS::Resolver::ISA) {
-	diag "$_\t($^O)" unless /[:]UNIX$/;
+	diag $_ unless /[:]UNIX$/;
 }
 
 isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );

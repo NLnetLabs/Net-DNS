@@ -3,6 +3,13 @@ $Id$                       -*-text-*-
 
 **** 0.80 [unreleased]
 
+Removal of Win32::IPHelper support with cygwin
+
+	Resolvers on Cygwin can get their DNS configuration from the
+	registry directly via the /proc filesystem.  Getting rid of
+	the other method reduces dependencies and makes installations
+	less error prone.
+
 Rework rt.cpan.org #96119
 
 	"Too late to run INIT block" warning for require Net::DNS

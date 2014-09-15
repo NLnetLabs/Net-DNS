@@ -50,21 +50,20 @@ my $help = 0;
 my $IPv6_tests;
 my $online_tests = 2;		# 2 = non-fatal, 1 = on, 0 = off
 my $use_xs;
-my $iphelper = 2;		# only relevant for Cygwin
-				# 2 = use when installed, 1 = use, 0 = don't use
-my @options  = (
+
+my @options = (
 	'xs!' => \$use_xs,
 	'pm'  => sub {
 		warn qq/\n\tWARNING: Use of "--pm" is deprecated.  Use "--noxs" instead.\n\n/;
 		$use_xs = 0;
 	},
 	'online-tests!'		 => \$online_tests,
-	'non-fatal-online-tests' => sub { $online_tests = 2; },
+	'non-fatal-online-tests' => sub {
+		$online_tests = 2;
+	},
 	'IPv6-tests!' => \$IPv6_tests,
-	'help!'       => \$help
+	'help!'	      => \$help
 	);
-
-push @options, ( 'iphelper!' => \$iphelper ) if ( $^O eq 'cygwin' );
 
 
 unless ( GetOptions(@options) ) {
@@ -72,6 +71,7 @@ unless ( GetOptions(@options) ) {
 	print "Try perl Makefile.PL --help for more information\n";
 	exit 1;
 }
+
 
 if ($help) {
 	print <<EOT;
@@ -95,44 +95,8 @@ Prepare Makefile for building and installing Net::DNS
 				make test.  This is the default.
 
 EOT
-	print <<EOT if ( $^O eq 'cygwin' );
-  --iphelper --noiphelper	Use the Win32::IPHelper module to determine
-				network parameters like which nameservers to
-				use.  When freshly installing Net::DNS, the
-				default is to *not* use Win32::IPHelper and
-				read those values from /proc/registry.
-				When updating, the default is to copy what the
-				installed version did.
-				
-EOT
 
 	exit 0;
-}
-
-if ( $^O eq 'cygwin' ) {
-	# Just testing if Net::DNS::Resolver::Win32 is installed, but
-	# Net::DNS::Resolver needs to be required first for it to load
-	# successfully (if available).
-	my $iphelper_present = '';
-	eval { require Net::DNS::Resolver; require Net::DNS::Resolver::Win32; };
-	$iphelper_present ||= $INC{'Net/DNS/Resolver/Win32.pm'} unless $@;
-
-	eval { require Net::DNS::Resolver; require Net::DNS::Resolver::MSWin32; };
-	$iphelper_present ||= $INC{'Net/DNS/Resolver/MSWin32.pm'} unless $@;
-
-	$iphelper = ( $iphelper_present ? 1 : 0 ) if $iphelper == 2;
-
-	die <<EOT if $iphelper_present && ! $iphelper;
-You have indicated a wish to remove Win32::IPHelper usage. However, you are
-either doing a reinstall or an upgrade of an installation which *did* use
-Win32::IPHelper.  In your case, you have to delete the file:
-
-	$iphelper_present
-
-by hand first, to build and install Net::DNS in this way.
-EOT
-
-	print "Build will" . ( $iphelper ? "" : " not" ) . " use Win32::IPHelper.\n\n";
 }
 
 
@@ -143,7 +107,6 @@ my @debris = qw(
 		t/IPv6.enabled
 		t/online.enabled t/online.nonfatal
 		compile.* DNS.o DNS.c DNS.bs
-		lib/Net/DNS/Resolver/MSWin32
 		zone[0-9].txt zone[0-9][0-9].txt
 		);
 
@@ -172,31 +135,27 @@ my %Makefile = (
 	);
 
 
-if ( $^O eq 'MSWin32' || $^O eq "cygwin" && $iphelper ) {
+if ( $^O eq "MSWin32" ) {
+
 	unless (eval {
 			local $SIG{__WARN__} = sub { };
 			require WIN32::API;
 		}
 		) {
-		warn <<AMEN;
+
+		print <<AMEN;
 I can not find WIN32::API version 0.55 or higher.
 I will add WIN32::API to the list of prerequisites.
-AMEN
 
-
-		if ( $^O eq "MSWin32" ) {
-			warn <<AMEN2;
 Note that, WIN32::API is included in recent versions
 of ActivePerl (5.10 since build 1003) and recent
 versions of Strawberry perl (at least in the October
 version of 5.10.0.3) and the module has not be 
 tested with other versions. In case of failure please
 consider upgrading.
-AMEN2
-		}
-
-
+AMEN
 	}
+
 	$Makefile{'PREREQ_PM'}->{'enum'}	       = 1.0;	# Dependency for Win32::IPHelper
 	$Makefile{'PREREQ_PM'}->{'Win32::IPHelper'}    = 0.07;
 	$Makefile{'PREREQ_PM'}->{'Win32::API'}	       = 0.55;
@@ -345,7 +304,7 @@ EOF
 	my $ar = exists $Config{'full_ar'} ? $Config{'full_ar'} : $Config{'ar'};
 	my $cr = ( $^O eq 'MSWin32' && $Config{'cc'} eq 'cl' ? '/OUT:' : 'cr ' );    # ar action
 
-	$ret = system( "$ar $cr compile$Config{lib_ext} compile$Config{obj_ext}" )
+	$ret = system("$ar $cr compile$Config{lib_ext} compile$Config{obj_ext}")
 			unless $ret;
 
 	foreach my $file ( glob('compile*') ) {
@@ -382,6 +341,9 @@ netdns$(LIB_EXT): netdns$(OBJ_EXT)
 sub MY::libscan {
 	my $path = $_[1];
 	return '' if $path =~ /\B\.svn\b/;
-	return '' if $^O eq 'cygwin' && !$iphelper && $path =~ /Resolver[^\w]MSWin32\.pm$/;
 	return $path;
 }
+
+
+__END__
+
