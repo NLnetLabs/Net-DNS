@@ -369,7 +369,7 @@ The default is port 53.
     print 'sending queries from port ', $resolver->srcport, "\n";
     $resolver->srcport(5353);
 
-Gets or sets the port from which we send queries.
+Gets or sets the port from which queries are sent.
 The default is 0, meaning any port.
 
 =head2 srcaddr
@@ -377,7 +377,7 @@ The default is 0, meaning any port.
     print 'sending queries from address ', $resolver->srcaddr, "\n";
     $resolver->srcaddr('192.0.2.1');
 
-Gets or sets the source address from which we send queries.
+Gets or sets the source address from which queries are sent.
 Convenient for forcing queries from a specific interface on a
 multi-homed host.
 The default is 0.0.0.0, meaning any local address.
@@ -474,7 +474,7 @@ The default resolver behavior is not to sign any packets.  You must
 call this method to set the key if you would like the resolver to
 sign packets automatically.
 
-You can also sign packets manually -- see the L<Net::DNS::Packet>
+Packets can also be signed manually; see the L<Net::DNS::Packet>
 and L<Net::DNS::Update> manual pages for examples.  TSIG records
 in manually-signed packets take precedence over those that the
 resolver would add automatically.
@@ -607,14 +607,14 @@ Returns a string containing the status of the most recent query.
 
     print 'last answer was from: ', $resolver->answerfrom, "\n";
 
-Returns the IP address from which we received the last answer in
-response to a query.
+Returns the IP address from which the most recent packet was
+received in response to a query.
 
 =head2 answersize
 
     print 'size of last answer: ', $resolver->answersize, "\n";
 
-Returns the size in bytes of the last answer we received in
+Returns the size in bytes of the most recent packet received in
 response to a query.
 
 
@@ -623,13 +623,12 @@ response to a query.
     print "dnssec flag: ", $resolver->dnssec, "\n";
     $resolver->dnssec(0);
 
-Enabled DNSSEC this will set the checking disabled flag in the query header
-and add EDNS0 data as in RFC2671 and RFC3225
+The dnssec flag causes the resolver to transmit DNSSEC queries
+and to add a EDNS0 record as required by RFC2671 and RFC3225.
+The actions of, and response from, the remote nameserver is
+determined by the settings of the AD and CD flags.
 
-When set to true the answer and additional section of queries from
-secured zones will contain DNSKEY, NSEC and RRSIG records.
-
-Setting calling the dnssec method with a non-zero value will set the
+Calling the dnssec() method with a non-zero value will also set the
 UDP packet size to the default value of 2048. If that is too small or
 too big for your environment, you should call the udppacketsize()
 method immediately after.
@@ -637,10 +636,20 @@ method immediately after.
    $resolver->dnssec(1);		# DNSSEC using default packetsize
    $resolver->udppacketsize(1250);	# lower the UDP packet size
 
-The method will Croak::croak with the message "You called the
-Net::DNS::Resolver::dnssec() method but do not have Net::DNS::SEC
-installed at ..." if you call it without Net::DNS::SEC being in your
-@INC path.
+A fatal exception will be raised if the dnssec() method is called
+but the Net::DNS::SEC library has not been installed.
+
+
+=head2 adflag
+
+    $resolver->dnssec(1);
+    $resolver->adflag(1);
+    print "authentication desired flag: ", $resolver->adflag, "\n";
+
+Gets or sets the AD bit for dnssec queries.  This bit indicates that
+the caller is interested in the returned AD (authentic data) bit but
+does not require any dnssec RRs to be included in the response.
+The default value is 0.
 
 
 =head2 cdflag
@@ -649,9 +658,11 @@ installed at ..." if you call it without Net::DNS::SEC being in your
     $resolver->cdflag(1);
     print "checking disabled flag: ", $resolver->cdflag, "\n";
 
-Sets or gets the CD bit for a dnssec query.  This bit is always zero
-for non dnssec queries. When the dnssec is enabled the flag defaults to
-0 can be set to 1.
+Gets or sets the CD bit for dnssec queries.  This bit indicates that
+authentication by upstream nameservers should be suppressed.
+Any dnssec RRs required to execute the authentication procedure
+should be included in the response.
+The default value is 0.
 
 
 =head2 udppacketsize
@@ -717,9 +728,9 @@ take values are specified as C<option:value>.
 
 =head1 IPv6 TRANSPORT
 
-The Net::DNS::Resolver library will use IPv6 transport if the
+The Net::DNS::Resolver library will enable IPv6 transport if the
 appropriate libraries (Socket6 and IO::Socket::INET6) are available
-and the address the server tries to connect to is an IPv6 address.
+and the destination nameserver has at least one IPv6 address.
 
 The force_v4(), force_v6() and prefer_v6() methods with a non-zero
 argument may be used to configure transport selection.
