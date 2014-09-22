@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 0.80 [unreleased]
+**** 0.80 Sep 22, 2014
 
 Removal of Win32::IPHelper support with cygwin
 
