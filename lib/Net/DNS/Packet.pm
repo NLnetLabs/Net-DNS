@@ -237,7 +237,7 @@ sub header {
     $version = $edns->version;
     $size    = $edns->size;
 
-Auxilliary function edns() provides access to EDNS extensions.
+Auxiliary function edns() provides access to EDNS extensions.
 
 =cut
 
