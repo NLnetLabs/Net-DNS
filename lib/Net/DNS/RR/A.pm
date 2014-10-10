@@ -51,14 +51,17 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
+my $pad = pack 'x4';
+
 sub address {
 	my $self = shift;
 
-	return join '.', unpack( 'C4', $self->{address} ) unless scalar @_;
+	return join '.', unpack 'C4', $self->{address} . $pad unless scalar @_;
 
 	# Note: pack masks overlarge values, mostly without warning
 	my @part = split /\./, shift || '';
 	my $last = pop(@part) || 0;
+	$self = {} unless ref($self);
 	$self->{address} = pack 'C4', @part, (0) x ( 3 - @part ), $last;
 }
 

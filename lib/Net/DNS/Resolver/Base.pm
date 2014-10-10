@@ -18,7 +18,7 @@ use IO::Select;
 use Net::DNS::RR;
 use Net::DNS::Packet;
 
-use constant DNSSEC => eval { require Net::DNS::RR::DS; } || 0;
+use constant DNSSEC => eval { require Net::DNS::RR::DNSKEY; } || 0;
 use constant INT16SZ  => 2;
 use constant PACKETSZ => 512;
 
@@ -1094,7 +1094,7 @@ sub make_query_packet {
 		$header->ad(0);
 		$header->do(0);
 
-	} elsif ( $self->{adflag} ) {
+	} elsif ( $self->{adflag} ) {				# RFC6840, 5.7
 		print ";; Set AD flag\n" if $self->{debug};
 		$header->ad(1);
 		$header->cd(0);
@@ -1560,7 +1560,7 @@ __END__
 
 =head1 NAME
 
-Net::DNS::Resolver::Base - Common Resolver Class
+Net::DNS::Resolver::Base - DNS resolver base class
 
 =head1 SYNOPSIS
 

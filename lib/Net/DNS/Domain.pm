@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Domain - Domain Name System domains
+Net::DNS::Domain - DNS domains
 
 =head1 SYNOPSIS
 
@@ -59,7 +59,7 @@ use constant LIBIDN => eval {
 } || 0;
 
 
-# perlcc: eddress of encoding objects must be determined at runtime
+# perlcc: address of encoding objects must be determined at runtime
 my $ascii = Encode::find_encoding('ascii') if ASCII;		# Osborn's Law:
 my $utf8  = Encode::find_encoding('utf8')  if UTF8;		# Variables won't; constants aren't.
 
@@ -151,7 +151,8 @@ sub name {
 	my $head = _decode_ascii( join chr(46), map _escape($_), @$lref );
 	my $tail = $self->{origin} || return $self->{name} = $head || $dot;
 	return $self->{name} = $tail->name unless length $head;
-	return $self->{name} = join $dot, $head, $tail->name;
+	my $suffix = $tail->name;
+	return $self->{name} = $suffix eq $dot ? $head : join $dot, $head, $suffix;
 }
 
 
@@ -243,10 +244,10 @@ where relative names become descendents of the specified $ORIGIN.
 my $placebo = sub { my $constructor = shift; &$constructor; };
 
 sub origin {
-	my $class = shift;
-	my $name = shift || return $placebo;
+	my ( $class, $name ) = @_;
 
-	my $domain = new Net::DNS::Domain($name);
+	my $domain = defined $name ? new Net::DNS::Domain($name) : return $placebo;
+	$domain = undef unless scalar @{$domain->{label}};
 	return sub {						# closure w.r.t. $domain
 		my $constructor = shift;
 		local $ORIGIN = $domain;			# dynamically scoped $ORIGIN

@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Text - Domain Name System text representation
+Net::DNS::Text - DNS text representation
 
 =head1 SYNOPSIS
 
@@ -53,7 +53,7 @@ use constant UTF8 => eval {
 } || 0;
 
 
-# perlcc: eddress of encoding objects must be determined at runtime
+# perlcc: address of encoding objects must be determined at runtime
 my $ascii = Encode::find_encoding('ascii') if ASCII;		# Osborn's Law:
 my $utf8  = Encode::find_encoding('utf8')  if UTF8;		# Variables won't; constants aren't.
 

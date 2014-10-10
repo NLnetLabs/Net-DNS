@@ -51,13 +51,15 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
+my $pad = pack 'x16';
+
 sub address_long {
-	return sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack 'n8', shift->{address};
+	sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack 'n8', shift->{address} . $pad;
 }
 
 
 sub address_short {
-	for ( sprintf ':%x:%x:%x:%x:%x:%x:%x:%x:', unpack 'n8', shift->{address} ) {
+	for ( sprintf ':%x:%x:%x:%x:%x:%x:%x:%x:', unpack 'n8', shift->{address} . $pad ) {
 		s/(:0[:0]+:)(?!.+:0\1)/::/;			# squash longest zero sequence
 		s/^:// unless /^::/;				# prune LH :
 		s/:$// unless /::$/;				# prune RH :
@@ -73,6 +75,7 @@ sub address {
 
 	my $argument = shift || '';
 	my @parse = split /:/, "0$argument";
+	$self = {} unless ref($self);
 
 	if ( (@parse)[$#parse] =~ /\./ ) {			# embedded IPv4
 		my @ip4 = split /\./, pop(@parse);

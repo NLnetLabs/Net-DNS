@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Update - Create a DNS update packet
+Net::DNS::Update - DNS dynamic update packet
 
 =head1 SYNOPSIS
 
@@ -27,15 +27,10 @@ making DNS dynamic updates.
 
 Programmers should refer to RFC2136 for dynamic update semantics.
 
-WARNING:  This code is still under development.	 Please use with
-caution on production nameservers.
-
 =cut
 
 
 use strict;
-use integer;
-
 use base 'Net::DNS::Packet';
 
 
@@ -179,10 +174,6 @@ subsequent examples show only the creation of the update packet .
     $update->push( update     => rr_add('foo.example.com A 10.1.2.3') );
     $update->push( additional => $tsig );
 
-=head1 BUGS
-
-This code is still under development.  Please use with caution on
-production nameservers.
 
 =head1 COPYRIGHT
 

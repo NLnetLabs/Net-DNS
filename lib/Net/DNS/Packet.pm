@@ -39,8 +39,6 @@ BEGIN {
 	require Net::DNS::RR;
 }
 
-my @dummy_header = ( header => {} ) if Net::DNS::RR->COMPATIBLE;
-
 
 =head1 METHODS
 
@@ -69,7 +67,6 @@ sub new {
 		answer	   => [],
 		authority  => [],
 		additional => [],
-		@dummy_header		## Net::DNS::SEC 0.17 compatible
 		}, $class;
 
 	$self->{question} = [Net::DNS::Question->new(@_)] if scalar @_;
@@ -134,7 +131,6 @@ sub decode {
 			authority  => [],
 			additional => [],
 			answersize => length $$data,
-			@dummy_header	## Net::DNS::SEC 0.17 compatible
 			}, $class;
 
 		# question/zone section
@@ -227,7 +223,7 @@ represents the header section of the packet.
 
 sub header {
 	my $self = shift;
-	return bless \$self, q(Net::DNS::Header);
+	bless \$self, q(Net::DNS::Header);
 }
 
 
@@ -245,7 +241,7 @@ sub edns {
 	my $self = shift;
 	my $link = \$self->{xedns};
 	($$link) = grep $_->isa(qw(Net::DNS::RR::OPT)), @{$self->{additional}} unless $$link;
-	return $$link ||= new Net::DNS::RR( type => 'OPT' );
+	$$link ||= new Net::DNS::RR( type => 'OPT' );
 }
 
 
@@ -551,103 +547,6 @@ sub _section {				## returns array reference for section
 	my $name = shift;
 	my $list = $_section{unpack 'a3', $name} || $name;
 	return $self->{$list} || [];
-}
-
-
-# =head2 dn_comp
-
-#     $compname = $packet->dn_comp("foo.example.com", $offset);
-
-# Returns a domain name compressed for a particular packet object, to
-# be stored beginning at the given offset within the packet data.  The
-# name will be added to a running list of compressed domain names for
-# future use.
-
-# =cut
-
-sub dn_comp {
-	my ($self, $fqdn, $offset) = @_;
-
-	my @labels = Net::DNS::name2labels($fqdn);
-	my $hash   = $self->{compnames};
-	my $data   = '';
-	while (@labels) {
-		my $name = join( '.', @labels );
-
-		return $data . pack( 'n', 0xC000 | $hash->{$name} ) if defined $hash->{$name};
-
-		my $label = shift @labels;
-		my $length = length($label) || next;		   # skip if null
-		if ( $length > 63 ) {
-			$length = 63;
-			$label = substr( $label, 0, $length );
-			carp "\n$label...\ntruncated to $length octets (RFC1035 2.3.1)";
-		}
-		$data .= pack( 'C a*', $length, $label );
-
-		next unless $offset < 0x4000;
-		$hash->{$name} = $offset;
-		$offset += 1 + $length;
-	}
-	$data .= chr(0);
-}
-
-
-# =head2 dn_expand
-
-#     use Net::DNS::Packet qw(dn_expand);
-#     ($name, $nextoffset) = dn_expand(\$data, $offset);
-
-#     ($name, $nextoffset) = Net::DNS::Packet::dn_expand(\$data, $offset);
-
-# Expands the domain name stored at a particular location in a DNS
-# packet.  The first argument is a reference to a scalar containing
-# the packet data.  The second argument is the offset within the
-# packet where the (possibly compressed) domain name is stored.
-
-# Returns the domain name and the offset of the next location in the
-# packet.
-
-# Returns undef if the domain name could not be expanded.
-
-# =cut
-
-
-# This is very hot code, so we try to keep things fast.  This makes for
-# odd style sometimes.
-
-sub dn_expand {
-#FYI	my ($packet, $offset) = @_;
-	return dn_expand_XS(@_) if $Net::DNS::HAVE_XS;
-#	warn "USING PURE PERL dn_expand()\n";
-	return dn_expand_PP(@_, {} );	# $packet, $offset, anonymous hash
-}
-
-sub dn_expand_PP {
-	my ($packet, $offset, $visited) = @_;
-	my $packetlen = length $$packet;
-	my $name = '';
-
-	while ( $offset < $packetlen ) {
-		unless ( my $length = unpack("\@$offset C", $$packet) ) {
-			$name =~ s/\.$//o;
-			return ($name, ++$offset);
-
-		} elsif ( ($length & 0xc0) == 0xc0 ) {		# pointer
-			my $point = 0x3fff & unpack("\@$offset n", $$packet);
-			die 'Exception: unbounded name expansion' if $visited->{$point}++;
-
-			my ($suffix) = dn_expand_PP($packet, $point, $visited);
-
-			return ($name.$suffix, $offset+2) if defined $suffix;
-
-		} else {
-			my $element = substr($$packet, ++$offset, $length);
-			$name .= Net::DNS::wire2presentation($element).'.';
-			$offset += $length;
-		}
-	}
-	return undef;
 }
 
 

@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Resolver::Recurse - Perform recursive DNS lookups
+Net::DNS::Resolver::Recurse - DNS recursive resolver
 
 
 =head1 SYNOPSIS
@@ -206,7 +206,7 @@ for queries for missing glue records.
 sub callback {
 	my ( $self, $sub ) = @_;
 
-	$self->{callback} = $sub if $sub && UNIVERSAL::isa( $sub, 'CODE' );
+	$self->{callback} = $sub if defined $sub && ref($sub) eq 'CODE';
 	return $self->{callback};
 }
 

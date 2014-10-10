@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::DomainName - DNS domain name wire representation
+Net::DNS::DomainName - DNS name representation
 
 =head1 SYNOPSIS
 

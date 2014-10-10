@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 0.81 [unreleased]
+
+Fix rt.cpan.org #99320
+
+	Net::DNS::ZoneFile bug in "$ORIGIN ."
+
+
 **** 0.80 Sep 22, 2014
 
 Removal of Win32::IPHelper support with cygwin
