@@ -125,11 +125,12 @@ sub send {
 		return $packet;
 	}
 
-	my $domain = $question->qtype ne 'NULL' ? $original->qname : join '.', @tail;
+	my $domain = lc join( '.', @tail ) || '.';
 	my $nslist = $res->{cache}->{$domain} ||= [];
 	if ( scalar @$nslist ) {
-		print ";; using cached nameservers for $domain.\n" if $res->{debug};
+		print ";; using cached nameservers for $domain\n" if $res->{debug};
 	} else {
+		$domain = lc $question->qname if $question->qtype ne 'NULL';
 		my $packet = $res->send( $domain, 'NULL', 'ANY', $original ) || return;
 		return $packet unless $packet->header->rcode eq 'NOERROR';
 
@@ -137,17 +138,20 @@ sub send {
 		return $packet if $packet->header->aa && grep $_->name eq $original->qname, @answer;
 
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
-		print ";; cache nameservers for $domain.\n" if $res->{debug} && scalar(@auth);
-		my %auth = map { lc $_->nsdname => 1 } @auth;
+		my %auth = map { lc $_->nsdname => lc $_->name } @auth;
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
-
 		my %glue;
 		foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
 		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
-		@$nslist = values %glue;
 
-		my @noglue = grep !$glue{$_}, keys %auth;
-		push @$nslist, @noglue;
+		my %zone = reverse %auth;
+		foreach my $zone ( keys %zone ) {
+			print ";; cache nameservers for $zone\n" if $res->{debug};
+			my @nsname = grep $auth{$_} eq $zone, keys %auth;
+			$nslist = $res->{cache}->{$zone} ||= [];
+			@$nslist = map $glue{$_} || $_, @nsname;
+			last if $zone eq $domain;
+		}
 	}
 
 	my $query = new Net::DNS::Packet();
@@ -158,24 +162,28 @@ sub send {
 	splice @a, 0, 0, splice( @a, int( rand scalar @a ) );	# cut deck
 
 	foreach (@a) {
+		$res->empty_nameservers();
 		$res->nameservers( map @$_, @a );
 		my $reply = $res->send($query) || last;
 		$res->{callback}->($reply) if $res->{callback};
 		return $reply;
 	}
 
-	foreach my $ns ( grep !ref($_), @$nslist ) {
-		print ";; find missing glue for $domain. ($ns)\n" if $res->{debug};
+	foreach my $ns (@$nslist) {
+		next if ref($ns);
+		my $name = $ns;
+		print ";; find missing glue for $name\n" if $res->{debug};
+		$ns = [];					# substitute IP list in situ
 		$res->empty_nameservers();
-		my @ip = $res->nameservers($ns);
-		$ns = [@ip];					# substitute IP list in situ
-		next unless @ip;
+		@$ns = $res->nameservers($name);
+		next unless @$ns;
 		my $reply = $res->send($query) || next;
 		$res->{callback}->($reply) if $res->{callback};
 		return $reply;
 	}
 	return;
 }
+
 
 sub query_dorecursion { &send; }	## historical
 

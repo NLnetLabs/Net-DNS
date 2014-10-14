@@ -3,6 +3,11 @@ $Id$                       -*-text-*-
 
 **** 0.81 [unreleased]
 
+Fix rt.cpan.org #99429
+
+	Infinite recursion in Net::DNS::Resolver::Recurse::send when
+	following certain delegations with empty-non terminals.
+
 Fix rt.cpan.org #99320
 
 	Net::DNS::ZoneFile bug in "$ORIGIN ."
