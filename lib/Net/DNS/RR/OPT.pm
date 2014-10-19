@@ -121,9 +121,8 @@ sub class {				## overide RR method
 
 sub ttl {				## overide RR method
 	my $self = shift;
-	my $mods = shift || return if scalar @_;
 	carp qq[Usage: OPT has no "ttl" attribute, please use "flags()" and "rcode()"] unless $warned++;
-	@{$self}{qw(rcode version flags)} = unpack 'C2 n', pack 'N', $mods if $mods;
+	@{$self}{qw(rcode version flags)} = unpack 'C2 n', pack 'N', shift || 0 if scalar @_;
 	return pack 'C2 n', @{$self}{qw(rcode version flags)} if defined wantarray;
 }
 

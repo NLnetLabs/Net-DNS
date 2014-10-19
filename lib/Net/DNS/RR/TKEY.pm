@@ -156,7 +156,7 @@ __END__
 
 =head1 DESCRIPTION
 
-Class for DNS Transaction Signature (TKEY) resource records.
+Class for DNS TSIG Key (TKEY) resource records.
 
 =head1 METHODS
 
@@ -222,8 +222,8 @@ The meaning of this data depends on the mode.
     $other = $rr->other;
     $rr->other( $other );
 
-Not defined in [RFC2930] specification but may be used in future
-extensions.
+Content not defined in the [RFC2930] specification but may be used
+in future extensions.
 
 
 =head1 COPYRIGHT

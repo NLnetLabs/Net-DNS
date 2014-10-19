@@ -54,8 +54,8 @@ use constant UTF8 => eval {
 
 
 # perlcc: address of encoding objects must be determined at runtime
-my $ascii = Encode::find_encoding('ascii') if ASCII;		# Osborn's Law:
-my $utf8  = Encode::find_encoding('utf8')  if UTF8;		# Variables won't; constants aren't.
+my $ascii = ASCII ? Encode::find_encoding('ascii') : undef;	# Osborn's Law:
+my $utf8  = UTF8  ? Encode::find_encoding('utf8')  : undef;	# Variables won't; constants aren't.
 
 
 =head1 METHODS

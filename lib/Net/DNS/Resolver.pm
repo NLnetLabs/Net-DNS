@@ -771,9 +771,6 @@ For example, if we wanted to cache lookups:
 
 =head1 BUGS
 
-The current implementation supports TSIG only on outgoing packets.
-No validation of server replies is performed.
-
 bgsend() does not honour the usevc flag and only uses UDP for transport.
 
 =head1 COPYRIGHT

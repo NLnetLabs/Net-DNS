@@ -271,9 +271,8 @@ sub sig_data {
 	my $data = shift || '';
 
 	if ( ref($data) ) {
-		my $packet = $data if $data->isa('Net::DNS::Packet');
-		die 'missing packet reference' unless $packet;
-
+		die 'missing packet reference' unless $data->isa('Net::DNS::Packet');
+		my $packet   = $data;
 		my $original = $packet->{additional};
 		my @unsigned = grep ref($_) ne ref($self), @$original;
 		$packet->{additional} = \@unsigned;		# strip TSIG RR
@@ -339,8 +338,8 @@ sub create {
 			key  => $key
 			);
 
-	} elsif ( $karg =~ /K([^+]+)[+0-9]+\.private$/ ) {	# ( keyfile, options )
-		my $kname = $1;
+	} elsif ( $karg =~ /[+.0-9]+private$/ ) {		# ( keyfile, options )
+		require File::Spec;
 		require Net::DNS::ZoneFile;
 		my $keyfile = new Net::DNS::ZoneFile($karg);
 		my ( $alg, $key, $junk );
@@ -350,6 +349,9 @@ sub create {
 				( $junk, $key ) = split if /Key:/;
 			}
 		}
+
+		my ( $vol, $dir, $file ) = File::Spec->splitpath( $keyfile->name );
+		my $kname = $file =~ /^K([^+]+)+.+private$/ ? $1 : undef;
 		return new Net::DNS::RR(
 			name	  => $kname,
 			type	  => 'TSIG',

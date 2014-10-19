@@ -154,7 +154,7 @@ my $initial;
 
 sub new {
 	my $class = shift;
-	my %args = @_ unless scalar(@_) % 2;
+	my %args = ( scalar(@_) % 2 ) ? () : @_;
 
 	my $self;
 	my $base = $class->defaults;
@@ -351,7 +351,7 @@ sub nameservers {
 
 		my $packet = $defres->search( $ns, 'A' );
 		$self->errorstring( $defres->errorstring );
-		my @address = cname_addr( [@names], $packet ) if defined $packet;
+		my @address = $packet ? cname_addr( [@names], $packet ) : ();
 
 		if ($has_inet6) {
 			$packet = $defres->search( $ns, 'AAAA' );
@@ -372,8 +372,8 @@ sub nameservers {
 		return unless defined wantarray;
 	}
 
-	my @ns4 = @{$self->{nameserver4}} unless $self->force_v6;
-	my @ns6 = @{$self->{nameserver6}} if $has_inet6 && !$self->force_v4;
+	my @ns4 = $self->force_v6 ? () : @{$self->{nameserver4}};
+	my @ns6 = $has_inet6 && !$self->force_v4 ? @{$self->{nameserver6}} : ();
 	my @returnval = $self->prefer_v6 ? ( @ns6, @ns4 ) : ( @ns4, @ns6 );
 
 	return @returnval if scalar @returnval;
@@ -446,8 +446,8 @@ sub search {
 	my $self = shift;
 	my $name = shift || '.';
 
-	my $defdomain  = $self->{domain}	  if $self->{defnames};
-	my @searchlist = @{$self->{'searchlist'}} if $self->{dnsrch};
+	my $defdomain  = $self->{defnames} ? $self->{domain}	      : undef;
+	my @searchlist = $self->{dnsrch}   ? @{$self->{'searchlist'}} : ();
 
 	# resolve name by trying as absolute name, then applying searchlist
 	my @list = ( undef, @searchlist );
@@ -483,7 +483,7 @@ sub query {
 	my $name = shift || '.';
 
 	# resolve name containing no dots or colons by appending domain
-	my @suffix = ( $self->{domain} || () ) if $name !~ m/[:.]/ and $self->{defnames};
+	my @suffix = ( $name !~ m/[:.]/ && $self->{defnames} ) ? ( $self->{domain} || () ) : ();
 
 	my $fqname = join '.', $name, @suffix;
 
@@ -655,7 +655,7 @@ sub send_udp {
 
 	my $lastanswer;
 
-	my $stop_time = time + $self->{'udp_timeout'} if $self->{'udp_timeout'};
+	my $stop_time = $self->{'udp_timeout'} ? time + $self->{'udp_timeout'} : undef;
 
 	$self->_reset_errorstring;
 
@@ -1124,7 +1124,8 @@ sub axfr {				## zone transfer
 	my @null;
 	my $query = $self->_axfr_start(@_) || return $whole ? @null : sub {undef};
 	my $reply = $self->_axfr_next()	   || return $whole ? @null : sub {undef};
-	my $verfy = $reply->verify($query) || croak $reply->verifyerr if $query->sigrr;
+	my $sigrr = $query->sigrr();
+	my $verfy = $sigrr && ( $reply->verify($query) || croak $reply->verifyerr );
 	my @rr	  = $reply->answer;
 	my $soa	  = $rr[0];
 
@@ -1135,7 +1136,7 @@ sub axfr {				## zone transfer
 			push @zone, @rr;			# unpack non-terminal packet
 			@rr    = @null;
 			$reply = $self->_axfr_next() || last;
-			$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $query->sigrr;
+			$verfy = $sigrr && ( $reply->verify($verfy) || croak $reply->verifyerr );
 			@rr    = $reply->answer;
 		}
 
@@ -1160,7 +1161,7 @@ sub axfr {				## zone transfer
 		}
 
 		$reply = $self->_axfr_next() || return undef;	# end of packet
-		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $query->sigrr;
+		$verfy = $sigrr && ( $reply->verify($verfy) || croak $reply->verifyerr );
 		@rr = $reply->answer;
 		return $rr;
 	};

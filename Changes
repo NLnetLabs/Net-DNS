@@ -3,6 +3,18 @@ $Id$                       -*-text-*-
 
 **** 0.81 [unreleased]
 
+Fix rt.cpan.org #99531
+
+	Resolver doc error - when is a 'bug' a 'bug'? [TSIG verification]
+
+Fix rt.cpan.org #99528
+
+	TSIG::create fails with some filenames
+	
+Fix rt.cpan.org #99527
+
+	Random errors... [declaration with statement modifier]
+
 Fix rt.cpan.org #99429
 
 	Infinite recursion in Net::DNS::Resolver::Recurse::send when

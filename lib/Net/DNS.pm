@@ -40,6 +40,28 @@ use vars qw(@EXPORT);
 		mx rrsort);
 
 
+use vars qw($HAVE_XS);
+$HAVE_XS = eval {
+	local $SIG{'__DIE__'} = 'DEFAULT';
+
+	my $version = $VERSION;
+	$version =~ s/[^0-9.]//g;
+
+	eval {
+		require XSLoader;
+		XSLoader::load( 'Net::DNS', $version );
+		1;
+	} or do {
+		use vars qw(@ISA);
+		require DynaLoader;
+		push @ISA, 'DynaLoader';
+		bootstrap Net::DNS $version;
+		1;
+	};
+
+} || 0;
+
+
 use Net::DNS::RR;
 use Net::DNS::Packet;
 use Net::DNS::Update;
@@ -162,6 +184,151 @@ sub rr_del {
 }
 
 
+########################################
+#	Net::DNS::SEC 0.17 compatibility
+########################################
+
+use constant OLDDNSSEC => Net::DNS::RR->COMPATIBLE;
+
+if (OLDDNSSEC) {
+	require Net::DNS::RR::RRSIG;	## pre-load RRs
+	foreach my $type (qw(SIG DS DLV DNSKEY KEY NXT NSEC)) {
+		new Net::DNS::RR( type => $type );
+	}
+
+	eval <<EOT;
+		no warnings 'void';	## suppress "Too late to run INIT block ..."
+
+		sub INIT {
+			# deferred pre-load of RRs with intractable dependence problems
+			# required to satisfy Net::DNS::SEC t/00-load.t
+			new Net::DNS::RR( type => 'NSEC3' );
+			new Net::DNS::RR( type => 'NSEC3PARAM' );
+		}
+EOT
+}
+
+
+require Carp;
+require Net::DNS::Parameters;
+
+my $warned;
+
+sub deprecated {
+	Carp::carp "deprecated @_" unless $warned++;
+}
+
+sub typesbyname {
+	deprecated('typesbyname; use Net::DNS::Parameters::typebyname') unless OLDDNSSEC;
+
+	# preserve historical behaviour for TYPE0	[OMK]
+	Net::DNS::Parameters::typebyname(shift) || '00';
+}
+
+sub typesbyval {
+	deprecated('typesbyval; use Net::DNS::Parameters::typebyval') unless OLDDNSSEC;
+	Net::DNS::Parameters::typebyval(shift);
+}
+
+if (OLDDNSSEC) {
+	use vars qw(%typesbyname %typesbyval);
+	%typesbyname = %Net::DNS::Parameters::typebyname;
+	%typesbyval  = %Net::DNS::Parameters::typebyval;
+}
+
+
+use vars qw(@EXPORT_OK);
+@EXPORT_OK = qw(name2labels presentation2wire wire2presentation stripdot);
+
+#
+# name2labels()
+#
+# Utility function to translate names from presentation format into
+# an array of "wire-format" labels.
+#
+# in: $dname a string with a domain name in presentation format
+# (1035 sect 5.1)
+# out: an array of labels in wire format.
+
+sub name2labels {
+	deprecated('name2labels') unless OLDDNSSEC;
+	my $dname = shift;
+	my @names;
+	my $j = 0;
+	while ($dname) {
+		( $names[$j], $dname ) = presentation2wire($dname);
+		$j++;
+	}
+
+	return @names;
+}
+
+
+sub wire2presentation {
+	deprecated('wire2presentation') unless OLDDNSSEC;
+	my $presentation = shift;				# Really wire...
+
+	# Prepend these with a backslash
+	$presentation =~ s/(["$();@.\\])/\\$1/g;
+
+	# Convert < 33 and > 126 to \x<\d\d\d>
+	$presentation =~ s/([^\x21-\x7E])/sprintf("\\%03u", ord($1))/eg;
+
+	return $presentation;
+}
+
+
+sub stripdot {
+	deprecated('stripdot') unless OLDDNSSEC;
+
+	# Code courtesy of JMEHNLE <JMEHNLE@cpan.org>
+	# rt.cpan.org #51009
+
+	# Strips the final non-escaped dot from a domain name.	Note
+	# that one could have a label that looks like "foo\\\\\.\.."
+	# although not likely one wants to deal with that cracefully.
+	# This utilizes 2 functions in the DNS module to deal with
+	# thing cracefully.
+
+	return join( '.', map( wire2presentation($_), name2labels(shift) ) );
+
+}
+
+
+#
+#    ($wire,$leftover)=presentation2wire($leftover);
+#
+# Will parse the input presentation format and return everything before
+# the first non-escaped "." in the first element of the return array and
+# all that has not been parsed yet in the 2nd argument.
+
+sub presentation2wire {
+	deprecated('presentation2wire') unless OLDDNSSEC;
+	my $presentation = shift;
+	my $wire	 = "";
+
+	while ( $presentation =~ /\G([^.\\]*)([.\\]?)/g ) {
+		$wire .= $1 if defined $1;
+
+		if ($2) {
+			if ( $2 eq '.' ) {
+				return ( $wire, substr( $presentation, pos $presentation ) );
+			}
+
+			#backslash found
+			if ( $presentation =~ /\G(\d\d\d)/gc ) {
+				$wire .= pack( "C", $1 );
+			} elsif ( $presentation =~ /\G([@().\\])/gc ) {
+				$wire .= $1;
+			}
+		}
+	}
+
+	return $wire;
+}
+
+########################################
+
 1;
 __END__
 
@@ -169,64 +336,60 @@ __END__
 
 =head2 Resolver Objects
 
-A resolver object is an instance of the
-L<Net::DNS::Resolver|Net::DNS::Resolver> class. A program can have
-multiple resolver objects, each maintaining its own state information
-such as the nameservers to be queried, whether recursion is desired,
-etc.
+A resolver object is an instance of the L<Net::DNS::Resolver> class.
+A program can have multiple resolver objects, each maintaining its
+own state information such as the nameservers to be queried, whether
+recursion is desired, etc.
 
 
 =head2 Packet Objects
 
-L<Net::DNS::Resolver|Net::DNS::Resolver> queries return
-L<Net::DNS::Packet|Net::DNS::Packet> objects.  Packet objects have five
-sections:
+L<Net::DNS::Resolver> queries return L<Net::DNS::Packet> objects.
+Packet objects have five sections:
 
 =over 3
 
 =item *
 
-The header section, a L<Net::DNS::Header|Net::DNS::Header> object.
+The header section, a L<Net::DNS::Header> object.
 
 =item *
 
-The question section, a list of L<Net::DNS::Question|Net::DNS::Question>
-objects.
+The question section, a list of L<Net::DNS::Question> objects.
 
 =item *
 
-The answer section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
+The answer section, a list of L<Net::DNS::RR> objects.
 
 =item *
 
-The authority section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
+The authority section, a list of L<Net::DNS::RR> objects.
 
 =item *
 
-The additional section, a list of L<Net::DNS::RR|Net::DNS::RR> objects.
+The additional section, a list of L<Net::DNS::RR> objects.
 
 =back
 
 =head2 Update Objects
 
-L<Net::DNS::Update|Net::DNS::Update> is a subclass of
-L<Net::DNS::Packet|Net::DNS::Packet> used to create dynamic update requests.
+L<Net::DNS::Update> is a subclass of L<Net::DNS::Packet>
+used to create dynamic update requests.
 
 =head2 Header Objects
 
-L<Net::DNS::Header|Net::DNS::Header> objects represent the header
+L<Net::DNS::Header> objects represent the header
 section of a DNS packet.
 
 =head2 Question Objects
 
-L<Net::DNS::Question|Net::DNS::Question> objects represent the content
-of the question section of a DNS packet.
+L<Net::DNS::Question> objects represent the content of the question
+section of a DNS packet.
 
 =head2 RR Objects
 
-L<Net::DNS::RR|Net::DNS::RR> is the base class for DNS resource record
-(RR) objects in the answer, authority, and additional sections of a DNS
-packet.
+L<Net::DNS::RR> is the base class for DNS resource record (RR) objects
+in the answer, authority, and additional sections of a DNS packet.
 
 Do not assume that RR objects will be of the type requested.
 The type of an RR object must be checked before calling any methods.
@@ -244,7 +407,7 @@ Returns the version of Net::DNS.
 
 =head2 mx
 
-    # Use a default resolver -- can't get an error string this way.
+    # Use a default resolver -- can not get an error string this way.
     use Net::DNS;
     my @mx = mx("example.com");
 
@@ -253,12 +416,12 @@ Returns the version of Net::DNS.
     my $res = Net::DNS::Resolver->new;
     my @mx = mx($res, "example.com");
 
-Returns a list of L<Net::DNS::RR::MX|Net::DNS::RR::MX> objects
-representing the MX records for the specified name; the list will be
-sorted by preference. Returns an empty list if the query failed or no MX
-records were found.
+Returns a list of L<Net::DNS::RR::MX> objects representing the MX
+records for the specified name.
+The list will be sorted by preference.
+Returns an empty list if the query failed or no MX record was found.
 
-This method does not look up A records -- it only performs MX queries.
+This method does not look up A records; it only performs MX queries.
 
 See L</EXAMPLES> for a more complete example.
 
@@ -287,7 +450,7 @@ exist.
 Meaning:  At least one RR with the specified name and type must
 exist and must have matching data.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
+Returns a C<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 nxrrset
@@ -299,7 +462,7 @@ a dynamic update packet.
 
 Meaning:  No RRs with the specified name and type can exist.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
+Returns a C<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 yxdomain
@@ -311,7 +474,7 @@ update packet.
 
 Meaning:  At least one RR with the specified name must exist.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
+Returns a C<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 nxdomain
@@ -323,7 +486,7 @@ dynamic update packet.
 
 Meaning:  No RR with the specified name can exist.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
+Returns a C<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 rr_add
@@ -338,7 +501,7 @@ RR objects created by this method should be added to the "update"
 section of a dynamic update packet.  The TTL defaults to 86400
 seconds (24 hours) if not specified.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
+Returns a C<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 rr_del
@@ -364,7 +527,7 @@ Meaning:  Delete all RRs having the specified name, type, and data.
 RR objects created by this method should be added to the "update"
 section of a dynamic update packet.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object couldn't
+Returns a C<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 
@@ -495,7 +658,7 @@ dynamic updates.
 	    print $rr->preference, " ", $rr->exchange, "\n";
 	}
     } else {
-	warn "Can't find MX records for $name: ", $res->errorstring, "\n";
+	warn "Can not find MX records for $name: ", $res->errorstring, "\n";
     }
 
 

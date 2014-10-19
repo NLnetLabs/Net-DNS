@@ -412,7 +412,7 @@ sub udp_connection {
 		};
 	my $reply = $self->make_reply( $query, $peerhost, $conn ) || return;
 
-	my $max_len = $query->edns->size if $query && $self->{Truncate};
+	my $max_len = ( $query && $self->{Truncate} ) ? $query->edns->size : undef;
 	if ( $self->{Verbose} ) {
 		local $| = 1;
 		print "Maximum UDP size advertised by $peerhost:$peerport: $max_len\n" if $max_len;

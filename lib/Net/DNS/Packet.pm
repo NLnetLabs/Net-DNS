@@ -39,6 +39,9 @@ BEGIN {
 	require Net::DNS::RR;
 }
 
+use constant OLDDNSSEC => Net::DNS::RR->COMPATIBLE;
+my @dummy_header = OLDDNSSEC ? ( header => {} ) : ();
+
 
 =head1 METHODS
 
@@ -67,6 +70,7 @@ sub new {
 		answer	   => [],
 		authority  => [],
 		additional => [],
+		@dummy_header		## Net::DNS::SEC 0.17 compatible
 		}, $class;
 
 	$self->{question} = [Net::DNS::Question->new(@_)] if scalar @_;
@@ -131,6 +135,7 @@ sub decode {
 			authority  => [],
 			additional => [],
 			answersize => length $$data,
+			@dummy_header	## Net::DNS::SEC 0.17 compatible
 			}, $class;
 
 		# question/zone section
@@ -550,6 +555,103 @@ sub _section {				## returns array reference for section
 }
 
 
+# =head2 dn_comp
+
+#     $compname = $packet->dn_comp("foo.example.com", $offset);
+
+# Returns a domain name compressed for a particular packet object, to
+# be stored beginning at the given offset within the packet data.  The
+# name will be added to a running list of compressed domain names for
+# future use.
+
+# =cut
+
+sub dn_comp {
+	my ($self, $fqdn, $offset) = @_;
+
+	my @labels = Net::DNS::name2labels($fqdn);
+	my $hash   = $self->{compnames};
+	my $data   = '';
+	while (@labels) {
+		my $name = join( '.', @labels );
+
+		return $data . pack( 'n', 0xC000 | $hash->{$name} ) if defined $hash->{$name};
+
+		my $label = shift @labels;
+		my $length = length($label) || next;		   # skip if null
+		if ( $length > 63 ) {
+			$length = 63;
+			$label = substr( $label, 0, $length );
+			carp "\n$label...\ntruncated to $length octets (RFC1035 2.3.1)";
+		}
+		$data .= pack( 'C a*', $length, $label );
+
+		next unless $offset < 0x4000;
+		$hash->{$name} = $offset;
+		$offset += 1 + $length;
+	}
+	$data .= chr(0);
+}
+
+
+# =head2 dn_expand
+
+#     use Net::DNS::Packet qw(dn_expand);
+#     ($name, $nextoffset) = dn_expand(\$data, $offset);
+
+#     ($name, $nextoffset) = Net::DNS::Packet::dn_expand(\$data, $offset);
+
+# Expands the domain name stored at a particular location in a DNS
+# packet.  The first argument is a reference to a scalar containing
+# the packet data.  The second argument is the offset within the
+# packet where the (possibly compressed) domain name is stored.
+
+# Returns the domain name and the offset of the next location in the
+# packet.
+
+# Returns undef if the domain name could not be expanded.
+
+# =cut
+
+
+# This is very hot code, so we try to keep things fast.  This makes for
+# odd style sometimes.
+
+sub dn_expand {
+#FYI	my ($packet, $offset) = @_;
+	return dn_expand_XS(@_) if $Net::DNS::HAVE_XS;
+#	warn "USING PURE PERL dn_expand()\n";
+	return dn_expand_PP(@_, {} );	# $packet, $offset, anonymous hash
+}
+
+sub dn_expand_PP {
+	my ($packet, $offset, $visited) = @_;
+	my $packetlen = length $$packet;
+	my $name = '';
+
+	while ( $offset < $packetlen ) {
+		unless ( my $length = unpack("\@$offset C", $$packet) ) {
+			$name =~ s/\.$//o;
+			return ($name, ++$offset);
+
+		} elsif ( ($length & 0xc0) == 0xc0 ) {		# pointer
+			my $point = 0x3fff & unpack("\@$offset n", $$packet);
+			die 'Exception: unbounded name expansion' if $visited->{$point}++;
+
+			my ($suffix) = dn_expand_PP($packet, $point, $visited);
+
+			return ($name.$suffix, $offset+2) if defined $suffix;
+
+		} else {
+			my $element = substr($$packet, ++$offset, $length);
+			$name .= Net::DNS::wire2presentation($element).'.';
+			$offset += $length;
+		}
+	}
+	return undef;
+}
+
+
 =head2 sign_tsig
 
     $query = Net::DNS::Packet->new( 'www.example.com', 'A' );
@@ -727,7 +829,7 @@ The minimum maximum length that is honoured is 512 octets.
 #   The TC bit should be set in responses only when an RRSet is required
 #   as a part of the response, but could not be included in its entirety.
 #   The TC bit should not be set merely because some extra information
-#   could have been included, but there was insufficient room.  This
+#   could have been included, for which there was insufficient room. This
 #   includes the results of additional section processing.  In such cases
 #   the entire RRSet that will not fit in the response should be omitted,
 #   and the reply sent as is, with the TC bit clear.  If the recipient of
