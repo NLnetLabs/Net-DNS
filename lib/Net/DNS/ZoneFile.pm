@@ -548,7 +548,7 @@ sub _include {				## open $INCLUDE file
 	my $file = _filename(shift);
 	my $root = shift;
 
-	my @discipline = ( join ':', '<', PerlIO::get_layers $self->{handle} ) if PERLIO;
+	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
 	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: "$file" $!);
 
 	delete $self->{latest};					# forbid empty owner field

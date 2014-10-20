@@ -1124,10 +1124,11 @@ sub axfr {				## zone transfer
 	my @null;
 	my $query = $self->_axfr_start(@_) || return $whole ? @null : sub {undef};
 	my $reply = $self->_axfr_next()	   || return $whole ? @null : sub {undef};
-	my $sigrr = $query->sigrr();
-	my $verfy = $sigrr && ( $reply->verify($query) || croak $reply->verifyerr );
 	my @rr	  = $reply->answer;
 	my $soa	  = $rr[0];
+	my $verfy = $query->sigrr();
+	$verfy = $reply->verify($query) || croak $reply->verifyerr if $verfy;
+	print ';; ', $verfy ? '' : 'not ', "verified\n" if $self->{debug};
 
 	if ($whole) {
 		my @zone = shift @rr;
@@ -1136,7 +1137,8 @@ sub axfr {				## zone transfer
 			push @zone, @rr;			# unpack non-terminal packet
 			@rr    = @null;
 			$reply = $self->_axfr_next() || last;
-			$verfy = $sigrr && ( $reply->verify($verfy) || croak $reply->verifyerr );
+			$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
+			print ';; ', $verfy ? '' : 'not ', "verified\n" if $self->{debug};
 			@rr    = $reply->answer;
 		}
 
@@ -1161,7 +1163,8 @@ sub axfr {				## zone transfer
 		}
 
 		$reply = $self->_axfr_next() || return undef;	# end of packet
-		$verfy = $sigrr && ( $reply->verify($verfy) || croak $reply->verifyerr );
+		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
+		print ';; ', $verfy ? '' : 'not ', "verified\n" if $self->{debug};
 		@rr = $reply->answer;
 		return $rr;
 	};

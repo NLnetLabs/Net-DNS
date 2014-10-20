@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 0.81 [unreleased]
 
+Fix rt.cpan.org #99571
+
+	AXFR BADSIG failures
+
 Fix rt.cpan.org #99531
 
 	Resolver doc error - when is a 'bug' a 'bug'? [TSIG verification]

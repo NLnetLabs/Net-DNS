@@ -75,6 +75,9 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
+	my $cutoff = $offset - Net::DNS::RR->RRFIXEDSZ - length $self->{owner}->encode();
+	$self->{raw} = substr $$data, 0, $cutoff;
+
 	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
@@ -267,17 +270,19 @@ sub sign_func { &sig_function; }	## historical
 
 
 sub sig_data {
-	my $self = shift;
-	my $data = shift || '';
+	my ( $self, $message ) = @_;
 
-	if ( ref($data) ) {
-		die 'missing packet reference' unless $data->isa('Net::DNS::Packet');
-		my $packet   = $data;
-		my $original = $packet->{additional};
-		my @unsigned = grep ref($_) ne ref($self), @$original;
-		$packet->{additional} = \@unsigned;		# strip TSIG RR
-		$data		      = $packet->data;
-		$packet->{additional} = $original;		# reinstate TSIG RR
+	if ( ref($message) ) {
+		die 'missing packet reference' unless $message->isa('Net::DNS::Packet');
+		my @unsigned = grep ref($_) ne ref($self), @{$message->{additional}};
+		local $message->{additional} = \@unsigned;	# remake header image
+		my @part = qw(question answer authority additional);
+		my @size = map scalar( @{$message->{$_}} ), @part;
+		my $orig = $self->{raw} ? $self->original_id : $message->{id};
+		my $hbin = pack 'n6', $orig, $message->{status}, @size;
+		my $data = $self->{raw} || $message->data;
+		delete $self->{raw};				# reclaim storage
+		$message = $hbin . substr $data, length $hbin;
 	}
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
@@ -286,15 +291,14 @@ sub sig_data {
 	# Insert the prior MAC if present (multi-packet message).
 	$self->prior_macbin( $self->{link}->macbin ) if $self->{link};
 	if ( my $prior_mac = $self->prior_macbin ) {
-		return pack 'na* a* a*', length($prior_mac), $prior_mac, $data, $time;
+		return pack 'na* a* a*', length($prior_mac), $prior_mac, $message, $time;
 	}
 
 	# Insert the request MAC if present (used to validate responses).
-	my $sigdata = '';
 	my $req_mac = $self->request_macbin;
-	$sigdata = pack 'na*', length($req_mac), $req_mac if $req_mac;
+	my $sigdata = $req_mac ? pack( 'na*', length($req_mac), $req_mac ) : '';
 
-	$sigdata .= $data;
+	$sigdata .= $message || '';
 
 	my $kname = $self->{owner}->canonical;			# canonical key name
 	$sigdata .= pack 'a* n N', $kname, ANY, 0;
