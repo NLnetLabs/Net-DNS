@@ -75,9 +75,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $cutoff = $offset - Net::DNS::RR->RRFIXEDSZ - length $self->{owner}->encode();
-	$self->{raw} = substr $$data, 0, $cutoff;
-
+	my $eom = $offset - Net::DNS::RR->RRFIXEDSZ - length $self->{owner}->encode();
 	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
@@ -93,6 +91,11 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 
 	my $other_size = unpack "\@$offset n", $$data;
 	$self->{other} = unpack "\@$offset xx a$other_size", $$data;
+	$offset += $other_size + 2;
+
+	croak('misplaced or corrupt TSIG') unless $offset == length $$data;
+	substr( $$data, $eom ) = '';
+	$self->{rawref} = $data;
 }
 
 
@@ -278,11 +281,11 @@ sub sig_data {
 		local $message->{additional} = \@unsigned;	# remake header image
 		my @part = qw(question answer authority additional);
 		my @size = map scalar( @{$message->{$_}} ), @part;
-		my $orig = $self->{raw} ? $self->original_id : $message->{id};
+		my $data = $self->{rawref};
+		delete $self->{rawref};
+		my $orig = $data ? $self->original_id : $message->{id};
 		my $hbin = pack 'n6', $orig, $message->{status}, @size;
-		my $data = $self->{raw} || $message->data;
-		delete $self->{raw};				# reclaim storage
-		$message = $hbin . substr $data, length $hbin;
+		$message = $hbin . substr $data ? $$data : $message->data, length $hbin;
 	}
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
