@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Resolver::android - Android Resolver Class
+Net::DNS::Resolver::android - Android resolver class
 
 =cut
 

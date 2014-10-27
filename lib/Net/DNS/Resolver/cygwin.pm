@@ -8,7 +8,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Resolver::cygwin - Cygwin Resolver Class
+Net::DNS::Resolver::cygwin - Cygwin resolver class
 
 =cut
 

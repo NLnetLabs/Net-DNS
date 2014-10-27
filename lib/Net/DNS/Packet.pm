@@ -299,7 +299,7 @@ specifies the DNS zone to be updated.
 =cut
 
 sub question {
-	return @{shift->{question}};
+	my @qr = @{shift->{question}};
 }
 
 sub zone {&question}
@@ -319,7 +319,7 @@ not preexist.
 =cut
 
 sub answer {
-	return @{shift->{answer}};
+	my @rr = @{shift->{answer}};
 }
 
 sub pre		 {&answer}
@@ -339,7 +339,7 @@ specifies the RRs or RRsets to be added or deleted.
 =cut
 
 sub authority {
-	return @{shift->{authority}};
+	my @rr = @{shift->{authority}};
 }
 
 sub update {&authority}
@@ -355,7 +355,7 @@ section of the packet.
 =cut
 
 sub additional {
-	return @{shift->{additional}};
+	my @rr = @{shift->{additional}};
 }
 
 

@@ -75,7 +75,6 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $eom = $offset - Net::DNS::RR->RRFIXEDSZ - length $self->{owner}->encode();
 	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
@@ -94,7 +93,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	$offset += $other_size + 2;
 
 	croak('misplaced or corrupt TSIG') unless $offset == length $$data;
-	substr( $$data, $eom ) = '';
+	substr( $$data, $self->{offset} || $offset ) = '';
 	$self->{rawref} = $data;
 }
 

@@ -176,7 +176,7 @@ sub send {
 		$ns = [];					# substitute IP list in situ
 		$res->empty_nameservers();
 		@$ns = $res->nameservers($name);
-		next unless @$ns;
+		next unless scalar @$ns;
 		my $reply = $res->send($query) || next;
 		$res->{callback}->($reply) if $res->{callback};
 		return $reply;

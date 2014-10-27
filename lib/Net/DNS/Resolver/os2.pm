@@ -8,7 +8,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
-Net::DNS::Resolver::os2 - OS2 Resolver Class
+Net::DNS::Resolver::os2 - OS2 resolver class
 
 =cut
 

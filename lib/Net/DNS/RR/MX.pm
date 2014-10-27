@@ -52,8 +52,8 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->preference(shift) if @_;
-	$self->exchange( shift || return );
+	$self->preference( shift || return );
+	$self->exchange(shift);
 }
 
 

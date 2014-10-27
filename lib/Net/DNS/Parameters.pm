@@ -216,9 +216,9 @@ sub classbyname {
 	my $name = shift;
 
 	$classbyname{$name} || do {
-		confess "unknown type $name" unless $name =~ m/CLASS(\d+)/;
+		croak "unknown type $name" unless $name =~ m/CLASS(\d+)/;
 		my $val = 0 + $1;
-		confess "classbyname( $name ) out of range" if $val > 0xffff;
+		croak "classbyname( $name ) out of range" if $val > 0xffff;
 		return $val;
 			}
 }
@@ -228,7 +228,7 @@ sub classbyval {
 
 	$classbyval{$val} || do {
 		$val += 0;
-		confess "classbyval( $val ) out of range" if $val > 0xffff;
+		croak "classbyval( $val ) out of range" if $val > 0xffff;
 		return "CLASS$val";
 			}
 }
@@ -238,9 +238,9 @@ sub typebyname {
 	my $name = shift;
 
 	$typebyname{$name} || do {
-		confess "unknown type $name" unless $name =~ m/TYPE(\d+)/;
+		croak "unknown type $name" unless $name =~ m/TYPE(\d+)/;
 		my $val = 0 + $1;
-		confess "typebyname( $name ) out of range" if $val > 0xffff;
+		croak "typebyname( $name ) out of range" if $val > 0xffff;
 		return $val;
 			}
 }
@@ -250,7 +250,7 @@ sub typebyval {
 
 	$typebyval{$val} || do {
 		$val += 0;
-		confess "typebyval( $val ) out of range" if $val > 0xffff;
+		croak "typebyval( $val ) out of range" if $val > 0xffff;
 		return "TYPE$val";
 			}
 }
@@ -259,7 +259,7 @@ sub typebyval {
 sub opcodebyname {
 	my $name = shift;
 	return $opcodebyname{$name} if defined $opcodebyname{$name};
-	confess "unknown opcode $name";
+	croak "unknown opcode $name";
 }
 
 sub opcodebyval {
@@ -272,7 +272,7 @@ sub rcodebyname {
 	my $arg = shift;
 	return $rcodebyname{$arg} if defined $rcodebyname{$arg};
 	return 0 + $arg if $arg =~ /^\d/;
-	confess "unknown rcode $arg";
+	croak "unknown rcode $arg";
 }
 
 sub rcodebyval {
@@ -285,7 +285,7 @@ sub ednsoptionbyname {
 	my $arg = shift;
 	return $ednsoptionbyname{$arg} if defined $ednsoptionbyname{$arg};
 	return 0 + $arg if $arg =~ /^\d/;
-	confess "unknown option $arg";
+	croak "unknown option $arg";
 }
 
 sub ednsoptionbyval {
