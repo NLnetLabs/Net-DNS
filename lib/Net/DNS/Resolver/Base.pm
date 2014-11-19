@@ -1489,6 +1489,7 @@ sub _ip_is_ipv6 {
 
 	for (shift) {
 		return 1 if /^[:0-9a-f]+:[0-9a-f]*$/i;		# mixed : and hexdigits
+		return 1 if /^[:0-9a-f]+:[0-9a-f]*[%].+$/i;	# RFC4007 scoped address
 		return 1 if /^[:0-9a-f]+:[0-9.]+$/i;		# prefix + dotted digits
 	}
 

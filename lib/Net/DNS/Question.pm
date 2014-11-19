@@ -278,6 +278,7 @@ sub _dns_addr {			## Map IP address into reverse lookup namespace
 	local $_ = shift;
 
 	# IP address must contain address characters only
+	s/[%].+$//;						# discard RFC4007 scopeid
 	return undef unless m#^[a-fA-F0-9:./]+$#;
 
 	my ( $address, $length ) = split m#/#, $_ . '/0';
