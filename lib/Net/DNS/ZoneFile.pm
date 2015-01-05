@@ -484,13 +484,7 @@ sub _getline {				## get line from current source
 
 		return $_ unless /^\$/;				# RR string
 
-		if (/^\$ORIGIN/) {				# directive
-			my ( $keyword, $origin, @etc ) = split;
-			die '$ORIGIN incomplete' unless $origin;
-			my $context = $self->{context};
-			&$context( sub { $self->_origin($origin); } );
-
-		} elsif (/^\$INCLUDE/) {			# directive
+		if (/^\$INCLUDE/) {				# directive
 			my ( $keyword, @argument ) = split;
 			$fh = $self->_include(@argument);
 
@@ -498,6 +492,12 @@ sub _getline {				## get line from current source
 			my ( $keyword, $range, @template ) = split;
 			die '$GENERATE incomplete' unless $range;
 			$fh = $self->_generate( $range, "@template\n" );
+
+		} elsif (/^\$ORIGIN/) {				# directive
+			my ( $keyword, $origin, @etc ) = split;
+			die '$ORIGIN incomplete' unless $origin;
+			my $context = $self->{context};
+			&$context( sub { $self->_origin($origin); } );
 
 		} elsif (/^\$TTL/) {				# directive
 			my ( $keyword, $ttl, @etc ) = split;

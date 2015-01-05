@@ -243,7 +243,6 @@ use constant RRFIXEDSZ => length pack 'n2 N n', (0) x 4;
 sub decode {
 	my $base = shift;
 	my ( $data, $offset, @opaque ) = @_;
-	my $start = $offset;
 
 	my ( $owner, $fixed ) = decode Net::DNS::DomainName1035(@_);
 
@@ -258,7 +257,7 @@ sub decode {
 	my $next = $index + $self->{rdlength};
 	die 'corrupt wire-format data' if length $$data < $next;
 
-	$self->{offset} = $start;
+	$self->{offset} = $offset;
 	if (COMPATIBLE) {
 		ref($self)->new( $self, $data, $index, @opaque );
 		delete $self->{offset};

@@ -758,21 +758,19 @@ NSADDRESS: foreach my $ns_address ( $self->nameservers() ) {
 								# AI_NUMERICHOST is not available at compile time.
 								# The AI_NUMERICHOST suppresses lookups.
 
-			my $old_wflag = $^W;			#circumvent perl -w warnings about 'udp'
-			$^W = 0;
+			local $^W = 0;				# circumvent perl -w warnings about 'udp'
 
 			my @res = Socket6::getaddrinfo( $ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 0,
 				AI_NUMERICHOST );
 
-			$^W = $old_wflag;
-
-			use strict 'subs';
-
-			my ( $sockfamily, $socktype_tmp, $proto_tmp, $dst_sockaddr, $canonname_tmp ) = @res;
-
 			if ( scalar(@res) < 5 ) {
-				die("can't resolve \"$ns_address\" to address");
+				for ($ns_address) {
+					die("invalid scoped address '$_'") if /[%].*$/;
+					die("invalid IP address '$_'");
+				}
 			}
+
+			my ( $sockfamily, $socktype, $proto, $dst_sockaddr, $canonname ) = @res;
 
 			push @ns, [$ns_address, $dst_sockaddr, $sockfamily];
 
@@ -954,7 +952,7 @@ sub bgsend {
 	my $srcaddr = $self->{'srcaddr'};
 	my $srcport = $self->{'srcport'};
 
-	my ( @res, $sockfamily, $dst_sockaddr );
+	my ( $sockfamily, $dst_sockaddr );
 	my ($ns_address) = @ns;
 	my $dstport = $self->{'port'};
 
@@ -964,26 +962,21 @@ sub bgsend {
 	# to the 'classic' mechanism
 	if ( $has_inet6 && !$self->force_v4() ) {
 
-		my ( $socktype_tmp, $proto_tmp, $canonname_tmp );
-
 		no strict 'subs';				# Because of the eval statement in the BEGIN
 								# AI_NUMERICHOST is not available at compile time.
 
-		my $old_wflag = $^W;				#circumvent perl -w warnings about 'udp'
-		$^W = 0;
+		local $^W = 0;					# circumvent perl -w warnings about 'udp'
 
-		# The AI_NUMERICHOST suppresses lookups.
 		my @res = Socket6::getaddrinfo( $ns_address, $dstport, AF_UNSPEC, SOCK_DGRAM, 0, AI_NUMERICHOST );
-
-		$^W = $old_wflag;
-
-		use strict 'subs';
-
-		( $sockfamily, $socktype_tmp, $proto_tmp, $dst_sockaddr, $canonname_tmp ) = @res;
-
 		if ( scalar(@res) < 5 ) {
-			die("can't resolve \"$ns_address\" to address (it could have been an IP address)");
+			for ($ns_address) {
+				die("invalid scoped address '$_'") if /[%].*$/;
+				die("invalid IP address '$_'");
+			}
 		}
+
+		my ( $socktype, $proto, $canonname );
+		( $sockfamily, $socktype, $proto, $dst_sockaddr, $canonname ) = @res;
 
 	} else {
 		$sockfamily = AF_INET;
@@ -1139,7 +1132,7 @@ sub axfr {				## zone transfer
 			$reply = $self->_axfr_next() || last;
 			$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
 			print ';; ', $verfy ? '' : 'not ', "verified\n" if $self->{debug};
-			@rr    = $reply->answer;
+			@rr = $reply->answer;
 		}
 
 		my $last = pop @rr;				# unpack final packet

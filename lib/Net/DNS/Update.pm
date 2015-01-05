@@ -57,7 +57,8 @@ If the class is omitted, it defaults to IN.
 =cut
 
 sub new {
-	my ( $package, $zone, $class ) = @_;
+	my $package = shift;
+	my ( $zone, $class ) = @_;
 
 	unless ($zone) {
 		require Net::DNS::Resolver;
@@ -66,6 +67,8 @@ sub new {
 		($zone) = $resolver->searchlist;
 		return unless $zone;
 	}
+
+	return $package->SUPER::decode(@_) if ref($zone);
 
 	my $self = $package->SUPER::new( $zone, 'SOA', $class ) || return;
 
