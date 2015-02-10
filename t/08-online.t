@@ -1,22 +1,64 @@
 # $Id$ -*-perl-*-
 
-use Test::More;
 use strict;
-use Socket;
-use Data::Dumper;
+use Test::More;
+
+use Net::DNS;
 use t::NonFatal;
+use Socket;
 
-BEGIN {
-	if (-e 't/online.enabled' && ! -e 't/online.disabled' ) {
-		plan tests => 95;
-		NonFatalBegin();
-	} else {
-		plan skip_all => 'Online tests disabled.';
-		exit;
+
+my @HINTS = qw(
+		192.33.4.12
+		199.7.91.13
+		192.203.230.10
+		192.5.5.241
+		192.112.36.4
+		128.63.2.53
+		192.36.148.17
+		192.58.128.30
+		193.0.14.129
+		199.7.83.42
+		202.12.27.33
+		198.41.0.4
+		192.228.79.201
+		);
+
+
+exit( plan skip_all => 'Online tests disabled.' ) if -e 't/online.disabled';
+exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
+
+
+eval {
+	my $res = new Net::DNS::Resolver();
+	exit plan skip_all => "No nameservers" unless $res->nameservers;
+
+	my $reply = $res->send( ".", "NS" ) || die;
+
+	exit plan skip_all => "Local nameserver broken" unless $reply->header->ancount;
+
+	1;
+} || exit( plan skip_all => "Unable to access local nameserver" );
+
+
+eval {
+	my $res = new Net::DNS::Resolver( nameservers => [@HINTS] );
+
+	my $reply = $res->send( "a.t.", "A" ) || die;
+
+	if ( $reply->header->ancount ) {
+		diag "There seems to be a middle box in the path that modifies your packets";
+		exit( plan skip_all => "Modifying middlebox detected" );
 	}
-}
 
-BEGIN { use_ok('Net::DNS'); }
+	1;
+} || exit( plan skip_all => "Unable to access global root nameservers" );
+
+
+plan tests => 94;
+
+NonFatalBegin();
+
 
 sub timeoutres {
     return Net::DNS::Resolver->new(
@@ -296,4 +338,8 @@ if ($ans_at && $ans_at->header && $ans_at->header->ancount >= 1 ){
 
 	}
 
+
 NonFatalEnd();
+
+exit;
+
