@@ -90,6 +90,11 @@ Prepare Makefile for building and installing Net::DNS
 
   --noonline-tests		Skip online tests completely.
 
+  --IPv6-tests                  Perform IPv6 specific online tests. Default is
+                                the same as regular online tests.
+
+  --noIPv6-tests                Skip IPv6 specific online test
+
   --non-fatal-online-tests	Perform online test, but do not let failures 
 				negatively affect the outcome of running
 				make test.  This is the default.
@@ -254,7 +259,11 @@ EOT
 # Test to see if IPv6 is available, unless IPv6 testing has been declined.
 #
 if ( !defined $IPv6_tests || $IPv6_tests == 1 ) {
-	unless ( eval { require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01"); } ) {
+	if ( eval { require IO::Socket::INET6; IO::Socket::INET6->VERSION("2.01"); } )
+        {
+                $IPv6_tests = $online_tests if !defined $IPv6_tests;
+        }
+        else {
 		print <<V6WARNING;
 
 The libraries needed to support IPv6 transport have not been found. 

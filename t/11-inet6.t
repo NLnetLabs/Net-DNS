@@ -1,22 +1,63 @@
 # $Id$ -*-perl-*-
 
-
-
-use Test::More; 
 use strict;
+use Test::More;
+
+use Net::DNS;
+use t::NonFatal;
+use Socket;
 
 
+my @HINTS = qw(
+		2001:500:2::c
+		2001:7fd::1
+		2001:500:3::42
+		2001:503:c27::2:30
+		2001:500:84::b
+		2001:500:1::803f:235
+		2001:500:2d::d
+		2001:503:ba3e::2:30
+		2001:500:2f::f
+		2001:7fe::53
+		2001:dc3::35
+		);
 
 
+exit( plan skip_all => 'Online tests disabled.' ) if -e 't/IPv6.disabled';
+exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/IPv6.enabled';
 
-BEGIN {
-	if (-e 't/IPv6.enabled' && ! -e 't/IPv6.disabled' ) {
-		plan tests => 10;
-	} else {
-		plan skip_all => 'Online tests disabled.';
-		exit;
+
+eval {
+	my $res = new Net::DNS::Resolver();
+	exit plan skip_all => "No nameservers" unless $res->nameservers;
+
+	my $reply = $res->send( ".", "NS" ) || die;
+
+	exit plan skip_all => "Local nameserver broken" unless $reply->header->ancount;
+
+	1;
+} || exit( plan skip_all => "Unable to access local nameserver" );
+
+
+eval {
+	my $res = new Net::DNS::Resolver( nameservers => [@HINTS] );
+
+	my $reply = $res->send( "a.t.", "A" ) || die;
+
+	if ( $reply->header->ancount ) {
+		diag "There seems to be a middle box in the path that modifies your packets";
+		exit( plan skip_all => "Modifying middlebox detected" );
 	}
-}
+
+	1;
+} || exit( plan skip_all => "Unable to access global root nameservers" );
+
+
+plan tests => 10;
+
+NonFatalBegin();
+
+
 
 
 
@@ -35,7 +76,7 @@ is (($nsanswer->answer)[0]->type, "NS","Preparing  for v6 transport, got NS reco
 
 my $found_ns=0;
 foreach my $ns ($nsanswer->answer){
-    next if $ns->nsdname !~ /net-dns\.org$/i; # User net-dns.org only
+    # assume any net-dns.org nameserver will do
     my $aaaa_answer=$res->send($ns->nsdname,"AAAA","IN");
     next if ($aaaa_answer->header->ancount == 0);
     is (($aaaa_answer->answer)[0]->type,"AAAA", "Preparing  for v6 transport, got AAAA records for ". $ns->nsdname);
@@ -60,7 +101,7 @@ $res->force_v4(1);
 # $res->print;
 # $res->debug(1);
 $answer=$res->send("net-dns.org","SOA","IN");
-is ($res->errorstring,"no nameservers","Correct errorstring when forcing v4");
+is ($res->errorstring,"IPv6 transport not available","Correct errorstring when forcing v4");
 
 
 $res->force_v4(0);
@@ -88,7 +129,7 @@ if ($answer){
 #  Now test AXFR functionality.
 #
 #
-my $socket;
+my $iter;
 SKIP: { skip "online tests are not enabled", 2 unless  (-e 't/IPv6.enabled' && ! -e 't/IPv6.disabled');
 
 	# First use the local resolver to query for the AAAA record of a 
@@ -101,8 +142,6 @@ SKIP: { skip "online tests are not enabled", 2 unless  (-e 't/IPv6.enabled' && !
 	      my $AAAA_address;
 	       
 	      foreach my $ns ($nsanswer->answer){
-		  next if $ns->nsdname !~ /net-dns\.org$
-/; # User net-dns.org only
 		  my $aaaa_answer=$res2->send($ns->nsdname,"AAAA","IN");
 
 		  next if ($aaaa_answer->header->ancount == 0);
@@ -120,17 +159,17 @@ SKIP: { skip "online tests are not enabled", 2 unless  (-e 't/IPv6.enabled' && !
 	       $res2->nameservers($AAAA_address);
 	       # $res2->print;
 	       
-	       $socket=$res2->axfr_start('example.com');
+	       $iter=$res2->axfr('example.com');
 	       
 	}
 }
 
 
 
-SKIP: { skip "axfr_start did not return a socket", 2 unless defined($socket);
-	is(ref($socket),"IO::Socket::INET6","axfr_start returns IPv6 Socket");
-	my ($rr,$err)=$res2->axfr_next;
-	is($res2->errorstring,'Response code from server: NOTAUTH',"Transfer is not authorized (but our connection worked)");
+SKIP: { skip "axfr did not return an iterator", 2 unless defined($iter);
+	is(ref($iter),"CODE","axfr returns CODE ref");
+	my ($rr)=$iter->();
+	is($res2->errorstring,'RCODE from server: NOTAUTH',"Transfer is not authorized (but our connection worked)");
 
 }
 
@@ -145,3 +184,5 @@ my $ns = Net::DNS::Nameserver->new(
 
 
 ok($ns,"nameserver object created on IPv6 ::1");
+
+NonFatalEnd();
