@@ -1,6 +1,25 @@
 $Id$                       -*-text-*-
 
 
+**** 0.83 [unreleased]
+
+Fix rt.cpan.org #101798
+
+	AUTOLOAD error confusing w/o reference to object class
+
+Fix rt.cpan.org #101709
+
+	Provide separate control of IPv6 tests
+
+Fix rt.cpan.org #101675
+
+	MX record with 0 preference fails to parse
+
+Fix rt.cpan.org #101405
+
+	Install tests fail for v0.81 on Perl 5.21.7
+
+
 **** 0.82 Jan 20, 2015
 
 Fix rt.cpan.org #100385
