@@ -797,18 +797,19 @@ sub AUTOLOAD {				## Default method
 		return $self->{$method} if exists $self->{$method};
 	}
 
-	my $object = $self->string;
+	my $string = $self->string;
+	my @object = ( $oref->VERSION || (), $oref );
 
 	@_ = (<<"END");
 ***  FATAL PROGRAM ERROR!!	Unknown method '$method'
 ***  which the program has attempted to call for the object:
 ***
-    $object
+    $string
 ***
-***  This object does not have a method '$method'.  THIS IS A BUG
-***  IN THE CALLING SOFTWARE, which incorrectly assumes that the
-***  object would be of a particular type.  The type of an object
-***  should be checked before calling any of its methods.
+***  The @object object has no method '$method'
+***  THIS IS A BUG IN THE CALLING SOFTWARE, which incorrectly assumes
+***  that the object would be of a particular type.  The type of an
+***  object should be checked before calling any of its methods.
 END
 	no strict;
 	goto &{'Carp::confess'};
