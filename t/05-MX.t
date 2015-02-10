@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 18;
 
 
 use Net::DNS;
@@ -72,6 +72,18 @@ my $wire = '000a026d78076578616d706c6503636f6d00';
 	ok( length $compressed < length $predecessor, 'encoded RDATA compressible' );
 	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
 	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
+}
+
+
+{					## incomplete RR (specimen test for widely used constructs)
+	my $empty = new Net::DNS::RR( type => $type );
+	is( $empty->preference, 0, 'unspecified integer returns 0 (not default value)');
+	is( $empty->exchange, undef, 'unspecified domain name returns undefined');
+
+	my $part = new Net::DNS::RR( type => $type, exchange => 'mx.example' );
+	is( $part->preference, 10, 'unspecified integer returns default value');
+	ok( $part->exchange, 'domain name defined as expected');
+	is( $part->preference(0), 0, 'zero integer replaces default value');
 }
 
 

@@ -52,7 +52,7 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->preference( shift || return );
+	$self->preference(shift);
 	$self->exchange(shift);
 }
 
@@ -76,7 +76,7 @@ sub exchange {
 	my $self = shift;
 
 	$self->{exchange} = new Net::DNS::DomainName1035(shift) if scalar @_;
-	$self->{exchange}->name if defined wantarray;
+	$self->{exchange}->name if defined wantarray && $self->{exchange};
 }
 
 
