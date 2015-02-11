@@ -66,10 +66,10 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	$self->mname(shift);
 	$self->rname(shift);
 	$self->serial(shift);
-	$self->refresh( Net::DNS::RR::ttl( {}, shift || return ) );
-	$self->retry( Net::DNS::RR::ttl( {}, shift || return ) );
-	$self->expire( Net::DNS::RR::ttl( {}, shift || return ) );
-	$self->minimum( Net::DNS::RR::ttl( {}, shift || return ) );
+	$self->refresh( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
+	$self->retry( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
+	$self->expire( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
+	$self->minimum( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
 }
 
 
@@ -85,7 +85,7 @@ sub mname {
 	my $self = shift;
 
 	$self->{mname} = new Net::DNS::DomainName1035(shift) if scalar @_;
-	$self->{mname}->name if defined wantarray;
+	$self->{mname}->name if defined wantarray && $self->{mname};
 }
 
 
@@ -93,7 +93,7 @@ sub rname {
 	my $self = shift;
 
 	$self->{rname} = new Net::DNS::Mailbox1035(shift) if scalar @_;
-	$self->{rname}->address if defined wantarray;
+	$self->{rname}->address if defined wantarray && $self->{rname};
 }
 
 
@@ -146,7 +146,6 @@ sub minimum {
 
 ########################################
 
-
 sub _ordered($$) {			## irreflexive 32-bit partial ordering
 	use integer;
 	my ( $a, $b ) = @_;
@@ -162,7 +161,6 @@ sub _ordered($$) {			## irreflexive 32-bit partial ordering
 
 	return $a < $b ? ( $a > ( $b - 0x80000000 ) ) : ( $b < ( $a - 0x80000000 ) );
 }
-
 
 1;
 __END__
