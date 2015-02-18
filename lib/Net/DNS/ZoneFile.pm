@@ -90,7 +90,7 @@ sub new {
 		croak 'argument not a file handle';
 	}
 
-	$self->{handle} = new FileHandle($file) or croak qq(open: "$file" $!);
+	$self->{handle} = new FileHandle($file) or croak qq("$file" $!);
 	$self->{filename} = $file;
 	return $self;
 }
@@ -190,10 +190,7 @@ Returns the default TTL as specified by the $TTL directive.
 =cut
 
 sub ttl {
-	my $self = shift;
-	my $time = shift;
-	return $self->{ttl} || 0 unless defined $time;
-	$self->{ttl} = new Net::DNS::RR(". $time IN A")->ttl;
+	return shift->{ttl} || 0;
 }
 
 
@@ -444,10 +441,10 @@ sub _getline {				## get line from current source
 
 	my $fh = $self->{handle};
 	while (<$fh>) {
-		next unless /\S/;				# discard blank line
 		next if /^\s*;/;				# discard comment line
+		next unless /\S/;				# discard blank line
 
-		if (/["(]/) {					# concatenate multi-line RR
+		if (/[(]/) {					# concatenate multi-line RR
 			s/\\\\/\\092/g;				# disguise escaped escape
 			s/\\"/\\034/g;				# disguise escaped quote
 			s/\\\(/\\040/g;				# disguise escaped bracket
@@ -456,27 +453,15 @@ sub _getline {				## get line from current source
 			my @token = grep defined && length, split /$LEX_REGEX/o;
 			if ( grep( $_ eq '(', @token ) && !grep( $_ eq ')', @token ) ) {
 				while (<$fh>) {
+					$_ = pop(@token) . $_;	# splice fragmented string
 					s/\\\\/\\092/g;		# disguise escaped escape
 					s/\\"/\\034/g;		# disguise escaped quote
 					s/\\\(/\\040/g;		# disguise escaped bracket
 					s/\\\)/\\041/g;		# disguise escaped bracket
 					s/\\;/\\059/g;		# disguise escaped semicolon
-					substr( $_, 0, 0 ) = pop @token || '';	  # splice multi-line token
-					push @token, grep defined && length, split /$LEX_REGEX/o;
-					last if $token[$#token] eq ')';
-				}
-				$_ = join ' ', @token;		# reconstitute RR string
-
-			} elsif ( $token[$#token] =~ /^"[^"]+$/ ) {
-				while (<$fh>) {
-					s/\\\\/\\092/g;		# disguise escaped escape
-					s/\\"/\\034/g;		# disguise escaped quote
-					s/\\\(/\\040/g;		# disguise escaped bracket
-					s/\\\)/\\041/g;		# disguise escaped bracket
-					s/\\;/\\059/g;		# disguise escaped semicolon
-					substr( $_, 0, 0 ) = pop @token || '';	  # splice multi-line string
-					push @token, grep defined && length, split /$LEX_REGEX/o;
-					last unless $token[$#token] =~ /^"[^"]+$/;
+					my @part = grep defined && length, split /$LEX_REGEX/o;
+					push @token, @part;
+					last if grep $_ eq ')', @part;
 				}
 				$_ = join ' ', @token;		# reconstitute RR string
 			}
@@ -502,7 +487,7 @@ sub _getline {				## get line from current source
 		} elsif (/^\$TTL/) {				# directive
 			my ( $keyword, $ttl, @etc ) = split;
 			die '$TTL incomplete' unless defined $ttl;
-			$self->ttl($ttl);
+			$self->{ttl} = new Net::DNS::RR(". $ttl IN A")->ttl;
 
 		} else {					# unrecognised
 			chomp;
@@ -536,8 +521,8 @@ sub _getRR {				## get RR from current source
 
 	$rr->class( $self->{class} ||= $rr->class );		# propagate RR class
 
-	$self->{'ttl'} ||= $rr->type eq 'SOA' ? $rr->minimum : undef;	# default TTL
-	$rr->ttl( $self->ttl ) unless defined $rr->{'ttl'};
+	$self->{ttl} ||= $rr->minimum if $rr->type eq 'SOA';	# default TTL
+	$rr->{ttl} ||= $self->{ttl};
 
 	return $self->{latest} = $rr;
 }
@@ -549,7 +534,7 @@ sub _include {				## open $INCLUDE file
 	my $root = shift;
 
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
-	my $handle = new FileHandle( $file, @discipline ) or croak qq(open: "$file" $!);
+	my $handle = new FileHandle( $file, @discipline ) or croak qq("$file" $!);
 
 	delete $self->{latest};					# forbid empty owner field
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link

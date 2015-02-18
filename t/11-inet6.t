@@ -7,6 +7,7 @@ use Net::DNS;
 use t::NonFatal;
 use Socket;
 
+my $debug = 0;
 
 my @HINTS = qw(
 		2001:500:2::c
@@ -82,7 +83,7 @@ foreach my $ns ($nsanswer->answer){
     is (($aaaa_answer->answer)[0]->type,"AAAA", "Preparing  for v6 transport, got AAAA records for ". $ns->nsdname);
     $AAAA_address=($aaaa_answer->answer)[0]->address;
     $found_ns=1;
-    diag ("\n\t\t Will try to connect to  ". $ns->nsdname . " ($AAAA_address)");
+    diag ("\n\t\t Will try to connect to  ". $ns->nsdname . " ($AAAA_address)") if $debug;
     last;
 }
 
@@ -109,9 +110,8 @@ $answer=$res->send("net-dns.org","NS","IN");
 if ($answer){
     is (($answer->answer)[0]->type, "NS","Query over tcp6  succeeded");
 }else{
-    diag "You can safely ignore the following message:";
     diag ($res->errorstring) if ($res->errorstring ne "connection failed(IPv6 socket failure)");
-    diag ("configuring ".$AAAA_address." ". $A_address." as nameservers");
+    diag ("configuring nameservers( $AAAA_address, $A_address )") if $debug;
     $res->nameservers($AAAA_address,$A_address);
     undef $answer;
 #	$res->print;
@@ -147,7 +147,7 @@ SKIP: { skip "online tests are not enabled", 2 unless  (-e 't/IPv6.enabled' && !
 		  next if ($aaaa_answer->header->ancount == 0);
 		  is (($aaaa_answer->answer)[0]->type,"AAAA", "Preparing  for v6 transport, got AAAA records for ". $ns->nsdname);
 		  $AAAA_address=($aaaa_answer->answer)[0]->address;
-		  diag ("\n\t\t Trying to connect to  ". $ns->nsdname . " ($AAAA_address)");
+		  diag ("\n\t\t Trying to connect to  ". $ns->nsdname . " ($AAAA_address)") if $debug;
 		  last;
 	      }
 

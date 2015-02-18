@@ -42,6 +42,7 @@ lib/Net/DNS/RR/AFSDB.pm
 lib/Net/DNS/RR/CAA.pm
 lib/Net/DNS/RR/CERT.pm
 lib/Net/DNS/RR/CNAME.pm
+lib/Net/DNS/RR/CSYNC.pm
 lib/Net/DNS/RR/DHCID.pm
 lib/Net/DNS/RR/DNAME.pm
 lib/Net/DNS/RR/EUI48.pm
