@@ -56,7 +56,7 @@ sub ptrdname {
 	my $self = shift;
 
 	$self->{ptrdname} = new Net::DNS::DomainName1035(shift) if scalar @_;
-	$self->{ptrdname}->name if defined wantarray;
+	$self->{ptrdname}->name if defined wantarray && $self->{ptrdname};
 }
 
 1;

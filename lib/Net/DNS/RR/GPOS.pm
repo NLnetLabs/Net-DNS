@@ -91,7 +91,6 @@ sub altitude {
 
 ########################################
 
-
 sub _fp2text {
 	return new Net::DNS::Text( sprintf( '%1.10g', shift ) );
 }
@@ -100,7 +99,6 @@ sub _text2fp {
 	no integer;
 	return 0.0 + shift->value;
 }
-
 
 1;
 __END__

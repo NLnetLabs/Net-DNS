@@ -68,7 +68,7 @@ sub intermediate {
 	my $self = shift;
 
 	$self->{intermediate} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{intermediate}->name if defined wantarray;
+	$self->{intermediate}->name if defined wantarray && $self->{intermediate};
 }
 
 

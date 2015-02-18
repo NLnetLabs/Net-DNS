@@ -94,8 +94,7 @@ sub fpbin {
 
 
 sub babble {
-	return Digest::BubbleBabble::bubblebabble( Digest => shift->fpbin ) if BABBLE;
-	return '';
+	return BABBLE ? Digest::BubbleBabble::bubblebabble( Digest => shift->fpbin ) : '';
 }
 
 

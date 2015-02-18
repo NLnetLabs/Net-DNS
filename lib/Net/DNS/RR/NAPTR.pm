@@ -86,7 +86,7 @@ sub flags {
 	my $self = shift;
 
 	$self->{flags} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{flags}->value if defined wantarray;
+	$self->{flags}->value if defined wantarray && $self->{flags};
 }
 
 
@@ -94,7 +94,7 @@ sub service {
 	my $self = shift;
 
 	$self->{service} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{service}->value if defined wantarray;
+	$self->{service}->value if defined wantarray && $self->{service};
 }
 
 
@@ -102,7 +102,7 @@ sub regexp {
 	my $self = shift;
 
 	$self->{regexp} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{regexp}->value if defined wantarray;
+	$self->{regexp}->value if defined wantarray && $self->{regexp};
 }
 
 
@@ -110,7 +110,7 @@ sub replacement {
 	my $self = shift;
 
 	$self->{replacement} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{replacement}->name if defined wantarray;
+	$self->{replacement}->name if defined wantarray && $self->{replacement};
 }
 
 

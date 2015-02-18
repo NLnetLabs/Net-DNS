@@ -61,7 +61,7 @@ sub rmailbx {
 	my $self = shift;
 
 	$self->{rmailbx} = new Net::DNS::Mailbox1035(shift) if scalar @_;
-	$self->{rmailbx}->address if defined wantarray;
+	$self->{rmailbx}->address if defined wantarray && $self->{rmailbx};
 }
 
 
@@ -69,7 +69,7 @@ sub emailbx {
 	my $self = shift;
 
 	$self->{emailbx} = new Net::DNS::Mailbox1035(shift) if scalar @_;
-	$self->{emailbx}->address if defined wantarray;
+	$self->{emailbx}->address if defined wantarray && $self->{emailbx};
 }
 
 1;

@@ -60,7 +60,7 @@ sub cpu {
 	my $self = shift;
 
 	$self->{cpu} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{cpu}->value if defined wantarray;
+	$self->{cpu}->value if defined wantarray && $self->{cpu};
 }
 
 
@@ -68,7 +68,7 @@ sub os {
 	my $self = shift;
 
 	$self->{os} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{os}->value if defined wantarray;
+	$self->{os}->value if defined wantarray && $self->{os};
 }
 
 1;

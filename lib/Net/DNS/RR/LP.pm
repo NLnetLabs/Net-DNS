@@ -66,7 +66,7 @@ sub locator {
 	my $self = shift;
 
 	$self->{locator} = new Net::DNS::DomainName(shift) if scalar @_;
-	$self->{locator}->name if defined wantarray;
+	$self->{locator}->name if defined wantarray && $self->{locator};
 }
 
 

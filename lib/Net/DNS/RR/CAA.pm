@@ -140,16 +140,19 @@ sub-formats.
 
 Unsigned 8-bit number representing Boolean flags.
 
-=head2 critical
+=over 4
 
-    $rr->critical(0);
-    $rr->critical(1);
+=item critical
 
-    if ( $rr->critical ) {
+ $rr->critical(1);
+
+ if ( $rr->critical ) {
 	...
-    }
+ }
 
 Issuer critical flag.
+
+=back
 
 
 =head1 COPYRIGHT

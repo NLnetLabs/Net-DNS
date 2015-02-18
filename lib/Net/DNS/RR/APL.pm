@@ -230,7 +230,6 @@ created it.
 
 =head2 negate
 
-    $rr->negate(0);
     $rr->negate(1);
 
     if ( $rr->negate ) {

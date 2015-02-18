@@ -54,7 +54,7 @@ sub newname {
 	my $self = shift;
 
 	$self->{newname} = new Net::DNS::DomainName1035(shift) if scalar @_;
-	$self->{newname}->name if defined wantarray;
+	$self->{newname}->name if defined wantarray && $self->{newname};
 }
 
 1;

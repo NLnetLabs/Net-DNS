@@ -150,7 +150,6 @@ sub version {
 
 ########################################
 
-
 no integer;
 
 my $datum_alt = 10000000;
@@ -210,7 +209,6 @@ sub _encode_prec {
 	}
 	return 0x99;
 }
-
 
 1;
 __END__
