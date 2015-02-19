@@ -113,6 +113,7 @@ t/05-APL.t
 t/05-CAA.t
 t/05-CERT.t
 t/05-CNAME.t
+t/05-CSYNC.t
 t/05-DHCID.t
 t/05-DNAME.t
 t/05-EUI48.t
@@ -132,6 +133,7 @@ t/05-NAPTR.t
 t/05-NID.t
 t/05-NULL.t
 t/05-NS.t
+t/05-OPENPGPKEY.t
 t/05-OPT.t
 t/05-PTR.t
 t/05-PX.t

@@ -78,6 +78,28 @@ sub flags {
 }
 
 
+sub immediate {
+	my $bit = 0x0001;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
+sub soaminimum {
+	my $bit = 0x0002;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
 sub typelist {
 	my $self = shift;
 
@@ -171,25 +193,58 @@ other unpredictable behaviour.
     $SOAserial = $rr->SOAserial;
     $rr->SOAserial( $SOAserial );
 
-The SOA Serial field contains a copy of the 32-bit SOA serial number
-from the child zone.
+The SOA Serial field contains a copy of the 32-bit SOA serial number from
+the child zone.
 
 =head2 flags
 
     $flags = $rr->flags;
     $rr->flags( $flags );
 
-The flags field contains 16 bits of boolean flags that define
-operations which affect the processing of the CSYNC record.
+The flags field contains 16 bits of boolean flags that define operations
+which affect the processing of the CSYNC record.
+
+=over 4
+
+=item immediate
+
+ $rr->immediate(1);
+
+ if ( $rr->immediate ) {
+	...
+ }
+
+
+If not set, a parental agent must not process the CSYNC record until
+the zone administrator approves the operation through an out-of-band
+mechanism.
+
+=back
+
+=over 4
+
+=item soaminimum
+
+ $rr->soaminimum(1);
+
+ if ( $rr->soaminimum ) {
+	...
+ }
+
+If set, a parental agent querying child authoritative servers must not
+act on data from zones advertising an SOA serial number less than the
+SOAserial value.
+
+=back
 
 =head2 typelist
 
     @typelist = $rr->typelist;
     $typelist = $rr->typelist;
 
-The type list indicates the record types to be processed by the
-parental agent. When called in scalar context, the list is
-interpolated into a string.
+The type list indicates the record types to be processed by the parental
+agent. When called in scalar context, the list is interpolated into a
+string.
 
 
 =head1 COPYRIGHT
@@ -197,6 +252,11 @@ interpolated into a string.
 Copyright (c)2015 Dick Franks
 
 All rights reserved.
+
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted, provided
@@ -213,8 +273,6 @@ THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
-
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO
