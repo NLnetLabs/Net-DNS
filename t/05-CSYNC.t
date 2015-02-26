@@ -11,7 +11,7 @@ my $name = 'alpha.example.com';
 my $type = 'CSYNC';
 my $code = 62;
 my @attr = qw( SOAserial flags typelist);
-my @data = qw( example.com 3600 IN CSYNC 66 3 A AAAA NS );
+my @data = qw( 66 3 A AAAA NS );
 my @hash = ( qw(66 3), q(A AAAA NS) );
 my @also = qw( immediate soaminimum );
 
@@ -63,6 +63,11 @@ my $wire = '000000420003000460000008';
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
+}
 
 exit;
 
