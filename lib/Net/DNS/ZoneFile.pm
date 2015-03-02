@@ -487,7 +487,7 @@ sub _getline {				## get line from current source
 		} elsif (/^\$TTL/) {				# directive
 			my ( $keyword, $ttl, @etc ) = split;
 			die '$TTL incomplete' unless defined $ttl;
-			$self->{ttl} = new Net::DNS::RR(". $ttl IN A")->ttl;
+			$self->{TTL} = new Net::DNS::RR(". $ttl IN A")->ttl;
 
 		} else {					# unrecognised
 			chomp;
@@ -521,8 +521,8 @@ sub _getRR {				## get RR from current source
 
 	$rr->class( $self->{class} ||= $rr->class );		# propagate RR class
 
-	$self->{ttl} ||= $rr->minimum if $rr->type eq 'SOA';	# default TTL
-	$rr->{ttl} ||= $self->{ttl};
+	$self->{TTL} ||= $rr->minimum if $rr->type eq 'SOA';	# default TTL
+	$rr->{'ttl'} = $self->{TTL} unless defined $rr->{'ttl'};
 
 	return $self->{latest} = $rr;
 }
@@ -585,3 +585,4 @@ L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 5.1,
 RFC2308, BIND 9 Administrator Reference Manual
 
 =cut
+

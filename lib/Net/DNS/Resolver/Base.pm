@@ -18,7 +18,6 @@ use IO::Select;
 use Net::DNS::RR;
 use Net::DNS::Packet;
 
-use constant DNSSEC => eval { require Net::DNS::RR::DNSKEY; } || 0;
 use constant INT16SZ  => 2;
 use constant PACKETSZ => 512;
 
@@ -1333,14 +1332,9 @@ sub tsig {
 sub dnssec {
 	my $self = shift;
 
-	unless (DNSSEC) {
-		carp 'resolver->dnssec(1) without Net::DNS::SEC installed' if shift;
-		return $self->{dnssec} = 0;
-	}
-
 	return $self->{dnssec} unless scalar @_;
 
-	# set flag and increase default udppacket size
+	# increase default udppacket size if flag set
 	$self->udppacketsize(2048) if $self->{dnssec} = shift;
 
 	return $self->{dnssec};
@@ -1572,15 +1566,14 @@ sub-classes of L<Net::DNS::Resolver>.
 No user serviceable parts inside, see L<Net::DNS::Resolver>
 for all your resolving needs.
 
+
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr.
+Copyright (c)2003,2004 Chris Reinhardt.
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c)2005 Olaf Kolkman.
 
-Portions Copyright (c) 2005 Olaf Kolkman.
-
-Portions Copyright (c) 2006,2014 Dick Franks.
+Portions Copyright (c)2006,2014 Dick Franks.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

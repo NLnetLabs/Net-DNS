@@ -4,7 +4,7 @@ package Net::DNS;
 # $Id$
 #
 use vars qw($VERSION $SVNVERSION);
-$VERSION    = '0.83';
+$VERSION    = '0.83_01';
 $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
@@ -38,28 +38,6 @@ use vars qw(@EXPORT);
 @EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
 		yxrrset nxrrset yxdomain nxdomain rr_add rr_del
 		mx rrsort);
-
-
-use vars qw($HAVE_XS);
-$HAVE_XS = eval {
-	local $SIG{'__DIE__'} = 'DEFAULT';
-
-	my $version = $VERSION;
-	$version =~ s/[^0-9.]//g;
-
-	eval {
-		require XSLoader;
-		XSLoader::load( 'Net::DNS', $version );
-		1;
-	} or do {
-		use vars qw(@ISA);
-		require DynaLoader;
-		push @ISA, 'DynaLoader';
-		bootstrap Net::DNS $version;
-		1;
-	};
-
-} || 0;
 
 
 use Net::DNS::RR;
@@ -183,151 +161,6 @@ sub rr_del {
 	return $rr;
 }
 
-
-########################################
-#	Net::DNS::SEC 0.17 compatibility
-########################################
-
-use constant OLDDNSSEC => Net::DNS::RR->COMPATIBLE;
-
-if (OLDDNSSEC) {
-	require Net::DNS::RR::RRSIG;	## pre-load RRs
-	foreach my $type (qw(SIG DS DLV DNSKEY KEY NXT NSEC)) {
-		new Net::DNS::RR( type => $type );
-	}
-
-	eval <<EOT;
-		no warnings 'void';	## suppress "Too late to run INIT block ..."
-
-		sub INIT {
-			# deferred pre-load of RRs with intractable dependence problems
-			# required to satisfy Net::DNS::SEC t/00-load.t
-			new Net::DNS::RR( type => 'NSEC3' );
-			new Net::DNS::RR( type => 'NSEC3PARAM' );
-		}
-EOT
-}
-
-
-require Carp;
-require Net::DNS::Parameters;
-
-my $warned;
-
-sub deprecated {
-	Carp::carp "deprecated @_" unless $warned++;
-}
-
-sub typesbyname {
-	deprecated('typesbyname; use Net::DNS::Parameters::typebyname') unless OLDDNSSEC;
-
-	# preserve historical behaviour for TYPE0	[OMK]
-	Net::DNS::Parameters::typebyname(shift) || '00';
-}
-
-sub typesbyval {
-	deprecated('typesbyval; use Net::DNS::Parameters::typebyval') unless OLDDNSSEC;
-	Net::DNS::Parameters::typebyval(shift);
-}
-
-if (OLDDNSSEC) {
-	use vars qw(%typesbyname %typesbyval);
-	%typesbyname = %Net::DNS::Parameters::typebyname;
-	%typesbyval  = %Net::DNS::Parameters::typebyval;
-}
-
-
-use vars qw(@EXPORT_OK);
-@EXPORT_OK = qw(name2labels presentation2wire wire2presentation stripdot);
-
-#
-# name2labels()
-#
-# Utility function to translate names from presentation format into
-# an array of "wire-format" labels.
-#
-# in: $dname a string with a domain name in presentation format
-# (1035 sect 5.1)
-# out: an array of labels in wire format.
-
-sub name2labels {
-	deprecated('name2labels') unless OLDDNSSEC;
-	my $dname = shift;
-	my @names;
-	my $j = 0;
-	while ($dname) {
-		( $names[$j], $dname ) = presentation2wire($dname);
-		$j++;
-	}
-
-	return @names;
-}
-
-
-sub wire2presentation {
-	deprecated('wire2presentation') unless OLDDNSSEC;
-	my $presentation = shift;				# Really wire...
-
-	# Prepend these with a backslash
-	$presentation =~ s/(["$();@.\\])/\\$1/g;
-
-	# Convert < 33 and > 126 to \x<\d\d\d>
-	$presentation =~ s/([^\x21-\x7E])/sprintf("\\%03u", ord($1))/eg;
-
-	return $presentation;
-}
-
-
-sub stripdot {
-	deprecated('stripdot') unless OLDDNSSEC;
-
-	# Code courtesy of JMEHNLE <JMEHNLE@cpan.org>
-	# rt.cpan.org #51009
-
-	# Strips the final non-escaped dot from a domain name.	Note
-	# that one could have a label that looks like "foo\\\\\.\.."
-	# although not likely one wants to deal with that cracefully.
-	# This utilizes 2 functions in the DNS module to deal with
-	# thing cracefully.
-
-	return join( '.', map( wire2presentation($_), name2labels(shift) ) );
-
-}
-
-
-#
-#    ($wire,$leftover)=presentation2wire($leftover);
-#
-# Will parse the input presentation format and return everything before
-# the first non-escaped "." in the first element of the return array and
-# all that has not been parsed yet in the 2nd argument.
-
-sub presentation2wire {
-	deprecated('presentation2wire') unless OLDDNSSEC;
-	my $presentation = shift;
-	my $wire	 = "";
-
-	while ( $presentation =~ /\G([^.\\]*)([.\\]?)/g ) {
-		$wire .= $1 if defined $1;
-
-		if ($2) {
-			if ( $2 eq '.' ) {
-				return ( $wire, substr( $presentation, pos $presentation ) );
-			}
-
-			#backslash found
-			if ( $presentation =~ /\G(\d\d\d)/gc ) {
-				$wire .= pack( "C", $1 );
-			} elsif ( $presentation =~ /\G([@().\\])/gc ) {
-				$wire .= $1;
-			}
-		}
-	}
-
-	return $wire;
-}
-
-########################################
 
 1;
 __END__
@@ -614,7 +447,7 @@ See the C<Net::DNS::Update> manual page for an example of performing
 dynamic updates.
 
 
-=head2 Look up a host's addresses.
+=head2 Look up host addresses.
 
     use Net::DNS;
     my $res   = Net::DNS::Resolver->new;
@@ -662,7 +495,7 @@ dynamic updates.
     }
 
 
-=head2 Print a domain's SOA record in zone file format.
+=head2 Print domain SOA record in zone file format.
 
     use Net::DNS;
     my $res   = Net::DNS::Resolver->new;
@@ -741,9 +574,9 @@ distribution please use the CPAN bug reporting system.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr.
+Copyright (c)1997-2000 Michael Fuhr.
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002,2003 Chris Reinhardt.
 
 Portions Copyright (c)2005 Olaf Kolkman (RIPE NCC)
 
@@ -762,25 +595,21 @@ modify it under the same terms as Perl itself.
 
 =head1 AUTHOR INFORMATION
 
-Net::DNS is maintained at NLnet Labs (www.nlnetlabs.nl) by
-	Olaf Kolkman.
+Net::DNS is maintained at NLnet Labs (www.nlnetlabs.nl) by Willem Toorop.
+
+Between 2005 and 2012 Net::DNS was maintained by Olaf Kolkman.
 
 Between 2002 and 2004 Net::DNS was maintained by Chris Reinhardt.
 
-Net::DNS was created by Michael Fuhr.
+Net::DNS was created in 1997 by Michael Fuhr.
 
-
-For more information see:
-    http://www.net-dns.org/
-
-Stay tuned and syndicate:
-    http://www.net-dns.org/blog/
 
 =head1 SEE ALSO
 
-L<perl>, I<DNS and BIND> by Paul Albitz & Cricket Liu, RFC1035,
-L<Net::DNS::Resolver>, L<Net::DNS::Packet>, L<Net::DNS::Update>,
-L<Net::DNS::Question>, L<Net::DNS::RR>
+L<perl>, L<Net::DNS::Resolver>, L<Net::DNS::Question>, L<Net::DNS::RR>,
+L<Net::DNS::Packet>, L<Net::DNS::Update>,
+RFC1035, L<http://www.net-dns.org/>,
+I<DNS and BIND> by Paul Albitz & Cricket Liu
 
 =cut
 

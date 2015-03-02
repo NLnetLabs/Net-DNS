@@ -44,6 +44,7 @@ BEGIN {
 		'example.com	CLASS1	0	TYPE1	192.0.2.1',
 		) {
 		my $rr = new Net::DNS::RR("$testcase");
+		$rr->ttl( $example->ttl );			# TTL only shown if defined
 		is( $rr->string, $expected, "new Net::DNS::RR( $testcase )" );
 	}
 }
@@ -71,6 +72,7 @@ BEGIN {
 		'example.com (	0	IN	TXT	txt-data )	; bracketed',
 		) {
 		my $rr = new Net::DNS::RR("$testcase");
+		$rr->ttl( $example->ttl );			# TTL only shown if defined
 		is( $rr->string, $expected, "new Net::DNS::RR( $testcase )" );
 	}
 }

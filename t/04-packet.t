@@ -110,8 +110,14 @@ foreach my $count ( qw(qdcount ancount nscount arcount) ) {
 }
 
 
-foreach my $section ( qw(question answer authority additional) ) {
+foreach my $section ( qw(question) ) {
 	my @original = map{$_->string} $update->$section;
+	my @content = map{$_->string} $decoded->$section;
+	is_deeply(\@content, \@original, "check content of $section section");
+}
+
+foreach my $section ( qw(answer authority additional) ) {
+	my @original = map{$_->ttl(0); $_->string} $update->$section;	# almost! need TTL defined
 	my @content = map{$_->string} $decoded->$section;
 	is_deeply(\@content, \@original, "check content of $section section");
 }

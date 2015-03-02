@@ -77,9 +77,9 @@ sub new {
 		}
 	}
 
-	$self->{owner} = new Net::DNS::DomainName1035($qname);
-	$self->{type}  = typebyname( $qtype || 'A' );
-	$self->{class} = classbyname( $qclass || 'IN' );
+	$self->{qname}	= new Net::DNS::DomainName1035($qname);
+	$self->{qtype}	= typebyname( $qtype || 'A' );
+	$self->{qclass} = classbyname( $qclass || 'IN' );
 
 	return $self;
 }
@@ -110,11 +110,11 @@ sub decode {
 	my $self = bless {}, shift;
 	my ( $data, $offset ) = @_;
 
-	( $self->{owner}, $offset ) = decode Net::DNS::DomainName1035(@_);
+	( $self->{qname}, $offset ) = decode Net::DNS::DomainName1035(@_);
 
 	my $next = $offset + QFIXEDSZ;
 	die 'corrupt wire-format data' if length $$data < $next;
-	@{$self}{qw(type class)} = unpack "\@$offset n2", $$data;
+	@{$self}{qw(qtype qclass)} = unpack "\@$offset n2", $$data;
 
 	wantarray ? ( $self, $next ) : $self;
 }
@@ -136,99 +136,8 @@ table used to index compressed names within the packet.
 sub encode {
 	my $self = shift;
 
-	pack 'a* n2', $self->{owner}->encode(@_), @{$self}{qw(type class)};
+	pack 'a* n2', $self->{qname}->encode(@_), @{$self}{qw(qtype qclass)};
 }
-
-
-=head2 name
-
-    $name = $question->name;
-
-Internationalised domain name corresponding to the qname attribute.
-
-Decoding non-ASCII domain names is computationally expensive and
-undesirable for names which are likely to be used to construct
-further queries.
-
-When required to communicate with humans, the 'proper' domain name
-should be extracted from a query or reply packet.
-
-    $query = new Net::DNS::Packet( $example, 'ANY' );
-    $reply = $resolver->send($query) or die;
-    ($question) = $reply->question;
-    $name = $question->name;
-
-=cut
-
-sub name {
-	my $self = shift;
-
-	croak 'immutable object: argument invalid' if scalar @_;
-	$self->{owner}->xname;
-}
-
-
-=head2 qname, zname
-
-    $qname = $question->qname;
-    $zname = $question->zname;
-
-Canonical ASCII domain name as required for the query subject
-transmitted to a nameserver.  In dynamic update packets, this
-attribute is known as zname() and refers to the zone name.
-
-=cut
-
-sub qname {
-	my $self = shift;
-
-	croak 'immutable object: argument invalid' if scalar @_;
-	$self->{owner}->name;
-}
-
-sub zname { &qname; }
-
-
-=head2 qtype, ztype
-
-    $qtype = $question->qtype;
-    $ztype = $question->ztype;
-
-Returns the question type attribute.  In dynamic update packets,
-this attribute is known as ztype() and refers to the zone type.
-
-=cut
-
-sub type {
-	my $self = shift;
-
-	croak 'immutable object: argument invalid' if scalar @_;
-	typebyval( $self->{type} );
-}
-
-sub qtype { &type; }
-sub ztype { &type; }
-
-
-=head2 qclass, zclass
-
-    $qclass = $question->qclass;
-    $zclass = $question->zclass;
-
-Returns the question class attribute.  In dynamic update packets,
-this attribute is known as zclass() and refers to the zone class.
-
-=cut
-
-sub class {
-	my $self = shift;
-
-	croak 'immutable object: argument invalid' if scalar @_;
-	classbyval( $self->{class} );
-}
-
-sub qclass { &class; }
-sub zclass { &class; }
 
 
 =head2 print
@@ -256,8 +165,99 @@ Returns a string representation of the question record.
 sub string {
 	my $self = shift;
 
-	join "\t", $self->{owner}->string, $self->qclass, $self->qtype;
+	join "\t", $self->{qname}->string, $self->qclass, $self->qtype;
 }
+
+
+=head2 name
+
+    $name = $question->name;
+
+Internationalised domain name corresponding to the qname attribute.
+
+Decoding non-ASCII domain names is computationally expensive and
+undesirable for names which are likely to be used to construct
+further queries.
+
+When required to communicate with humans, the 'proper' domain name
+should be extracted from a query or reply packet.
+
+    $query = new Net::DNS::Packet( $example, 'ANY' );
+    $reply = $resolver->send($query) or die;
+    ($question) = $reply->question;
+    $name = $question->name;
+
+=cut
+
+sub name {
+	my $self = shift;
+
+	croak 'immutable object: argument invalid' if scalar @_;
+	$self->{qname}->xname;
+}
+
+
+=head2 qname, zname
+
+    $qname = $question->qname;
+    $zname = $question->zname;
+
+Canonical ASCII domain name as required for the query subject
+transmitted to a nameserver.  In dynamic update packets, this
+attribute is known as zname() and refers to the zone name.
+
+=cut
+
+sub qname {
+	my $self = shift;
+
+	croak 'immutable object: argument invalid' if scalar @_;
+	$self->{qname}->name;
+}
+
+sub zname { &qname; }
+
+
+=head2 qtype, ztype
+
+    $qtype = $question->qtype;
+    $ztype = $question->ztype;
+
+Returns the question type attribute.  In dynamic update packets,
+this attribute is known as ztype() and refers to the zone type.
+
+=cut
+
+sub type {
+	my $self = shift;
+
+	croak 'immutable object: argument invalid' if scalar @_;
+	typebyval( $self->{qtype} );
+}
+
+sub qtype { &type; }
+sub ztype { &type; }
+
+
+=head2 qclass, zclass
+
+    $qclass = $question->qclass;
+    $zclass = $question->zclass;
+
+Returns the question class attribute.  In dynamic update packets,
+this attribute is known as zclass() and refers to the zone class.
+
+=cut
+
+sub class {
+	my $self = shift;
+
+	croak 'immutable object: argument invalid' if scalar @_;
+	classbyval( $self->{qclass} );
+}
+
+sub qclass { &class; }
+sub zclass { &class; }
 
 
 ########################################
@@ -314,9 +314,9 @@ __END__
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr. 
+Copyright (c)1997-2000 Michael Fuhr. 
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002,2003 Chris Reinhardt.
 
 Portions Copyright (c)2003,2006-2011 Dick Franks.
 
@@ -330,4 +330,6 @@ modify it under the same terms as Perl itself.
 
 L<perl>, L<Net::DNS>, L<Net::DNS::DomainName>, L<Net::DNS::Packet>,
 RFC 1035 Section 4.1.2
+
+=cut
 
