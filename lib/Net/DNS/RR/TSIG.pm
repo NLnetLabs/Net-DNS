@@ -366,16 +366,13 @@ sub create {
 
 	} else {						# ( keyfile, options )
 		require Net::DNS::ZoneFile;
-		my $keyfile = new Net::DNS::ZoneFile($karg);
-		my $keyline = $keyfile->_getline;		# bad news: KEY is in Net::DNS::SEC
-		my ( $kname, $c, $t, $f, $p, $algorithm, @key ) = split /\s+/, $keyline;
-		croak 'key file incompatible with TSIG' unless "$c $t $f $p" eq 'IN KEY 512 3';
-		my $key = join '', @key;
+		my $keyrr = new Net::DNS::ZoneFile($karg)->read;
+		croak 'key file incompatible with TSIG' unless $keyrr->type eq 'KEY';
 		return new Net::DNS::RR(
-			name	  => $kname,
+			name	  => $keyrr->name,
 			type	  => 'TSIG',
-			algorithm => $algorithm,
-			key	  => $key,
+			algorithm => $keyrr->algorithm,
+			key	  => $keyrr->key,
 			@_
 			);
 	}
@@ -764,18 +761,21 @@ before the code stops working on 7 February 2106.
 
 =head1 COPYRIGHT
 
-Copyright (c)2002 Michael Fuhr. 
+Copyright (c)2000,2001 Michael Fuhr. 
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002,2003 Chris Reinhardt.
 
 Portions Copyright (c)2013 Dick Franks.
 
 All rights reserved.
 
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
+
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
-
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

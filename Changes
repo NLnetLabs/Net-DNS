@@ -1,7 +1,12 @@
 $Id$                       -*-text-*-
 
 
-**** 0.84 [unreleased]
+**** 1.01 [unreleased]
+
+Feature
+	The RRs previously only available with Net::DNS::SEC are now
+	integrated with Net::DNS.  Net::DNS::SEC needs to be installed
+	to enable the signature generation and verification functions.
 
 
 **** 0.83 Feb 26, 2015
