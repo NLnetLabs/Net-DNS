@@ -114,7 +114,9 @@ for the cell named by the owner name of the RR.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-1998 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
+
+Portions Copyright (c)2002,2003 Chris Reinhardt. 
 
 All rights reserved.
 

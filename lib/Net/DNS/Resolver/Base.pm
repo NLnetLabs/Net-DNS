@@ -339,26 +339,20 @@ sub nameservers {
 			debug	    => $self->{debug} );
 		$defres->{cache} = $self->{cache} if $self->{cache};
 
-		my @names;
-		if ( $ns =~ /\./ ) {
-			@names = ($ns);
-		} else {
-			my @suffix = $defres->searchlist;
-			@suffix = grep length, ( $defres->domain ) unless @suffix;
-			@names = map "$ns.$_", @suffix;
-		}
-
 		my $packet = $defres->search( $ns, 'A' );
 		$self->errorstring( $defres->errorstring );
+		my @names = ($ns);
+		push @names, $packet ? ( map $_->qname, $packet->question ) : ();
 		my @address = $packet ? cname_addr( [@names], $packet ) : ();
 
 		if ($has_inet6) {
 			$packet = $defres->search( $ns, 'AAAA' );
 			$self->errorstring( $defres->errorstring );
-			push @address, cname_addr( [@names], $packet ) if defined $packet;
+			push @names, $packet ? ( map $_->qname, $packet->question ) : ();
+			push @address, $packet ? cname_addr( [@names], $packet ) : ();
 		}
 
-		my %address = map { $_ => $_ } @address;	# tainted
+		my %address = map { ( $_ => $_ ) } @address;	# tainted
 		my @unique = values %address;
 		carp "unresolvable name: $ns" unless @unique;
 		push @ipv4, grep _ip_is_ipv4($_), @unique;

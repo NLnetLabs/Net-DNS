@@ -493,30 +493,24 @@ sub rdatastr {
 	my @rdata = eval { $self->format_rdata; };
 	carp $@ if $@;
 
-	unless ( scalar @rdata > 1 ) {
-		my $string = shift @rdata;			# pre-formatted single string
-		return '' unless defined $string;
-		$string =~ s/\n+/\n\t/g;
-		return $string;
-	}
-
 	my @fill;
 	my @line;
-	chomp $rdata[$#rdata];
-	while ( scalar @rdata ) {				# line filling mode
+	while ( scalar @rdata ) {				# fill lines
 		my $item = shift @rdata;
+		next unless defined $item;
 		if ( ( $coln += 1 + length $item ) > $cols ) {
 			push @line, join ' ', @fill;
-			$coln = length $item;
 			@fill = ();
+			$coln = length $item;
 		}
+		$coln = $cols if chomp $item;			# line terminator
 		push( @fill, $item );
 	}
-	return join ' ', @fill unless scalar @line;
+	return join ' ', @fill unless scalar @line;		# simple RR
 
-	$line[0] = join ' ', $line[0], '(';
-	push @line, join ' ', @fill if scalar @fill;
-	join "\n\t", @line, ')';
+	$line[0] = join ' ', $line[0], '(';			# multi-line RR
+	return join "\n\t", @line, join ' ', @fill, ')' if $coln < $cols;
+	return join "\n\t", @line, join( ' ', @fill ), ')';
 }
 
 sub rdstring { &rdatastr; }
@@ -696,6 +690,7 @@ sub AUTOLOAD {				## Default method
 	confess 'undefined method ', $AUTOLOAD unless $oref;
 	confess 'unimplemented type ', $self->type if $oref eq __PACKAGE__;
 
+	no strict q/refs/;
 	my $method = $AUTOLOAD =~ m/^.*::(.*)$/ ? $1 : '<undef>';
 	*{$AUTOLOAD} = sub {undef};	## suppress deep recursion
 
@@ -713,7 +708,6 @@ sub AUTOLOAD {				## Default method
 ***  that the object would be of a particular type.  The type of an
 ***  object should be checked before calling any of its methods.
 END
-	no strict;
 	goto &{'Carp::confess'};
 }
 

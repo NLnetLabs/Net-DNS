@@ -43,12 +43,9 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{fpbin};
-	my $babble	= $self->babble;
-	my $fingerprint = $self->fp;
-	$fingerprint = "(\n$fingerprint )" if length $fingerprint > 40;
-	$fingerprint =~ s/(\S{64})/$1\n/g;
-	return join ' ', $self->algorithm, $self->fptype, $fingerprint unless $babble;
-	return join ' ', $self->algorithm, $self->fptype, $fingerprint, "\n;", $babble;
+	my @babble = BABBLE ? ( join '', ';', $self->babble, "\n" ) : ();
+	my @fprint = split /(\S{64})/, $self->fp;
+	my @rdata = $self->algorithm, $self->fptype, @fprint, @babble;
 }
 
 

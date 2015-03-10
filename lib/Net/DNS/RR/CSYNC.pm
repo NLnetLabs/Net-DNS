@@ -46,7 +46,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{typebm};
-	join ' ', $self->SOAserial, $self->flags, $self->typelist;
+	my @rdata = $self->SOAserial, $self->flags, $self->typelist;
 }
 
 

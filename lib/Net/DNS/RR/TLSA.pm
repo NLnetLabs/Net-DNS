@@ -19,6 +19,8 @@ Net::DNS::RR::TLSA - DNS TLSA resource record
 
 use integer;
 
+use constant BABBLE => eval { require Digest::BubbleBabble; };
+
 
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
@@ -44,11 +46,9 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{certbin};
-	my @params = ( $self->usage, $self->selector, $self->matchingtype );
-	( my $certificate = $self->cert ) =~ s/(\S{64})/$1\n/g;
-	chomp $certificate;
-	return join ' ', @params, $certificate if length $certificate < 40;
-	return join ' ', @params, "(\n", $certificate, ")";
+	my @babble = BABBLE ? ( join '', ';', $self->babble, "\n" ) : ();
+	my @cert = split /(\S{64})/, $self->cert;
+	my @rdata = $self->usage, $self->selector, $self->matchingtype, @cert, @babble;
 }
 
 
@@ -103,6 +103,11 @@ sub certbin {
 
 
 sub certificate { &cert; }
+
+
+sub babble {
+	return BABBLE ? Digest::BubbleBabble::bubblebabble( Digest => shift->certbin ) : '';
+}
 
 1;
 __END__
@@ -168,6 +173,22 @@ Hexadecimal representation of the certificate data.
     $rr->certbin( $certbin );
 
 Binary representation of the certificate data.
+
+=head2 babble
+
+    print $rr->babble;
+
+The babble() method returns the 'BubbleBabble' representation of the
+digest if the Digest::BubbleBabble package is available, otherwise
+an empty string is returned.
+
+BubbleBabble represents a message digest as a string of plausible
+words, to make the digest easier to verify.  The "words" are not
+necessarily real words, but they look more like words than a string
+of hex characters.
+
+The 'BubbleBabble' string is appended as a comment to the RDATA when
+the string method is called.
 
 
 =head1 COPYRIGHT

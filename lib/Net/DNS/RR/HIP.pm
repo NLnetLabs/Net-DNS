@@ -58,11 +58,9 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{hitbin};
-	my $algorithm = $self->pkalgorithm;
-	my $hit	      = $self->hit;
-	my $base64    = MIME::Base64::encode $self->keybin, '';
-	my @servers   = map $_->string, @{$self->{servers}};
-	return "$algorithm $hit (\n$base64\n@servers )";
+	my $base64 = encode_base64( $self->keybin, '' );
+	my @server = map $_->string, @{$self->{servers}};
+	my @rdata = $self->pkalgorithm, $self->hit, $base64, @server;
 }
 
 

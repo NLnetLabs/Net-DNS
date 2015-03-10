@@ -54,8 +54,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	return '' unless $self->{replacement};
 	my @number = @{$self}{qw(order preference)};
 	my @string = map { $_->string } @{$self}{qw(flags service regexp replacement)};
-
-	join ' ', @number, @string;
+	my @rdata  = @number, @string;
 }
 
 
@@ -210,7 +209,9 @@ depending on the value of the flags field.
 
 =head1 COPYRIGHT
 
-Copyright (c)2005 Olaf Kolkman, NLnet Labs.
+Copyright (c)1997 Mike Fuhr.
+
+Portions Copyright (c)2005 Olaf Kolkman, NLnet Labs.
 
 Based on code contributed by Ryan Moats.
 

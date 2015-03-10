@@ -154,9 +154,7 @@ for all your resolving needs.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr.
-
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Copyright (c)2003 Sidney Markowitz.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.
@@ -166,3 +164,4 @@ it and/or modify it under the same terms as Perl itself.
 L<perl>, L<Net::DNS>, L<Net::DNS::Resolver>
 
 =cut
+

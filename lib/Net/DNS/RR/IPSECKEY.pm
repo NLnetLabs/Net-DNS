@@ -88,12 +88,9 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{algorithm};
-	my @params  = map $self->$_, qw(precedence gatetype algorithm);
-	my $gateway = $self->gateway;
-	my $base64  = MIME::Base64::encode $self->keybin;
-	chomp $base64;
-	return join ' ', @params, $gateway, "(\n$base64 )" unless length($gateway) > 10;
-	return join ' ', @params, "(\n$gateway\n$base64 )";
+	my @params = map $self->$_, qw(precedence gatetype algorithm);
+	my @base64 = split /\s+/, encode_base64( $self->keybin );
+	my @rdata = @params, $self->gateway, @base64;
 }
 
 

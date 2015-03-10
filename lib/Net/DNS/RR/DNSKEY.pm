@@ -89,10 +89,10 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $base64 = MIME::Base64::encode $self->keybin || return '';
+	my @base64 = split /\s+/, encode_base64( $self->keybin || return '' );
+	my $keytag = $self->keytag;
 	my @params = map $self->$_, qw(flags protocol algorithm);
-	chomp $base64;
-	return join ' ', @params, "(\n$base64 ) ; Key ID =", $self->keytag;
+	my @rdata  = @params, @base64, "; Key ID = $keytag\n";
 }
 
 
@@ -117,6 +117,39 @@ sub flags {
 
 	$self->{flags} = 0 + shift if scalar @_;
 	return $self->{flags} || 0;
+}
+
+
+sub zone {
+	my $bit = 0x0100;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
+sub revoke {
+	my $bit = 0x0080;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
+}
+
+
+sub sep {
+	my $bit = 0x0001;
+	for ( shift->{flags} ||= 0 ) {
+		return $_ & $bit unless scalar @_;
+		my $set = $_ | $bit;
+		$_ = (shift) ? $set : ( $set ^ $bit );
+		return $_ & $bit;
+	}
 }
 
 
@@ -230,39 +263,6 @@ sub keytag {
 }
 
 
-sub zone {
-	my $bit = 0x0100;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
-		$_ = (shift) ? $set : ( $set ^ $bit );
-		return $_ & $bit;
-	}
-}
-
-
-sub revoke {
-	my $bit = 0x0080;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
-		$_ = (shift) ? $set : ( $set ^ $bit );
-		return $_ & $bit;
-	}
-}
-
-
-sub sep {
-	my $bit = 0x0001;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
-		$_ = (shift) ? $set : ( $set ^ $bit );
-		return $_ & $bit;
-	}
-}
-
-
 sub is_sep {				## historical
 	my $self = shift;
 	return $self->sep(@_) ? 1 : 0;
@@ -301,6 +301,48 @@ other unpredictable behaviour.
     $rr->flags( $flags );
 
 Unsigned 16-bit number representing Boolean flags.
+
+=over 4
+
+=item zone
+
+ $rr->zone(1);
+
+ if ( $rr->zone ) {
+	...
+ }
+
+Boolean Zone flag.
+
+=back
+
+=over 4
+
+=item revoke
+
+ $rr->revoke(1);
+
+ if ( $rr->revoke ) {
+	...
+ }
+
+Boolean Revoke flag.
+
+=back
+
+=over 4
+
+=item sep
+
+ $rr->sep(1);
+
+ if ( $rr->sep ) {
+	...
+ }
+
+Boolean Secure Entry Point flag.
+
+=back
 
 =head2 protocol
 
@@ -346,63 +388,33 @@ Returns the length (in bits) of the modulus calculated from the key text.
 
 Returns the 16-bit numerical key tag of the key. (RFC2535 4.1.6)
 
-=head2 zone
-
-    $rr->zone(0);
-    $rr->zone(1);
-
-    if ( $rr->zone ) {
-	...
-    }
-
-Boolean Zone key flag.
-
-=head2 revoke
-
-    $rr->revoke(0);
-    $rr->revoke(1);
-
-    if ( $rr->revoke ) {
-	...
-    }
-
-Boolean Revoke flag.
-
-=head2 sep
-
-    $rr->sep(0);
-    $rr->sep(1);
-
-    if ( $rr->sep ) {
-	...
-    }
-
-Boolean Secure Entry Point flag.
-
 
 =head1 COPYRIGHT
 
 Copyright (c)2003-2005 RIPE NCC.  Author Olaf M. Kolkman
 
-All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be used
-in advertising or publicity pertaining to distribution of the software
-without specific prior written permission.
-
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
-EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
-ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
+All rights reserved.
 
 Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO

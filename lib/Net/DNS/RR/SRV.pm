@@ -46,7 +46,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{target};
-	join ' ', $self->priority, $self->weight, $self->port, $self->{target}->string;
+	my @rdata = $self->priority, $self->weight, $self->port, $self->{target}->string;
 }
 
 
@@ -163,7 +163,7 @@ Note: This is NOT the order in which connections should be attempted.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr.
+Copyright (c)1997 Michael Fuhr.
 
 Portions Copyright (c)2005 Olaf Kolkman, NLnet Labs.
 

@@ -135,10 +135,9 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{digtype};
-	my @babble = BABBLE ? ( "\n;", $self->babble ) : ();
-	my $digest = $self->digest;
-	$digest = join( "\n", '(', split /(\S{64})/, $digest ) . ' )' if length $digest > 40;
-	join ' ', @{$self}{qw(keytag algorithm digtype)}, $digest, @babble;
+	my @babble = BABBLE ? ( join '', ';', $self->babble, "\n" ) : ();
+	my @digest = split /(\S{64})/, $self->digest;
+	my @rdata = @{$self}{qw(keytag algorithm digtype)}, @digest, @babble;
 }
 
 
@@ -217,10 +216,9 @@ sub create {
 	my $kname = $keyrr->name;
 	my $flags = $keyrr->flags;
 	croak "Unable to create $kname $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
-	croak "Unable to create $kname $type record for NULL key" if ( $flags & 0xc000 ) == 0xc000;
-	croak "Unable to create $kname $type record for key with flag bit7 clear" unless $flags & 0x0100;
-	croak "Unable to create $kname $type record for key with flag bit6 set" if $flags & 0x0200;
-	croak "Unable to create $kname $type record for key with flag bit0 set" if $flags & 0x8000;
+	croak "Unable to create $kname $type record for non-ZONE key" if ( $flags & 0x300 ) == 0x100;
+	croak "Unable to create $kname $type record for NULL key"     if ( $flags & 0xc000 ) == 0xc000;
+	croak "Unable to create $type RR for non-authentication key"  if $flags & 0x8000;
 
 	my $self = new Net::DNS::RR(
 		name	  => $kname,				# per definition, same as keyrr
@@ -320,7 +318,6 @@ Binary representation of the digest over the label and key.
     print $rr->babble;
 
 The babble() method returns the 'BubbleBabble' representation of the
-The babble() method returns the 'BubbleBabble' representation of the
 digest if the Digest::BubbleBabble package is available, otherwise
 an empty string is returned.
 
@@ -356,29 +353,32 @@ i.e. the DS points to the DNSKEY from the argument.
 
 =head1 COPYRIGHT
 
-Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman <olaf@net-dns.org>
+Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman
 
 Portions Copyright (c)2013 Dick Franks.
 
-All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be used
-in advertising or publicity pertaining to distribution of the software
-without specific prior written permission.
-
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
-EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
-ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
+All rights reserved.
 
 Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO

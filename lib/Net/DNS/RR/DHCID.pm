@@ -42,9 +42,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $base64 = MIME::Base64::encode $self->encode_rdata;
-	chomp $base64;
-	return length($base64) > 40 ? "(\n$base64 )" : $base64;
+	my @base64 = split /\s+/, encode_base64( $self->encode_rdata );
 }
 
 

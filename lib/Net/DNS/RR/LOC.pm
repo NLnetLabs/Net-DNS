@@ -27,7 +27,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset ) = @_;
 
 	my $version = $self->{version} = unpack "\@$offset C", $$data;
-	croak "LOC version $version not supported" unless $version == 0;
+	warn "LOC version $version not supported" unless $version == 0;
 	@{$self}{qw(size hp vp latitude longitude altitude)} = unpack "\@$offset xC3N3", $$data;
 }
 
@@ -44,9 +44,8 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{longitude};
-	my @angular = ( $self->latitude, ' ', $self->longitude, ' ' );
-	my @linear = ( $self->altitude, $self->size, $self->hp, $self->vp );
-	join ' ', @angular, join 'm ', @linear, '';
+	my ( $alt, @other ) = map $self->$_() . 'm', qw(altitude size hp vp);
+	my @rdata = $self->latitude, '', $self->longitude, '', $alt, join ' ', @other;
 }
 
 
@@ -133,10 +132,12 @@ sub vert_pre { &vp; }
 
 
 sub latlon {
-	my $self      = shift;
-	my $latitude  = _decode_lat( $self->{latitude} );
-	my $longitude = _decode_lat( $self->{longitude} );
-	return ( $latitude, $longitude );
+	my $self = shift;
+	$self->latitude(shift)	if scalar @_;
+	$self->longitude(shift) if scalar @_;
+	my $lat	 = $self->latitude;
+	my $long = $self->longitude;
+	my @pair = ( $lat, $long );
 }
 
 
@@ -299,8 +300,9 @@ total spread, in metres, of the distribution of possible values.
 =head2 latlon
 
     ($lat, $lon) = $rr->latlon;
+    $rr->latlon($lat, $lon);
 
-Returns the latitude and longitude coordinate pair as
+Representation of the latitude and longitude coordinate pair as
 signed floating-point degrees.
 
 =head2 version

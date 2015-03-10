@@ -43,6 +43,8 @@ use Net::DNS::Parameters;
 
 my $debug = 0;
 
+my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
+
 use constant DNSSEC => eval { require Net::DNS::SEC::Private } || 0;
 
 use constant DSA => eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA' } || 0;
@@ -54,7 +56,6 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset, @opaque ) = @_;
 
 	my $limit = $offset + $self->{rdlength};
-	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 	@{$self}{@field} = unpack "\@$offset n C2 N3 n", $$data;
 	( $self->{signame}, $offset ) = decode Net::DNS::DomainName2535( $data, $offset + 18 );
 	$self->{sigbin} = substr $$data, $offset, $limit - $offset;
@@ -83,7 +84,6 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 		$self->_CreateSig( $sigdata, $private || die 'missing key reference' );
 	}
 
-	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 	pack 'n C2 N3 n a* a*', @{$self}{@field}, $signame->encode, $self->sigbin;
 }
 
@@ -91,20 +91,17 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $base64 = encode_base64 $self->sigbin || return '';
-	my $line1 = join ' ', map $self->$_, qw(typecovered algorithm labels orgttl);
-	my $line2 = join ' ', map $self->$_, qw(sigexpiration siginception keytag);
-	my $signame = $self->{signame}->string;
-	chomp $base64;
-	return "$line1 (\n$line2 $signame\n$base64 )";
+	my @sig64 = split /\s+/, encode_base64( $self->sigbin || return '' );
+	my @rdata = map( $self->$_, @field ), $self->{signame}->string, @sig64;
 }
 
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	my @attribute = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag signame);
-	$self->$_( scalar @_ ? shift : () ) for @attribute;
+	for ( @field, qw(signame) ) {
+		$self->$_(shift) if scalar @_;
+	}
 	$self->signature(@_);
 }
 
@@ -316,7 +313,7 @@ sub verify {
 	if ( ref($keyref) eq "ARRAY" ) {
 
 		#  We will recurse for each key that matches algorithm and key-id
-		#  we return when there is a successful verification.
+		#  and return when there is a successful verification.
 		#  If not, we'll continue so that we even survive key-id collision.
 		#  The downside of this is that the error string only matches the
 		#  last error.
@@ -525,6 +522,7 @@ __END__
 				orgttl sigexpiration siginception
 				keytag signame signature');
 
+    use Net::DNS::SEC;
     $sigrr = create Net::DNS::RR::SIG( $string, $keypath,
 					sigval => 10	# minutes
 					);
@@ -714,31 +712,34 @@ responses to bug report and feature requests.
 
 =head1 COPYRIGHT
 
-Copyright (c)2001-2005 RIPE NCC,   Olaf M. Kolkman 
+Copyright (c)2001-2005 RIPE NCC,   Olaf M. Kolkman
 
-Copyright (c)2007-2008 NLnet Labs, Olaf M. Kolkman 
+Copyright (c)2007-2008 NLnet Labs, Olaf M. Kolkman
 
 Portions Copyright (c)2014 Dick Franks
 
-All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be used
-in advertising or publicity pertaining to distribution of the software
-without specific prior written permission.
-
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
-EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
-ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
+All rights reserved.
 
 Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO

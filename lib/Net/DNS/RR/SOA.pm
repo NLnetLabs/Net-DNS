@@ -52,11 +52,12 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $rname  = $self->{rname}->string;
 	my $serial = $self->serial;
 	my $spacer = $serial > 9999999 ? "" : "\t";
-	join "\n\t\t\t\t", "$mname $rname (", "$serial$spacer\t;serial",
+	my @rdata  = $mname, $rname, join "\n\t\t\t\t",
+			"\t\t\t$serial$spacer\t;serial",
 			"$self->{refresh}\t\t;refresh",
 			"$self->{retry}\t\t;retry",
 			"$self->{expire}\t\t;expire",
-			"$self->{minimum}\t)\t;minimum";
+			"$self->{minimum}\t\t;minimum";
 }
 
 
@@ -66,10 +67,9 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	$self->mname(shift);
 	$self->rname(shift);
 	$self->serial(shift);
-	$self->refresh( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
-	$self->retry( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
-	$self->expire( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
-	$self->minimum( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
+	for (qw(refresh retry expire minimum)) {
+		$self->$_( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
+	}
 }
 
 
@@ -280,9 +280,9 @@ serial number will be incremented as above.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2003 Chris Reinhardt.
 
 Portions Copyright (c)2010,2012 Dick Franks.
 

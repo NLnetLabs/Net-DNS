@@ -60,7 +60,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{aplist};
-	join ' ', map $_->string, @{$self->{aplist}};
+	my @rdata = map $_->string, @{$self->{aplist}};
 }
 
 

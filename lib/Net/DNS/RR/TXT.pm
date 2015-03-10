@@ -54,20 +54,6 @@ sub format_rdata {			## format rdata portion of RR string.
 
 	my $txtdata = $self->{txtdata} || [];
 	my @txtdata = map $_->string, @$txtdata;
-	my @line;
-	my $size = 32;
-	while (@txtdata) {
-		my @group;
-		while ( $size > 0 && scalar @txtdata ) {
-			my $string = shift @txtdata;
-			push @group, $string;
-			$size -= 1 + length($string);
-		}
-		push @line, join ' ', @group;
-		$size = 64;
-	}
-	my $rdata = join "\n", @line;
-	return $rdata =~ /\n/ ? "( $rdata )" : $rdata;
 }
 
 

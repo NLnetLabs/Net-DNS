@@ -42,7 +42,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $tag = $self->tag || return '';
-	join ' ', $self->flags, $tag, $self->value;
+	my @rdata = $self->flags, $tag, $self->value;
 }
 
 

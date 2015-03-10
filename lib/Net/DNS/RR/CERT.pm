@@ -73,13 +73,10 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{certbin};
-	my $format    = $r_formats{$self->{format}}	  || $self->{format};
+	my @base64 = split /\s+/, encode_base64( $self->{certbin} || return '' );
 	my $algorithm = $r_algorithms{$self->{algorithm}} || $self->{algorithm};
-	my $base64    = MIME::Base64::encode $self->{certbin};
-	chomp $base64;
-	return "$format $self->{tag} $algorithm $base64" if length($base64) < 40;
-	return "$format $self->{tag} $algorithm (\n$base64 )";
+	my $format    = $r_formats{$self->{format}}	  || $self->{format};
+	my @rdata = $format, $self->{tag}, $algorithm, @base64;
 }
 
 

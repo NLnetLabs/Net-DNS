@@ -151,9 +151,8 @@ sub _wire {			## Generate list of wire-format labels
 	my $self = shift;
 
 	my $label = $self->{label} || [];
-	my @label = @$label;
-	my $origin = $self->{origin} || return (@label);
-	return ( @label, $origin->_wire );
+	my $origin = $self->{origin} || return (@$label);
+	return ( @$label, $origin->_wire );
 }
 
 

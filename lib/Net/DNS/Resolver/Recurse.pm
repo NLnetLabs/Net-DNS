@@ -91,7 +91,7 @@ sub send {
 	my $original = pop(@_);					# sneaky extra argument needed
 	$original = $question unless ref($original);		# to preserve original request
 
-	my ( $head, @tail ) = $question->{owner}->label;
+	my ( $head, @tail ) = $question->{qname}->label;
 	unless ($head) {
 		return $root if $root;				# root servers cached indefinitely
 
@@ -252,9 +252,8 @@ sub _hints {				## default hints
 =head1 ACKNOWLEDGEMENT
 
 This package is an improved and compatible reimplementation of the
-Net::DNS::Resolver::Recurse.pm created by Rob Brown in 2002.
-
-The contribution of Rob Brown is gratefully acknowledged.
+Net::DNS::Resolver::Recurse.pm created by Rob Brown in 2002,
+whose contribution is gratefully acknowledged.
 
 
 =head1 COPYRIGHT

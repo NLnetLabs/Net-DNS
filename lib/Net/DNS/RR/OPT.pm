@@ -197,29 +197,6 @@ sub defined {
 	return 0;
 }
 
-
-sub do {				## historical
-	my $self = shift;
-	carp qq[Deprecated method: please use packet->header->do()] unless $warned++;
-	$self->{'flags'} & 0x8000;
-}
-
-sub clear_do {				## historical
-	my $self = shift;
-	carp qq[Deprecated method: please use packet->header->do(0)] unless $warned++;
-	$self->{'flags'} = ( ~0x8000 & $self->{'flags'} );
-}
-
-sub set_do {				## historical
-	my $self = shift;
-	carp qq[Deprecated method: please use packet->header->do(1)] unless $warned++;
-	$self->{'flags'} = ( 0x8000 | $self->{'flags'} );
-}
-
-sub ednsversion	  {&version}
-sub ednsflags	  {&flags}
-sub extendedrcode {&rcode}
-
 1;
 __END__
 
@@ -310,29 +287,32 @@ changes is cumulative. An option is deleted if the value is undefined.
 
 =head1 COPYRIGHT
 
-Copyright (c)2001,2002	RIPE NCC.  Author Olaf M. Kolkman.
-
-All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of the author not be used
-in advertising or publicity pertaining to distribution of the software
-without specific prior written permission.
-
-THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE,
-INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS; IN NO
-EVENT SHALL AUTHOR BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS
-ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
-THIS SOFTWARE.
+Copyright (c)2001,2002 RIPE NCC.  Author Olaf M. Kolkman.
 
 Portions Copyright (c)2012 Dick Franks.
 
+All rights reserved.
+
 Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO

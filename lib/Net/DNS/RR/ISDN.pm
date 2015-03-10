@@ -19,32 +19,31 @@ Net::DNS::RR::ISDN - DNS ISDN resource record
 
 use integer;
 
+use Net::DNS::Text;
+
 
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $asize = unpack "\@$offset C", $$data;
-	$self->{address} = unpack "\@$offset x a$asize", $$data;
-	$offset += 1 + $asize;
-	my $ssize = unpack "\@$offset C", $$data;
-	$self->{sa} = unpack "\@$offset x a$ssize", $$data;
+	( $self->{address}, $offset ) = decode Net::DNS::Text( $data, $offset );
+	( $self->{sa},	    $offset ) = decode Net::DNS::Text( $data, $offset );
 }
 
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{address};
-	pack 'C a* C a*', map { ( length $_, $_ ) } @{$self}{qw(address sa)};
+	return '' unless defined $self->{address};
+	join '', $self->{address}->encode, $self->{sa}->encode;
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{address};
-	join ' ', @{$self}{qw(address sa)};
+	my $address = $self->{address} || return '';
+	join ' ', $address->string, $self->{sa}->string;
 }
 
 
@@ -52,23 +51,30 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->address(shift);
-	$self->sa(shift);
+	$self->sa( shift || '' );
+}
+
+
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	$self->sa('');
 }
 
 
 sub address {
 	my $self = shift;
 
-	$self->{address} = shift if scalar @_;
-	$self->{address} || "";
+	$self->{address} = new Net::DNS::Text(shift) if scalar @_;
+	$self->{address}->value if defined wantarray && $self->{address};
 }
 
 
 sub sa {
 	my $self = shift;
 
-	$self->{sa} = shift if scalar @_;
-	$self->{sa} || "";
+	$self->{sa} = new Net::DNS::Text(shift) if scalar @_;
+	$self->{sa}->value if defined wantarray && $self->{sa};
 }
 
 1;
