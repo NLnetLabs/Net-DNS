@@ -478,9 +478,9 @@ __END__
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr.
+Copyright (c)1997 Michael Fuhr.
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002,2003 Chris Reinhardt.
 
 Portions Copyright (c)2012 Dick Franks.
 
@@ -493,4 +493,6 @@ modify it under the same terms as Perl itself.
 
 L<perl>, L<Net::DNS>, L<Net::DNS::Packet>, L<Net::DNS::RR::OPT>
 RFC 1035 Section 4.1.1
+
+=cut
 

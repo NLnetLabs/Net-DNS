@@ -99,7 +99,7 @@ authoritative for the specified class and domain.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
 
 All rights reserved.
 

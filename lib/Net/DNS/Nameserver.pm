@@ -645,7 +645,6 @@ See L</EXAMPLE> for an example.
 
 Start accepting queries. Calling main_loop never returns.
 
-=cut
 
 =head2 loop_once
 
@@ -681,11 +680,13 @@ A code fragment like:
 Would wait for 10 seconds for the initial connection and would then
 process all TCP sockets until none is left.
 
+
 =head2 get_open_tcp
 
 In scalar context returns the number of TCP connections for which state
 is maintained. In array context it returns IO::Socket objects, these could
 be useful for troubleshooting but be careful using them.
+
 
 =head1 EXAMPLE
 
@@ -732,6 +733,7 @@ additional filtering on its basis may be applied.
 
     $ns->main_loop;
 
+
 =head1 BUGS
 
 Limitations in perl 5.8.6 makes it impossible to guarantee that
@@ -749,15 +751,16 @@ work-around would be to not listen to INADDR_ANY but to specify each
 address that you want this module to listen on. A separate set of
 sockets will then be created for each IP-address.
 
+
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr.
+Copyright (c)2000 Michael Fuhr.
 
 Portions Copyright (c)2002-2004 Chris Reinhardt.
 
-Portions Copyright (c)2005-2009 O.M, Kolkman, RIPE NCC.
-
 Portions Copyright (c)2005 Robert Martin-Legene.
+
+Portions Copyright (c)2005-2009 O.M, Kolkman, RIPE NCC.
 
 All rights reserved.
 
@@ -771,3 +774,4 @@ L<Net::DNS::Update>, L<Net::DNS::Header>, L<Net::DNS::Question>,
 L<Net::DNS::RR>, RFC 1035
 
 =cut
+

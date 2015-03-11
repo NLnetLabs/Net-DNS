@@ -34,21 +34,23 @@ use integer;
 
 use warnings;
 use Carp;
+
+my $debug = 0;
+
+use Net::DNS::Parameters;
 use MIME::Base64;
 use Time::Local;
 
 use constant UTIL => eval { require Scalar::Util; } || 0;
 
-use Net::DNS::Parameters;
-
-my $debug = 0;
-
-my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
-
-use constant DNSSEC => eval { require Net::DNS::SEC::Private } || 0;
+use constant PRIVATE => eval { require Net::DNS::SEC::Private; } || 0;
 
 use constant DSA => eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA' } || 0;
 use constant RSA => eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA' } || 0;
+
+use constant DNSSEC => PRIVATE && ( RSA || DSA );
+
+my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -510,6 +512,7 @@ sub _VerifySig {
 	print "\nalgorithm $algorithm verification successful\n" if $debug;
 	return 1;
 }
+
 
 1;
 __END__

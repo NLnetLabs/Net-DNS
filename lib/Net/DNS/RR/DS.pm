@@ -216,9 +216,8 @@ sub create {
 	my $kname = $keyrr->name;
 	my $flags = $keyrr->flags;
 	croak "Unable to create $kname $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
-	croak "Unable to create $kname $type record for non-ZONE key" if ( $flags & 0x300 ) == 0x100;
-	croak "Unable to create $kname $type record for NULL key"     if ( $flags & 0xc000 ) == 0xc000;
-	croak "Unable to create $type RR for non-authentication key"  if $flags & 0x8000;
+	croak "Unable to create $kname $type record for non-ZONE key"	unless ( $flags & 0x300 ) == 0x100;
+	croak "Unable to create $kname $type record for non-authentication key" if $flags & 0x8000;
 
 	my $self = new Net::DNS::RR(
 		name	  => $kname,				# per definition, same as keyrr
@@ -249,6 +248,7 @@ sub verify {
 	return $verify->digestbin eq $self->digestbin;
 }
 
+
 1;
 __END__
 
@@ -257,6 +257,13 @@ __END__
 
     use Net::DNS;
     $rr = new Net::DNS::RR('name DS keytag algorithm digtype digest');
+
+    use Net::DNS::SEC;
+    $ds = create Net::DNS::RR::DS(
+	$dnskeyrr,
+	digtype => 'SHA256',
+	ttl	=> 3600
+	);
 
 =head1 DESCRIPTION
 

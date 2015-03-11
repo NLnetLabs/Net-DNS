@@ -17,7 +17,7 @@ BEGIN {
 
 	plan tests => 4;
 
-	use_ok('Net::DNS::SEC');
+	use_ok('Net::DNS');
 }
 
 

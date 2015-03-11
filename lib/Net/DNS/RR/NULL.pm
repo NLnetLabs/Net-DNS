@@ -43,7 +43,6 @@ other unpredictable behaviour.
 =head2 rdlength
 
     $rdlength = $rr->rdlength;
-    $rr->rdlength( $rdlength );
 
 Returns the length of the record data section.
 

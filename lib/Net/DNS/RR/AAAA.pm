@@ -141,9 +141,9 @@ Returns the textual form of address recommended by RFC5952.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-1998 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2003 Chris Reinhardt.
 
 Portions Copyright (c)2012 Dick Franks.
 

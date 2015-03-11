@@ -100,7 +100,8 @@ sub saltbin {
 
 ########################################
 
-sub hashalgo {&algorithm}		## historical
+sub hashalgo { &algorithm; }		## historical
+
 
 1;
 __END__

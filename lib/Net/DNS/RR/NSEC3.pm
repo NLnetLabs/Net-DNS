@@ -235,9 +235,7 @@ sub match {
 
 ########################################
 
-sub hashalgo {				## historical
-	&algorithm;
-}
+sub hashalgo { &algorithm; }		## historical
 
 sub nxtdname {				## inherited method inapplicable
 	my $method = join '::', __PACKAGE__, 'nxtdname';
@@ -267,6 +265,7 @@ sub name2hash {
 	my $base32hex = MIME::Base32::encode( $wirename, '' );	# [0-9 A-V]	per RFC4648, 7.
 	return lc $base32hex;
 }
+
 
 1;
 __END__

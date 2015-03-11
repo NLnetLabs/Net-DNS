@@ -13,7 +13,7 @@ BEGIN {
 			);
 
 	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not available"
+		plan skip_all => "$package not installed"
 				unless eval "require $package";
 	}
 

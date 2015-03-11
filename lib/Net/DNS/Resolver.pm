@@ -773,9 +773,10 @@ For example, if we wanted to cache lookups:
 
 bgsend() does not honour the usevc flag and only uses UDP for transport.
 
+
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr.
+Copyright (c)1997-2000 Michael Fuhr.
 
 Portions Copyright (c)2002-2004 Chris Reinhardt.
 
@@ -793,3 +794,4 @@ L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
 L<resolver(5)>, RFC 1035, RFC 1034 Section 4.3.5
 
 =cut
+

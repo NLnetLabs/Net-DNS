@@ -144,7 +144,7 @@ the MIXER Conformant Global Address Mapping.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
 
 All rights reserved.
 

@@ -133,7 +133,7 @@ to act as a mail exchange for the owner name.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
 
 Portions Copyright (c)2005 Olaf Kolkman, NLnet Labs.
 

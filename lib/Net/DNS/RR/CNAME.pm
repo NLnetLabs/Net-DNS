@@ -99,9 +99,9 @@ the owner.  The owner name is an alias.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-2002 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002-2003 Chris Reinhardt.
 
 All rights reserved.
 

@@ -180,9 +180,9 @@ subsequent examples show only the creation of the update packet .
 
 =head1 COPYRIGHT
 
-Copyright (c) 1997-2002 Michael Fuhr. 
+Copyright (c)1997-2000 Michael Fuhr. 
 
-Portions Copyright (c) 2002-2004 Chris Reinhardt.
+Portions Copyright (c)2002,2003 Chris Reinhardt.
 
 All rights reserved.  This program is free software; you may redistribute
 it and/or modify it under the same terms as Perl itself.

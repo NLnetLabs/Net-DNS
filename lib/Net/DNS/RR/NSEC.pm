@@ -138,13 +138,10 @@ sub typebm {				## historical
 	$self->{typebm} = shift;
 }
 
-sub _typearray2typebm {			## historical
-	&_type2bm;
-}
+sub _typearray2typebm { &_type2bm; }	## historical
 
-sub _typebm2typearray {			## historical
-	&_bm2type;
-}
+sub _typebm2typearray { &_bm2type; }	## historical
+
 
 1;
 __END__

@@ -108,6 +108,7 @@ sub defaults() {			## specify RR attribute default values
 	my $self = shift;
 
 	$self->algorithm(1);
+	$self->flags(256);
 	$self->protocol(3);
 }
 
@@ -183,16 +184,15 @@ sub key {
 }
 
 
-sub publickey { &key; }
-
-
 sub keybin {
 	my $self = shift;
 
-	return $self->{keybin} || '' unless scalar @_;
-	delete $self->{keytag};
-	$self->{keybin} = shift;
+	$self->{keybin} = shift if scalar @_;
+	$self->{keybin} || "";
 }
+
+
+sub publickey { &key; }
 
 
 sub privatekeyname {
@@ -245,13 +245,11 @@ sub keylength {
 sub keytag {
 	my $self = shift;
 
-	return 0 if ( $self->{flags} & 0xC000 ) == 0xC000;	# NULL KEY
-
 	# RFC4034 Appendix B.1: most significant 16 bits of least significant 24 bits
 	return unpack 'n', substr $self->keybin(), -3 if $self->{algorithm} == 1;
 
 	# RFC4034 Appendix B
-	return $self->{keytag} = do {
+	return do {
 		my @kp = @{$self}{qw(flags protocol algorithm)};
 		my $kb = $self->{keybin} || return 0;
 		my $od = length($kb) & 1;
@@ -263,14 +261,18 @@ sub keytag {
 }
 
 
+my $warned;
+
 sub is_sep {				## historical
 	my $self = shift;
+	carp "Deprecated method: please use rr->sep(@_)" unless $warned++;
 	return $self->sep(@_) ? 1 : 0;
 }
 
 sub set_sep   { shift->is_sep(1); }	## historical
 sub unset_sep { shift->is_sep(0); }	## historical
 sub clear_sep { shift->is_sep(0); }	## historical
+
 
 1;
 __END__
@@ -366,8 +368,14 @@ to perform mnemonic and numeric code translation.
     $key = $rr->key;
     $rr->key( $key );
 
-The key field holds the public key material.
-The format depends on the algorithm of the key being stored.
+Base64 representation of the public key material.
+
+=head2 keybin
+
+    $keybin = $rr->keybin;
+    $rr->keybin( $keybin );
+
+Opaque octet string representing the public key material.
 
 =head2 privatekeyname
 

@@ -111,7 +111,7 @@ Returns the operating system type for this RR.
 
 =head1 COPYRIGHT
 
-Copyright (c)1997-1998 Michael Fuhr. 
+Copyright (c)1997 Michael Fuhr. 
 
 All rights reserved.
 

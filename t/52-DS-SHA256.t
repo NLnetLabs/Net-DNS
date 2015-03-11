@@ -7,7 +7,7 @@ BEGIN {
 
 	plan tests => 5;
 
-	use_ok('Net::DNS::SEC');
+	use_ok('Net::DNS');
 	use_ok('Digest::SHA');
 }
 
