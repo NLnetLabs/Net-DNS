@@ -493,18 +493,16 @@ sub rdatastr {
 	my @rdata = eval { $self->format_rdata; };
 	carp $@ if $@;
 
-	my @fill;
-	my @line;
-	while ( scalar @rdata ) {				# fill lines
-		my $item = shift @rdata;
-		next unless defined $item;
-		if ( ( $coln += 1 + length $item ) > $cols ) {
+	my ( @line, @fill );
+	foreach (@rdata) {
+		if ( ( $coln += 1 + length ) > $cols ) {	# multi-line format
 			push @line, join ' ', @fill;
 			@fill = ();
-			$coln = length $item;
+			$coln = length;
 		}
-		$coln = $cols if chomp $item;			# line terminator
-		push( @fill, $item );
+		$coln = $cols if chomp;				# line terminator
+		return join "\n\t", split /\n/ if !$#rdata && /[\n]/;
+		push( @fill, $_ );
 	}
 	return join ' ', @fill unless scalar @line;		# simple RR
 
@@ -714,15 +712,15 @@ END
 
 ################################################################################
 
-## Stub implementation of Net::DNS::RR::OPT to avoid a barrage of confusing failure
-## reports if the subtype implementation module is absent or fails to load.
+sub _canonicalRdata {			## Net::DNS::SEC pre-0.22 compatibility
+	my $self = shift;
+	eval { $self->encode_rdata(0); } || '';
+}
 
-package Net::DNS::RR::OPT;
 
-sub AUTOLOAD {				## stub out all OPT attributes
-	my @a0;				## delivering 0, '' or () according to context
-	return @a0 if wantarray;
-	$! = scalar @a0;
+sub Net::DNS::RR::DS::defaults {	## Net::DNS::SEC pre-0.22 compatibility
+	my $self = shift;
+	$self->ttl(0) if $self->type eq 'DS' && ( $self->VERSION || 0 ) < 1307;
 }
 
 

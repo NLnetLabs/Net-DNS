@@ -18,7 +18,6 @@ Net::DNS::RR::NSEC3PARAM - DNS NSEC3PARAM resource record
 
 
 use integer;
-use warnings;
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string

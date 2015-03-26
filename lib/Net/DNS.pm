@@ -149,7 +149,7 @@ sub nxdomain {
 
 sub rr_add {
 	my $rr = new Net::DNS::RR(shift);
-	$rr->{ttl} ||= 86400;
+	$rr->{ttl} = 86400 unless defined( $rr->{ttl} );
 	return $rr;
 }
 

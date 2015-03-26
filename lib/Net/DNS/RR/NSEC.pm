@@ -19,7 +19,6 @@ Net::DNS::RR::NSEC - DNS NSEC resource record
 
 use integer;
 
-use warnings;
 use Net::DNS::DomainName;
 use Net::DNS::Parameters;
 

@@ -19,7 +19,6 @@ Net::DNS::RR::CSYNC - DNS CSYNC resource record
 
 use integer;
 
-use warnings;
 use Net::DNS::Parameters;
 
 
@@ -165,6 +164,7 @@ sub _bm2type {
 	return sort @typelist;
 }
 
+
 1;
 __END__
 
@@ -277,6 +277,6 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, draft-ietf-dnsop-child-syncronization
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC7477
 
 =cut

@@ -32,7 +32,6 @@ Net::DNS::RR::SIG - DNS SIG resource record
 
 use integer;
 
-use warnings;
 use Carp;
 
 my $debug = 0;
@@ -242,8 +241,9 @@ sub signame {
 sub signature {
 	my $self = shift;
 
-	return encode_base64( $self->sigbin, '' ) unless scalar @_;
-	return $self->sigbin( decode_base64( join '', @_ ) );
+	$self->sigbin( decode_base64( join '', @_ ) ) if scalar @_;
+	my $sigbin = $self->sigbin || return '';
+	encode_base64( $sigbin, '' ) if defined wantarray;
 }
 
 sub sig { &signature; }

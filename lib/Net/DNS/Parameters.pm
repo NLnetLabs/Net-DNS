@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2015-01-27)
+##	(last updated 2015-03-18)
 ##
 ################################################
 
@@ -105,7 +105,7 @@ use vars qw( %typebyname %typebyval );
 	CDS	   => 59,					# RFC7344
 	CDNSKEY	   => 60,					# RFC7344
 	OPENPGPKEY => 61,					# draft-ietf-dane-openpgpkey
-	CSYNC	   => 62,					# RFC-ietf-dnsop-child-syncronization-07
+	CSYNC	   => 62,					# RFC7477
 	SPF	   => 99,					# RFC7208
 	UINFO	   => 100,					# IANA-Reserved
 	UID	   => 101,					# IANA-Reserved
@@ -299,7 +299,6 @@ sub ednsoptionbyval {
 __END__
 
 
-
 =head1 NAME
 
     Net::DNS::Parameters - DNS parameter assignments
@@ -321,9 +320,9 @@ maintained and published by IANA.
 
 Copyright (c)2012 Dick Franks
 
-Portions Copyright (c)1997-2002 Michael Fuhr. 
+Portions Copyright (c)1997 Michael Fuhr.
 
-Portions Copyright (c)2002-2004 Chris Reinhardt.
+Portions Copyright (c)2003 Olaf Kolkman.
 
 All rights reserved.
 
@@ -336,3 +335,4 @@ modify it under the same terms as Perl itself.
 L<perl>, L<Net::DNS>,
 L<IANA Registry|http://www.iana.org/assignments/dns-parameters>
 
+=cut

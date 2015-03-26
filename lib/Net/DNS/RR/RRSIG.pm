@@ -19,7 +19,6 @@ Net::DNS::RR::RRSIG - DNS RRSIG resource record
 
 use integer;
 
-use warnings;
 use Carp;
 
 my $debug = 0;
@@ -214,7 +213,8 @@ sub signature {
 	my $self = shift;
 
 	$self->sigbin( decode_base64( join '', @_ ) ) if scalar @_;
-	encode_base64( $self->sigbin, '' ) if defined wantarray;
+	my $sigbin = $self->sigbin || return '';
+	encode_base64( $sigbin, '' ) if defined wantarray;
 }
 
 sub sig { &signature; }
@@ -743,7 +743,7 @@ Create a signature over a RR set.
     $sigrr->print;
 
 
-    #Alternatively use Net::DNS::SEC::Private 
+    # Alternatively use Net::DNS::SEC::Private 
 
     $private = Net::DNS::SEC::Private->new($keypath);
 

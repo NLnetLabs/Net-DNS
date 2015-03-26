@@ -19,10 +19,9 @@ Net::DNS::RR::DS - DNS DS resource record
 
 use integer;
 
-use warnings;
 use Carp;
 
-use constant BABBLE => eval { require Digest::BubbleBabble; };
+use constant BABBLE => eval { require Digest::BubbleBabble; } || 0;
 
 eval { require Digest::SHA };		## optional for simple Net::DNS RR
 eval { require Digest::GOST };
@@ -144,7 +143,7 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(keytag algorithm digtype);
+	foreach (qw(keytag algorithm digtype)) { $self->$_(shift) }
 	$self->digest(@_);
 }
 

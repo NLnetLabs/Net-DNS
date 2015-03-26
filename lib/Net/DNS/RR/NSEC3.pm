@@ -19,7 +19,6 @@ Net::DNS::RR::NSEC3 - DNS NSEC3 resource record
 
 use integer;
 
-use warnings;
 use Carp;
 use MIME::Base32;
 

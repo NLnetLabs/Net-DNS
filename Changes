@@ -8,6 +8,14 @@ Feature
 	integrated with Net::DNS.  Net::DNS::SEC needs to be installed
 	to enable the signature generation and verification functions.
 
+Fix rt.cpan.org #101810
+
+	Dynamic update: rr_add overrides ttl of zero
+
+Fix rt.cpan.org #101809
+
+	CAA broken
+
 
 **** 0.83 Feb 26, 2015
 
