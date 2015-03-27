@@ -12,7 +12,7 @@ my $type = 'NSEC';
 my $code = 47;
 my @attr = qw( nxtdname typelist);
 my @data = qw( host.example.com A MX RRSIG NSEC TYPE1234 );
-my @hash = ( qw( host.example.com ), q(A MX NSEC RRSIG TYPE1234) );
+my @hash = ( qw( host.example.com ), q(A MX RRSIG NSEC TYPE1234) );
 my @also = qw( );
 
 my $wire = '04686f7374076578616d706c6503636f6d000006400100000003041b000000000000000000000000000000000000000000000000000020';
@@ -75,6 +75,11 @@ my $wire = '04686f7374076578616d706c6503636f6d000006400100000003041b000000000000
 	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
 }
 
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
+}
 
 exit;
 

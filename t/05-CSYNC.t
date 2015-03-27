@@ -11,8 +11,8 @@ my $name = 'alpha.example.com';
 my $type = 'CSYNC';
 my $code = 62;
 my @attr = qw( SOAserial flags typelist);
-my @data = qw( 66 3 A AAAA NS );
-my @hash = ( qw(66 3), q(A AAAA NS) );
+my @data = qw( 66 3 A NS AAAA);
+my @hash = ( 66, 3, q(A NS AAAA) );
 my @also = qw( immediate soaminimum );
 
 my $wire = '000000420003000460000008';

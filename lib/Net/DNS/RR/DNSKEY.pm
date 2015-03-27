@@ -19,7 +19,6 @@ Net::DNS::RR::DNSKEY - DNS DNSKEY resource record
 
 use integer;
 
-use warnings;
 use Carp;
 use MIME::Base64;
 

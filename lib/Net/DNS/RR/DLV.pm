@@ -48,7 +48,7 @@ other unpredictable behaviour.
 
 =head1 COPYRIGHT
 
-Copyright (c)2005 Olaf Kolkman (NLnet Labs)
+Copyright (c)2005 Olaf Kolkman, NLnet Labs.
 
 All rights reserved.
 

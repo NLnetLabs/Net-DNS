@@ -115,27 +115,25 @@ sub _type2bm {
 	my @typearray;
 	foreach my $typename ( map split( /\s+/, $_ ), @_ ) {
 		next unless $typename;
-		my $typenum = typebyname( uc $typename );
-		my $window  = $typenum >> 8;
-		next unless $window or $typenum < 128;		# skip meta type
-		next if $typenum == 41;				# skip meta type
-		my $bitnum = $typenum & 255;
+		my $number = typebyname($typename);
+		my $window = $number >> 8;
+		my $bitnum = $number & 255;
 		my $octet  = $bitnum >> 3;
 		my $bit	   = $bitnum & 7;
 		$typearray[$window][$octet] |= 0x80 >> $bit;
 	}
 
-	my $bitmap;
+	my @bitmap;
 	my $window = 0;
 	foreach (@typearray) {
 		if ( my $pane = $typearray[$window] ) {
 			my @content = map $_ || 0, @$pane;
-			$bitmap .= pack 'CC C*', $window, scalar(@content), @content;
+			push @bitmap, pack 'CC C*', $window, scalar(@content), @content;
 		}
 		$window++;
 	}
 
-	return $bitmap || '';
+	join '', @bitmap;
 }
 
 
@@ -147,21 +145,21 @@ sub _bm2type {
 
 	while ( $index < $limit ) {
 		my ( $block, $size ) = unpack "\@$index C2", $bitmap;
-		my @octet = unpack "\@$index xxC$size", $bitmap;
-		$index += $size + 2;
 		my $typenum = $block << 8;
-		foreach my $octet (@octet) {
-			$typenum += 8;
-			my $i = $typenum;
+		foreach my $octet ( unpack "\@$index xxC$size", $bitmap ) {
+			my $i = $typenum += 8;
+			my @name;
 			while ($octet) {
 				--$i;
-				push @typelist, typebyval($i) if $octet & 1;
+				unshift @name, typebyval($i) if $octet & 1;
 				$octet = $octet >> 1;
 			}
+			push @typelist, @name;
 		}
+		$index += $size + 2;
 	}
 
-	return sort @typelist;
+	return @typelist;
 }
 
 

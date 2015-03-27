@@ -217,7 +217,7 @@ sub classbyname {
 	my $name = shift;
 
 	$classbyname{$name} || do {
-		croak "unknown type $name" unless $name =~ m/CLASS(\d+)/;
+		croak "unknown type $name" unless $name =~ m/CLASS(\d+)/i;
 		my $val = 0 + $1;
 		croak "classbyname( $name ) out of range" if $val > 0xffff;
 		return $val;
@@ -239,7 +239,7 @@ sub typebyname {
 	my $name = shift;
 
 	$typebyname{$name} || do {
-		croak "unknown type $name" unless $name =~ m/TYPE(\d+)/;
+		croak "unknown type $name" unless $name =~ m/TYPE(\d+)/i;
 		my $val = 0 + $1;
 		croak "typebyname( $name ) out of range" if $val > 0xffff;
 		return $val;

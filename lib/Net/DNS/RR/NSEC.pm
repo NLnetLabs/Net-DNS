@@ -81,11 +81,9 @@ sub _type2bm {
 	my @typearray;
 	foreach my $typename ( map split( /\s+/, $_ ), @_ ) {
 		next unless $typename;
-		my $typenum = typebyname( uc $typename );
-		my $window  = $typenum >> 8;
-		next unless $window or $typenum < 128;		# skip meta type
-		next if $typenum == 41;				# skip meta type
-		my $bitnum = $typenum & 255;
+		my $number = typebyname($typename);
+		my $window = $number >> 8;
+		my $bitnum = $number & 255;
 		my $octet  = $bitnum >> 3;
 		my $bit	   = $bitnum & 7;
 		$typearray[$window][$octet] |= 0x80 >> $bit;
@@ -113,21 +111,21 @@ sub _bm2type {
 
 	while ( $index < $limit ) {
 		my ( $block, $size ) = unpack "\@$index C2", $bitmap;
-		my @octet = unpack "\@$index xxC$size", $bitmap;
-		$index += $size + 2;
 		my $typenum = $block << 8;
-		foreach my $octet (@octet) {
-			$typenum += 8;
-			my $i = $typenum;
+		foreach my $octet ( unpack "\@$index xxC$size", $bitmap ) {
+			my $i = $typenum += 8;
+			my @name;
 			while ($octet) {
 				--$i;
-				push @typelist, typebyval($i) if $octet & 1;
+				unshift @name, typebyval($i) if $octet & 1;
 				$octet = $octet >> 1;
 			}
+			push @typelist, @name;
 		}
+		$index += $size + 2;
 	}
 
-	return sort @typelist;
+	return @typelist;
 }
 
 
@@ -136,10 +134,6 @@ sub typebm {				## historical
 	return $self->{typebm} unless scalar @_;
 	$self->{typebm} = shift;
 }
-
-sub _typearray2typebm { &_type2bm; }	## historical
-
-sub _typebm2typearray { &_bm2type; }	## historical
 
 
 1;

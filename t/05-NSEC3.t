@@ -11,8 +11,8 @@ my $name = '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example';
 my $type = 'NSEC3';
 my $code = 50;
 my @attr = qw( algorithm flags iterations salt hnxtname typelist );
-my @data = qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr MX DNSKEY NS SOA NSEC3PARAM RRSIG );
-my @hash = ( qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr ), q(DNSKEY MX NS NSEC3PARAM RRSIG SOA) );
+my @data = qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr NS SOA MX RRSIG DNSKEY NSEC3PARAM );
+my @hash = ( qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr ), q(NS SOA MX RRSIG DNSKEY NSEC3PARAM) );
 my @also = qw( optout );
 
 my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b000722010000000290';
@@ -99,6 +99,12 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 	my $rr = new Net::DNS::RR(". $type @rdata");
 	is( $rr->salt, '', 'parse RR with salt field placeholder' );
 	is( $rr->rdstring, "@rdata", 'placeholder denotes empty salt field' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
 }
 
 exit;
