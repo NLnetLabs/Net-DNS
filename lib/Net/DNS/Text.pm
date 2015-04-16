@@ -123,9 +123,14 @@ sub decode {
 	my $class  = shift;
 	my $buffer = shift;					# reference to data buffer
 	my $offset = shift || 0;				# offset within buffer
+	my $size   = shift;					# specify size of unbounded text
 
-	my $size = unpack "\@$offset C", $$buffer;
-	my $next = ++$offset + $size;
+	unless ( defined $size ) {
+		$size = unpack "\@$offset C", $$buffer;
+		$offset++;
+	}
+
+	my $next = $offset + $size;
 	croak 'corrupt wire-format data' if $next > length $$buffer;
 
 	my $self = bless [unpack( "\@$offset a$size", $$buffer )], $class;
@@ -146,6 +151,14 @@ suitable for inclusion in a DNS packet buffer.
 sub encode {
 	my $self = shift;
 	join '', map pack( 'C a*', length $_, $_ ), @$self;
+}
+
+
+# Returns unbounded wire-format text
+
+sub raw {
+	my $self = shift;
+	join '', map pack( 'a*', $_ ), @$self;
 }
 
 
@@ -221,8 +234,7 @@ sub _decode_utf8 {			## UTF-8 to perl internal encoding
 sub _encode_utf8 {			## perl internal encoding to UTF-8
 	my $s = shift;
 
-	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
-	my $z = length $t;
+	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
 	return pack "a* x$z", $utf8->encode($s) if UTF8;
 
 	return pack "a* x$z", $ascii->encode($s) if ASCII && not UTF8;
@@ -301,8 +313,24 @@ Copyright (c)2009-2011 Dick Franks.
 
 All rights reserved.
 
-This program is free software; you may redistribute it and/or
-modify it under the same terms as Perl itself.
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO

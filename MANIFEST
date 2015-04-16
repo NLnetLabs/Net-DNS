@@ -91,6 +91,7 @@ lib/Net/DNS/RR/TKEY.pm
 lib/Net/DNS/RR/TLSA.pm
 lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TXT.pm
+lib/Net/DNS/RR/URI.pm
 lib/Net/DNS/RR/X25.pm
 lib/Net/DNS/Text.pm
 lib/Net/DNS/Update.pm
@@ -122,6 +123,8 @@ t/05-AAAA.t
 t/05-AFSDB.t
 t/05-APL.t
 t/05-CAA.t
+t/05-CDNSKEY.t
+t/05-CDS.t
 t/05-CERT.t
 t/05-CNAME.t
 t/05-CSYNC.t
@@ -167,6 +170,7 @@ t/05-TKEY.t
 t/05-TLSA.t
 t/05-TSIG.t
 t/05-TXT.t
+t/05-URI.t
 t/05-X25.t
 t/06-packet-unique-push.t
 t/06-update.t
@@ -175,6 +179,9 @@ t/07-zonefile.t
 t/08-online.t
 t/10-recurse.t
 t/11-inet6.t
+t/31-NSEC3-typelist.t
+t/41-DNSKEY-keytag.t
+t/42-DNSKEY-sep.t
 t/51-DS-SHA1.t
 t/52-DS-SHA256.t
 t/53-DS-GOST.t

@@ -245,9 +245,8 @@ my $placebo = sub { my $constructor = shift; &$constructor; };
 
 sub origin {
 	my ( $class, $name ) = @_;
-
 	my $domain = defined $name ? new Net::DNS::Domain($name) : return $placebo;
-	$domain = undef unless scalar @{$domain->{label}};
+
 	return sub {						# closure w.r.t. $domain
 		my $constructor = shift;
 		local $ORIGIN = $domain;			# dynamically scoped $ORIGIN
@@ -273,8 +272,7 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 sub _decode_ascii {			## translate ASCII to perl string
 	my $s = shift;
 
-	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
-	my $z = length $t;
+	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
 	return pack "a* x$z", $ascii->decode($s) if ASCII;
 
 	# partial transliteration for non-ASCII character encodings
@@ -289,8 +287,7 @@ sub _decode_ascii {			## translate ASCII to perl string
 sub _encode_ascii {			## translate perl string to ASCII
 	my $s = shift;
 
-	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
-	my $z = length $t;
+	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
 	return pack "a* x$z", Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
 			if LIBIDN && $s =~ /[^\000-\177]/;
 
@@ -346,8 +343,7 @@ my %unesc = eval {			## precalculated numeric escape table
 		# partial transliteration for non-ASCII character encodings
 		$key =~ tr [0-9] [\060-\071];
 
-		$table{$key} = pack 'C', $n;
-		$table{$key} = pack 'C2', 92, $n if $n == 92;	# escaped escape
+		$table{$key} = pack 'C*', $n, $n == 92 ? ($n) : ();
 	}
 
 	return %table;
@@ -384,8 +380,24 @@ Copyright (c)2009-2011 Dick Franks.
 
 All rights reserved.
 
-This program is free software; you may redistribute it and/or
-modify it under the same terms as Perl itself.
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO

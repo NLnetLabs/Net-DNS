@@ -90,7 +90,7 @@ sub new {
 		croak 'argument not a file handle';
 	}
 
-	$self->{handle} = new FileHandle($file) or croak qq("$file" $!);
+	$self->{handle} = new FileHandle($file) or croak qq($! $file);
 	$self->{filename} = $file;
 	return $self;
 }
@@ -534,7 +534,7 @@ sub _include {				## open $INCLUDE file
 	my $root = shift;
 
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
-	my $handle = new FileHandle( $file, @discipline ) or croak qq("$file" $!);
+	my $handle = new FileHandle( $file, @discipline ) or croak qq($! $file);
 
 	delete $self->{latest};					# forbid empty owner field
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
@@ -571,12 +571,28 @@ of the initial version and invaluable assistance during testing.
 
 =head1 COPYRIGHT
 
-Copyright (c)2011-2012 Dick Franks 
+Copyright (c)2011-2012 Dick Franks.
 
 All rights reserved.
 
-This program is free software; you may redistribute it and/or
-modify it under the same terms as Perl itself.
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO

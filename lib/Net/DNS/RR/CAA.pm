@@ -29,25 +29,23 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my $limit = $offset + $self->{rdlength};
 	$self->{flags} = unpack "\@$offset C", $$data;
 	( $self->{tag}, $offset ) = decode Net::DNS::Text( $data, $offset + 1 );
-	my $tmp = pack 'Ca*', $limit - $offset, substr $$data, $offset, $limit - $offset;
-	$self->{value} = decode Net::DNS::Text( \$tmp );
+	$self->{value} = decode Net::DNS::Text( $data, $offset, $limit - $offset );
 }
 
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{tag};
-	my $value = substr $self->{value}->encode, 1;
-	pack "C a* a*", $self->flags, $self->{tag}->encode, $value;
+	my $tag = $self->{tag} || return '';
+	pack 'C a* a*', $self->flags, $tag->encode, $self->{value}->raw;
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{tag};
-	my @rdata = $self->flags, $self->{tag}->string, $self->{value}->string;
+	my $tag = $self->{tag} || return '';
+	my @rdata = $self->flags, $tag->string, $self->{value}->string;
 }
 
 
