@@ -20,7 +20,7 @@ plan skip_all => 'Could not read configuration file'
 plan tests => 7;
 
 
-isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );
+ok( $res->isa('Net::DNS::Resolver'), 'new() created object' );
 
 my @servers = $res->nameservers;
 ok( scalar(@servers), "nameservers() works" );

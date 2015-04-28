@@ -24,7 +24,7 @@ BEGIN {
 
 {
 	my $domain = new Net::DNS::Domain('example.com');
-	isa_ok( $domain,  'Net::DNS::Domain', 'object returned by new() constructor' );
+	ok( $domain->isa('Net::DNS::Domain'), 'object returned by new() constructor' );
 }
 
 

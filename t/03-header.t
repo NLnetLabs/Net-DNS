@@ -7,7 +7,7 @@ BEGIN { use_ok('Net::DNS'); }
 
 my $packet = new Net::DNS::Packet(qw(. NS IN));
 my $header = $packet->header;
-isa_ok($header,	'Net::DNS::Header',	'packet->header object');
+ok( $header->isa('Net::DNS::Header'), 'packet->header object' );
 
 
 sub waggle {
@@ -73,7 +73,7 @@ is($packet2->header->string, $string, 'encode/decode transparent');
 
 SKIP: {
 	my $edns = $header->edns;
-	isa_ok($edns,	'Net::DNS::RR::OPT',	'header->edns object');
+	ok( $edns->isa('Net::DNS::RR::OPT'), 'header->edns object' );
 
 	skip( 'EDNS header extensions not supported', 8 ) unless $edns->isa('Net::DNS::RR::OPT');
 

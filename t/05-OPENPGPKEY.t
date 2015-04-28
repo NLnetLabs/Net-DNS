@@ -1,10 +1,23 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 7;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
+	my @prerequisite = qw(
+		MIME::Base64
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 7;
+}
+
 
 my $name = '8d5730bd8d76d417bf974c03f59eedb7af98cb5c3dc73ea8ebbd54b7._openpgpkey.example.com';
 my $type = 'OPENPGPKEY';

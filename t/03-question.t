@@ -57,7 +57,7 @@ BEGIN {
 {
 	my $fqdn = 'example.com.';
 	my $question = new Net::DNS::Question( $fqdn, 'A', 'IN' );
-	isa_ok( $question, 'Net::DNS::Question', 'object returned by new() constructor' );
+	ok( $question->isa('Net::DNS::Question'), 'object returned by new() constructor' );
 
 	my $string   = $question->string;
 	my $expected = "$fqdn\tIN\tA";
@@ -90,7 +90,7 @@ BEGIN {
 	my $packet     = new Net::DNS::Packet('example.com');
 	my $encoded    = $packet->data;
 	my ($question) = new Net::DNS::Packet( \$encoded )->question;
-	isa_ok( $question, 'Net::DNS::Question', 'check decoded object' );
+	ok( $question->isa('Net::DNS::Question'), 'check decoded object' );
 }
 
 

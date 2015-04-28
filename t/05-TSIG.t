@@ -3,12 +3,22 @@
 use strict;
 
 BEGIN {
-	use Test::More tests => 57;
+	use Test::More;
+	use Net::DNS;
 
-	use_ok('Net::DNS');
-	use_ok('Digest::HMAC');
-	use_ok('Digest::MD5');
-	use_ok('Digest::SHA');
+	my @prerequisite = qw(
+		Digest::HMAC
+		Digest::MD5
+		Digest::SHA
+		MIME::Base64
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 53;
 }
 
 

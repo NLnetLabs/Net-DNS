@@ -7,7 +7,7 @@ use Net::DNS;
 
 
 my $res = Net::DNS::Resolver->new();
-isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );
+ok( $res->isa('Net::DNS::Resolver'), 'new() created object' );
 
 
 ok( !$res->dnssec(), "default dnssec flag off" );

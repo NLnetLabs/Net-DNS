@@ -1,10 +1,22 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 14;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
+	my @prerequisite = qw(
+		MIME::Base64
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 14;
+}
 
 
 my $name = 'CERT.example';
@@ -70,6 +82,11 @@ my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f7071727374
 	is( Net::DNS::RR->new("foo IN CERT 1 2 0 foo=")->algorithm, 0, 'algorithm may be zero' );
 }
 
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
+}
 
 exit;
 

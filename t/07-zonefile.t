@@ -33,7 +33,7 @@ sub source {				## zone file builder
 
 	my $handle = new FileHandle( $file, '>' );		# create test file
 	die "Failed to create $file" unless $handle;
-	eval{ binmode($handle) };				# suppress encoding layer
+	eval { binmode($handle) };				# suppress encoding layer
 
 	print $handle $text;
 	close $handle;
@@ -42,9 +42,9 @@ sub source {				## zone file builder
 }
 
 
-{				## public methods
+{					## public methods
 	my $zonefile = source('');
-	isa_ok( $zonefile, 'Net::DNS::ZoneFile', 'new ZoneFile object' );
+	ok( $zonefile->isa('Net::DNS::ZoneFile'), 'new ZoneFile object' );
 
 	ok( defined $zonefile->name,   'zonefile->name always defined' );
 	ok( defined $zonefile->line,   'zonefile->line always defined' );
@@ -58,7 +58,7 @@ sub source {				## zone file builder
 }
 
 
-{				## initial origin
+{					## initial origin
 	my $tld = 'test';
 	my $absolute = source( '', "$tld." );
 	is( $absolute->origin, "$tld.", 'new ZoneFile with absolute origin' );
@@ -68,7 +68,7 @@ sub source {				## zone file builder
 }
 
 
-{				## line numbering
+{					## line numbering
 	my $lines    = 10;
 	my $zonefile = source( "\n" x $lines );
 	is( $zonefile->line, 0, 'zonefile->line zero before calling read()' );
@@ -77,7 +77,7 @@ sub source {				## zone file builder
 }
 
 
-{				## CLASS coersion
+{					## CLASS coersion
 	my $zonefile = source <<'EOF';
 rr0	CH	NULL
 rr1	CLASS1	NULL
@@ -91,7 +91,7 @@ EOF
 }
 
 
-{				## $TTL directive
+{					## $TTL directive
 	my $zonefile = source <<'EOF';
 rr0		SOA	mname rname 99 6h 1h 1w 12345
 rr1		NULL
@@ -106,7 +106,7 @@ EOF
 }
 
 
-{				## $INCLUDE directive
+{					## $INCLUDE directive
 	my $include = source <<'EOF';
 rr2	NULL
 EOF
@@ -147,14 +147,14 @@ EOF
 
 
 my $zonefile;
-{				## $ORIGIN directive
+{					## $ORIGIN directive
 	my $nested = source <<'EOF';
 nested	NULL
 EOF
 
-	my $origin = 'example.com';
-	my $ORIGIN = '$ORIGIN';
-	my $inner = join ' ', '$INCLUDE', $nested->name;
+	my $origin  = 'example.com';
+	my $ORIGIN  = '$ORIGIN';
+	my $inner   = join ' ', '$INCLUDE', $nested->name;
 	my $include = source <<"EOF";
 $ORIGIN $origin
 @	NS	host
@@ -164,7 +164,7 @@ $ORIGIN relative
 @	NULL
 EOF
 
-	my $outer  = join ' ', '$INCLUDE', $include->name;
+	my $outer = join ' ', '$INCLUDE', $include->name;
 	$zonefile = source <<"EOF";
 $outer 
 outer	NULL
@@ -186,7 +186,7 @@ EOF
 }
 
 
-{				## $GENERATE directive
+{					## $GENERATE directive
 	my $zonefile = source <<'EOF';
 $GENERATE 10-30/10	@	MX	$ mail
 $GENERATE 30-10/-10	@	MX	$ mail
@@ -214,13 +214,13 @@ EOF
 	is( $zonefile->read->name, 'hosta.example', 'name of simple RR as expected' );
 	is( $zonefile->read->name, 'hosta.example', 'name of simple RR propagated from previous RR' );
 	my $multilineRR = $zonefile->read;
-	is( $multilineRR->name, 'hosta.example', 'name of multiline RR propagated from previous RR' );
+	is( $multilineRR->name,	   'hosta.example',		'name of multiline RR propagated from previous RR' );
 	is( $multilineRR->txtdata, 'multiline resource record', 'multiline RR correctly reassembled' );
-	is( $zonefile->read->name, 'hosta.example', 'name of following RR as expected' );
+	is( $zonefile->read->name, 'hosta.example',		'name of following RR as expected' );
 }
 
 
-{				## compatibility with defunct Net::DNS::ZoneFile 1.04 distro
+{					## compatibility with defunct Net::DNS::ZoneFile 1.04 distro
 	my $listref = Net::DNS::ZoneFile->read( $zonefile->name );
 	ok( scalar(@$listref), 'read entire zone file' );
 }
@@ -246,27 +246,27 @@ EOF
 }
 
 
-SKIP: {				## Non-ASCII zone content
+SKIP: {					## Non-ASCII zone content
 	skip( 'Unicode/UTF-8 not supported', 4 ) unless UTF8;
 
 	my $greek = pack 'C*', 103, 114, 9, 84, 88, 84, 9, 229, 224, 241, 231, 234, 225, 10;
 	my $file1 = source($greek);
-	my $fh1   = new FileHandle( $file1->name, '<:encoding(ISO8859-7)' );	# Greek
+	my $fh1	  = new FileHandle( $file1->name, '<:encoding(ISO8859-7)' );		       # Greek
 	my $zone1 = new Net::DNS::ZoneFile($fh1);
 	my $txtgr = $zone1->read;
 	my $text  = pack 'U*', 949, 944, 961, 951, 954, 945;
-	is( $txtgr->txtdata, $text , 'ISO8859-7 TXT rdata' );
+	is( $txtgr->txtdata, $text, 'ISO8859-7 TXT rdata' );
 
-	eval{ binmode(DATA) };					# suppress encoding layer
+	eval { binmode(DATA) };					# suppress encoding layer
 	my $jptxt = <DATA>;
 	my $file2 = source($jptxt);
-	my $fh2   = new FileHandle( $file2->name, '<:utf8' );	# UTF-8 character encoding
+	my $fh2	  = new FileHandle( $file2->name, '<:utf8' );	# UTF-8 character encoding
 	my $zone2 = new Net::DNS::ZoneFile($fh2);
 	my $txtrr = $zone2->read;				# TXT RR with kanji RDATA
 	my @rdata = $txtrr->txtdata;
 	my $rdata = $txtrr->txtdata;
 	is( length($rdata), 12, 'Unicode/UTF-8 TXT rdata' );
-	is( scalar(@rdata), 1,  'Unicode/UTF-8 TXT contiguous' );
+	is( scalar(@rdata), 1,	'Unicode/UTF-8 TXT contiguous' );
 
 	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
 

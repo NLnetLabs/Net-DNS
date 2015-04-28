@@ -13,7 +13,7 @@ use Net::DNS;
 my $test_file = File::Spec->catfile( 't', 'custom.txt' );
 
 my $res = Net::DNS::Resolver->new( config_file => $test_file );
-isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );
+ok( $res->isa('Net::DNS::Resolver'), 'new() created object' );
 
 
 my @servers = $res->nameservers;
@@ -37,8 +37,6 @@ ok( !$bad, 'Net::DNS::Resolver->new returned undef' );
 #
 # Check that we can set things in new()
 #
-undef $res;
-
 my %test_config = (
 	# NOTE: test breaks encapsulation, which limits what you can test
 	#
@@ -65,31 +63,23 @@ my %test_config = (
 	adflag		=> 1,
 );
 
-$res = Net::DNS::Resolver->new(%test_config);
-
-
-foreach my $item (keys %test_config) {
-	is_deeply($res->{$item}, $test_config{$item}, "$item is correct");
+while ( my ( $key, $value ) = each %test_config ) {
+	my $res = Net::DNS::Resolver->new( $key => $value );
+	is_deeply( $res->{$key}, $test_config{$key}, "$key is correct" );
 }	
 
 
 #
 # Check that new() is vetting things properly.
 #
-
 foreach my $test (qw(nameservers searchlist)) {
-	foreach my $input ({}, 'string', 1, \1, undef) {
-		undef $res;
-		eval { $res = Net::DNS::Resolver->new($test => $input); };
-		ok($@,    'Invalid input caught');
-		ok(!$res, 'No resolver returned');
+	foreach my $input ( {}, 'string', 1, \1, undef ) {
+		my $res = eval { Net::DNS::Resolver->new( $test => $input ); };
+		ok( $@,	   'Invalid input caught' );
+		ok( !$res, 'No resolver returned' );
 	}
 }
 
-
-
-
-undef $res;
 
 my %bad_input = (
 	errorstring    => 'set',
@@ -97,10 +87,9 @@ my %bad_input = (
 	answersize     => 'set',
 );	
 
-$res = Net::DNS::Resolver->new(%bad_input);
-
-foreach my $key (keys %bad_input) {
-	isnt($res->{$key}, 'set', "$key is not set");
+while ( my ( $key, $value ) = each %bad_input ) {
+	my $res = Net::DNS::Resolver->new( $key => $value );
+	isnt( $res->{$key}, 'set', "$key is not set" );
 }
 
 

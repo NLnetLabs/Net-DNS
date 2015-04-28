@@ -12,7 +12,7 @@ for (@Net::DNS::Resolver::ISA) {
 	diag $_ unless /[:]UNIX$/;
 }
 
-isa_ok( $res, 'Net::DNS::Resolver', 'new() created object' );
+ok( $res->isa('Net::DNS::Resolver'), 'new() created object' );
 
 
 ok( scalar $res->nameservers(qw(::1 127.0.0.1)), 'nameservers() works' );

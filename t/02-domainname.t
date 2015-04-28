@@ -143,8 +143,8 @@ t28: {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::DomainName( \$data );
 	my $downcased = new Net::DNS::DomainName( lc $domain->name )->encode( 0, {} );
-	isa_ok( $domain,  'Net::DNS::DomainName', 'object returned by new() constructor' );
-	isa_ok( $decoded, 'Net::DNS::DomainName', 'object returned by decode() constructor' );
+	ok( $domain->isa('Net::DNS::DomainName'), 'object returned by new() constructor' );
+	ok( $decoded->isa('Net::DNS::DomainName'), 'object returned by decode() constructor' );
 	is( length $compress, length $data, 'Net::DNS::DomainName wire encoding is uncompressed' );
 	isnt( $data, $downcased, 'Net::DNS::DomainName wire encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::DomainName canonical form is uncompressed' );
@@ -160,8 +160,8 @@ t34: {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::DomainName1035( \$data );
 	my $downcased = new Net::DNS::DomainName1035( lc $domain->name )->encode( 0, {} );
-	isa_ok( $domain,  'Net::DNS::DomainName1035', 'object returned by new() constructor' );
-	isa_ok( $decoded, 'Net::DNS::DomainName1035', 'object returned by decode() constructor' );
+	ok( $domain->isa('Net::DNS::DomainName1035'), 'object returned by new() constructor' );
+	ok( $decoded->isa('Net::DNS::DomainName1035'), 'object returned by decode() constructor' );
 	isnt( length $compress, length $data, 'Net::DNS::DomainName1035 wire encoding is compressible' );
 	isnt( $data, $downcased, 'Net::DNS::DomainName1035 wire encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::DomainName1035 canonical form is uncompressed' );
@@ -177,8 +177,8 @@ t40: {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::DomainName2535( \$data );
 	my $downcased = new Net::DNS::DomainName2535( lc $domain->name )->encode( 0, {} );
-	isa_ok( $domain,  'Net::DNS::DomainName2535', 'object returned by new() constructor' );
-	isa_ok( $decoded, 'Net::DNS::DomainName2535', 'object returned by decode() constructor' );
+	ok( $domain->isa('Net::DNS::DomainName2535'), 'object returned by new() constructor' );
+	ok( $decoded->isa('Net::DNS::DomainName2535'), 'object returned by decode() constructor' );
 	is( length $compress, length $data, 'Net::DNS::DomainName2535 wire encoding is uncompressed' );
 	isnt( $data, $downcased, 'Net::DNS::DomainName2535 wire encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::DomainName2535 canonical form is uncompressed' );

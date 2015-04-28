@@ -10,11 +10,11 @@ BEGIN {
 
 
 #	new() class constructor method must return object of appropriate class
-isa_ok(Net::DNS::Packet->new(),	'Net::DNS::Packet',	'new() object');
+ok( Net::DNS::Packet->new()->isa('Net::DNS::Packet'), 'new() object' );
 
 
 #	string method returns character string representation of object
-like(Net::DNS::Packet->new()->string,	'/HEADER/',	'$packet->string' );
+like( Net::DNS::Packet->new()->string, '/HEADER/', '$packet->string' );
 
 
 #	Create a DNS query packet
@@ -24,14 +24,14 @@ my $question = Net::DNS::Question->new($domain, $type, $class);
 my $packet = Net::DNS::Packet->new($domain, $type, $class);
 like($packet->string,	"/$class\t$type/",	'create query packet' );
 
-ok($packet->header,	'packet->header() method works');
-ok($packet->header->isa('Net::DNS::Header'),	'header() returns header object');
+ok( $packet->header, 'packet->header() method works' );
+ok( $packet->header->isa('Net::DNS::Header'), 'header() returns header object' );
 
 my @question = $packet->question;
-ok(@question && @question == 1,		'packet->question() returns single element list');
+ok( @question && @question == 1, 'packet->question() returns single element list' );
 my ($q) = @question;
-ok($q->isa('Net::DNS::Question'),	'list element is a question object');
-is($q->string,	$question->string,	'question object correct');
+ok( $q->isa('Net::DNS::Question' ), 'list element is a question object' );
+is( $q->string,	$question->string, 'question object correct' );
 
 
 #	Empty packet created when new() arguments omitted
@@ -50,9 +50,9 @@ ok($packet_data,	'packet->data() method works');
 
 #	new(\$data) class constructor method returns object of appropriate class
 my $packet2 = Net::DNS::Packet->new(\$packet_data);
-isa_ok($packet2,	'Net::DNS::Packet',	'new(\$data) object');
-is($packet2->string, $packet->string, 'decoded packet matches original');
-is(unpack('H*', $packet2->data), unpack('H*', $packet_data), 'retransmitted packet matches original');
+ok( $packet2->isa('Net::DNS::Packet'), 'new(\$data) object' );
+is( $packet2->string, $packet->string, 'decoded packet matches original' );
+is( unpack('H*', $packet2->data), unpack('H*', $packet_data), 'retransmitted packet matches original' );
 
 
 #	new(\$data) class constructor captures exception text when data truncated

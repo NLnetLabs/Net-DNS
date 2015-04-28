@@ -24,7 +24,7 @@ BEGIN {
 
 {
 	my $object = new Net::DNS::Text('example');
-	isa_ok( $object, 'Net::DNS::Text', 'object returned by new() constructor' );
+	ok( $object->isa('Net::DNS::Text'), 'object returned by new() constructor' );
 }
 
 
@@ -80,7 +80,7 @@ BEGIN {
 	my $sample = 'example';
 	my $buffer = new Net::DNS::Text($sample)->encode;
 	my $object = decode Net::DNS::Text( \$buffer );
-	isa_ok( $object, 'Net::DNS::Text', 'object returned by decode() constructor' );
+	ok( $object->isa('Net::DNS::Text'), 'object returned by decode() constructor' );
 	is( $object->string, $sample, 'object matches original data' );
 	my ( $x, $next ) = decode Net::DNS::Text( \$buffer );
 	is( $next, length $buffer, 'expected offset returned by decode()' );

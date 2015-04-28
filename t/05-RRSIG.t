@@ -1,10 +1,23 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 18;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
+	my @prerequisite = qw(
+		MIME::Base64
+		Time::Local
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 18;
+}
 
 
 my $name = 'net-dns.org';

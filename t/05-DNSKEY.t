@@ -1,10 +1,22 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 16;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
+	my @prerequisite = qw(
+		MIME::Base64
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 15;
+}
 
 
 my $name = 'DNSKEY.example';
@@ -21,7 +33,7 @@ my @data = (
 			742iU/TpPSEDhm2SNKLijfUppn1U
 			aNvv4w== )
 			);
-my @also = qw( keybin keylength keytag privatekeyname zone revoke sep );
+my @also = qw( keybin keylength keytag privatekeyname zone sep );
 
 my $wire = join '', qw( 010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E041647E1
 		BFF43D8D64C649AF1E371973C9E891FCE3DF519A8C840A63EE42A6D2EBDDBB97

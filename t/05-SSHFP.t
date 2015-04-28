@@ -1,13 +1,13 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
-
-
-use constant BABBLE => eval { require Digest::BubbleBabble; };
+	plan tests => 13;
+}
 
 
 my $name = 'host.example';
@@ -63,6 +63,12 @@ my $wire = '0201123456789abcdef67890123456789abcdef67890';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
 }
 
 

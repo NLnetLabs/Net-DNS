@@ -3,14 +3,12 @@
 
 use strict;
 
-
 BEGIN {
 	use Test::More;
+	use Net::DNS;
+	use Net::DNS::Parameters;
 
-	plan tests => 25;
-
-	use_ok('Net::DNS');
-	use_ok('Net::DNS::Parameters');
+	plan tests => 23;
 }
 
 

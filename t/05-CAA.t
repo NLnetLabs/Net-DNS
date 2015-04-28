@@ -1,17 +1,17 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 11;
+use Test::More tests => 12;
 
 use Net::DNS;
 
 
-my $name = 'certs.example';
+my $name = 'CAA.example';
 my $type = 'CAA';
 my $code = 257;
 my @attr = qw( flags tag value );
 my @data = qw( 0 issue example.net );
-my @also = qw( );
+my @also = qw( critical );
 
 my $wire = '000569737375656578616d706c652e6e6574';
 
@@ -61,6 +61,13 @@ my $wire = '000569737375656578616d706c652e6e6574';
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
+
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
+}
+
 
 exit;
 

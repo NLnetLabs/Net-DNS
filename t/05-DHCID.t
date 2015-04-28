@@ -1,20 +1,33 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 12;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
+	my @prerequisite = qw(
+		MIME::Base64
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 12;
+}
 
 
 my $name = 'DHCID.example';
 my $type = 'DHCID';
 my $code = 49;
 my @attr = qw( identifiertype digesttype digest );
-my @data = qw( 2 1 ObfuscatedIdentityInformation );
+#my @data = qw( 2 1 ObfuscatedIdentityInformation4 );
+my @data = qw( 2 1 ObfuscatedIdentityData );
 my @also = qw( rdata );
 
-my $wire = '0002014f6266757363617465644964656e74697479496e666f726d6174696f6e';
+my $wire = '0002014f6266757363617465644964656e7469747944617461';
 
 
 {
@@ -62,6 +75,11 @@ my $wire = '0002014f6266757363617465644964656e74697479496e666f726d6174696f6e';
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
 
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
+}
 
 exit;
 

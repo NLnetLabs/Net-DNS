@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 
 use Net::DNS;
@@ -12,7 +12,7 @@ my $type = 'NULL';
 my $code = 10;
 my @attr = qw( );
 my @data = ('\# 4 61626364');
-my @also = qw( rdata );
+my @also = qw( rdlength rdata );
 
 my $wire = '61626364';
 

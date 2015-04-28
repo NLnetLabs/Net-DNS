@@ -5,11 +5,20 @@ use strict;
 BEGIN {
 	use Test::More;
 
-	plan tests => 5;
+	my @prerequisite = qw(
+		Digest::SHA
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 4;
 
 	use_ok('Net::DNS');
-	use_ok('Digest::SHA');
 }
+
 
 
 # Simple known-answer tests based upon the examples given in RFC6605, section 6.2

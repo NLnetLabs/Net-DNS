@@ -68,8 +68,8 @@ BEGIN {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::Mailbox( \$data );
 	my $downcased = new Net::DNS::Mailbox( lc $domain->name )->encode( 0, {} );
-	isa_ok( $domain,  'Net::DNS::Mailbox', 'object returned by new() constructor' );
-	isa_ok( $decoded, 'Net::DNS::Mailbox', 'object returned by decode() constructor' );
+	ok( $domain->isa('Net::DNS::Mailbox'), 'object returned by new() constructor' );
+	ok( $decoded->isa('Net::DNS::Mailbox'), 'object returned by decode() constructor' );
 	is( length $compress, length $data, 'Net::DNS::Mailbox encoding is uncompressed' );
 	isnt( $data, $downcased, 'Net::DNS::Mailbox encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::Mailbox canonical form is uncompressed' );
@@ -85,8 +85,8 @@ BEGIN {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::Mailbox1035( \$data );
 	my $downcased = new Net::DNS::Mailbox1035( lc $domain->name )->encode( 0, {} );
-	isa_ok( $domain,  'Net::DNS::Mailbox1035', 'object returned by new() constructor' );
-	isa_ok( $decoded, 'Net::DNS::Mailbox1035', 'object returned by decode() constructor' );
+	ok( $domain->isa('Net::DNS::Mailbox1035'), 'object returned by new() constructor' );
+	ok( $decoded->isa('Net::DNS::Mailbox1035'), 'object returned by decode() constructor' );
 	isnt( length $compress, length $data, 'Net::DNS::Mailbox1035 encoding is compressible' );
 	isnt( $data,		$downcased,   'Net::DNS::Mailbox1035 encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::Mailbox1035 canonical form is uncompressed' );
@@ -102,8 +102,8 @@ BEGIN {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::Mailbox2535( \$data );
 	my $downcased = new Net::DNS::Mailbox2535( lc $domain->name )->encode( 0, {} );
-	isa_ok( $domain,  'Net::DNS::Mailbox2535', 'object returned by new() constructor' );
-	isa_ok( $decoded, 'Net::DNS::Mailbox2535', 'object returned by decode() constructor' );
+	ok( $domain->isa('Net::DNS::Mailbox2535'), 'object returned by new() constructor' );
+	ok( $decoded->isa('Net::DNS::Mailbox2535'), 'object returned by decode() constructor' );
 	is( length $compress, length $data, 'Net::DNS::Mailbox2535 encoding is uncompressed' );
 	isnt( $data, $downcased, 'Net::DNS::Mailbox2535 encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::Mailbox2535 canonical form is uncompressed' );

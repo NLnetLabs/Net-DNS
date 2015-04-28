@@ -1,10 +1,22 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 16;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
+	my @prerequisite = qw(
+		MIME::Base64
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 16;
+}
 
 
 my $name = 'HIP.example';
@@ -91,6 +103,11 @@ my $wire = join '', qw( 10020084200100107b1a74df365639cc39f1d57803010001b771ca13
 	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
 }
 
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
+}
 
 exit;
 

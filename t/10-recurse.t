@@ -71,7 +71,7 @@ use_ok('Net::DNS::Resolver::Recurse');
 {
 	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
 
-	isa_ok( $res, 'Net::DNS::Resolver::Recurse', 'new() created object' );
+	ok( $res->isa('Net::DNS::Resolver::Recurse'), 'new() created object' );
 
 	$res->udp_timeout(20);
 
@@ -102,7 +102,7 @@ use_ok('Net::DNS::Resolver::Recurse');
 
 	$res->recursion_callback(
 		sub {
-			isa_ok( shift, 'Net::DNS::Packet', 'callback argument' );
+			ok( shift->isa('Net::DNS::Packet'), 'callback argument' );
 			$count++;
 		} );
 

@@ -1,10 +1,22 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 16;
 
+BEGIN {
+	use Test::More;
+	use Net::DNS;
 
-use Net::DNS;
+	my @prerequisite = qw(
+		MIME::Base64
+		);
+
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+			unless eval "require $package";
+	}
+
+	plan tests => 16;
+}
 
 
 my $name = '38.1.0.192.in-addr.arpa';
@@ -75,6 +87,11 @@ my $wire =
 	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
 }
 
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	$rr->print;
+}
 
 exit;
 

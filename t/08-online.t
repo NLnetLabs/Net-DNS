@@ -177,7 +177,7 @@ is(scalar mx(&timeoutres, 'mx2.t.net-dns.org'), 2,  "mx() works in scalar contex
 	    
 	  SKIP: {
 	      skip "Packet returned for $method is undefined, error returned: ".$res->errorstring, 2, if !defined ($packet);
-	      isa_ok($packet,  'Net::DNS::Packet');
+	      ok( $packet->isa('Net::DNS::Packet') );
 	      
 	      
 	      is(lc(($packet->answer)[0]->ptrdname),lc($test->{'host'}), "$method($test->{'ip'}) works");
@@ -236,12 +236,12 @@ if ($ans_at && $ans_at->header && $ans_at->header->ancount >= 1 ){
 		 
 		 my $ans = $res->$method($test->{'name'});
 		 
-		 isa_ok($ans, 'Net::DNS::Packet');
+		 ok( $ans->isa('Net::DNS::Packet') );
 		 
 		 is($ans && $ans->header && $ans->header->ancount, 1,"Correct answer count (with $method)");
 		 my ($a) = $ans && $ans->answer;
 		 
-		 isa_ok($a, 'Net::DNS::RR::A');
+		 ok( $a->isa('Net::DNS::RR::A') );
 		 is($a && lc($a->name), 'a.t.net-dns.org',"Correct name (with $method)");
 	     }
 
@@ -283,7 +283,7 @@ if ($ans_at && $ans_at->header && $ans_at->header->ancount >= 1 ){
 	skip "Answerless packet (response from ".$ans->answerfrom. " had RCODE: ".$ans->header->rcode.")", 2 unless is ($ans->header->ancount, 1,"Correct answer count");
 	my ($a) = $ans->answer;
 	
-	isa_ok($a, 'Net::DNS::RR::A');
+	ok( $a->isa('Net::DNS::RR::A') );
 	is(lc($a->name), 'a.t.net-dns.org',"Correct name");
 	
       }
@@ -325,13 +325,13 @@ if ($ans_at && $ans_at->header && $ans_at->header->ancount >= 1 ){
 		my $ans = $res->$method($test->{'name'});
 		is(  $res->{'sockets'}[AF_INET]{"UDP"},$sock_id,"Persistent socket matches");
 		
-		isa_ok($ans, 'Net::DNS::Packet');
+		ok( $ans->isa('Net::DNS::Packet') );
 
 		is($ans && $ans->header && $ans->header->ancount, 1,"Correct answer count (with persistent socket and $method)");
 		
 		my ($a) = $ans && $ans->answer;
 		
-		isa_ok($a, 'Net::DNS::RR::A');
+		ok( $a->isa('Net::DNS::RR::A') );
 		is($a && lc($a->name), 'a.t.net-dns.org',"Correct name (with persistent socket and $method)");
 	}
 	
