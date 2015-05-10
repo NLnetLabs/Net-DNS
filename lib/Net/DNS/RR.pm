@@ -660,12 +660,17 @@ sub _subclass {
 		my $mnemon = typebyval($number);
 		my $module = join '::', $class, $mnemon;
 		$module =~ s/[^A-Za-z0-9:]//g;			# expect the unexpected
-		my $subclass = ( eval("require $module") || $mnemon eq 'OPT' ) ? $module : $class;
+		my $subclass = eval("require $module") ? $module : $class;
 
 		# cache pre-built minimal and populated default object images
-		my $base = $_MINIMAL{$rrtype} = $_MINIMAL{$mnemon} ||= bless ['type', $number], $subclass;
+		my @base = ( 'type' => $number, $@ ? ( 'exception' => $@ ) : () );
+
+		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon} ||= do {
+			bless [@base], $subclass;
+		};
+
 		$_LOADED{$rrtype} = $_LOADED{$mnemon} ||= do {
-			my $object = bless {@$base}, $subclass;
+			my $object = bless {@base}, $subclass;
 			$object->defaults;
 			bless [%$object], $subclass;
 		};
@@ -686,7 +691,7 @@ sub AUTOLOAD {				## Default method
 	my $self = shift;
 	my $oref = ref($self);
 	confess 'undefined method ', $AUTOLOAD unless $oref;
-	confess 'unimplemented type ', $self->type if $oref eq __PACKAGE__;
+	confess $self->{exception} if $oref eq __PACKAGE__;
 
 	no strict q/refs/;
 	my $method = $AUTOLOAD =~ m/^.*::(.*)$/ ? $1 : '<undef>';

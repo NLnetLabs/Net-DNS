@@ -3,13 +3,21 @@
 
 use strict;
 
-
 BEGIN {
 	use Test::More;
+	use Net::DNS;
 
-	plan tests => 5;
+	my @prerequisite = qw(
+			MIME::Base64
+			Net::DNS::RR::DNSKEY;
+			);
 
-	use_ok('Net::DNS');
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+				unless eval "require $package";
+	}
+
+	plan tests => 4;
 }
 
 

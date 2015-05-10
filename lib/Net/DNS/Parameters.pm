@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2015-03-18)
+##	(last updated 2015-03-26)
 ##
 ################################################
 
@@ -124,7 +124,7 @@ use vars qw( %typebyname %typebyval );
 	MAILB	   => 253,					# RFC1035
 	MAILA	   => 254,					# RFC1035
 	ANY	   => 255,					# RFC1035 RFC6895
-	URI	   => 256,					#
+	URI	   => 256,					# RFC-faltstrom-uri-14
 	CAA	   => 257,					# RFC6844
 	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
@@ -326,13 +326,30 @@ Portions Copyright (c)2003 Olaf Kolkman.
 
 All rights reserved.
 
-This program is free software; you may redistribute it and/or
-modify it under the same terms as Perl itself.
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO
 
 L<perl>, L<Net::DNS>,
-L<IANA Registry|http://www.iana.org/assignments/dns-parameters>
+L<IANA Registry|http://www.iana.org/assignments/dns-parameters/>
 
 =cut
+

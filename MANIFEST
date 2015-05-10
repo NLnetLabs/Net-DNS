@@ -15,7 +15,6 @@ demo/mx
 demo/perldig
 demo/README
 demo/trace_dns.pl
-DNS.xs
 lib/Net/DNS.pm
 lib/Net/DNS/Domain.pm
 lib/Net/DNS/DomainName.pm
@@ -98,8 +97,6 @@ lib/Net/DNS/Update.pm
 lib/Net/DNS/ZoneFile.pm
 Makefile.PL
 MANIFEST			This list of files
-netdns.c
-netdns.h
 README
 t/.resolv.conf
 t/00-load.t
@@ -179,7 +176,12 @@ t/07-zonefile.t
 t/08-online.t
 t/10-recurse.t
 t/11-inet6.t
-t/31-NSEC3-typelist.t
+t/31-NSEC-typelist.t
+t/32-NSEC3-typelist.t
+t/33-NSEC3-hash.t
+t/34-NSEC3-flags.t
+t/35-NSEC3-match.t
+t/36-NSEC3-covered.t
 t/41-DNSKEY-keytag.t
 t/42-DNSKEY-sep.t
 t/51-DS-SHA1.t

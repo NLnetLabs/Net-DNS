@@ -1,45 +1,47 @@
-# $Id$
+# $Id$	-*-perl-*-
+#
 
 use strict;
 
 BEGIN {
 	use Test::More;
+	use Net::DNS;
 
 	my @prerequisite = qw(
-		Digest::SHA
-		);
+			Digest::SHA
+			MIME::Base64
+			Net::DNS::RR::DNSKEY
+			Net::DNS::RR::DS
+			);
 
 	foreach my $package (@prerequisite) {
 		plan skip_all => "$package not installed"
-			unless eval "require $package";
+				unless eval "require $package";
 	}
 
-	plan tests => 4;
-
-	use_ok('Net::DNS');
+	plan tests => 3;
 }
-
 
 
 # Simple known-answer tests based upon the examples given in RFC4509, section 2.3
 
-my $dnskey = Net::DNS::RR->new(
-	'dskey.example.com. 86400 IN DNSKEY 256 3 5 (	AQOeiiR0GOMYkDshWoSKz9Xz
-							fwJr1AYtsmx3TGkJaNXVbfi/
-							2pHm822aJ5iI9BMzNXxeYCmZ
-							DRD99WYwYqUSdjMmmAphXdvx
-							egXd/M5+X7OrzKBaMbCVdFLU
-							Uh6DhweJBjEVv5f2wwjM9Xzc
-							nOf+EPbtG9DMBmADjFDc2w/r
-							ljwvFw==
-							) ;  key id = 60485'
-	);
+my $dnskey = new Net::DNS::RR <<'END';
+dskey.example.com. 86400 IN DNSKEY 256 3 5 (	AQOeiiR0GOMYkDshWoSKz9Xz
+						fwJr1AYtsmx3TGkJaNXVbfi/
+						2pHm822aJ5iI9BMzNXxeYCmZ
+						DRD99WYwYqUSdjMmmAphXdvx
+						egXd/M5+X7OrzKBaMbCVdFLU
+						Uh6DhweJBjEVv5f2wwjM9Xzc
+						nOf+EPbtG9DMBmADjFDc2w/r
+						ljwvFw==
+						) ;  key id = 60485
+END
 
-my $ds = Net::DNS::RR->new(
-	'dskey.example.com. 86400 IN DS 60485 5 2   (	D4B7D520E7BB5F0F67674A0C
-							CEB1E3E0614B93C4F9E99B83
-							83F6A1E4469DA50A )'
-	);
+my $ds = new Net::DNS::RR <<'END';
+dskey.example.com. 86400 IN DS 60485 5 2   (	D4B7D520E7BB5F0F67674A0C
+						CEB1E3E0614B93C4F9E99B83
+						83F6A1E4469DA50A )
+END
 
 
 my $test = create Net::DNS::RR::DS( $dnskey, digtype => 'SHA256' );

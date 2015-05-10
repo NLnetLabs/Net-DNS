@@ -8,13 +8,16 @@ BEGIN {
 	use Test::More;
 
 	my @prerequisite = qw(
-		Net::DNS::SEC
-		Net::DNS::SEC::ECDSA
-		);
+			MIME::Base64
+			Time::Local
+			Net::DNS::RR::RRSIG
+			Net::DNS::SEC
+			Net::DNS::SEC::ECDSA
+			);
 
 	foreach my $package (@prerequisite) {
 		plan skip_all => "$package not installed"
-			unless eval "require $package";
+				unless eval "require $package";
 	}
 
 	plan tests => 7;

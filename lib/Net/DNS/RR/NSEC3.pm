@@ -72,7 +72,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	$offset += 5 + $ssize;
 	my $hsize = unpack "\@$offset C",	  $$data;
 	my $hname = unpack "\@$offset x a$hsize", $$data;
-	$self->hnxtname( MIME::Base32::encode $hname, '' );
+	$self->hnxtname( MIME::Base32::encode_09AV $hname, '' );
 	$offset += 1 + $hsize;
 	$self->{typebm} = substr $$data, $offset, ( $limit - $offset );
 }
@@ -83,7 +83,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 
 	return '' unless $self->{typebm};
 	my $salt = $self->saltbin;
-	my $hash = MIME::Base32::decode uc( $self->hnxtname );
+	my $hash = MIME::Base32::decode_09AV uc( $self->hnxtname );
 	pack 'CCn C a* C a* a*', $self->algorithm, $self->flags, $self->iterations,
 			length($salt), $salt,
 			length($hash), $hash,
@@ -188,36 +188,26 @@ sub hnxtname {
 
 sub covered {
 	my $self = shift;
-	my $name = lc( shift || '' );
+	my $name = shift;
 
 	# first test if the domain name is in the NSEC3 zone.
 	my @domainlabels = new Net::DNS::DomainName($name)->_wire;
-	my ( $ownlabel, @zonelabels ) = $self->{owner}->_wire;
-	my $ownername = lc( $ownlabel || '' );
+	my ( $ownerhash, @zonelabels ) = map lc($_), $self->{owner}->_wire;
 
 	foreach ( reverse @zonelabels ) {
-		return 0 unless lc($_) eq ( pop(@domainlabels) || '' );
+		return 0 unless $_ eq lc( pop(@domainlabels) || return 0 );
 	}
 
-	my $hnxtname = $self->hnxtname;
+	my $namehash = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
+	my $nexthash = $self->hnxtname;
 
-	my $hashedname = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
-
-	my $hashorder = $ownername cmp $hnxtname;
-
-	if ( $hashorder < 0 ) {
-		return 0 unless ( $ownername cmp $hashedname ) < 0;
-		return 1 if ( $hashedname cmp $hnxtname ) < 0;
-
-	} elsif ($hashorder) {					# last name in zone
-		return 1 if ( $hashedname cmp $hnxtname ) < 0;
-		return 1 if ( $ownername cmp $hashedname ) < 0;
-
-	} else {						# only name in zone
-		return 1;
+	unless ( $ownerhash lt $nexthash ) {			# last or only NSEC3 RR
+		return 1 if $namehash lt $nexthash;
+		return $namehash gt $ownerhash ? 1 : 0;
 	}
 
-	return 0;
+	return 0 unless $namehash gt $ownerhash;		# general case
+	return $namehash lt $nexthash ? 1 : 0;
 }
 
 
@@ -225,10 +215,10 @@ sub match {
 	my $self = shift;
 	my $name = shift;
 
-	my ($ownername) = $self->{owner}->_wire;
-	my $hashedname = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
+	my ($ownerhash) = $self->{owner}->_wire;
+	my $namehash = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
 
-	return $hashedname eq lc( $ownername || '' );
+	return $namehash eq lc( $ownerhash || '' );
 }
 
 
@@ -244,7 +234,7 @@ sub nxtdname {				## inherited method inapplicable
 
 sub name2hash {
 	my $hashalg    = shift;
-	my $name       = lc( shift || '' );
+	my $name       = shift;
 	my $iterations = shift || 0;
 	my $salt       = shift || '';
 
@@ -252,7 +242,7 @@ sub name2hash {
 	my ( $object, @argument ) = @$arglist;
 	my $hash = $object->new(@argument);
 
-	my $wirename = new Net::DNS::DomainName($name)->encode;
+	my $wirename = new Net::DNS::DomainName2535($name)->encode;
 	$iterations++;
 
 	while ( $iterations-- > 0 ) {
@@ -261,8 +251,8 @@ sub name2hash {
 		$wirename = $hash->digest;
 	}
 
-	my $base32hex = MIME::Base32::encode( $wirename, '' );	# [0-9 A-V]	per RFC4648, 7.
-	return lc $base32hex;
+	local $_;						# CPAN RT#16528
+	return lc MIME::Base32::encode_09AV( $wirename, '' );	# per RFC4648, 7.
 }
 
 

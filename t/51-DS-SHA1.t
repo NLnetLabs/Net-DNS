@@ -1,38 +1,43 @@
-# $Id$
+# $Id$	-*-perl-*-
+#
 
 use strict;
 
 BEGIN {
 	use Test::More;
+	use Net::DNS;
 
 	my @prerequisite = qw(
-		Digest::SHA
-		);
+			Digest::SHA
+			MIME::Base64
+			Net::DNS::RR::KEY
+			Net::DNS::RR::DS
+			);
 
 	foreach my $package (@prerequisite) {
 		plan skip_all => "$package not installed"
-			unless eval "require $package";
+				unless eval "require $package";
 	}
 
-	plan tests => 4;
-
-	use_ok('Net::DNS');
+	plan tests => 3;
 }
-
 
 
 # Simple known-answer tests based upon the examples given in RFC3658, section 2.7
 
-my $key = Net::DNS::RR->new(
-	'dskey.example. KEY  256 3 1 (
-			AQPwHb4UL1U9RHaU8qP+Ts5bVOU1s7fYbj2b3CCbzNdj
-			4+/ECd18yKiyUQqKqQFWW5T3iVc8SJOKnueJHt/Jb/wt
-			) ; key id = 28668'
-	);
+my $key = new Net::DNS::RR <<'END';
+dskey.example.	IN	KEY	256 3 1 (
+	AQPwHb4UL1U9RHaU8qP+Ts5bVOU1s7fYbj2b3CCbzNdj
+	4+/ECd18yKiyUQqKqQFWW5T3iVc8SJOKnueJHt/Jb/wt
+	) ; key id = 28668
+END
 
-my $ds = Net::DNS::RR->new(
-	'dskey.example. DS	28668 1	 1  49FD46E6C4B45C55D4AC69CBD3CD34AC1AFE51DE'
-	);
+my $ds = new Net::DNS::RR <<'END';
+dskey.example.	IN	DS	28668 1 1 (
+	49fd46e6c4b45c55d4ac69cbd3cd34ac1afe51de
+	;xidez-ticuv-kicur-galah-hehyp-sopys-roges-titap-sakoz-vygat-vyxox
+	)
+END
 
 
 my $test = create Net::DNS::RR::DS( $key, digtype => 'SHA1', );

@@ -8,6 +8,9 @@ BEGIN {
 	use Test::More;
 
 	my @prerequisite = qw(
+			MIME::Base64
+			Time::Local
+			Net::DNS::RR::SIG
 			Net::DNS::SEC
 			Net::DNS::SEC::RSA
 			);

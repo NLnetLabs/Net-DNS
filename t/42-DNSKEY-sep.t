@@ -3,13 +3,21 @@
 
 use strict;
 
-
 BEGIN {
 	use Test::More;
+	use Net::DNS;
 
-	plan tests => 7;
+	my @prerequisite = qw(
+			MIME::Base64
+			Net::DNS::RR::DNSKEY;
+			);
 
-	use_ok('Net::DNS');
+	foreach my $package (@prerequisite) {
+		plan skip_all => "$package not installed"
+				unless eval "require $package";
+	}
+
+	plan tests => 6;
 }
 
 
@@ -28,7 +36,7 @@ my $sep = $key->sep;
 ok( !$sep, 'Boolean sep flag has expected value' );
 
 my $keytag = $key->keytag;
-$key->sep(!$sep);
+$key->sep( !$sep );
 ok( $key->sep, 'Boolean sep flag toggled' );
 isnt( $key->keytag, $keytag, 'keytag recalculated using modified sep flag' );
 

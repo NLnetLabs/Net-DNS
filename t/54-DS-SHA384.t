@@ -1,41 +1,43 @@
-# $Id$
+# $Id$	-*-perl-*-
+#
 
 use strict;
 
 BEGIN {
 	use Test::More;
+	use Net::DNS;
 
 	my @prerequisite = qw(
-		Digest::SHA
-		);
+			Digest::SHA
+			MIME::Base64
+			Net::DNS::RR::DNSKEY
+			Net::DNS::RR::DS
+			);
 
 	foreach my $package (@prerequisite) {
 		plan skip_all => "$package not installed"
-			unless eval "require $package";
+				unless eval "require $package";
 	}
 
-	plan tests => 4;
-
-	use_ok('Net::DNS');
+	plan tests => 3;
 }
-
 
 
 # Simple known-answer tests based upon the examples given in RFC6605, section 6.2
 
-my $dnskey = Net::DNS::RR->new(
-	'example.net. 3600 IN DNSKEY 257 3 14 (
+my $dnskey = new Net::DNS::RR <<'END';
+example.net. 3600 IN DNSKEY 257 3 14 (
 	   xKYaNhWdGOfJ+nPrL8/arkwf2EY3MDJ+SErKivBVSum1
 	   w/egsXvSADtNJhyem5RCOpgQ6K8X1DRSEkrbYQ+OB+v8
-	   /uX45NBwY8rp65F6Glur8I/mlVNgF6W/qTI37m40 )'
-	);
+	   /uX45NBwY8rp65F6Glur8I/mlVNgF6W/qTI37m40 )
+END
 
-my $ds = Net::DNS::RR->new(
-	'example.net. 3600 IN DS 10771 14 4 (
+my $ds = new Net::DNS::RR <<'END';
+example.net. 3600 IN DS 10771 14 4 (
 	   72d7b62976ce06438e9c0bf319013cf801f09ecc84b8
 	   d7e9495f27e305c6a9b0563a9b5f4d288405c3008a94
-	   6df983d6 )'
-	);
+	   6df983d6 )
+END
 
 
 my $test = create Net::DNS::RR::DS(

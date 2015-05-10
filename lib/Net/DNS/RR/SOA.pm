@@ -50,10 +50,10 @@ sub format_rdata {			## format rdata portion of RR string.
 	return '' unless defined $self->{rname};
 	my $mname  = $self->{mname}->string;
 	my $rname  = $self->{rname}->string;
-	my $serial = $self->serial;
-	my $spacer = $serial > 9999999 ? "" : "\t";
+	my $serial = '' . $self->serial;
+	my $spacer = length $serial > 7 ? "" : "\t";
 	my @rdata  = $mname, $rname, join "\n\t\t\t\t",
-			"\t\t\t$serial$spacer\t;serial",
+			"\t\t\t$serial\t$spacer;serial",
 			"$self->{refresh}\t\t;refresh",
 			"$self->{retry}\t\t;retry",
 			"$self->{expire}\t\t;expire",
@@ -161,6 +161,7 @@ sub _ordered($$) {			## irreflexive 32-bit partial ordering
 
 	return $a < $b ? ( $a > ( $b - 0x80000000 ) ) : ( $b < ( $a - 0x80000000 ) );
 }
+
 
 1;
 __END__

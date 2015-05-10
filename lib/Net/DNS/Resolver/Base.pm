@@ -121,7 +121,8 @@ BEGIN {
 }
 
 # These are the attributes that the user may specify in the new() constructor.
-my %public_attr = map { $_ => 1 } qw(
+my %public_attr = map { $_ => $_ } qw(
+		nameserver
 		nameservers
 		port
 		srcaddr
@@ -181,15 +182,10 @@ sub new {
 
 	while ( my ( $attr, $value ) = each %args ) {
 		next unless $public_attr{$attr};
-
-		if ( $attr eq 'nameservers' || $attr eq 'searchlist' ) {
-
-			croak "usage: Net::DNS::Resolver->new( $attr => [ ... ] )"
-					unless UNIVERSAL::isa( $value, 'ARRAY' );
-			$self->$attr(@$value);
-		} else {
-			$self->$attr($value);			# attribute => value
-		}
+		my $ref = ref($value);
+		croak "usage: Net::DNS::Resolver->new( $attr => [ ... ] )"
+				if $ref ne 'ARRAY' && $attr =~ /servers|list/;
+		$self->$attr( $ref ? @$value : $value );
 	}
 
 	return $self;
@@ -199,11 +195,16 @@ sub new {
 #
 # $class->read_env() or $object->read_env()
 #
-my %netdns_conf = ( %public_attr, map { $_ => 0 } qw(nameservers domain searchlist ignqrid) );
-my %resolv_conf = (
+my %resolv_conf = (			## map traditional resolv.conf option names
 	attempts => 'retry',
 	inet6	 => 'prefer_v6',
 	timeout	 => 'retrans',
+	);
+
+my %env_option = (			## any resolver attribute except as listed below
+	%public_attr,
+	%resolv_conf,
+	map { $_ => 0 } qw(nameserver nameservers domain searchlist ignqrid),
 	);
 
 sub read_env {
@@ -219,10 +220,9 @@ sub read_env {
 	if ( exists $ENV{RES_OPTIONS} ) {
 		foreach ( map split, $ENV{RES_OPTIONS} ) {
 			my ( $name, $val ) = split( m/:/, $_, 2 );
-			my $attribute = $resolv_conf{$name};
+			my $attribute = $env_option{$name} || next;
 			$val = 1 unless defined $val;
-			$config->$attribute($val) if $attribute;
-			$config->$name($val) if $netdns_conf{$name};
+			$config->$attribute($val);
 		}
 	}
 }
@@ -255,9 +255,9 @@ sub read_config_file {
 		/^option/ && do {
 			my ( $keyword, $option ) = grep defined, split;
 			my ( $name, $val ) = split( m/:/, $option, 2 );
-			my $attribute = $resolv_conf{$name};
+			my $attribute = $resolv_conf{$name} || next;
 			$val = 1 unless defined $val;
-			$config->$attribute($val) if $attribute;
+			$config->$attribute($val);
 			next;
 		};
 
@@ -1076,20 +1076,12 @@ sub make_query_packet {
 
 	$header->rd( $self->{recurse} ) if $header->opcode eq 'QUERY';
 
-	unless ( $self->dnssec ) {
-		$header->ad(0);
-		$header->do(0);
+	$header->ad(1) if $self->{adflag};			# RFC6840, 5.7
+	$header->cd(1) if $self->{cdflag};			# RFC6840, 5.9
 
-	} elsif ( $self->{adflag} ) {				# RFC6840, 5.7
-		print ";; Set AD flag\n" if $self->{debug};
-		$header->ad(1);
-		$header->cd(0);
-		$header->do(0);
-
-	} else {
+	if ( $self->dnssec ) {
 		print ";; Set EDNS DO flag\n" if $self->{debug};
 		$header->ad(0);
-		$header->cd( $self->{cdflag} );
 		$header->do(1);
 	}
 
