@@ -62,6 +62,7 @@ sub target {
 
 sub dname { &target; }			## historical
 
+
 1;
 __END__
 
@@ -100,10 +101,26 @@ Copyright (c)2002 Andreas Gustafsson.
 
 All rights reserved.
 
-This program is free software; you may redistribute it and/or
-modify it under the same terms as Perl itself.
-
 Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO
