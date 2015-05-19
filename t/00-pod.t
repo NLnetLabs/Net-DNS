@@ -1,26 +1,13 @@
 # $Id$
 
-use Test::More;
-use File::Spec;
-use File::Find;
 use strict;
+use Test::More;
 
-eval 'require Encode; use Test::Pod 0.95';
+my $rev = '1.45';
+eval "use Test::Pod $rev";
+plan skip_all => "Test::Pod $rev required for testing POD" if $@;
 
-if ($@) {
-	plan skip_all => 'test requires Test::Pod 0.95 and POD "=encoding" support';
-} else {
-	Test::Pod->import;
-
-	my @files;
-	my $blib = File::Spec->catfile(qw(blib lib));
-
-	find( sub { push( @files, $File::Find::name ) if /\.(pl|pm|pod)$/ }, $blib );
-
-	plan tests => scalar @files;
-
-	foreach my $file (@files) {
-		pod_file_ok($file);
-	}
-}
+my @poddirs = qw( blib demo );
+my @allpods = all_pod_files(@poddirs);
+all_pod_files_ok(@allpods);
 
