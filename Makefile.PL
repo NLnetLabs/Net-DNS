@@ -158,6 +158,8 @@ WriteMakefile(				## version check & end-user metadata
 	);
 
 
+local $SIG{__WARN__} = sub { };		## suppress repeated warnings
+
 WriteMakefile(				## Makefile & distribution metadata
 	NO_MYMETA => 1,
 	PREREQ_PM => {%prerequisite},

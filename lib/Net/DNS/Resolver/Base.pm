@@ -93,8 +93,8 @@ BEGIN {
 		persistent_tcp	=> 0,
 		persistent_udp	=> 0,
 		dnssec		=> 0,
-		adflag		=> 0,	# this is only used when {dnssec} == 1
-		cdflag		=> 0,	# this is only used when {dnssec} == 1
+		adflag		=> 0,	# see RFC6840, 5.7
+		cdflag		=> 0,	# see RFC6840, 5.9
 		udppacketsize	=> 0,	# value bounded below by PACKETSZ
 		force_v4	=> 0,	# only relevant if IPv6 is supported
 		force_v6	=> 0,	#
@@ -1561,8 +1561,27 @@ Portions Copyright (c)2005 Olaf Kolkman.
 
 Portions Copyright (c)2006,2014 Dick Franks.
 
-All rights reserved.  This program is free software; you may redistribute
-it and/or modify it under the same terms as Perl itself.
+All rights reserved.
+
+
+=head1 LICENSE
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
 
 =head1 SEE ALSO
 

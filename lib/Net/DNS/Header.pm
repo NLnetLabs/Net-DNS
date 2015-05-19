@@ -72,13 +72,11 @@ sub string {
 	my $opt = $$self->edns;
 	my $edns = $opt->defined ? $opt->string : '';
 
-	my $retval;
-	return $retval = <<EOF if $opcode eq 'UPDATE';
+	return <<END . $edns if $opcode eq 'UPDATE';
 ;;	id = $id
 ;;	qr = $qr		opcode = $opcode	rcode = $rcode
 ;;	zocount = $qd	prcount = $an	upcount = $ns	adcount = $ar
-$edns
-EOF
+END
 
 	my $aa = $self->aa;
 	my $tc = $self->tc;
@@ -89,14 +87,13 @@ EOF
 	my $cd = $self->cd;
 	my $do = $self->do;
 
-	return $retval = <<EOF;
+	return <<END . $edns;
 ;;	id = $id
 ;;	qr = $qr	aa = $aa	tc = $tc	rd = $rd	opcode = $opcode
 ;;	ra = $ra	z  = $zz	ad = $ad	cd = $cd	rcode  = $rcode
 ;;	qdcount = $qd	ancount = $an	nscount = $ns	arcount = $ar
 ;;	do = $do
-$edns
-EOF
+END
 }
 
 
