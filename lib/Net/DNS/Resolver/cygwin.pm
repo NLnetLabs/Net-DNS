@@ -65,7 +65,7 @@ sub init {
 	# This is (probably) adequate on NT4
 	my @nt4nameservers;
 	foreach ( grep length, getregkey( $root, 'NameServer' ), getregkey( $root, 'DhcpNameServer' ) ) {
-		push @nt4nameservers, split;
+		push @nt4nameservers, split m/[\s,]+/;
 		last;
 	}
 
@@ -106,7 +106,7 @@ sub init {
 				getregkey( $interfaces, $iface, 'NameServer' ),
 				getregkey( $interfaces, $iface, 'DhcpNameServer' )
 				) {
-				push @nameservers, split;
+				push @nameservers, split m/[\s,]+/;
 				last;
 			}
 		}

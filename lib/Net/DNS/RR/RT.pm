@@ -80,6 +80,7 @@ __PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
 
 __PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
 
+
 1;
 __END__
 
@@ -128,10 +129,13 @@ Copyright (c)1997 Michael Fuhr.
 
 All rights reserved.
 
+Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
+
+
+=head1 LICENSE
+
 This program is free software; you may redistribute it and/or
 modify it under the same terms as Perl itself.
-
-Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 
 =head1 SEE ALSO

@@ -200,6 +200,4 @@ t/73-RRSIG-ECDSAP256SHA256.t
 t/74-RRSIG-ECDSAP384SHA384.t
 t/99-cleanup.t
 t/NonFatal.pm
-t/TestData.pm
 t/custom.txt
-TODO

@@ -212,7 +212,6 @@ which affect the processing of the CSYNC record.
 	...
  }
 
-
 If not set, a parental agent must not process the CSYNC record until
 the zone administrator approves the operation through an out-of-band
 mechanism.

@@ -244,19 +244,18 @@ sub keylength {
 sub keytag {
 	my $self = shift;
 
+	my $keybin = $self->keybin || return 0;
+
 	# RFC4034 Appendix B.1: most significant 16 bits of least significant 24 bits
-	return unpack 'n', substr $self->keybin(), -3 if $self->{algorithm} == 1;
+	return unpack 'n', substr $keybin, -3 if $self->{algorithm} == 1;
 
 	# RFC4034 Appendix B
-	return do {
-		my @kp = @{$self}{qw(flags protocol algorithm)};
-		my $kb = $self->{keybin} || return 0;
-		my $od = length($kb) & 1;
-		my $ac = 0;
-		$ac += $_ for unpack 'n*', pack "n C2 a* x$od", @kp, $kb;
-		$ac += ( $ac >> 16 );
-		$ac & 0xFFFF;
-			}
+	my $od = length($keybin) & 1;
+	my $rd = pack "n C2 a* x$od", @{$self}{qw(flags protocol algorithm)}, $keybin;
+	my $ac = 0;
+	$ac += $_ for unpack 'n*', $rd;
+	$ac += ( $ac >> 16 );
+	return $ac & 0xFFFF;
 }
 
 
