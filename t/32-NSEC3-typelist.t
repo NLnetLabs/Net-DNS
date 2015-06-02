@@ -2,25 +2,23 @@
 #
 
 use strict;
+use Test::More;
+use Net::DNS;
+use Net::DNS::Parameters;
 
-BEGIN {
-	use Test::More;
-	use Net::DNS;
-	use Net::DNS::Parameters;
+my @prerequisite = qw(
+		MIME::Base32
+		Net::DNS::RR::NSEC3;
+		Net::DNS::Text;
+		);
 
-	my @prerequisite = qw(
-			MIME::Base32
-			Net::DNS::RR::NSEC3;
-			Net::DNS::Text;
-			);
-
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-				unless eval "require $package";
-	}
-
-	plan tests => 80;
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 80;
 
 
 my $rr = new Net::DNS::RR(
@@ -63,4 +61,5 @@ foreach my $rrtype ( 0 .. 64 ) {
 exit;
 
 __END__
+
 

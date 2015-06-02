@@ -2,28 +2,26 @@
 #
 
 use strict;
+use Test::More;
+use Net::DNS;
 
+my @prerequisite = qw(
+		MIME::Base64
+		Time::Local
+		Net::DNS::RR::RRSIG
+		Net::DNS::SEC
+		Net::DNS::SEC::ECDSA
+		);
 
-BEGIN {
-	use Test::More;
-
-	my @prerequisite = qw(
-			MIME::Base64
-			Time::Local
-			Net::DNS::RR::RRSIG
-			Net::DNS::SEC
-			Net::DNS::SEC::ECDSA
-			);
-
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-				unless eval "require $package";
-	}
-
-	plan tests => 7;
-
-	use_ok('Net::DNS::SEC');
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 7;
+
+use_ok('Net::DNS::SEC');
 
 
 my $ksk = new Net::DNS::RR <<'END';
@@ -38,8 +36,7 @@ ok( $ksk, 'set up ECDSA public ksk' );
 
 my $keyfile = $ksk->privatekeyname;
 
-END { unlink $keyfile }
-
+END { unlink $keyfile if defined $keyfile; }
 
 open( KSK, ">$keyfile" ) or die "$keyfile $!";
 print KSK <<'END';
@@ -76,4 +73,5 @@ ok( !$rrsig->verify( \@badrrset, $ksk ), 'verify fails using wrong rrset' );
 exit;
 
 __END__
+
 

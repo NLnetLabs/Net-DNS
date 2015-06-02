@@ -83,10 +83,5 @@ my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f7071727374
 }
 
 
-{
-	my $rr = new Net::DNS::RR("$name $type @data");
-	$rr->print;
-}
-
 exit;
 

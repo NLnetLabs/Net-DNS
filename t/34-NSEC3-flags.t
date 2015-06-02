@@ -2,27 +2,24 @@
 #
 
 use strict;
+use Test::More;
+use Net::DNS;
 
-BEGIN {
-	use Test::More;
-	use Net::DNS;
-	use Net::DNS::Parameters;
+my @prerequisite = qw(
+		MIME::Base32
+		Net::DNS::RR::NSEC3;
+		);
 
-	my @prerequisite = qw(
-			MIME::Base32
-			Net::DNS::RR::NSEC3;
-			);
-
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-				unless eval "require $package";
-	}
-
-	plan tests => 3;
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
 
+plan tests => 3;
 
-my $rr = new Net::DNS::RR( type	 => 'NSEC3' );
+
+my $rr = new Net::DNS::RR( type => 'NSEC3' );
 
 
 my $optout = $rr->optout;
@@ -38,4 +35,5 @@ ok( !$optout, 'Boolean optout flag restored' );
 exit;
 
 __END__
+
 

@@ -2,26 +2,24 @@
 #
 
 use strict;
+use Test::More;
+use Net::DNS;
 
-BEGIN {
-	use Test::More;
-	use Net::DNS;
+my @prerequisite = qw(
+		Digest::GOST
+		Digest::GOST::CryptoPro
+		MIME::Base64
+		Net::DNS::RR::DNSKEY
+		Net::DNS::RR::DS
+		);
 
-	my @prerequisite = qw(
-			Digest::GOST
-			Digest::GOST::CryptoPro
-			MIME::Base64
-			Net::DNS::RR::DNSKEY
-			Net::DNS::RR::DS
-			);
-
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-				unless eval "require $package";
-	}
-
-	plan tests => 3;
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 3;
 
 
 # Simple known-answer tests based upon the examples given in RFC5933, section 4.1
@@ -56,4 +54,5 @@ ok( $ds->verify($dnskey), 'RFC5933 example DS verifies DNSKEY' );
 $test->print;
 
 __END__
+
 

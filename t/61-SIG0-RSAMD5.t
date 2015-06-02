@@ -2,28 +2,25 @@
 #
 
 use strict;
+use Test::More;
 
+my @prerequisite = qw(
+		MIME::Base64
+		Time::Local
+		Net::DNS::RR::SIG
+		Net::DNS::SEC
+		Net::DNS::SEC::RSA
+		);
 
-BEGIN {
-	use Test::More;
-
-	my @prerequisite = qw(
-			MIME::Base64
-			Time::Local
-			Net::DNS::RR::SIG
-			Net::DNS::SEC
-			Net::DNS::SEC::RSA
-			);
-
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-				unless eval "require $package";
-	}
-
-	plan tests => 8;
-
-	use_ok('Net::DNS::SEC');
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 8;
+
+use_ok('Net::DNS::SEC');
 
 
 my $key = new Net::DNS::RR <<'END';
@@ -36,10 +33,10 @@ END
 
 ok( $key, 'set up RSA public key' );
 
+
 my $keyfile = $key->privatekeyname;
 
-END { unlink($keyfile) }
-
+END { unlink($keyfile) if defined $keyfile; }
 
 open( KEY, ">$keyfile" ) or die "$keyfile $!";
 print KEY <<'END';

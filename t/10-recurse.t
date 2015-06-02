@@ -43,25 +43,6 @@ eval {
 } || exit( plan skip_all => "Unable to access global root nameservers" );
 
 
-{
-	# Some people try to run these on private address space."
-	use IO::Socket::INET;
-
-	my ($root_server) = @HINTS;
-	my $sock = IO::Socket::INET->new(
-		PeerAddr => $root_server,
-		PeerPort => '53',
-		Proto	 => 'udp'
-		);
-
-	exit( plan skip_all => "Cannot bind to socket:\n\t$!\n" ) unless $sock;
-
-	my $ip = inet_ntoa( $sock->sockaddr );
-	exit( plan skip_all => "Cannot run these tests from this IP: $ip" )
-			if $ip =~ /^(10|172\.(1[6-9]|2.|30|31)|192.168)\./;
-}
-
-
 plan 'no_plan';
 
 NonFatalBegin();
@@ -75,20 +56,20 @@ use_ok('Net::DNS::Resolver::Recurse');
 
 	$res->udp_timeout(20);
 
-	ok( $res->hints(@HINTS), "hints() set" );
+	ok( scalar($res->hints(@HINTS)), "hints() set" );
 
 	my $packet;
 
 	# Try a domain that is a CNAME
 	$packet = $res->query_dorecursion( "www.google.com.", "A" );
 	ok( $packet,		    'got a packet' );
-	ok( scalar $packet->answer, 'answer section has RRs' );
+	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
 
 	# Try a big hairy one
 	undef $packet;
 	$packet = $res->query_dorecursion( "www.rob.com.au.", "A" );
 	ok( $packet,		    'got a packet' );
-	ok( scalar $packet->answer, 'answer section has RRs' );
+	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
 }
 
 

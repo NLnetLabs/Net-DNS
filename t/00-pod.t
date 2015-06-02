@@ -1,11 +1,19 @@
 # $Id$
 
+
 use strict;
 use Test::More;
 
-my $rev = '1.45';
-eval "use Test::Pod $rev";
-plan skip_all => "Test::Pod $rev required for testing POD" if $@;
+my %prerequisite = qw(
+		Test::Pod 1.45
+		);
+
+while ( my ( $package, $rev ) = each %prerequisite ) {
+	next if eval "use $package $rev";
+	plan skip_all => "$package $rev required for testing POD";
+	exit;
+}
+
 
 my @poddirs = qw( blib demo );
 my @allpods = all_pod_files(@poddirs);

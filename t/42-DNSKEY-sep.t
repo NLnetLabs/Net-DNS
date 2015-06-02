@@ -2,23 +2,21 @@
 #
 
 use strict;
+use Test::More;
+use Net::DNS;
 
-BEGIN {
-	use Test::More;
-	use Net::DNS;
+my @prerequisite = qw(
+		MIME::Base64
+		Net::DNS::RR::DNSKEY;
+		);
 
-	my @prerequisite = qw(
-			MIME::Base64
-			Net::DNS::RR::DNSKEY;
-			);
-
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-				unless eval "require $package";
-	}
-
-	plan tests => 6;
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 6;
 
 
 my $key = new Net::DNS::RR <<'END';
@@ -48,4 +46,5 @@ is( $key->keytag, $keytag, 'keytag recalculated using restored sep flag' );
 exit;
 
 __END__
+
 

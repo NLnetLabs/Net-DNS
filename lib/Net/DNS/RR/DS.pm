@@ -62,9 +62,16 @@ my %digest = (
 
 	my %algbyval = reverse @algbyname;
 
-	my @algbynum = map { ( $_, 0 + $_ ) } ( 1 .. 250, keys %algbyval );
+	my $map = sub {
+		my $arg = shift;
+		unless ( $algbyval{$arg} ) {
+			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
+			return uc $arg;
+		}
+		my @map = ( $arg, "$arg" => $arg );		# also accept number
+	};
 
-	my %algbyname = map { s/[^A-Za-z0-9]//g; $_ } @algbyname, @algbynum;
+	my %algbyname = map &$map($_), @algbyname;
 
 	sub algbyname {
 		my $name = shift;
@@ -94,9 +101,16 @@ my %digest = (
 
 	my %digestbyval = reverse @digestbyname;
 
-	my @digestbynum = map { ( $_, 0 + $_ ) } keys %digestbyval;    # accept algorithm number
+	my $map = sub {
+		my $arg = shift;
+		unless ( $digestbyval{$arg} ) {
+			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
+			return uc $arg;
+		}
+		my @map = ( $arg, "$arg" => $arg );		# also accept number
+	};
 
-	my %digestbyname = map { s /[^A-Za-z0-9]//g; $_ } @digestbyalias, @digestbyname, @digestbynum;
+	my %digestbyname = map &$map($_), @digestbyalias, @digestbyname;
 
 
 	sub digestbyname {

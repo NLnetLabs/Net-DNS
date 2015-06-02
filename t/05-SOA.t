@@ -123,7 +123,7 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 	use integer;
 	my $pretime = UNIXTIME;
 	my $rr	    = new Net::DNS::RR("name SOA mname rname $pretime");
-	sleep 10;
+	sleep 5;
 	my $posttime = UNIXTIME;
 	my $postincr = $posttime + 1;
 	is( $rr->serial($posttime), $posttime, "rr->serial(UNIXTIME) steps from $pretime to $posttime" );

@@ -37,11 +37,13 @@ use base qw(Net::DNS::DomainName);
 
 =head2 new
 
-    $mailbox = new Net::DNS::Mailbox('John.Doe@example.com');
-    $mailbox = new Net::DNS::Mailbox('John Doe <j.doe@example.com>');
+    $mailbox = new Net::DNS::Mailbox('John Doe <john.doe@example.com>');
+    $mailbox = new Net::DNS::Mailbox('john.doe@example.com');
+    $mailbox = new Net::DNS::Mailbox('john\.doe.example.com');
 
-Creates a mailbox object which represents the DNS domain encoded form
-of the mail address specified by the character string argument.
+Creates a mailbox object representing the RFC822 mail address specified by
+the character string argument. An encoded domain name is also accepted for
+backward compatibility with Net::DNS 0.68 and earlier.
 
 The argument string consists of printable characters from the 7-bit
 ASCII repertoire.

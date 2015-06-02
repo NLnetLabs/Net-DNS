@@ -57,15 +57,15 @@ my $bfore = $hash{'p.domain.parent.example'};
 my $after = $hash{'q.domain.parent.example'};
 my $nsec3 = new Net::DNS::RR("$hzone.$name{$hzone}. NSEC3 @param $hnext");
 
-foreach my $name ($name{$hzone}) {
+foreach my $name ( $name{$hzone} ) {
 	ok( !$nsec3->covered($name), "NSEC3 owner name not covered\t($name)" );
 }
 
-foreach my $name ($name{$cover}) {
+foreach my $name ( $name{$cover} ) {
 	ok( $nsec3->covered($name), "NSEC3 covers enclosed name\t($name)" );
 }
 
-foreach my $name ($name{$hnext}) {
+foreach my $name ( $name{$hnext} ) {
 	ok( !$nsec3->covered($name), "NSEC3 next name not covered\t($name)" );
 }
 
@@ -75,11 +75,11 @@ foreach my $name ( $name{$bfore}, $name{$after} ) {
 
 
 my $last = new Net::DNS::RR("$hnext.$name{$hzone}. NSEC3 @param $hzone");
-foreach my $name ($name{$hnext}) {
+foreach my $name ( $name{$hnext} ) {
 	ok( !$last->covered($name), "last NSEC3 owner not covered\t($name)" );
 }
 
-foreach my $name ($name{$hzone}) {
+foreach my $name ( $name{$hzone} ) {
 	ok( !$last->covered($name), "last NSEC3 next not covered\t($name)" );
 }
 
@@ -102,4 +102,5 @@ foreach my $name (@domain) {
 
 
 exit;
+
 

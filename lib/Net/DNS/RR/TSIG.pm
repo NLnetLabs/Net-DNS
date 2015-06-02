@@ -51,9 +51,16 @@ use constant TSIG => typebyname qw(TSIG);
 
 	my %algbyval = reverse @algbyname;
 
-	my @algbynum = map { ( $_, 0 + $_ ) } keys %algbyval;	# accept algorithm number
+	my $map = sub {
+		my $arg = shift;
+		unless ( $algbyval{$arg} ) {
+			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
+			return uc $arg;
+		}
+		my @map = ( $arg, "$arg" => $arg );		# also accept number
+	};
 
-	my %algbyname = map { s /[^A-Za-z0-9]//g; $_ } @algbyalias, @algbyname, @algbynum;
+	my %algbyname = map &$map($_), @algbyalias, @algbyname;
 
 
 	sub algbyname {
