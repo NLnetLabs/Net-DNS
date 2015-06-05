@@ -5,11 +5,11 @@ use strict;
 use Test::More;
 
 my @prerequisite = qw(
-                MIME::Base64
-                Time::Local
-                Net::DNS::RR::RRSIG
-                Net::DNS::SEC
-                Net::DNS::SEC::DSA
+		MIME::Base64
+		Time::Local
+		Net::DNS::RR::RRSIG
+		Net::DNS::SEC
+		Net::DNS::SEC::DSA
 		);
 
 foreach my $package (@prerequisite) {

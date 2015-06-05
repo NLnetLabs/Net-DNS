@@ -1,22 +1,21 @@
 # $Id$	-*-perl-*-
+#
 
 use strict;
+use Test::More;
+use Net::DNS;
 
-BEGIN {
-	use Test::More;
-	use Net::DNS;
+my @prerequisite = qw(
+		MIME::Base32
+		);
 
-	my @prerequisite = qw(
-			MIME::Base32
-			);
-
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-				unless eval "require $package";
-	}
-
-	plan tests => 17;
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 17;
 
 
 my $name = '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example';

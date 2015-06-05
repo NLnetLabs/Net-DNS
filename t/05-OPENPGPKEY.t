@@ -1,35 +1,31 @@
 # $Id$	-*-perl-*-
+#
 
 use strict;
+use Test::More;
+use Net::DNS;
 
-BEGIN {
-	use Test::More;
-	use Net::DNS;
-
-	my @prerequisite = qw(
+my @prerequisite = qw(
 		MIME::Base64
 		);
 
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-			unless eval "require $package";
-	}
-
-	plan tests => 7;
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 7;
 
 
 my $name = '8d5730bd8d76d417bf974c03f59eedb7af98cb5c3dc73ea8ebbd54b7._openpgpkey.example.com';
 my $type = 'OPENPGPKEY';
 my $code = 61;
 my @attr = qw( keys );
-
-my @data = (
-	join '', qw(
-	AQPSKmynfzW4kyBv015MUG2DeIQ3Cbl+BBZH4b/0PY1kxkmvHjcZc8nokfzj31GajIQKY+5CptLr
-	3buXA10hWqTkF7H6RfoRqXQeogmMHfpftf6zMv1LyBUgia7za6ZEzOJBOztyvhjL742iU/TpPSED
-	hm2SNKLijfUppn1UaNvv4w== )
-			);
+my @data = join '', qw(
+		AQPSKmynfzW4kyBv015MUG2DeIQ3Cbl+BBZH4b/0PY1kxkmvHjcZc8nokfzj31GajIQKY+5CptLr
+		3buXA10hWqTkF7H6RfoRqXQeogmMHfpftf6zMv1LyBUgia7za6ZEzOJBOztyvhjL742iU/TpPSED
+		hm2SNKLijfUppn1UaNvv4w== );
 my @also = qw( keysbin );
 
 my $wire = join '', qw( 0103D22A6CA77F35B893206FD35E4C506D8378843709B97E041647E1

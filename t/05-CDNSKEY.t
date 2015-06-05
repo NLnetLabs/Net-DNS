@@ -1,22 +1,21 @@
 # $Id$	-*-perl-*-
+#
 
 use strict;
+use Test::More;
+use Net::DNS;
 
-BEGIN {
-	use Test::More;
-	use Net::DNS;
-
-	my @prerequisite = qw(
+my @prerequisite = qw(
 		MIME::Base64
 		);
 
-	foreach my $package (@prerequisite) {
-		plan skip_all => "$package not installed"
-			unless eval "require $package";
-	}
-
-	plan tests => 15;
+foreach my $package (@prerequisite) {
+	next if eval "require $package";
+	plan skip_all => "$package not installed";
+	exit;
 }
+
+plan tests => 15;
 
 
 my $name = 'CDNSKEY.example';
@@ -24,7 +23,8 @@ my $type = 'CDNSKEY';
 my $code = 60;
 my @attr = qw( flags protocol algorithm publickey );
 my @data = (
-	256, 3, 5, join '', qw( AQPSKmynfzW4kyBv015MUG2DeIQ3
+	256, 3, 5, join '', qw(
+			AQPSKmynfzW4kyBv015MUG2DeIQ3
 			Cbl+BBZH4b/0PY1kxkmvHjcZc8no
 			kfzj31GajIQKY+5CptLr3buXA10h
 			WqTkF7H6RfoRqXQeogmMHfpftf6z
@@ -34,7 +34,8 @@ my @data = (
 			);
 my @also = qw( keybin keylength keytag privatekeyname zone sep );
 
-my $wire = join '', qw( 010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E041647E1
+my $wire = join '', qw(
+		010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E041647E1
 		BFF43D8D64C649AF1E371973C9E891FCE3DF519A8C840A63EE42A6D2EBDDBB97
 		035D215AA4E417B1FA45FA11A9741EA2098C1DFA5FB5FEB332FD4BC8152089AE
 		F36BA644CCE2413B3B72BE18CBEF8DA253F4E93D2103866D9234A2E28DF529A6

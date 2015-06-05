@@ -155,7 +155,7 @@ my $wire = '000102030405060708090a0b0c0d0e0f';
 
 	foreach my $address ( sort keys %testcase ) {
 		my $expect = new Net::DNS::RR( name => $name, type => $type, address => $testcase{$address} );
-		my $rr = new Net::DNS::RR( name => $name, type => $type, address => $address );
+		my $rr	   = new Net::DNS::RR( name => $name, type => $type, address => $address );
 		is( $rr->address, $expect->address, "address completion:\t$address" );
 	}
 }

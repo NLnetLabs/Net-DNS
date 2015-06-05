@@ -59,7 +59,7 @@ my $wire = '0000290500000080000000';
 		my $changed = 0xA5A;
 		$rr->{$_} = $initial;
 		is( $rr->$_($changed), $changed, "rr->$_(x) returns function argument" );
-		is( $rr->$_(), $changed, "rr->$_(x) changes attribute value" );
+		is( $rr->$_(),	       $changed, "rr->$_(x) changes attribute value" );
 	}
 }
 
@@ -76,7 +76,7 @@ my $wire = '0000290500000080000000';
 
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
-	my @result = sort $decoded->options;
+	my @result  = sort $decoded->options;
 	is( scalar(@result), scalar(@optn), 'expected number of options' );
 
 	foreach (@result) {
