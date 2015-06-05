@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 27;
+use Test::More tests => 37;
 
 
 BEGIN {
@@ -23,8 +23,11 @@ BEGIN {
 
 
 {
-	my $object = new Net::DNS::Text('example');
+	my $string = 'example';
+	my $object = new Net::DNS::Text($string);
 	ok( $object->isa('Net::DNS::Text'), 'object returned by new() constructor' );
+	is( $object->value,  $string, 'expected object->value' );
+	is( $object->string, $string, 'expected object->string' );
 }
 
 
@@ -67,12 +70,31 @@ BEGIN {
 
 
 {
+	my $string = 'a' x 256;
+	my $object = new Net::DNS::Text($string);
+	is( scalar(@$object),	       2,		'new() splits long argument' );
+	is( length( $object->value ),  length($string), 'object->value reassembles string' );
+	is( length( $object->string ), length($string), 'object->string reassembles string' );
+}
+
+
+{
+	my $utf8   = '\192\160';
+	my $filler = 'a' x 254;
+	my $string = join '', $filler, $utf8;
+	my $object = new Net::DNS::Text($string);
+	is( length( $object->[0] ), length($filler), 'new() does not break UTF8 sequence' );
+}
+
+
+{
 	my $sample = 'x\000x\031x\127x\128x\159\160\255x';
 	my $expect = '7800781f787f7880789fa0ff78';
 	my $length = sprintf '%02x', length pack( 'H*', $expect );
 	my $object = new Net::DNS::Text($sample);
 	my $buffer = $object->encode;
-	is( unpack( 'H*', $buffer ), $length . $expect, 'encode() returns expected data' );
+	is( unpack( 'H*', $buffer ),	  $length . $expect, 'encode() returns expected data' );
+	is( unpack( 'H*', $object->raw ), $expect,	     'raw() returns expected data' );
 }
 
 
@@ -88,6 +110,24 @@ BEGIN {
 
 
 {
+	my $sample = 'example';
+	my $buffer = new Net::DNS::Text($sample)->encode;
+	my ( $object, $next ) = decode Net::DNS::Text( \$buffer, 1, length($buffer) - 1 );
+	is( $object->string, $sample,	     'decode() extracts arbitrary substring' );
+	is( $next,	     length $buffer, 'expected offset returned by decode()' );
+}
+
+
+{
+	my $sample = 'example';
+	my $buffer = substr new Net::DNS::Text($sample)->encode, 0, 2;
+	eval { my $object = decode Net::DNS::Text( \$buffer ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt wire-format\t[$exception]" );
+}
+
+
+{
 	my %testcase = (
 		'000102030405060708090a0b0c0d0e0f' =>
 				'\000\001\002\003\004\005\006\007\008\009\010\011\012\013\014\015',
@@ -98,7 +138,7 @@ BEGIN {
 	foreach my $hexcode ( sort keys %testcase ) {
 		my $string  = $testcase{$hexcode};
 		my $content = pack 'H*', $hexcode;
-		my $buffer = pack 'C a*', length $content, $content;
+		my $buffer  = pack 'C a*', length $content, $content;
 		my $decoded = decode Net::DNS::Text( \$buffer );
 		my $compare = $decoded->string;
 		is( $compare, qq($string), "C0 controls:\t$string" );
@@ -114,12 +154,12 @@ BEGIN {
 		'505152535455565758595a5b5c5d5e5f' => 'PQRSTUVWXYZ[\\\\]^_',
 		'606162636465666768696a6b6c6d6e6f' => '`abcdefghijklmno',
 		'707172737475767778797a7b7c7d7e7f' => 'pqrstuvwxyz{|}~\127'
-				);
+		);
 
 	foreach my $hexcode ( sort keys %testcase ) {
 		my $string  = $testcase{$hexcode};
 		my $content = pack 'H*', $hexcode;
-		my $buffer = pack 'C a*', length $content, $content;
+		my $buffer  = pack 'C a*', length $content, $content;
 		my $decoded = decode Net::DNS::Text( \$buffer );
 		my $compare = $decoded->string;
 		is( $compare, qq($string), "G0 graphics:\t$string" );
@@ -149,7 +189,7 @@ BEGIN {
 
 	foreach my $hexcode ( sort keys %testcase ) {
 		my $string  = $testcase{$hexcode};
-		my $encoded = new Net::DNS::Text( $string )->encode;
+		my $encoded = new Net::DNS::Text($string)->encode;
 		is( unpack( 'xH*', $encoded ), $hexcode, qq(8-bit codes:\t$string) );
 	}
 }

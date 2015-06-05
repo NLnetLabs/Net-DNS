@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 45;
+use Test::More tests => 51;
 
 
 BEGIN {
@@ -12,6 +12,9 @@ BEGIN {
 {
 	my $domain = new Net::DNS::DomainName('');
 	is( $domain->name, '.', 'DNS root represented as single dot' );
+
+	my @label = $domain->_wire;
+	is( scalar(@label), 0, "DNS root name has zero labels" );
 
 	my $binary = unpack 'H*', $domain->encode;
 	my $expect = '00';
@@ -25,6 +28,9 @@ BEGIN {
 	my $subdomain = new Net::DNS::DomainName("sub.$ldh");
 	is( $domain->name, $ldh, '63 octet LDH character label' );
 
+	my @label = $domain->_wire;
+	is( scalar(@label), 1, "name has single label" );
+
 	my $buffer = $domain->encode;
 	my $hex	   = '3f'
 			. '4142434445464748494a4b4c4d4e4f505152535455565758595a'
@@ -35,11 +41,28 @@ BEGIN {
 	my ( $decoded, $offset ) = decode Net::DNS::DomainName( \$buffer );
 	is( $decoded->name, $domain->name, 'simple wire-format decoding' );
 
-	my $data = '03737562c000';
+	is( decode Net::DNS::DomainName( \$subdomain->encode )->name, $subdomain->name, 'simple wire-format decoding' );
+
+	my $data = '03737562c000c000c000';
 	$buffer .= pack( 'H*', $data );
 
-	( $decoded, $offset ) = decode Net::DNS::DomainName( \$buffer, $offset );
+	my $cache = {};
+	( $decoded, $offset ) = decode Net::DNS::DomainName( \$buffer, $offset, $cache );
 	is( $decoded->name, $subdomain->name, 'compressed wire-format decoding' );
+
+	my @labels = $decoded->_wire;
+	is( scalar(@labels), 2, "decoded name has two labels" );
+
+	$decoded = decode Net::DNS::DomainName( \$buffer, $offset, $cache );
+	is( $decoded->name, $domain->name, 'compressed wire-format decoding' );
+}
+
+
+{
+	my $buffer = pack 'H*', '0200';
+	eval { my $domain = decode Net::DNS::DomainName( \$buffer ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt wire-format\t[$exception]" );
 }
 
 
@@ -59,7 +82,7 @@ BEGIN {
 }
 
 
-t10: {
+{
 	my $hex = '40'
 			. '4142434445464748494a4b4c4d4e4f505152535455565758595a'
 			. '6162636465666768696a6b6c6d6e6f707172737475767778797a'
@@ -116,7 +139,7 @@ t10: {
 }
 
 
-t20: {
+{
 	foreach my $case (
 		'\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143',
 		'\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159',
@@ -135,7 +158,7 @@ t20: {
 }
 
 
-t28: {
+{
 	my $domain    = new Net::DNS::DomainName( uc 'EXAMPLE.COM' );
 	my $hash      = {};
 	my $data      = $domain->encode( 0, $hash );
@@ -143,7 +166,7 @@ t28: {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::DomainName( \$data );
 	my $downcased = new Net::DNS::DomainName( lc $domain->name )->encode( 0, {} );
-	ok( $domain->isa('Net::DNS::DomainName'), 'object returned by new() constructor' );
+	ok( $domain->isa('Net::DNS::DomainName'),  'object returned by new() constructor' );
 	ok( $decoded->isa('Net::DNS::DomainName'), 'object returned by decode() constructor' );
 	is( length $compress, length $data, 'Net::DNS::DomainName wire encoding is uncompressed' );
 	isnt( $data, $downcased, 'Net::DNS::DomainName wire encoding preserves case' );
@@ -152,24 +175,24 @@ t28: {
 }
 
 
-t34: {
+{
 	my $domain    = new Net::DNS::DomainName1035( uc 'EXAMPLE.COM' );
 	my $hash      = {};
 	my $data      = $domain->encode( 0, $hash );
 	my $compress  = $domain->encode( length $data, $hash );
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::DomainName1035( \$data );
-	my $downcased = new Net::DNS::DomainName1035( lc $domain->name )->encode( 0, {} );
-	ok( $domain->isa('Net::DNS::DomainName1035'), 'object returned by new() constructor' );
+	my $downcased = new Net::DNS::DomainName1035( lc $domain->name )->encode( 0x4000, {} );
+	ok( $domain->isa('Net::DNS::DomainName1035'),  'object returned by new() constructor' );
 	ok( $decoded->isa('Net::DNS::DomainName1035'), 'object returned by decode() constructor' );
 	isnt( length $compress, length $data, 'Net::DNS::DomainName1035 wire encoding is compressible' );
-	isnt( $data, $downcased, 'Net::DNS::DomainName1035 wire encoding preserves case' );
+	isnt( $data,		$downcased,   'Net::DNS::DomainName1035 wire encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::DomainName1035 canonical form is uncompressed' );
-	is( $canonical, $downcased, 'Net::DNS::DomainName1035 canonical form is lower case' );
+	is( $canonical,	       $downcased,   'Net::DNS::DomainName1035 canonical form is lower case' );
 }
 
 
-t40: {
+{
 	my $domain    = new Net::DNS::DomainName2535( uc 'EXAMPLE.COM' );
 	my $hash      = {};
 	my $data      = $domain->encode( 0, $hash );
@@ -177,12 +200,12 @@ t40: {
 	my $canonical = $domain->encode( length $data );
 	my $decoded   = decode Net::DNS::DomainName2535( \$data );
 	my $downcased = new Net::DNS::DomainName2535( lc $domain->name )->encode( 0, {} );
-	ok( $domain->isa('Net::DNS::DomainName2535'), 'object returned by new() constructor' );
+	ok( $domain->isa('Net::DNS::DomainName2535'),  'object returned by new() constructor' );
 	ok( $decoded->isa('Net::DNS::DomainName2535'), 'object returned by decode() constructor' );
 	is( length $compress, length $data, 'Net::DNS::DomainName2535 wire encoding is uncompressed' );
 	isnt( $data, $downcased, 'Net::DNS::DomainName2535 wire encoding preserves case' );
 	is( length $canonical, length $data, 'Net::DNS::DomainName2535 canonical form is uncompressed' );
-	is( $canonical, $downcased, 'Net::DNS::DomainName2535 canonical form is lower case' );
+	is( $canonical,	       $downcased,   'Net::DNS::DomainName2535 canonical form is lower case' );
 }
 
 

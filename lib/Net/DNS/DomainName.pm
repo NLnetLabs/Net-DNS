@@ -68,8 +68,13 @@ as defined in RFC2535(8.1).
 
 =cut
 
+my $lc = sub {				## work around 5.8.x case-folding bug
+	( my $s = shift ) =~ tr [\101-\132] [\141-\172];
+	return $s;
+};
+
 sub canonical {
-	join '', map pack( 'C a*', length($_), FIXlc ? _lc($_) : lc($_) ), shift->_wire, '';
+	join '', map pack( 'C a*', length($_), FIXlc ? &$lc($_) : lc($_) ), shift->_wire, '';
 }
 
 
@@ -142,15 +147,10 @@ sub encode {
 
 ########################################
 
-sub _lc {			## work around 5.8.x case-folding bug
-	( my $s = shift ) =~ tr [\101-\132] [\141-\172];
-	return $s;
-}
-
-sub _wire {			## Generate list of wire-format labels
+sub _wire {				## Generate list of wire-format labels
 	my $self = shift;
 
-	my $label = $self->{label} || [];
+	my $label = $self->{label};
 	my $origin = $self->{origin} || return (@$label);
 	return ( @$label, $origin->_wire );
 }

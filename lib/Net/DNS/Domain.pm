@@ -147,7 +147,7 @@ sub name {
 
 	return $self->{name} if defined $self->{name};
 
-	my $lref = $self->{label} || [];
+	my $lref = $self->{label};
 	my $head = _decode_ascii( join chr(46), map _escape($_), @$lref );
 	my $tail = $self->{origin} || return $self->{name} = $head || $dot;
 	return $self->{name} = $tail->name unless length $head;
@@ -190,7 +190,7 @@ sub xname {
 	return $name unless $name =~ /xn--/;
 
 	my $self = shift;
-	return $self->{xname} ||= $utf8->decode( Net::LibIDN::idn_to_unicode( $name, 'utf-8' ) || $name );
+	$self->{xname} ||= $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' ) || $name;
 }
 
 
@@ -257,30 +257,16 @@ sub origin {
 
 ########################################
 
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {				## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
-}
-
-
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
-
 sub _decode_ascii {			## translate ASCII to perl string
 	my $s = shift;
-
-	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return pack "a* x$z", $ascii->decode($s) if ASCII;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
 	[\040-\176\000-\377]
 	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
-	return $s;						# native 8-bit code
+	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
+	return ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
 }
 
 
@@ -291,14 +277,12 @@ sub _encode_ascii {			## translate perl string to ASCII
 	return pack "a* x$z", Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
 			if LIBIDN && $s =~ /[^\000-\177]/;
 
-	return pack "a* x$z", $ascii->encode($s) if ASCII;
-
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
 	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
 	[\040-\176\077] unless ASCII;
 
-	return $s;						# ASCII
+	return ASCII ? pack( "a* x$z", $ascii->encode($s) ) : $s;
 }
 
 

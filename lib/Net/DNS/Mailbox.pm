@@ -87,8 +87,9 @@ sub address {
 	local $_ = shift(@label) || return '<>';
 	s/\\\./\./g;						# unescape dots
 	s/\\032/ /g;						# unescape space
-	s/^(.+)$/"$1"/ if /[ ",@\[\\\]]/;			# quote local part
-	return join '@', $_, join( '.', @label ) || ();
+	s/^(.+)$/"$1"/ if /[^-.A-Za-z0-9]/;			# quote local part
+	return $_ unless scalar(@label);
+	join '@', $_, join '.', @label;
 }
 
 

@@ -53,11 +53,6 @@ use constant UTF8 => eval {
 } || 0;
 
 
-# perlcc: address of encoding objects must be determined at runtime
-my $ascii = ASCII ? Encode::find_encoding('ascii') : undef;	# Osborn's Law:
-my $utf8  = UTF8  ? Encode::find_encoding('utf8')  : undef;	# Variables won't; constants aren't.
-
-
 =head1 METHODS
 
 =head2 new
@@ -201,50 +196,46 @@ sub string {
 
 ########################################
 
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {				## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
-}
+# perlcc: address of encoding objects must be determined at runtime
+my $ascii = ASCII ? Encode::find_encoding('ascii') : undef;	# Osborn's Law:
+my $utf8  = UTF8  ? Encode::find_encoding('utf8')  : undef;	# Variables won't; constants aren't.
 
 
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
-
-sub _decode_utf8 {			## UTF-8 to perl internal encoding
+my $decode_ascii = sub {		## ASCII to perl internal encoding
 	my $s = shift;
-
-	my $t = substr $s, 0, 0;				# pre-5.18 taint workaround
-	return $utf8->decode($s) . $t if UTF8;
-
-	my $z = length $t;
-	return pack "a* x$z", $ascii->decode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
 	[\040-\176\000-\377]
 	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
-	return $s;						# native 8-bit code
+	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
+	return ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
+};
+
+sub _decode_utf8 {			## UTF-8 to perl internal encoding
+	my $s = shift;
+	return UTF8 ? ( $utf8->decode($s) . substr $s, 0, 0 ) : &$decode_ascii($s);
 }
 
 
-sub _encode_utf8 {			## perl internal encoding to UTF-8
+my $encode_ascii = sub {		## perl internal encoding to ASCII
 	my $s = shift;
-
-	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return pack "a* x$z", $utf8->encode($s) if UTF8;
-
-	return pack "a* x$z", $ascii->encode($s) if ASCII && not UTF8;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
 	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~]
 	[\040-\176] unless ASCII;
 
-	return $s;						# ASCII
+	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
+	return ASCII ? pack( "a* x$z", $ascii->encode($s) ) : $s;
+};
+
+sub _encode_utf8 {			## perl internal encoding to UTF-8
+	my $s = shift;
+
+	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
+	return UTF8 ? pack( "a* x$z", $utf8->encode($s) ) : &$encode_ascii($s);
 }
 
 
@@ -284,7 +275,7 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 		$key =~ tr [0-9] [\060-\071];
 
 		$table{$key} = pack 'C', $n;
-		$table{$key} = pack 'C2', 92, $n if $n == 92;	# escaped escape
+		$table{$key} = pack 'C2', 92, $n if $n == 92;	   # escaped escape
 	}
 
 	return %table;

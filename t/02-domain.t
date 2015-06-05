@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 50;
+use Test::More tests => 58;
 
 
 use constant UTF8 => eval {
@@ -16,15 +16,30 @@ use constant LIBIDNOK => eval {					# tested and working
 };
 
 
-
 BEGIN {
 	use_ok('Net::DNS::Domain');
 }
 
 
 {
-	my $domain = new Net::DNS::Domain('example.com');
+	my $name   = 'example.com';
+	my $domain = new Net::DNS::Domain($name);
 	ok( $domain->isa('Net::DNS::Domain'), 'object returned by new() constructor' );
+
+	my $same = new Net::DNS::Domain($name);
+	is( $same, $domain, "same name returns cached object" );
+
+	my %cache;
+	my ( $i, $j );
+	for ( ; ; ) {
+		$j = ( $i++ >> 1 ) + 1;
+		my $fill = "name-$i";
+		my $test = "name-$j";
+		$cache{$fill} = new Net::DNS::Domain($fill);
+		last unless $cache{$test} == new Net::DNS::Domain($test);
+	}
+	my $size = $i - $j;
+	ok( $size, "name cache at least $size deep" );
 }
 
 
@@ -42,7 +57,16 @@ BEGIN {
 }
 
 
-t5: {
+{
+	my $domain = new Net::DNS::Domain('');
+	is( $domain->name,   '.', 'name: DNS root represented as single dot' );
+	is( $domain->fqdn,   '.', 'fqdn: DNS root represented as single dot' );
+	is( $domain->xname,  '.', 'xname: DNS root represented as single dot' );
+	is( $domain->string, '.', 'string: DNS root represented as single dot' );
+}
+
+
+{
 	my $domain = new Net::DNS::Domain('example.com');
 	my $labels = @{[$domain->label]};
 	is( $labels, 2, 'domain labels separated by dots' );
@@ -83,9 +107,24 @@ use constant ESC => '\\';
 }
 
 
-t10: {
-	my $domain = new Net::DNS::Domain('');
-	is( $domain->name, '.', 'DNS root represented as single dot' );
+{
+	my $name   = 'simple-name';
+	my $simple = new Net::DNS::Domain($name);
+	is( $simple->name, $name, "$name absolute by default" );
+
+	my $create = origin Net::DNS::Domain(undef);
+	my $domain = &$create( sub { new Net::DNS::Domain($name); } );
+	is( $domain->name, $name, "$name absolute if origin undefined" );
+}
+
+
+{
+	my $name   = 'simple-name';
+	my $create = origin Net::DNS::Domain('.');
+	my $domain = &$create( sub { new Net::DNS::Domain($name); } );
+	is( $domain->name, $name, "$name absolute if origin '.'" );
+	my @label = $domain->label;
+	is( scalar(@label), 1, "$name has single label" );
 }
 
 
@@ -93,33 +132,30 @@ t10: {
 	my $name   = 'simple-name';
 	my $suffix = 'example.com';
 	my $create = origin Net::DNS::Domain($suffix);
-	my $domain = new Net::DNS::Domain($name);
-	is( $domain->name, $name, "$name absolute by default" );
-
-	my $result = &$create( sub{ new Net::DNS::Domain($name); } );
+	my $domain = &$create( sub { new Net::DNS::Domain($name); } );
 	my $expect = new Net::DNS::Domain("$name.$suffix");
-	is( $result->name, $expect->name, "origin appended to $name" );
+	is( $domain->name, $expect->name, "origin appended to $name" );
 
-	my $root   = new Net::DNS::Domain('@');
+	my $root = new Net::DNS::Domain('@');
 	is( $root->name, '.', 'bare @ represents root by default' );
 
-	my $origin = &$create( sub{ new Net::DNS::Domain('@'); } );
+	my $origin = &$create( sub { new Net::DNS::Domain('@'); } );
 	is( $origin->name, $suffix, 'bare @ represents defined origin' );
 }
 
 
 {
-	foreach my $char ( qw($ ' " ; @) ) {
-		my $name = $char . 'example.com.';
+	foreach my $char (qw($ ' " ; @)) {
+		my $name   = $char . 'example.com.';
 		my $domain = new Net::DNS::Domain($name);
 		is( $domain->string, ESC . $name, "escape leading $char in string" );
 	}
 }
 
 
-t20: {
-	foreach my $part ( qw(_rvp._tcp *) ) {
-		my $name = "$part.example.com.";
+{
+	foreach my $part (qw(_rvp._tcp *)) {
+		my $name   = "$part.example.com.";
 		my $domain = new Net::DNS::Domain($name);
 		is( $domain->string, $name, "permit leading $part" );
 	}
@@ -127,8 +163,8 @@ t20: {
 
 
 {
-	my $ldh	      = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-0123456789';
-	my $domain    = new Net::DNS::Domain($ldh);
+	my $ldh	   = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-0123456789';
+	my $domain = new Net::DNS::Domain($ldh);
 	is( $domain->name, $ldh, '63 octet LDH character label' );
 }
 
@@ -151,7 +187,7 @@ t20: {
 }
 
 
-t25: {
+{
 	my $domain = eval { new Net::DNS::Domain("example..com"); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "empty interior label\t[$exception]" );
@@ -167,23 +203,24 @@ t25: {
 
 SKIP: {
 	skip( 'IDN test - Unicode/UTF-8 not supported', 8 ) unless UTF8;
-	skip( 'IDN test - Net::LibIDN not installed', 8 ) unless LIBIDN;
-	skip( 'IDN test - Net::LibIDN not working', 8 ) unless LIBIDNOK;
+	skip( 'IDN test - Net::LibIDN not installed',	8 ) unless LIBIDN;
+	skip( 'IDN test - Net::LibIDN not working',	8 ) unless LIBIDNOK;
 	my $a_label = 'xn--fiqs8s';
-	my $u_label = eval{ pack( 'U*', 20013, 22269 ); };
-	is( new Net::DNS::Domain($a_label)->name, $a_label, 'IDN A-label domain->name' );
-	is( new Net::DNS::Domain($a_label)->xname, $u_label, 'IDN A-label domain->xname' );
-	is( new Net::DNS::Domain($a_label)->fqdn, "$a_label.", 'IDN A-label domain->fqdn' );
+	my $u_label = eval { pack( 'U*', 20013, 22269 ); };
+	is( new Net::DNS::Domain($a_label)->name,   $a_label,	 'IDN A-label domain->name' );
+	is( new Net::DNS::Domain($a_label)->fqdn,   "$a_label.", 'IDN A-label domain->fqdn' );
+	is( new Net::DNS::Domain($a_label)->xname,  $u_label,	 'IDN A-label domain->xname' );
 	is( new Net::DNS::Domain($a_label)->string, "$a_label.", 'IDN A-label domain->string' );
 
-	is( new Net::DNS::Domain($u_label)->name, $a_label, 'IDN U-label domain->name' );
-	is( new Net::DNS::Domain($u_label)->xname, $u_label, 'IDN U-label domain->xname' );
-	is( new Net::DNS::Domain($u_label)->fqdn, "$a_label.", 'IDN U-label domain->fqdn' );
+	is( new Net::DNS::Domain($u_label)->name,  $a_label,	'IDN U-label domain->name' );
+	is( new Net::DNS::Domain($u_label)->fqdn,  "$a_label.", 'IDN U-label domain->fqdn' );
+	is( new Net::DNS::Domain($u_label)->xname, $u_label,	'IDN U-label domain->xname' );
+	new Net::DNS::Domain($u_label)->xname;			# exercise cache path
 	is( new Net::DNS::Domain($u_label)->string, "$a_label.", 'IDN U-label domain->string' );
 }
 
 
-t35:{
+{
 	foreach my $case (
 		'\000\001\002\003\004\005\006\007\008\009\010\011\012\013\014\015',
 		'\016\017\018\019\020\021\022\023\024\025\026\027\028\029\030\031'
@@ -209,7 +246,7 @@ t35:{
 }
 
 
-t43: {
+{
 	foreach my $case (
 		'\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143',
 		'\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159',

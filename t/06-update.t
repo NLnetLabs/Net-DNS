@@ -1,6 +1,6 @@
 # $Id$  -*-perl-*-
 
-use Test::More tests => 72;
+use Test::More tests => 73;
 use strict;
 
 
@@ -45,6 +45,13 @@ my $rdata  = "10.1.2.3";
 	is( $z->zname,		     $zone,    'zname correct' );
 	is( $z->zclass,		     $class,   'zclass correct' );
 	is( $z->ztype,		     'SOA',    'ztype correct' );
+}
+
+
+{
+	my $packet = eval { new Net::DNS::Update(undef); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "argument undefined\t[$exception]" );
 }
 
 

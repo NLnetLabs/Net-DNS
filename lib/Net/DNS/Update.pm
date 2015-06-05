@@ -33,6 +33,8 @@ Programmers should refer to RFC2136 for dynamic update semantics.
 use strict;
 use base 'Net::DNS::Packet';
 
+use Carp;
+
 
 =head1 METHODS
 
@@ -65,17 +67,18 @@ sub new {
 		my $resolver = new Net::DNS::Resolver();	# create resolver object
 
 		($zone) = $resolver->searchlist;
-		return unless $zone;
 	}
 
-	return $package->SUPER::decode(@_) if ref($zone);
+	return eval {
+		my $self = $package->SUPER::new( $zone, 'SOA', $class );
 
-	my $self = $package->SUPER::new( $zone, 'SOA', $class ) || return;
+		my $header = $self->header;
+		$header->opcode('UPDATE');
+		$header->qr(0);
+		$header->rd(0);
 
-	$self->header->opcode('UPDATE');
-	$self->header->rd(0);
-
-	return $self;
+		return $self;
+	} || croak $@;
 }
 
 
