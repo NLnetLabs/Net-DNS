@@ -59,18 +59,18 @@ If the class is omitted, it defaults to IN.
 =cut
 
 sub new {
-	my $package = shift;
-	my ( $zone, $class ) = @_;
+	shift;
+	my ( $zone, @class ) = @_;
 
-	unless ($zone) {
+	unless ( scalar @_ ) {
 		require Net::DNS::Resolver;
-		my $resolver = new Net::DNS::Resolver();	# create resolver object
+		my $resolver = new Net::DNS::Resolver();
 
-		($zone) = $resolver->searchlist;
+		($zone) = $resolver->searchlist;		# default from resolver config
 	}
 
-	return eval {
-		my $self = $package->SUPER::new( $zone, 'SOA', $class );
+	eval {
+		my $self = __PACKAGE__->SUPER::new( $zone, 'SOA', @class );
 
 		my $header = $self->header;
 		$header->opcode('UPDATE');

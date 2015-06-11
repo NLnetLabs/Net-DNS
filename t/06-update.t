@@ -1,6 +1,6 @@
 # $Id$  -*-perl-*-
 
-use Test::More tests => 79;
+use Test::More tests => 80;
 use strict;
 
 
@@ -52,6 +52,14 @@ my $rdata  = "10.1.2.3";
 	my $packet = eval { new Net::DNS::Update(undef); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "argument undefined\t[$exception]" );
+}
+
+
+{
+	my $packet = eval { new Net::DNS::Update(); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $packet, 'using default domain' ) if $packet;
+	ok( $exception ||= '', "no default domain\t[$exception]" ) unless $packet;
 }
 
 

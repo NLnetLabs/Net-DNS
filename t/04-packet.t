@@ -3,7 +3,7 @@
 use strict;
 
 BEGIN {
-	use Test::More tests => 99;
+	use Test::More tests => 101;
 
 	use_ok('Net::DNS');
 }
@@ -110,7 +110,10 @@ $update->push( 'answer', Net::DNS::RR->new('VW.XY TXT ""') );
 my $buffer = $update->data;
 my $decoded = eval { Net::DNS::Packet->new( \$buffer ) };
 ok( $decoded, 'new() from data buffer works' );
-is( $decoded->answersize, length($buffer), 'answersize() returns buffer length' );
+is( $decoded->answersize, length($buffer), '$decoded->answersize() works' );
+$decoded->answerfrom('local');
+ok( $decoded->answerfrom(), '$decoded->answerfrom() works' );
+ok( $decoded->string(), '$decoded->string() works' );
 foreach my $count (qw(qdcount ancount nscount arcount)) {
 	is( $decoded->header->$count, $update->header->$count, "check header->$count correct" );
 }
