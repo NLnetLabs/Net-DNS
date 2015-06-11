@@ -90,8 +90,8 @@ sub new {
 		croak 'argument not a file handle';
 	}
 
-	$self->{handle} = new FileHandle($file) or croak qq($! $file);
-	$self->{filename} = $file;
+	$self->{filename} = $file ||= '';
+	$self->{handle} = new FileHandle($file) or croak qq($! "$file");
 	return $self;
 }
 
@@ -147,7 +147,7 @@ argument supplied when the object was created.
 =cut
 
 sub name {
-	return shift->{filename} || '<anon>';
+	return shift->{filename};
 }
 
 
@@ -190,7 +190,7 @@ Returns the default TTL as specified by the $TTL directive.
 =cut
 
 sub ttl {
-	return shift->{ttl} || 0;
+	return shift->{TTL};
 }
 
 
@@ -238,8 +238,8 @@ use vars qw($include_dir);		## dynamically scoped
 
 sub _filename {				## rebase unqualified filename
 	my $name = shift;
-	return $name unless $include_dir;
 	return $name if ref($name);	## file handle
+	return $name unless $include_dir;
 	require File::Spec;
 	return $name if File::Spec->file_name_is_absolute($name);
 	return File::Spec->catfile( $include_dir, $name );
@@ -248,16 +248,18 @@ sub _filename {				## rebase unqualified filename
 
 sub _read {
 	my ($arg1) = @_;
-	shift unless ref($arg1) || $arg1 ne __PACKAGE__;
-	my $file = new Net::DNS::ZoneFile( _filename(shift) );
+	shift if !ref($arg1) && $arg1 eq __PACKAGE__;
+	my $filename = shift;
 	local $include_dir = shift;
+
+	my $zonefile = new Net::DNS::ZoneFile( _filename($filename) );
 	my @zone;
 	eval {
 		my $rr;
-		push( @zone, $rr ) while $rr = $file->_getRR;
+		push( @zone, $rr ) while $rr = $zonefile->_getRR;
 	};
 	return wantarray ? @zone : \@zone unless $@;
-	carp join ' ', $@, ' file', $file->name, 'line', $file->line, "\n ";
+	carp $@;
 	return wantarray ? @zone : undef;
 }
 
@@ -268,12 +270,14 @@ sub _read {
 
 	use overload ( '<>' => 'readline' );
 
+	use constant OVERLOAD_OK => eval { no integer; $] > 5.006; };
+
 	sub new {
 		my $self = bless {}, shift;
 		my $data = shift;
 		$self->{data} = [split /\n/, ref($data) ? $$data : $data];
 		no integer;
-		return $] > 5.006 ? $self : do {		# Plan B
+		return OVERLOAD_OK ? $self : do {		# Plan B
 			require IO::File;
 			my $fh = IO::File->new_tmpfile() or die "$!";
 			while ( my $line = $self->readline ) { print $fh $line, "\n"; }
@@ -327,19 +331,21 @@ the RRs.
 =cut
 
 sub parse {
-	my ($arg1) = @_;
-	shift unless ref($arg1) || $arg1 ne __PACKAGE__;
-	return &_read( new Net::DNS::ZoneFile::Text(shift), @_ );
+	my ($text) = reverse @_;
+	return &readfh( new Net::DNS::ZoneFile::Text($text), @_ );
 }
 
 
 ########################################
+
 
 {
 
 	package Net::DNS::ZoneFile::Generator;
 
 	use overload ( '<>' => 'readline' );
+
+	use constant OVERLOAD_OK => eval { no integer; $] > 5.006; };
 
 	sub new {
 		my $self = bless {}, shift;
@@ -350,13 +356,21 @@ sub parse {
 
 		my ( $bound, $step ) = split m#[/]#, $range;	# initial iterator state
 		my ( $first, $last ) = split m#[-]#, $bound;
+		$first ||= 0;
+		$last  ||= $first;
 		$step = abs( $step || 1 );			# coerce step to match range
 		$step = -$step if $last < $first;
 		$self->{count} = int( ( $last - $first ) / $step ) + 1;
 
 		@{$self}{qw(instant step template line)} = ( $first, $step, $template, $line );
 
-		return $self;
+		return OVERLOAD_OK ? $self : do {		# Plan B
+			require IO::File;
+			my $fh = IO::File->new_tmpfile() or die "$!";
+			while ( my $line = $self->readline ) { print $fh $line, "\n"; }
+			seek $fh, 0, 0;
+			return $fh;
+		};
 	}
 
 	sub readline {
@@ -399,6 +413,7 @@ sub parse {
 		my $nibble = join( '.', split //, sprintf ".%32.32lx", $value );
 		return lc reverse substr $nibble, -$length if $format =~ /[n]/;
 		return uc reverse substr $nibble, -$length if $format =~ /[N]/;
+		die "unknown $format format";
 	}
 
 }
@@ -411,14 +426,7 @@ sub _generate {				## expand $GENERATE into input stream
 
 	delete $self->{latest};					# forbid empty owner field
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
-	no integer;
-	return $self->{handle} = $] > 5.006 ? $handle : do {	# Plan B
-		require IO::File;
-		my $fh = IO::File->new_tmpfile() or die "$!";
-		while ( my $line = $self->readline ) { print $fh $line, "\n"; }
-		seek $fh, 0, 0;
-		return $fh;
-	};
+	$self->{handle} = $handle;
 }
 
 
@@ -459,6 +467,7 @@ sub _getline {				## get line from current source
 
 		if (/^\$INCLUDE/) {				# directive
 			my ( $keyword, @argument ) = split;
+			die '$INCLUDE incomplete' unless @argument;
 			$fh = $self->_include(@argument);
 
 		} elsif (/^\$GENERATE/) {			# directive
@@ -478,15 +487,13 @@ sub _getline {				## get line from current source
 			$self->{TTL} = new Net::DNS::RR(". $ttl IN A")->ttl;
 
 		} else {					# unrecognised
-			chomp;
-			die "unknown directive: $_";
+			my ($keyword) = split;
+			die "unknown '$keyword' directive";
 		}
 	}
 
 	$self->{eom} = $self->line;				# end of file
-	my $ok = $fh->close;
-	die "pipe: process exit status $?" if $?;
-	die "close: $!" unless $ok;
+	$fh->close();
 	my $link = $self->{parent} || return undef;		# end of zone
 	%$self = %$link;					# end $INCLUDE
 	$self->_getline;					# resume input
@@ -505,9 +512,10 @@ sub _getRR {				## get RR from current source
 	my $context = $self->{context};
 	my $rr = &$context( sub { Net::DNS::RR->_new_string($_) } );
 
-	$rr->{owner} = $self->{latest}->{owner} if $noname && $self->{latest};	  # overwrite placeholder
+	$rr->{owner} = $self->{latest}->{owner} if $noname;	# overwrite placeholder
 
-	$rr->class( $self->{class} ||= $rr->class );		# propagate RR class
+	$self->{class} = $rr->class unless $self->{class};	# propagate RR class
+	$rr->class( $self->{class} );
 
 	$self->{TTL} ||= $rr->minimum if $rr->type eq 'SOA';	# default TTL
 	$rr->{'ttl'} = $self->{TTL} unless defined $rr->{'ttl'};
@@ -522,7 +530,7 @@ sub _include {				## open $INCLUDE file
 	my $root = shift;
 
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
-	my $handle = new FileHandle( $file, @discipline ) or croak qq($! $file);
+	my $handle = new FileHandle( $file, @discipline ) or croak qq($! "$file");
 
 	delete $self->{latest};					# forbid empty owner field
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link

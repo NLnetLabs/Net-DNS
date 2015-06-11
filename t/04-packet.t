@@ -3,7 +3,7 @@
 use strict;
 
 BEGIN {
-	use Test::More tests => 98;
+	use Test::More tests => 99;
 
 	use_ok('Net::DNS');
 }
@@ -110,6 +110,7 @@ $update->push( 'answer', Net::DNS::RR->new('VW.XY TXT ""') );
 my $buffer = $update->data;
 my $decoded = eval { Net::DNS::Packet->new( \$buffer ) };
 ok( $decoded, 'new() from data buffer works' );
+is( $decoded->answersize, length($buffer), 'answersize() returns buffer length' );
 foreach my $count (qw(qdcount ancount nscount arcount)) {
 	is( $decoded->header->$count, $update->header->$count, "check header->$count correct" );
 }
@@ -215,6 +216,7 @@ eval {					## exercise but do not test print
 	local $Data::Dumper::Sortkeys;
 	my $object   = new Net::DNS::Packet('example.com');
 	my $buffer   = $object->data;
+	my $corrupt  = substr $buffer, 0, 10;
 	my $filename = '04-packet.txt';
 	open( TEMP, ">$filename" ) || die "Could not open $filename for writing";
 	select( ( select(TEMP), $object->print )[0] );
@@ -223,6 +225,7 @@ eval {					## exercise but do not test print
 	$Data::Dumper::Sortkeys = 1;
 	select( ( select(TEMP), $object->dump )[0] );
 	select( ( select(TEMP), Net::DNS::Packet->new( \$buffer, 1 ) )[0] );
+	select( ( select(TEMP), Net::DNS::Packet->new( \$corrupt, 1 ) )[0] );
 	close(TEMP);
 	unlink($filename);
 };

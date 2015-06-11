@@ -114,7 +114,6 @@ sub decode {
 	my $offset = 0;
 	my $self;
 	eval {
-		local $SIG{__WARN__} = sub { die @_ };
 		die 'corrupt wire-format data' if length($$data) < HEADER_LENGTH;
 
 		# header section
@@ -160,9 +159,10 @@ sub decode {
 		return $self;
 	};
 
-	if ( $debug && $self ) {
-		local $@;
-		$self->print;
+	if ($debug) {
+		local $@ = $@;
+		print $@ if $@;
+		$self->print if $self;
 	}
 
 	return wantarray ? ( $self, $offset ) : $self;
@@ -381,7 +381,8 @@ sub string {
 	my $update = $header->opcode eq 'UPDATE';
 
 	my $server = $self->{answerfrom};
-	my $string = $server ? ";; Answer received from $server ($self->{answersize} bytes)\n" : "";
+	my $length = $self->{answersize};
+	my $string = $server ? ";; Answer received from $server ($length bytes)\n" : "";
 
 	$string .= ";; HEADER SECTION\n" . $header->string;
 
@@ -424,8 +425,7 @@ User-created packets will return undef for this method.
 sub answerfrom {
 	my $self = shift;
 
-	return $self->{answerfrom} = shift if scalar @_;
-
+	$self->{answerfrom} = shift if scalar @_;
 	return $self->{answerfrom};
 }
 
@@ -621,7 +621,7 @@ sub sign_tsig {
 		my $tsig = Net::DNS::RR::TSIG->create(@_);
 		$self->push( 'additional' => $tsig );
 		return $tsig;
-	} || croak "$@TSIG: unable to sign packet";
+	} || croak "$@\nTSIG: unable to sign packet";
 }
 
 
@@ -698,7 +698,7 @@ sub sign_sig0 {
 			$sig0 = Net::DNS::RR::SIG->create( '', $karg );
 
 		} else {
-			die "unexpected $kref argument passed to sign_sig0";
+			croak "sign_sig0: unexpected $kref argument";
 		}
 
 		$self->push( 'additional' => $sig0 );

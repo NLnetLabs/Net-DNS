@@ -73,7 +73,7 @@ foreach my $test (@tests) {
 
 	while ( my ( $section, $count_meth ) = each %sections ) {
 
-		my $packet = Net::DNS::Packet->new($domain);
+		my $packet = new Net::DNS::Update($domain);
 
 		$packet->$method( $section => @rrs );
 
@@ -87,7 +87,7 @@ foreach my $test (@tests) {
 	#
 	while ( my ( $section, $count_meth ) = each %sections ) {
 
-		my $packet = Net::DNS::Packet->new($domain);
+		my $packet = new Net::DNS::Update($domain);
 
 		foreach my $rr (@rrs) {
 			$packet->$method( $section => $rr );
