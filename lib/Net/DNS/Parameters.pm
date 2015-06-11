@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2015-03-26)
+##	(last updated 2015-06-04)
 ##
 ################################################
 
@@ -124,7 +124,7 @@ use vars qw( %typebyname %typebyval );
 	MAILB	   => 253,					# RFC1035
 	MAILA	   => 254,					# RFC1035
 	ANY	   => 255,					# RFC1035 RFC6895
-	URI	   => 256,					# RFC-faltstrom-uri-14
+	URI	   => 256,					# RFC7553
 	CAA	   => 257,					# RFC6844
 	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
@@ -349,7 +349,7 @@ DEALINGS IN THE SOFTWARE.
 =head1 SEE ALSO
 
 L<perl>, L<Net::DNS>,
-L<IANA Registry|http://www.iana.org/assignments/dns-parameters/>
+L<IANA Registry|http://www.iana.org/assignments/dns-parameters>
 
 =cut
 

@@ -22,8 +22,10 @@ BEGIN {
 		my $class = join '::', __PACKAGE__, $_;
 		return @ISA = ($class) if eval "require $class;";
 	}
-	die 'failed to load platform specific resolver component';
 }
+
+
+die 'failed to load platform specific resolver component' unless @ISA;
 
 
 1;

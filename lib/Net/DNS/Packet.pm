@@ -271,7 +271,7 @@ sub reply {
 	my @question = $query->question;
 	$reply->{question} = [@question];
 
-	$header->rcode('FORMERR');				# failure to provide RCODE is sinful!
+	$header->rcode('FORMERR');				# no RCODE considered sinful!
 
 	$header->rd( $qheadr->rd );				# copy these flags into reply
 	$header->cd( $qheadr->cd );
@@ -707,6 +707,19 @@ sub sign_sig0 {
 }
 
 
+sub sigrr {				## obtain packet signature RR
+	my $self = shift;
+
+	my ($sig) = reverse $self->additional;
+	return undef unless $sig;
+	return $sig if $sig->type eq 'TSIG';
+	return $sig if $sig->type eq 'SIG';
+	return undef;
+}
+
+
+########################################
+
 =head2 truncate
 
 The truncate method takes a maximum length as argument and then tries
@@ -794,28 +807,6 @@ sub dump {				## print internal data structure
 	local $Data::Dumper::Maxdepth = $Data::Dumper::Maxdepth || 3;
 	local $Data::Dumper::Sortkeys = $Data::Dumper::Sortkeys || 1;
 	print Data::Dumper::Dumper(@_);
-}
-
-
-sub sigrr {				## obtain packet signature RR
-	my $self = shift;
-
-	my ($sig) = reverse $self->additional;
-	return undef unless $sig;
-	return $sig if $sig->type eq 'TSIG';
-	return $sig if $sig->type eq 'SIG';
-	return undef;
-}
-
-
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {				## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
 }
 
 

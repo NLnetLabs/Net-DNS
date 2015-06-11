@@ -169,9 +169,9 @@ sub rcode {
 			return $rcode == 16 ? 'BADVERS' : rcodebyval($rcode);
 		}
 		my $rcode = rcodebyname($arg);
-		$opt->rcode($rcode);				# write back full 12-bit rcode
-		$_ &= 0xfff0;					# write back low 4-bit rcode
-		$_ |= ( $rcode & 0x000f ) if $rcode < 16 or $opt->rcode;
+		$opt->rcode($rcode);				# full 12-bit rcode
+		$_ &= 0xfff0;					# low 4-bit rcode
+		$_ |= ( $rcode & 0x000f );
 		return $rcode;
 	}
 }
@@ -430,17 +430,6 @@ sub edns {
 
 
 ########################################
-
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {			## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
-}
-
-sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
-
 
 sub _dnsflag {
 	my $self = shift;

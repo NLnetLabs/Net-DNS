@@ -81,13 +81,11 @@ sub exchange {
 
 
 eval {					## avoid compilation failure using ancient perl
-	__PACKAGE__->set_rrsort_func(
-		'preference',		## sort RRs in numerically ascending order.
-		sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
 
-		);
+	# sort RRs in numerically ascending order.
+	my $function = __PACKAGE__->get_rrsort_func('preference');
 
-	__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
+	__PACKAGE__->set_rrsort_func( 'default_sort', $function );
 };
 
 

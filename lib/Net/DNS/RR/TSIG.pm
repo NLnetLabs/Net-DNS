@@ -135,12 +135,13 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my @lines = (
+		"\n",
+		map "; $_\n",
 		join( "\t", 'algorithm:', $self->algorithm ),
 		join( "\t", 'time signed:', $self->time_signed, 'fudge:', $self->fudge ),
 		join( "\t", 'signature:',   $self->mac ),
 		join( "\t", 'original id:', $self->original_id ),
 		join( "\t", $self->error, $self->other || '' ) );
-	join "\n; ", '', @lines;
 }
 
 

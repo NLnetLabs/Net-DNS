@@ -81,7 +81,7 @@ sub target {
 
 
 # order RRs by numerically increasing priority, decreasing weight
-__PACKAGE__->set_rrsort_func(
+my $function = __PACKAGE__->set_rrsort_func(
 	'priority',
 	sub {
 		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
@@ -90,7 +90,7 @@ __PACKAGE__->set_rrsort_func(
 	} );
 
 
-__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('priority') );
+__PACKAGE__->set_rrsort_func( 'default_sort', $function );
 
 
 1;
@@ -177,6 +177,6 @@ DEALINGS IN THE SOFTWARE.
 =head1 SEE ALSO
 
 L<perl>, L<Net::DNS>, L<Net::DNS::RR>, 
-draft-faltstrom-uri-14
+RFC7553
 
 =cut

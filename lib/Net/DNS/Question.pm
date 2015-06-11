@@ -262,46 +262,33 @@ sub zclass { &class; }
 
 ########################################
 
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {			## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
-}
-
-
-sub DESTROY { }			## Avoid tickling AUTOLOAD (in cleanup)
-
-
-sub _dns_addr {			## Map IP address into reverse lookup namespace
+sub _dns_addr {				## Map IP address into reverse lookup namespace
 	local $_ = shift;
 
 	# IP address must contain address characters only
 	s/[%].+$//;						# discard RFC4007 scopeid
 	return undef unless m#^[a-fA-F0-9:./]+$#;
 
-	my ( $address, $length ) = split m#/#, $_ . '/0';
+	my ( $address, $pfxlen ) = split m#/#;
 
 	# map IPv4 address to in-addr.arpa space
 	if (m#^\d*[.\d]*\d(/\d+)?$#) {
-		return undef if new Net::DNS::DomainName('@')->label;
 		my @parse = split /\./, $address;
-		my $prefx = $length || @parse << 3;
-		my $last = $prefx > 24 ? 3 : ( $prefx - 1 ) >> 3;
+		$pfxlen = scalar(@parse) << 3 unless $pfxlen;
+		my $last = $pfxlen > 24 ? 3 : ( $pfxlen - 1 ) >> 3;
 		return join '.', reverse( ( @parse, (0) x 3 )[0 .. $last] ), 'in-addr.arpa.';
 	}
 
 	# map IPv6 address to ip6.arpa space
 	return unless m#^[:\w]+:([.\w]*)(/\d+)?$#;
 	my $rhs = $1 || '0';
-	return _dns_addr("$rhs/$length") if m#^[:0]*:0*:[fF]{4}:[^:]+$#;	   # IPv4
+	return _dns_addr($rhs) if m#^[:0]*:0*:[fF]{4}:[^:]+$#;	# IPv4
 	$rhs = sprintf '%x%0.2x:%x%0.2x', split( /\./, $rhs ), 0, 0, 0 if /\./;
 	$address =~ s/:[^:]*$/:0$rhs/;
 	my @parse = split /:/, ( reverse "0$address" ), 9;
-	my @xpand = map { /./ ? $_ : ('0') x ( 9 - @parse ) } @parse;		   # expand ::
-	my $prefx = $length || @xpand << 4;			# implicit length if unspecified
-	my $len = $prefx > 124 ? 32 : ( $prefx + 3 ) >> 2;
+	my @xpand = map { /./ ? $_ : ('0') x ( 9 - @parse ) } @parse;	 # expand ::
+	$pfxlen = ( scalar(@xpand) << 4 ) unless $pfxlen;	# implicit length if unspecified
+	my $len = $pfxlen > 124 ? 32 : ( $pfxlen + 3 ) >> 2;
 	my $hex = pack 'A4' x 8, map { $_ . '000' } ('0') x ( 8 - @xpand ), @xpand;
 	return join '.', split( //, substr( $hex, -$len ) ), 'ip6.arpa.';
 }

@@ -4,14 +4,14 @@ use strict;
 
 BEGIN {
 	use Net::DNS::Parameters;
-	use Test::More tests => 101 + keys(%classbyname) + keys(%typebyname);
+	use Test::More tests => 120 + keys(%classbyname) + keys(%typebyname);
 
-	use_ok('Net::DNS');
+	use_ok('Net::DNS::Question');
 }
 
 
-{	# check type conversion functions
-	my ($anon) = grep { not defined $Net::DNS::Parameters::typebyval{$_} } ( 1 .. 1 << 16 );
+{					## check type conversion functions
+	my ($anon) = grep { !defined $Net::DNS::Parameters::typebyval{$_} } ( 1 .. 1 << 16 );
 
 	is( typebyval(1),	      'A',	   "typebyval(1)" );
 	is( typebyval($anon),	      "TYPE$anon", "typebyval($anon)" );
@@ -19,21 +19,27 @@ BEGIN {
 	is( typebyname("TYPE0$anon"), $anon,	   "typebyname('TYPE0$anon')" );
 
 	my $large = 1 << 16;
+	foreach my $testcase ( "BOGUS$large", "TYPE$large" ) {
+		eval { typebyname($testcase); };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "typebyname($testcase)\t[$exception]" );
+	}
+
 	eval { typebyval($large); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "typebyval($large)\t[$exception]" );
 
-	foreach ( sort keys %typebyname ) {
-		my $expect    = /[*]/ ? 'ANY' : uc($_);
-		my $name      = eval { typebyval(typebyname($_)) };
+	foreach ( sort keys %Net::DNS::Parameters::typebyname ) {
+		my $expect = /[*]/ ? 'ANY' : uc($_);
+		my $name = eval { typebyval( typebyname($_) ) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
 		is( $name, $expect, "typebyname('$_')\t$exception" );
 	}
 }
 
 
-{	# check class conversion functions
-	my ($anon) = grep { not defined $Net::DNS::Parameters::classbyval{$_} } ( 1  .. 1 << 16 );
+{					## check class conversion functions
+	my ($anon) = grep { !defined $Net::DNS::Parameters::classbyval{$_} } ( 1 .. 1 << 16 );
 
 	is( classbyval(1),		'IN',	      "classbyval(1)" );
 	is( classbyval($anon),		"CLASS$anon", "classbyval($anon)" );
@@ -41,13 +47,19 @@ BEGIN {
 	is( classbyname("CLASS0$anon"), $anon,	      "classbyname('CLASS0$anon')" );
 
 	my $large = 1 << 16;
+	foreach my $testcase ( "BOGUS$large", "CLASS$large" ) {
+		eval { classbyname($testcase); };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "classbyname($testcase)\t[$exception]" );
+	}
+
 	eval { classbyval($large); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "classbyval($large)\t[$exception]" );
 
-	foreach ( sort keys %classbyname ) {
-		my $expect    = /[*]/ ? 'ANY' : uc($_);
-		my $name      = eval { classbyval(classbyname($_)) };
+	foreach ( sort keys %Net::DNS::Parameters::classbyname ) {
+		my $expect = /[*]/ ? 'ANY' : uc($_);
+		my $name = eval { classbyval( classbyname($_) ) };
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
 		is( $name, $expect, "classbyname('$_')\t$exception" );
 	}
@@ -55,21 +67,30 @@ BEGIN {
 
 
 {
-	my $fqdn = 'example.com.';
-	my $question = new Net::DNS::Question( $fqdn, 'A', 'IN' );
+	my $name = 'example.com';
+	my $question = new Net::DNS::Question( $name, 'A', 'IN' );
 	ok( $question->isa('Net::DNS::Question'), 'object returned by new() constructor' );
 
+	is( $question->qname,  $name,		 '$question->qname returns expected value' );
+	is( $question->qtype,  'A',		 '$question->qtype returns expected value' );
+	is( $question->qclass, 'IN',		 '$question->qclass returns expected value' );
+	is( $question->name,   $question->qname, '$question->name returns expected value' );
+	is( $question->type,   $question->qtype, '$question->type returns expected value' );
+	is( $question->zname,  $question->qname, '$question->zname returns expected value' );
+	is( $question->ztype,  $question->qtype, '$question->ztype returns expected value' );
+	is( $question->zclass, $question->class, '$question->zclass returns expected value' );
+
 	my $string   = $question->string;
-	my $expected = "$fqdn\tIN\tA";
+	my $expected = "$name.\tIN\tA";
 	is( $string, $expected, '$question->string returns text representation of object' );
 
 	my $test = 'new() argument undefined or absent';
-	is( new Net::DNS::Question( $fqdn, 'A',   undef )->string, $expected, "$test\t( $fqdn,\tA,\tundef\t)" );
-	is( new Net::DNS::Question( $fqdn, 'A',   ()    )->string, $expected, "$test\t( $fqdn,\tA,\t\t)" );
-	is( new Net::DNS::Question( $fqdn, undef, 'IN'  )->string, $expected, "$test\t( $fqdn,\tundef,\tIN\t)" );
-	is( new Net::DNS::Question( $fqdn, (),    'IN'  )->string, $expected, "$test\t( $fqdn,\t\tIN\t)" );
-	is( new Net::DNS::Question( $fqdn, undef, undef )->string, $expected, "$test\t( $fqdn,\tundef,\tundef\t)" );
-	is( new Net::DNS::Question( $fqdn, (),    ()    )->string, $expected, "$test\t( $fqdn \t\t\t)" );
+	is( new Net::DNS::Question( $name, 'A',   undef )->string, $expected, "$test\t( $name,\tA,\tundef\t)" );
+	is( new Net::DNS::Question( $name, 'A',   ()	)->string, $expected, "$test\t( $name,\tA,\t\t)" );
+	is( new Net::DNS::Question( $name, undef, 'IN'	)->string, $expected, "$test\t( $name,\tundef,\tIN\t)" );
+	is( new Net::DNS::Question( $name, (),    'IN'	)->string, $expected, "$test\t( $name,\t\tIN\t)" );
+	is( new Net::DNS::Question( $name, undef, undef )->string, $expected, "$test\t( $name,\tundef,\tundef\t)" );
+	is( new Net::DNS::Question( $name, (),    ()	)->string, $expected, "$test\t( $name \t\t\t)" );
 }
 
 
@@ -87,10 +108,26 @@ BEGIN {
 
 
 {
-	my $packet     = new Net::DNS::Packet('example.com');
-	my $encoded    = $packet->data;
-	my ($question) = new Net::DNS::Packet( \$encoded )->question;
-	ok( $question->isa('Net::DNS::Question'), 'check decoded object' );
+	my $question = eval { new Net::DNS::Question(undef); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "argument undefined\t[$exception]" );
+}
+
+
+{
+	foreach my $method (qw(qname qtype qclass name)) {
+		my $question = eval { new Net::DNS::Question('.')->$method('name'); };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "$method read-only:\t[$exception]" );
+	}
+}
+
+
+{
+	my $wiredata = pack 'H*', '000001';
+	my $question = eval { decode Net::DNS::Question( \$wiredata ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt wire-format\t[$exception]" );
 }
 
 
@@ -98,14 +135,21 @@ BEGIN {
 	my $test = 'decoded object matches encoded data';
 	foreach my $class (qw(IN HS ANY)) {
 		foreach my $type (qw(A AAAA MX NS SOA ANY)) {
-			my $packet     = new Net::DNS::Packet( 'example.com', $type, $class );
-			my $encoded    = $packet->data;
-			my ($example)  = $packet->question;
-			my $expected   = $example->string;
-			my ($question) = new Net::DNS::Packet( \$encoded )->question;
-			is( $question->string, $expected, "$test\t$expected" );
+			my $question = new Net::DNS::Question( 'example.com', $type, $class );
+			my $encoded  = $question->encode;
+			my $expected = $question->string;
+			my $decoded  = decode Net::DNS::Question( \$encoded );
+			is( $decoded->string, $expected, "$test\t$expected" );
 		}
 	}
+}
+
+
+{
+	my $question = new Net::DNS::Question('example.com');
+	my $encoded  = $question->encode;
+	my ( $decoded, $offset ) = decode Net::DNS::Question( \$encoded );
+	is( $offset, length($encoded), 'returned offset has expected value' );
 }
 
 
@@ -162,9 +206,13 @@ BEGIN {
 		"d.e.a.d.b.e.e.f.6.0.0.0.5.0.0.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.ip6.arpa.\tIN\tPTR",
 		'interpret IPv6 + embedded IPv4 address as query in ip6.arpa'
 		);
-	is(	new Net::DNS::Question('::x')->string,
-		"::x.\tIN\tA",
+	is(	new Net::DNS::Question(':x:')->string,
+		":x:.\tIN\tA",
 		'non-address character precludes interpretation as PTR query'
+		);
+	is(	new Net::DNS::Question(':.:')->string,
+		":.:.\tIN\tA",
+		'non-numeric character precludes interpretation as PTR query'
 		);
 }
 
@@ -206,4 +254,17 @@ BEGIN {
 		}
 	}
 }
+
+
+eval {					## exercise but do not test print
+	my $object   = new Net::DNS::Question('example.com');
+	my $filename = '03-question.txt';
+	open( TEMP, ">$filename" ) || die "Could not open $filename for writing";
+	select( ( select(TEMP), $object->print )[0] );
+	close(TEMP);
+	unlink($filename);
+};
+
+
+exit;
 

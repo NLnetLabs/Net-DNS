@@ -1,10 +1,10 @@
 # $Id$  -*-perl-*-
 
-use Test::More tests => 73;
+use Test::More tests => 79;
 use strict;
 
 
-BEGIN { use_ok('Net::DNS'); }					#1
+BEGIN { use_ok('Net::DNS'); }
 
 
 sub is_empty {
@@ -40,7 +40,7 @@ my $rdata  = "10.1.2.3";
 	my $packet = Net::DNS::Update->new( $zone, $class );
 	my ($z) = ( $packet->zone )[0];
 
-	ok( $packet, 'new() returned packet' );			#2
+	ok( $packet, 'new() returned packet' );
 	is( $packet->header->opcode, 'UPDATE', 'header opcode correct' );
 	is( $z->zname,		     $zone,    'zname correct' );
 	is( $z->zclass,		     $class,   'zclass correct' );
@@ -63,12 +63,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $ttl $class $type";
 	my $rr	= yxrrset($arg);
 
-	ok( $rr, "yxrrset($arg)" );				#7
+	ok( $rr, "yxrrset($arg)" );				#8
 	is( $rr->name,	$name, 'yxrrset - right name' );
 	is( $rr->ttl,	0,     'yxrrset - ttl	0' );
 	is( $rr->class, 'ANY', 'yxrrset - class ANY' );
 	is( $rr->type,	$type, "yxrrset - type	$type" );
-	ok( is_empty( $rr->rdatastr ), 'yxrrset - data empty' );
+	ok( is_empty( $rr->rdstring ), 'yxrrset - data empty' );
 }
 
 #------------------------------------------------------------------------------
@@ -79,12 +79,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $ttl $class $type $rdata";
 	my $rr	= yxrrset($arg);
 
-	ok( $rr, "yxrrset($arg)" );				#13
+	ok( $rr, "yxrrset($arg)" );
 	is( $rr->name,	   $name,  'yxrrset - right name' );
 	is( $rr->ttl,	   0,	   'yxrrset - ttl   0' );
 	is( $rr->class,	   $class, "yxrrset - class $class" );
 	is( $rr->type,	   $type,  "yxrrset - type  $type" );
-	is( $rr->rdatastr, $rdata, 'yxrrset - right data' );
+	is( $rr->rdstring, $rdata, 'yxrrset - right data' );
 }
 
 
@@ -96,12 +96,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $ttl $class $type $rdata";
 	my $rr	= nxrrset($arg);
 
-	ok( $rr, "nxrrset($arg)" );				#19
+	ok( $rr, "nxrrset($arg)" );				#20
 	is( $rr->name,	$name,	'nxrrset - right name' );
 	is( $rr->ttl,	0,	'nxrrset - ttl	 0' );
 	is( $rr->class, 'NONE', 'nxrrset - class NONE' );
 	is( $rr->type,	$type,	"nxrrset - type	 $type" );
-	ok( is_empty( $rr->rdatastr ), 'nxrrset - data empty' );
+	ok( is_empty( $rr->rdstring ), 'nxrrset - data empty' );
 }
 
 
@@ -111,14 +111,14 @@ my $rdata  = "10.1.2.3";
 
 {
 	my $arg = "$name $class";
-	my $rr	= yxrrset($arg);
+	my $rr	= yxdomain($arg);
 
-	ok( $rr, "yxrrset($arg)" );				#25
+	ok( $rr, "yxdomain($arg)" );
 	is( $rr->name,	$name, 'yxdomain - right name' );
 	is( $rr->ttl,	0,     'yxdomain - ttl	 0' );
 	is( $rr->class, 'ANY', 'yxdomain - class ANY' );
 	is( $rr->type,	'ANY', 'yxdomain - type	 ANY' );
-	ok( is_empty( $rr->rdatastr ), 'yxdomain - data empty' );
+	ok( is_empty( $rr->rdstring ), 'yxdomain - data empty' );
 }
 
 
@@ -130,12 +130,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $class";
 	my $rr	= nxdomain($arg);
 
-	ok( $rr, "nxdomain($arg)" );				#31
+	ok( $rr, "nxdomain($arg)" );				#32
 	is( $rr->name,	$name,	'nxdomain - right name' );
 	is( $rr->ttl,	0,	'nxdomain - ttl	  0' );
 	is( $rr->class, 'NONE', 'nxdomain - class NONE' );
 	is( $rr->type,	'ANY',	'nxdomain - type  ANY' );
-	ok( is_empty( $rr->rdatastr ), 'nxdomain - data empty' );
+	ok( is_empty( $rr->rdstring ), 'nxdomain - data empty' );
 }
 
 
@@ -147,12 +147,24 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $ttl $class $type $rdata";
 	my $rr	= rr_add($arg);
 
-	ok( $rr, "rr_add($arg)" );				#37
+	ok( $rr, "rr_add($arg)" );				#38
 	is( $rr->name,	   $name,  'rr_add - right name' );
 	is( $rr->ttl,	   $ttl,   "rr_add - ttl   $ttl" );
 	is( $rr->class,	   $class, "rr_add - class $class" );
 	is( $rr->type,	   $type,  "rr_add - type  $type" );
-	is( $rr->rdatastr, $rdata, 'rr_add - right data' );
+	is( $rr->rdstring, $rdata, 'rr_add - right data' );
+}
+
+{
+	my $arg = "$name      $class $type $rdata";
+	my $rr	= rr_add($arg);
+
+	ok( $rr, "rr_add($arg)" );
+	is( $rr->name,	   $name,  'rr_add - right name' );
+	is( $rr->ttl,	   86400,  "rr_add - ttl   86400" );
+	is( $rr->class,	   $class, "rr_add - class $class" );
+	is( $rr->type,	   $type,  "rr_add - type  $type" );
+	is( $rr->rdstring, $rdata, 'rr_add - right data' );
 }
 
 
@@ -164,12 +176,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $class $type";
 	my $rr	= rr_del($arg);
 
-	ok( $rr, "rr_del($arg)" );				#43
+	ok( $rr, "rr_del($arg)" );				#50
 	is( $rr->name,	$name, 'rr_del - right name' );
 	is( $rr->ttl,	0,     'rr_del - ttl   0' );
 	is( $rr->class, 'ANY', 'rr_del - class ANY' );
 	is( $rr->type,	$type, "rr_del - type  $type" );
-	ok( is_empty( $rr->rdatastr ), 'rr_del - data empty' );
+	ok( is_empty( $rr->rdstring ), 'rr_del - data empty' );
 }
 
 #------------------------------------------------------------------------------
@@ -180,12 +192,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name";
 	my $rr	= rr_del($arg);
 
-	ok( $rr, "rr_del($arg)" );				#49
+	ok( $rr, "rr_del($arg)" );
 	is( $rr->name,	$name, 'rr_del - right name' );
 	is( $rr->ttl,	0,     'rr_del - ttl   0' );
 	is( $rr->class, 'ANY', 'rr_del - class ANY' );
 	is( $rr->type,	'ANY', 'rr_del - type  ANY' );
-	ok( is_empty( $rr->rdatastr ), 'rr_del - data empty' );
+	ok( is_empty( $rr->rdstring ), 'rr_del - data empty' );
 }
 
 #------------------------------------------------------------------------------
@@ -196,12 +208,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $class";
 	my $rr	= rr_del($arg);
 
-	ok( $rr, "rr_del($arg)" );				#55
+	ok( $rr, "rr_del($arg)" );				#62
 	is( $rr->name,	$name, 'rr_del - right name' );
 	is( $rr->ttl,	0,     'rr_del - ttl   0' );
 	is( $rr->class, 'ANY', 'rr_del - class ANY' );
 	is( $rr->type,	'ANY', 'rr_del - type  ANY' );
-	ok( is_empty( $rr->rdatastr ), 'rr_del - data empty' );
+	ok( is_empty( $rr->rdstring ), 'rr_del - data empty' );
 }
 
 #------------------------------------------------------------------------------
@@ -212,12 +224,12 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $class $type $rdata";
 	my $rr	= rr_del($arg);
 
-	ok( $rr, "rr_del($arg)" );				#61
+	ok( $rr, "rr_del($arg)" );				#68
 	is( $rr->name,	   $name,  'rr_del - right name' );
 	is( $rr->ttl,	   0,	   'rr_del - ttl   0' );
 	is( $rr->class,	   'NONE', 'rr_del - class NONE' );
 	is( $rr->type,	   $type,  "rr_del - type  $type" );
-	is( $rr->rdatastr, $rdata, 'rr_del - right data' );
+	is( $rr->rdstring, $rdata, 'rr_del - right data' );
 }
 
 
@@ -228,7 +240,7 @@ my $rdata  = "10.1.2.3";
 
 {
 	my $packet = Net::DNS::Update->new( $zone, $class );
-	ok( $packet, 'packet created' );			#67
+	ok( $packet, 'packet created' );			#74
 
 	$packet->push( "pre", yxrrset("$name $class $type $rdata") );
 	$packet->push( "pre", yxrrset("$name $class2 $type $rdata") );
@@ -237,7 +249,7 @@ my $rdata  = "10.1.2.3";
 
 	my @pre = $packet->pre;
 
-	is( scalar(@pre),   4,	    '"pre" length correct' );	#68
+	is( scalar(@pre),   4,	    '"pre" length correct' );
 	is( $pre[0]->class, $class, 'first class right' );
 	is( $pre[1]->class, $class, 'second class right' );
 	is( $pre[2]->class, 'ANY',  'third class right' );

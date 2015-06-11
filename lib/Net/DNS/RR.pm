@@ -132,8 +132,7 @@ sub _new_string {
 		my $rdata = pack 'H*', join '', @token;
 		my $rdlen = $self->{rdlength} = length $rdata;
 		croak 'length and hexadecimal data inconsistent' unless $rdlen == $count;
-		return $self unless $count;
-		$self->decode_rdata( \$rdata, 0 );		# unpack RDATA
+		$self->decode_rdata( \$rdata, 0 ) if $rdlen;	# unpack RDATA
 		return $self;
 	}
 
@@ -261,10 +260,9 @@ subordinate encoders.
 
 sub encode {
 	my $self = shift;
-	my ( $offset, @opaque ) = @_;
-	( $offset, @opaque ) = ( 0x4000, {} ) unless scalar @_;
+	my ( $offset, @opaque ) = scalar(@_) ? @_ : ( 0x4000, {} );
 
-	my $owner = $self->{owner}->encode(@_);
+	my $owner = $self->{owner}->encode( $offset, @opaque );
 	my $type  = $self->{type};
 	my $class = $self->{class} || 1;
 	my $index = $offset + length($owner) + RRFIXEDSZ;
@@ -329,7 +327,7 @@ sub string {
 	my @ttl = grep defined, ( $self->{ttl} );
 	my $core = join "\t", $self->{owner}->string, @ttl, $self->class, $self->type;
 
-	my $rdata = $self->rdatastr( 14 + length $core );
+	my $rdata = $self->rdstring( 14 + length $core );
 	return join "\t", $core, length $rdata ? $rdata : '; no data';
 }
 
@@ -345,7 +343,7 @@ Returns the owner name of the record.
 sub name {
 	my $self = shift;
 	$self->{owner} = new Net::DNS::DomainName1035(shift) if scalar @_;
-	$self->{owner}->name if defined wantarray && $self->{owner};
+	$self->{owner}->name if defined wantarray;
 }
 
 sub owner { &name; }			## compatibility with RFC1034
@@ -362,7 +360,7 @@ Returns the record type.
 sub type {
 	my $self = shift;
 	croak 'not possible to change RR->type' if scalar @_;
-	typebyval( $self->{type} || 1 );
+	typebyval( $self->{type} );
 }
 
 
@@ -418,8 +416,7 @@ sub ttl {
 
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $self, $data, $offset ) = @_;
-	my $size = defined $self->{rdlength} ? $self->{rdlength} : length $$data;
-	$self->{rdata} = substr $$data, $offset, $size;
+	$self->{rdata} = substr $$data, $offset, $self->{rdlength};
 }
 
 
@@ -439,9 +436,8 @@ sub format_rdata {			## format rdata portion of RR string
 
 sub parse_rdata {			## parse RR attributes in argument list
 	my $self = shift;
-	return unless shift;
 	die join ' ', $self->type, 'not implemented' if ref($self) eq __PACKAGE__;
-	die join ' ', 'zone file representation not defined for', $self->type;
+	die join ' ', 'no zone file representation defined for', $self->type;
 }
 
 
@@ -469,49 +465,49 @@ sub rdata {
 
 	return eval { $self->encode_rdata( 0x4000, {} ); } unless scalar @_;
 
-	my $rdata = $self->{rdata}    = shift;
+	my $rdata = shift;
 	my $rdlen = $self->{rdlength} = length $rdata;
 	my $hash  = {};
 	$self->decode_rdata( \$rdata, 0, $hash ) if $rdlen;
-	croak 'compression pointer seen in rdata' if keys %$hash;
+	croak 'found compression pointer in rdata' if keys %$hash;
 }
 
 
-=head2 rdatastr
+=head2 rdstring
 
-    $rdatastr = $rr->rdatastr;
+    $rdstring = $rr->rdstring;
 
 Returns a string representation of the RR-specific data.
 
 =cut
 
-sub rdatastr {
+sub rdstring {
 	my $self = shift;
 	my $coln = shift || 0;
 	my $cols = 80;
 
 	my @rdata = eval { $self->format_rdata; };
+
 	carp $@ if $@;
 
 	my ( @line, @fill );
 	foreach (@rdata) {
-		if ( ( $coln += 1 + length ) > $cols ) {	# multi-line format
-			push @line, join ' ', @fill;
-			@fill = ();
+		if ( ( $coln += 1 + length ) > $cols ) {
+			push @line, join ' ', @fill;		# multi-line format
 			$coln = length;
+			@fill = ();
 		}
 		$coln = $cols if chomp;				# line terminator
-		return join "\n\t", split /\n/ if !$#rdata && /[\n]/;
 		push( @fill, $_ );
 	}
 	return join ' ', @fill unless scalar @line;		# simple RR
 
-	$line[0] .= ' (';					# multi-line RR
+	$line[0] = '( ' . $line[0];				# multi-line RR
 	return join "\n\t", @line, join ' ', @fill, ')' if $coln < $cols;
 	return join "\n\t", @line, join( ' ', @fill ), ')';
 }
 
-sub rdstring { &rdatastr; }
+sub rdatastr { &rdstring; }
 
 
 =head2 rdlength
@@ -587,13 +583,16 @@ comparator function used for a particular RR based on its attributes.
 set_rrsort_func() must be called as a class method. The first argument is
 the attribute name on which the sorting is to take place. If you specify
 "default_sort" then that is the sort algorithm that will be used when
-rrsort() is called without an RR attribute as argument.
+set_rrsort_rrsort() is called without an RR attribute as argument.
 
-The second argument is a reference to a comparison function that uses the
+The second argument is a reference to a comparator function that uses the
 global variables $a and $b in the Net::DNS package. During sorting, the
 variables $a and $b will contain references to objects of the class whose
 set_rrsort_func() was called. The above sorting function will only be
 applied to Net::DNS::RR::MX objects.
+
+Both get_rrsort_func() and set_rrsort_func() return a reference to the
+comparator function.
 
 The above example is the sorting function implemented in MX.
 
@@ -607,7 +606,7 @@ sub set_rrsort_func {
 	my $funct     = shift;
 
 	my ($type) = $class =~ m/::([^:]+)$/;
-	$Net::DNS::RR::rrsortfunct{$type}{$attribute} = $funct;
+	$rrsortfunct{$type}{$attribute} = $funct;
 }
 
 sub get_rrsort_func {
@@ -617,18 +616,16 @@ sub get_rrsort_func {
 	my ($type) = $class =~ m/::([^:]+)$/;
 
 	my $comparator = $attribute || 'default_sort';
-	if ( exists( $Net::DNS::RR::rrsortfunct{$type}{$comparator} ) ) {
-		return $Net::DNS::RR::rrsortfunct{$type}{$comparator};
 
-	} elsif ( defined($attribute) && $class->can($attribute) ) {
+	return $rrsortfunct{$type}{$comparator} || do {
 
-		return sub {
+		unless ( $attribute && $class->can($attribute) ) {
+			return sub { $Net::DNS::a->canonical() cmp $Net::DNS::b->canonical() };
+		}
+
+		$rrsortfunct{$type}{$attribute} = sub {
 			$Net::DNS::a->$attribute() <=> $Net::DNS::b->$attribute();
 		};
-	}
-
-	return sub {
-		$Net::DNS::a->canonical() cmp $Net::DNS::b->canonical();
 	};
 }
 
@@ -650,17 +647,15 @@ use vars qw(%_LOADED %_MINIMAL);
 
 sub _subclass {
 	my $class   = shift;
-	my $rrtype  = shift || '';
+	my $rrtype  = shift;
 	my $default = shift;
 
 	unless ( $_LOADED{$rrtype} ) {				# load once only
-		die "Usage:\t\$rr = new Net::DNS::RR( name $rrtype ... )\n"
-				unless $class eq __PACKAGE__;
 		my $number = typebyname($rrtype);
 		my $mnemon = typebyval($number);
 		my $module = join '::', $class, $mnemon;
 		$module =~ s/[^A-Za-z0-9:]//g;			# expect the unexpected
-		my $subclass = eval("require $module") ? $module : $class;
+		my $subclass = eval("require $module") ? $module : __PACKAGE__;
 
 		# cache pre-built minimal and populated default object images
 		my @base = ( 'type' => $number, $@ ? ( 'exception' => $@ ) : () );
@@ -691,10 +686,10 @@ sub AUTOLOAD {				## Default method
 	my $self = shift;
 	my $oref = ref($self);
 	confess 'undefined method ', $AUTOLOAD unless $oref;
-	confess $self->{exception} if $oref eq __PACKAGE__;
+	confess "unknown RRtype\n" . $self->{exception} if $oref eq __PACKAGE__;
 
 	no strict q/refs/;
-	my $method = $AUTOLOAD =~ m/^.*::(.*)$/ ? $1 : '<undef>';
+	my ($method) = reverse split /::/, $AUTOLOAD;
 	*{$AUTOLOAD} = sub {undef};	## suppress deep recursion
 
 	my $string = $self->string;
@@ -712,20 +707,6 @@ sub AUTOLOAD {				## Default method
 ***  object should be checked before calling any of its methods.
 END
 	goto &{'Carp::confess'};
-}
-
-
-################################################################################
-
-sub _canonicalRdata {			## Net::DNS::SEC pre-0.22 compatibility
-	my $self = shift;
-	eval { $self->encode_rdata(0); } || '';
-}
-
-
-sub Net::DNS::RR::DS::defaults {	## Net::DNS::SEC pre-0.22 compatibility
-	my $self = shift;
-	$self->ttl(0) if $self->type eq 'DS' && ( $self->VERSION || 0 ) < 1307;
 }
 
 

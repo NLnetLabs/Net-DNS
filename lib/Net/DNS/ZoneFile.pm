@@ -273,13 +273,13 @@ sub _read {
 		my $data = shift;
 		$self->{data} = [split /\n/, ref($data) ? $$data : $data];
 		no integer;
-		return $self unless $] < 5.006;
-
-		require IO::File;	## Plan B: ancient perl unable to overload <>
-		my $fh = IO::File->new_tmpfile() or die "Unable to create temporary file: $!";
-		while ( my $line = $self->readline ) { print $fh $line, "\n"; }
-		seek $fh, 0, 0;
-		return $fh;
+		return $] > 5.006 ? $self : do {		# Plan B
+			require IO::File;
+			my $fh = IO::File->new_tmpfile() or die "$!";
+			while ( my $line = $self->readline ) { print $fh $line, "\n"; }
+			seek $fh, 0, 0;
+			return $fh;
+		};
 	}
 
 	sub readline {
@@ -334,18 +334,6 @@ sub parse {
 
 
 ########################################
-
-use vars qw($AUTOLOAD);
-
-sub AUTOLOAD {				## Default method
-	no strict;
-	@_ = ("method $AUTOLOAD undefined");
-	goto &{'Carp::confess'};
-}
-
-
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
-
 
 {
 
@@ -424,13 +412,13 @@ sub _generate {				## expand $GENERATE into input stream
 	delete $self->{latest};					# forbid empty owner field
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
 	no integer;
-	return $self->{handle} = $handle unless $] < 5.006;
-
-	require IO::File;		## Plan B: ancient perl unable to overload <>
-	my $fh = IO::File->new_tmpfile() or die "Unable to create temporary file: $!";
-	while ( my $line = $handle->readline ) { print $fh $line, "\n"; }
-	seek $fh, 0, 0;
-	return $self->{handle} = $fh;
+	return $self->{handle} = $] > 5.006 ? $handle : do {	# Plan B
+		require IO::File;
+		my $fh = IO::File->new_tmpfile() or die "$!";
+		while ( my $line = $self->readline ) { print $fh $line, "\n"; }
+		seek $fh, 0, 0;
+		return $fh;
+	};
 }
 
 
