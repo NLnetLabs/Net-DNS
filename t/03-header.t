@@ -3,13 +3,13 @@
 use strict;
 use Test::More;
 
+use Net::DNS;
 use Net::DNS::Parameters;
+
 my @op = keys %Net::DNS::Parameters::opcodebyname;
 my @rc = keys %Net::DNS::Parameters::rcodebyname;
 
-plan tests => 73 + scalar(@op) + scalar(@rc);
-
-use_ok('Net::DNS');
+plan tests => 76 + scalar(@op) + scalar(@rc);
 
 
 my $packet = new Net::DNS::Packet(qw(. NS IN));
@@ -30,18 +30,38 @@ sub waggle {
 
 
 {					## check conversion functions
-	foreach ( sort keys %Net::DNS::Parameters::opcodebyname ) {
+	foreach ( sort( keys %Net::DNS::Parameters::opcodebyname ), 15 ) {
 		my $expect = /NS_NOTIFY/i ? 'NOTIFY' : uc($_);
-		my $name = eval { opcodebyval( opcodebyname($_) ) };
+		my $name = eval {
+			my $val = opcodebyname($_);
+			opcodebyval( opcodebyname($val) );
+		};
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
 		is( $name, $expect, "opcodebyname('$_')\t$exception" );
 	}
 
-	foreach ( sort keys %Net::DNS::Parameters::rcodebyname ) {
+	foreach my $testcase ('BOGUS') {
+		eval { opcodebyname($testcase); };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "opcodebyname($testcase)\t[$exception]" );
+	}
+}
+
+{
+	foreach ( sort( keys %Net::DNS::Parameters::rcodebyname ), 4000 ) {
 		my $expect = /BADVERS/i ? 'BADSIG' : uc($_);
-		my $name = eval { rcodebyval( rcodebyname($_) ) };
+		my $name = eval {
+			my $val = rcodebyname($_);
+			rcodebyval( rcodebyname($val) );
+		};
 		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
 		is( $name, $expect, "rcodebyname('$_')\t$exception" );
+	}
+
+	foreach my $testcase ('BOGUS') {
+		eval { rcodebyname($testcase); };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "rcodebyname($testcase)\t[$exception]" );
 	}
 }
 

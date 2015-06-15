@@ -37,7 +37,7 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $packet = Net::DNS::Update->new( $zone, $class );
+	my $packet = new Net::DNS::Update( $zone, $class );
 	my ($z) = ( $packet->zone )[0];
 
 	ok( $packet, 'new() returned packet' );
@@ -49,17 +49,20 @@ my $rdata  = "10.1.2.3";
 
 
 {
-	my $packet = eval { new Net::DNS::Update(undef); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "argument undefined\t[$exception]" );
+	my $default = 'example.com';
+	my ($zone) = eval {
+		local $ENV{'RES_SEARCHLIST'} = $default;	# overides config files
+		my $update = new Net::DNS::Update();
+		my @domain = map $_->name, $update->zone;
+	};
+	is( $zone, $default, 'using default domain' );
 }
 
 
 {
-	my $packet = eval { new Net::DNS::Update(); };
+	my $packet = eval { new Net::DNS::Update(undef); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $packet, 'using default domain' ) if $packet;
-	ok( $exception ||= '', "no default domain\t[$exception]" ) unless $packet;
+	ok( $exception ||= '', "argument undefined\t[$exception]" );
 }
 
 

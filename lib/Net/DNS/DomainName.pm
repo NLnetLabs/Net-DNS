@@ -42,11 +42,10 @@ introduced by RFC3597.
 use strict;
 use base qw(Net::DNS::Domain);
 
-use constant FIXlc => eval { $] < 5.010; } || 0;
-
-
 use integer;
 use Carp;
+
+use constant FIXlc => eval { no integer; $] < 5.010; };
 
 
 =head1 METHODS

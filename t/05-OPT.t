@@ -1,11 +1,14 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 19;
-
+use Test::More;
 
 use Net::DNS;
 use Net::DNS::Parameters;
+
+my @opt = keys %Net::DNS::Parameters::ednsoptionbyname;
+
+plan tests => 21 + scalar(@opt);
 
 
 my $name = '.';
@@ -16,6 +19,25 @@ my @data = qw( 1280 0 32768 );
 my @also = qw( version );
 
 my $wire = '0000290500000080000000';
+
+
+{					## check conversion functions
+	foreach ( sort( keys %Net::DNS::Parameters::ednsoptionbyname ), 65500 ) {
+		my $expect = uc($_);
+		my $name = eval {
+			my $val = ednsoptionbyname($_);
+			ednsoptionbyval( ednsoptionbyname($val) );
+		};
+		my $exception = $@ =~ /^(.+)\n/ ? $1 : '';
+		is( $name, $expect, "ednsoptionbyname('$_')\t$exception" );
+	}
+
+	foreach my $testcase ('BOGUS') {
+		eval { ednsoptionbyname($testcase); };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "ednsoptionbyname($testcase)\t[$exception]" );
+	}
+}
 
 
 {

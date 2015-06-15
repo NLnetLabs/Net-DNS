@@ -72,6 +72,7 @@ my $hash = {};
 	my $rxbin  = decode Net::DNS::RR( \$buffer )->encode;
 	my $packet = Net::DNS::Packet->new( $name, 'TKEY', 'IN' );
 	$packet->header->id(1234);				# fix packet id
+	$packet->header->rd(1);
 	my $encoded = $buffer = $rr->encode( 0, {}, $packet );
 	my $decoded = decode Net::DNS::RR( \$buffer );
 	my $hex1 = unpack 'H*', $encoded;

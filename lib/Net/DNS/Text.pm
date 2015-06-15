@@ -40,17 +40,18 @@ use integer;
 use Carp;
 
 
-use constant ASCII => eval {
+use constant ASCII => ref( eval {
 	require Encode;
 	Encode::find_encoding('ascii');				# encoding object
-	1;
-} || 0;
+} );
 
-use constant UTF8 => eval {
-	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
-	Encode::find_encoding('utf8');				# encoding object
-	1;
-} || 0;
+use constant LIBUTF8 => eval {
+	Encode::decode_utf8( chr(91) ) eq '[';			# not UTF-EBCDIC  [see UTR#16 3.6]
+};
+
+use constant UTF8 => ref( eval {
+	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
+} );
 
 
 =head1 METHODS
@@ -210,12 +211,12 @@ my $decode_ascii = sub {		## ASCII to perl internal encoding
 	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
+	ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
 };
 
 sub _decode_utf8 {			## UTF-8 to perl internal encoding
 	my $s = shift;
-	return UTF8 ? ( $utf8->decode($s) . substr $s, 0, 0 ) : &$decode_ascii($s);
+	UTF8 ? ( $utf8->decode($s) . substr $s, 0, 0 ) : &$decode_ascii($s);
 }
 
 
@@ -228,14 +229,14 @@ my $encode_ascii = sub {		## perl internal encoding to ASCII
 	[\040-\176] unless ASCII;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return ASCII ? pack( "a* x$z", $ascii->encode($s) ) : $s;
+	ASCII ? pack( "a* x$z", $ascii->encode($s) ) : $s;
 };
 
 sub _encode_utf8 {			## perl internal encoding to UTF-8
 	my $s = shift;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return UTF8 ? pack( "a* x$z", $utf8->encode($s) ) : &$encode_ascii($s);
+	UTF8 ? pack( "a* x$z", $utf8->encode($s) ) : &$encode_ascii($s);
 }
 
 

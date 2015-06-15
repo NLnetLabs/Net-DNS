@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{address} && length $self->{address};
+	return '' unless $self->{address};
 	return pack 'a4', $self->{address};
 }
 
@@ -39,7 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{address} && length $self->{address};
+	return '' unless $self->{address};
 	return $self->address;
 }
 
@@ -55,13 +55,13 @@ my $pad = pack 'x4';
 
 sub address {
 	my $self = shift;
+	my $addr = shift;
 
-	return join '.', unpack 'C4', $self->{address} . $pad unless scalar @_;
+	return join '.', unpack 'C4', $self->{address} . $pad unless defined $addr;
 
 	# Note: pack masks overlarge values, mostly without warning
-	my @part = split /\./, shift || '';
-	my $last = pop(@part) || 0;
-	$self = {} unless ref($self);
+	my @part = split /\./, $addr;
+	my $last = pop(@part);
 	$self->{address} = pack 'C4', @part, (0) x ( 3 - @part ), $last;
 }
 

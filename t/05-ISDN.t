@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 
 use Net::DNS;
@@ -12,7 +12,7 @@ my $type = 'ISDN';
 my $code = 20;
 my @attr = qw( address sa );
 my @data = qw( 150862028003217 004 );
-my @also = qw( );
+my @also = qw( ISDNaddress );
 
 my $wire = '0f31353038363230323830303332313703303034';
 

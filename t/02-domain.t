@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 58;
+use Test::More tests => 59;
 
 
 use constant UTF8 => eval {
@@ -202,9 +202,9 @@ use constant ESC => '\\';
 
 
 SKIP: {
-	skip( 'IDN test - Unicode/UTF-8 not supported', 8 ) unless UTF8;
-	skip( 'IDN test - Net::LibIDN not installed',	8 ) unless LIBIDN;
-	skip( 'IDN test - Net::LibIDN not working',	8 ) unless LIBIDNOK;
+	skip( 'IDN test - Unicode/UTF-8 not supported', 9 ) unless UTF8;
+	skip( 'IDN test - Net::LibIDN not installed',	9 ) unless LIBIDN;
+	skip( 'IDN test - Net::LibIDN not working',	9 ) unless LIBIDNOK;
 	my $a_label = 'xn--fiqs8s';
 	my $u_label = eval { pack( 'U*', 20013, 22269 ); };
 	is( new Net::DNS::Domain($a_label)->name,   $a_label,	 'IDN A-label domain->name' );
@@ -217,6 +217,10 @@ SKIP: {
 	is( new Net::DNS::Domain($u_label)->xname, $u_label,	'IDN U-label domain->xname' );
 	new Net::DNS::Domain($u_label)->xname;			# exercise cache path
 	is( new Net::DNS::Domain($u_label)->string, "$a_label.", 'IDN U-label domain->string' );
+
+	eval { new Net::DNS::Domain( pack 'H*', 'C200' ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "invalid name\t[$exception]" );
 }
 
 

@@ -2,24 +2,21 @@
 
 use strict;
 
-BEGIN {
-	use Net::DNS::Parameters;
-	use Test::More tests => 120 + keys(%classbyname) + keys(%typebyname);
+use Net::DNS::Question;
+use Net::DNS::Parameters;
 
-	use_ok('Net::DNS::Question');
-}
+use Test::More tests => 119 + keys(%classbyname) + keys(%typebyname);
 
 
 {					## check type conversion functions
-	my ($anon) = grep { !defined $Net::DNS::Parameters::typebyval{$_} } ( 1 .. 1 << 16 );
-
+	my ($anon) = 65500;
 	is( typebyval(1),	      'A',	   "typebyval(1)" );
 	is( typebyval($anon),	      "TYPE$anon", "typebyval($anon)" );
 	is( typebyname("TYPE$anon"),  $anon,	   "typebyname('TYPE$anon')" );
 	is( typebyname("TYPE0$anon"), $anon,	   "typebyname('TYPE0$anon')" );
 
 	my $large = 1 << 16;
-	foreach my $testcase ( "BOGUS$large", "TYPE$large" ) {
+	foreach my $testcase ( "BOGUS", "TYPE$large" ) {
 		eval { typebyname($testcase); };
 		my $exception = $1 if $@ =~ /^(.+)\n/;
 		ok( $exception ||= '', "typebyname($testcase)\t[$exception]" );
@@ -39,15 +36,14 @@ BEGIN {
 
 
 {					## check class conversion functions
-	my ($anon) = grep { !defined $Net::DNS::Parameters::classbyval{$_} } ( 1 .. 1 << 16 );
-
+	my ($anon) = 65500;
 	is( classbyval(1),		'IN',	      "classbyval(1)" );
 	is( classbyval($anon),		"CLASS$anon", "classbyval($anon)" );
 	is( classbyname("CLASS$anon"),	$anon,	      "classbyname('CLASS$anon')" );
 	is( classbyname("CLASS0$anon"), $anon,	      "classbyname('CLASS0$anon')" );
 
 	my $large = 1 << 16;
-	foreach my $testcase ( "BOGUS$large", "CLASS$large" ) {
+	foreach my $testcase ( "BOGUS", "CLASS$large" ) {
 		eval { classbyname($testcase); };
 		my $exception = $1 if $@ =~ /^(.+)\n/;
 		ok( $exception ||= '', "classbyname($testcase)\t[$exception]" );

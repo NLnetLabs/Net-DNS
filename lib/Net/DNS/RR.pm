@@ -402,7 +402,8 @@ sub ttl {
 	my $ttl = 0;
 	my %time = reverse split /(\D)\D*/, $time . 'S';
 	while ( my ( $u, $t ) = each %time ) {
-		$ttl += $t * ( $unit{$u} || croak qq(bad time: $t$u) );
+		my $scale = $unit{$u} || die qq(bad time: $t$u);
+		$ttl += $t * $scale;
 	}
 	$self->{ttl} = $ttl;
 }
@@ -619,9 +620,8 @@ sub get_rrsort_func {
 
 	return $rrsortfunct{$type}{$comparator} || do {
 
-		unless ( $attribute && $class->can($attribute) ) {
-			return sub { $Net::DNS::a->canonical() cmp $Net::DNS::b->canonical() };
-		}
+		return sub { $Net::DNS::a->canonical() cmp $Net::DNS::b->canonical() }
+				unless $attribute && $class->can($attribute);
 
 		$rrsortfunct{$type}{$attribute} = sub {
 			$Net::DNS::a->$attribute() <=> $Net::DNS::b->$attribute();
@@ -660,9 +660,7 @@ sub _subclass {
 		# cache pre-built minimal and populated default object images
 		my @base = ( 'type' => $number, $@ ? ( 'exception' => $@ ) : () );
 
-		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon} ||= do {
-			bless [@base], $subclass;
-		};
+		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon} ||= bless [@base], $subclass;
 
 		$_LOADED{$rrtype} = $_LOADED{$mnemon} ||= do {
 			my $object = bless {@base}, $subclass;
@@ -690,10 +688,10 @@ sub AUTOLOAD {				## Default method
 
 	no strict q/refs/;
 	my ($method) = reverse split /::/, $AUTOLOAD;
-	*{$AUTOLOAD} = sub {undef};	## suppress deep recursion
+	*{$AUTOLOAD} = sub {undef};	## suppress repetition and deep recursion
 
 	my $string = $self->string;
-	my @object = ( $oref->VERSION || (), $oref );
+	my @object = grep defined($_), $oref->VERSION, $oref;
 
 	@_ = (<<"END");
 ***  FATAL PROGRAM ERROR!!	Unknown method '$method'

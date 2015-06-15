@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 94;
+use Test::More tests => 95;
 
 
 BEGIN {
@@ -180,6 +180,14 @@ BEGIN {
 	eval { $rr->type('X'); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "cannot change type:\t[$exception]" );
+}
+
+
+{				## check for exception when abusing $rr->ttl()
+	my $rr = new Net::DNS::RR( type => 'A' );
+	eval { $rr->ttl('1year'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "bad time unit:\t[$exception]" );
 }
 
 

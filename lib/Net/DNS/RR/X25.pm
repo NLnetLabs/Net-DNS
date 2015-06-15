@@ -59,7 +59,7 @@ sub address {
 }
 
 
-sub psdn { &address; }
+sub PSDNaddress { &address; }
 
 
 1;
@@ -69,7 +69,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name X25 address');
+    $rr = new Net::DNS::RR('name X25 PSDNaddress');
 
 =head1 DESCRIPTION
 

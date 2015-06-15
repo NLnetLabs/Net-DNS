@@ -10,6 +10,10 @@ my @prerequisite = qw(
 		Net::DNS::RR::RRSIG
 		Net::DNS::SEC
 		Net::DNS::SEC::ECCGOST
+		Crypt::OpenSSL::Bignum
+		Crypt::OpenSSL::EC
+		Crypt::OpenSSL::ECDSA
+		Digest::GOST
 		);
 
 foreach my $package (@prerequisite) {
@@ -75,24 +79,4 @@ ok( !$rrsig->verify( \@badrrset, $ksk ), 'verify fails using wrong rrset' );
 exit;
 
 __END__
-
-# $Id$	-*-perl-*-
-#
-
-use strict;
-use Test::More;
-use Net::DNS;
-
-my @prerequisite = qw(
-		MIME::Base64
-		);
-
-foreach my $package (@prerequisite) {
-	next if eval "require $package";
-	plan skip_all => "$package not installed";
-	exit;
-}
-
-plan tests => 14;
-
 

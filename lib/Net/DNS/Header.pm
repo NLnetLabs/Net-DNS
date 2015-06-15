@@ -138,7 +138,7 @@ Gets or sets the query opcode (the purpose of the query).
 
 sub opcode {
 	my $self = shift;
-	for ( $$self->{status} ||= 0 ) {
+	for ( $$self->{status} ) {
 		return opcodebyval( ( $_ >> 11 ) & 0x0f ) unless scalar @_;
 		my $opcode = opcodebyname(shift);
 		$_ = ( $_ & 0x87ff ) | ( $opcode << 11 );
@@ -158,7 +158,7 @@ Gets or sets the query response code (the status of the query).
 
 sub rcode {
 	my $self = shift;
-	for ( $$self->{status} ||= 0 ) {
+	for ( $$self->{status} ) {
 		my $arg = shift;
 		my $opt = $$self->edns;
 		unless ( defined $arg ) {
@@ -434,7 +434,7 @@ sub edns {
 sub _dnsflag {
 	my $self = shift;
 	my $flag = shift;
-	for ( $$self->{status} ||= 0 ) {
+	for ( $$self->{status} ) {
 		my $set = $_ | $flag;
 		my $not = $set - $flag;
 		$_ = (shift) ? $set : $not if scalar @_;

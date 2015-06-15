@@ -63,6 +63,7 @@ sub new {
 	my $class = shift;
 
 	my $self = bless {
+		status	   => 0,
 		question   => [],
 		answer	   => [],
 		authority  => [],
@@ -71,7 +72,6 @@ sub new {
 
 	$self->{question} = [Net::DNS::Question->new(@_)] if scalar @_;
 
-	$self->header->rd(1);
 	return $self;
 }
 

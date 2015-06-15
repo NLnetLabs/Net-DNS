@@ -78,6 +78,9 @@ sub sa {
 }
 
 
+sub ISDNaddress { &address; }
+
+
 1;
 __END__
 
@@ -85,7 +88,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name ISDN address sa');
+    $rr = new Net::DNS::RR('name ISDN ISDNaddress sa');
 
 =head1 DESCRIPTION
 

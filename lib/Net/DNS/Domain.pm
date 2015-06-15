@@ -41,22 +41,27 @@ use integer;
 use Carp;
 
 
-use constant ASCII => eval {
-	require Encode;
-	Encode::find_encoding('ascii');				# encoding object
-	1;
-} || 0;
+use constant ASCII => ref(
+	eval {
+		require Encode;
+		Encode::find_encoding('ascii');			# encoding object
+	} );
 
-use constant UTF8 => eval {
-	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
-	Encode::find_encoding('utf8');				# encoding object
-	1;
-} || 0;
+use constant UTF8 => ref(
+	eval {
+		Encode::find_encoding('utf8');			# encoding object
+	} );
 
 use constant LIBIDN => eval {
-	require Net::LibIDN;					# tested and working
-	UTF8 && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
-} || 0;
+	require Net::LibIDN;
+	UTF8 && Encode::decode_utf8( chr(91) ) eq '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
+};
+
+use constant IDN => eval {
+	my $cn = pack( 'U*', 20013, 22269 );
+	my $xn = 'xn--fiqs8s';
+	LIBIDN && ( Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq $xn );
+};
 
 
 # perlcc: address of encoding objects must be determined at runtime
@@ -113,8 +118,8 @@ sub new {
 
 	foreach my $l (@$label) {
 		$l = _unescape($l) if $l =~ /\\/;
-		( substr( $l, 63 ) = '', carp 'domain label truncated' )
-				if ( length($l) || croak 'empty domain label' ) > 63;
+		croak 'empty domain label' unless my $size = length($l);
+		( substr( $l, 63 ) = '', carp 'domain label truncated' ) if $size > 63;
 	}
 
 	$$cache1{$k} = $self;					# cache object reference
@@ -143,7 +148,7 @@ numerical escape sequence.
 my $dot = '.';
 
 sub name {
-	my $self = shift;
+	my ($self) = @_;
 
 	return $self->{name} if defined $self->{name};
 
@@ -184,13 +189,14 @@ Net::LibIDN module is installed.
 =cut
 
 sub xname {
-	return &name unless LIBIDN;
+	return &name unless IDN;
 
 	my $name = &name;
 	return $name unless $name =~ /xn--/;
 
 	my $self = shift;
-	$self->{xname} ||= $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' ) || $name;
+	return $self->{xname} if defined $self->{xname};
+	$self->{xname} = $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' );
 }
 
 
@@ -274,8 +280,11 @@ sub _encode_ascii {			## translate perl string to ASCII
 	my $s = shift;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return pack "a* x$z", Net::LibIDN::idn_to_ascii( $s, 'utf-8' ) || croak 'invalid name'
-			if LIBIDN && $s =~ /[^\000-\177]/;
+	return do {
+		my $xn = Net::LibIDN::idn_to_ascii( $s, 'utf-8' );
+		croak 'invalid name' unless $xn;
+		pack "a* x$z", $xn;
+	} if IDN && $s =~ /[^\000-\177]/;
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr

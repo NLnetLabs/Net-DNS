@@ -258,14 +258,15 @@ sub typebyval {
 
 
 sub opcodebyname {
-	my $name = shift;
-	return $opcodebyname{$name} if defined $opcodebyname{$name};
-	croak "unknown opcode $name";
+	my $arg = shift;
+	return $opcodebyname{$arg} if defined $opcodebyname{$arg};
+	return 0 + $arg if $arg =~ /^\d/;
+	croak "unknown opcode $arg";
 }
 
 sub opcodebyval {
-	my $arg = shift;
-	return $opcodebyval{$arg} || 0 + $arg;
+	my $val = shift;
+	$opcodebyval{$val} || return $val;
 }
 
 
@@ -277,8 +278,8 @@ sub rcodebyname {
 }
 
 sub rcodebyval {
-	my $arg = shift;
-	return $rcodebyval{$arg} || 0 + $arg;
+	my $val = shift;
+	$rcodebyval{$val} || return $val;
 }
 
 
@@ -290,8 +291,8 @@ sub ednsoptionbyname {
 }
 
 sub ednsoptionbyval {
-	my $arg = shift;
-	return $ednsoptionbyval{$arg} || 0 + $arg;
+	my $val = shift;
+	$ednsoptionbyval{$val} || return $val;
 }
 
 

@@ -53,27 +53,29 @@ sub version { $VERSION; }
 # mx()
 #
 # Usage:
-#    my @mxes = mx('example.com', 'IN');
+#	@mx = mx('example.com');
+#	@mx = mx($res, 'example.com');
 #
 sub mx {
-	my $res = ref $_[0] ? shift : Net::DNS::Resolver->new;
+	my ($arg1) = @_;
+	my $res = ref($arg1) ? shift : new Net::DNS::Resolver();
 
-	my ( $name, $class ) = @_;
-	$class ||= 'IN';
+	my ( $name, @class ) = @_;
 
-	my $ans = $res->query( $name, 'MX', $class ) || return;
+	my $ans = $res->query( $name, 'MX', @class );
 
-	# This construct is best read backwords.
+	# This construct is best read backwards.
 	#
-	# First we take the answer secion of the packet.
+	# First we take the answer section of the packet.
 	# Then we take just the MX records from that list
 	# Then we sort the list by preference
-	# Then we return it.
 	# We do this into an array to force list context.
-	my @ret = sort { $a->preference <=> $b->preference }
-			grep { $_->type eq 'MX' } $ans->answer;
+	# Then we return the list.
 
-	return @ret;
+	my @list = sort { $a->preference <=> $b->preference }
+			grep { $_->type eq 'MX' } $ans->answer
+			if $ans;
+	return @list;
 }
 
 

@@ -55,7 +55,7 @@ eval {
 } || exit( plan skip_all => "Unable to access global root nameservers" );
 
 
-plan tests => 94;
+plan tests => 96;
 
 NonFatalBegin();
 
@@ -154,6 +154,10 @@ is_deeply($names, $wanted_names, "mx() seems to be working");
 
 # some people seem to use mx() in scalar context
 is(scalar mx(&timeoutres, 'mx2.t.net-dns.org'), 2,  "mx() works in scalar context");
+
+is(scalar mx(&timeoutres, 'bogus.t.net-dns.org'), 0,  "mx() works for bogus name");
+
+is(scalar mx('mx2.t.net-dns.org'), 2,  "mx() works with resolver defaults");
 
 #
 # test that search() and query() DTRT with reverse lookups

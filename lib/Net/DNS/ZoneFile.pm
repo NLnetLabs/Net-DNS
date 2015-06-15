@@ -51,7 +51,7 @@ require FileHandle;
 
 use Net::DNS;
 
-use constant PERLIO => eval { require PerlIO; } || 0;
+use constant PERLIO => ref( eval { require PerlIO; \1; } );
 
 
 =head1 METHODS
@@ -276,7 +276,7 @@ sub _read {
 		my $self = bless {}, shift;
 		my $data = shift;
 		$self->{data} = [split /\n/, ref($data) ? $$data : $data];
-		no integer;
+
 		return OVERLOAD_OK ? $self : do {		# Plan B
 			require IO::File;
 			my $fh = IO::File->new_tmpfile() or die "$!";

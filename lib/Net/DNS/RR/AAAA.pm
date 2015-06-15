@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{address} && length $self->{address};
+	return '' unless $self->{address};
 	pack 'a16', $self->{address};
 }
 
@@ -39,7 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{address} && length $self->{address};
+	return '' unless $self->{address};
 	return $self->address_short;
 }
 
@@ -70,16 +70,15 @@ sub address_short {
 
 sub address {
 	my $self = shift;
+	my $addr = shift;
 
-	return $self->address_long unless scalar @_;
+	return $self->address_long unless defined $addr;
 
-	my $argument = shift || '';
-	my @parse = split /:/, "0$argument";
-	$self = {} unless ref($self);
+	my @parse = split /:/, "0$addr";
 
 	if ( (@parse)[$#parse] =~ /\./ ) {			# embedded IPv4
 		my @ip4 = split /\./, pop(@parse);
-		my $rhs = pop(@ip4) || 0;
+		my $rhs = pop(@ip4);
 		my @ip6 = map { /./ ? hex($_) : (0) x ( 7 - @parse ) } @parse;
 		return $self->{address} = pack 'n6 C4', @ip6, @ip4, (0) x ( 3 - @ip4 ), $rhs;
 	}

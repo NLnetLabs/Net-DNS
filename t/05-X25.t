@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 
 use Net::DNS;
@@ -12,7 +12,7 @@ my $type = 'X25';
 my $code = 19;
 my @attr = qw( address );
 my @data = qw( 311061700956 );
-my @also = qw( );
+my @also = qw( PSDNaddress );
 
 my $wire = '0c333131303631373030393536';
 

@@ -18,12 +18,12 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 80;
+plan tests => 79;
 
 
 my $rr = new Net::DNS::RR(
 	type	 => 'NSEC3',
-	hnxtname => 'irrelevent',
+	hnxtname => 'irrelevant',
 	);
 
 foreach my $rrtype ( 0, 256, 512, 768, 1024 ) {
@@ -46,7 +46,7 @@ foreach my $rrtype ( 0, 7, 8, 15, 16, 23, 24, 31, 32, 39 ) {
 	is( $l, 1 + ( $rrtype >> 3 ), "expected map length for $type" );
 }
 
-foreach my $rrtype ( 0 .. 64 ) {
+foreach my $rrtype ( 0 .. 40, 42 .. 64 ) {
 	my $type = typebyval($rrtype);
 	$rr->typelist($type);
 	my $rdata = $rr->rdata;
