@@ -105,9 +105,9 @@ package Net::DNS::RR::APL::Item;
 
 sub negate {
 	my $bit = 0x80;
-	for ( shift->{negate} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{negate} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}
@@ -118,7 +118,7 @@ sub family {
 	my $self = shift;
 
 	$self->{family} = 0 + shift if scalar @_;
-	return $self->{family} || 0;
+	$self->{family} || 0;
 }
 
 
@@ -126,7 +126,7 @@ sub prefix {
 	my $self = shift;
 
 	$self->{prefix} = 0 + shift if scalar @_;
-	return $self->{prefix} || 0;
+	$self->{prefix} || 0;
 }
 
 

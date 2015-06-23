@@ -15,15 +15,15 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 14;
+plan tests => 23;
 
 
 my $name = 'CERT.example';
 my $type = 'CERT';
 my $code = 37;
-my @attr = qw( format tag algorithm certificate );
-my @data = qw( 1 2 3 123456789abcdefghijklmnopqrstuvwxyz );
-my @also = qw( );
+my @attr = qw( certtype keytag algorithm cert );
+my @data = qw( 1 2 3 MTIzNDU2Nzg5YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXo= );
+my @also = qw( certificate format tag );
 
 my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f707172737475767778797a';
 
@@ -76,9 +76,30 @@ my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f7071727374
 
 
 {
-	is( Net::DNS::RR->new("foo IN CERT 0 2 3 foo=")->format,    0, 'format may be zero' );
-	is( Net::DNS::RR->new("foo IN CERT 1 0 3 foo=")->tag,	    0, 'tag may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 0 2 3 foo=")->certtype,  0, 'certtype may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 1 0 3 foo=")->keytag,    0, 'keytag may be zero' );
 	is( Net::DNS::RR->new("foo IN CERT 1 2 0 foo=")->algorithm, 0, 'algorithm may be zero' );
+}
+
+
+{
+	my $rr = Net::DNS::RR->new("foo IN CERT 1 2 3 foo=");
+	is( $rr->algorithm('MNEMONIC'), 'DSA', 'algorithm mnemonic' );
+	$rr->algorithm(0);
+	is( $rr->algorithm('MNEMONIC'), 0, 'no algorithm mnemonic' );
+
+	eval { $rr->algorithm('X'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+}
+
+
+{
+	my $rr = Net::DNS::RR->new("foo IN CERT 1 2 3 foo=");
+	is( $rr->certtype('PKIX'), 1, 'valid certtype mnemonic' );
+	eval { $rr->certtype('X'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
 }
 
 

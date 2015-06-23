@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 9;
+use Test::More tests => 10;
 
 
 use Net::DNS;
@@ -12,7 +12,7 @@ my $type = 'SPF';
 my $code = 99;
 my @attr = qw( spfdata );
 my @data = ('v=spf1 +mx a:colo.example.com/28 -all');
-my @also = qw( );
+my @also = qw( txtdata );
 
 my $wire = '25763d73706631202b6d7820613a636f6c6f2e6578616d706c652e636f6d2f3238202d616c6c';
 
@@ -37,11 +37,14 @@ my $wire = '25763d73706631202b6d7820613a636f6c6f2e6578616d706c652e636f6d2f323820
 	is( $rr2->encode, $rr->encode, 'new($string) and new(%hash) equivalent' );
 
 	foreach (@attr) {
-		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
+		my $r1 = join '', $rr->$_;
+		is( $r1, $hash->{$_}, "expected result from rr->$_()" );
 	}
 
 	foreach (@also) {
-		is( $rr2->$_, $rr->$_, "additional attribute rr->$_()" );
+		my $r1 = join '', $rr->$_;
+		my $r2 = join '', $rr2->$_;
+		is( $r2, $r1, "additional attribute rr->$_()" );
 	}
 
 

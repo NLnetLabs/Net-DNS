@@ -158,12 +158,12 @@ sub defaults() {			## specify RR attribute default values
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
-		return $algbyname{$key} || croak "unknown algorithm $name";
+		$algbyname{$key} || croak "unknown algorithm $name";
 	}
 
 	sub algbyval {
 		my $value = shift;
-		return $algbyval{$value} || $value;
+		$algbyval{$value} || return $value;
 	}
 }
 
@@ -233,7 +233,7 @@ sub keytag {
 	my $self = shift;
 
 	$self->{keytag} = 0 + shift if scalar @_;
-	return $self->{keytag} || 0;
+	$self->{keytag} || 0;
 }
 
 

@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 14;
+use Test::More tests => 18;
 
 
 use Net::DNS;
@@ -12,7 +12,7 @@ my $type = 'LOC';
 my $code = 29;
 my @attr = qw( latitude longitude altitude size hp vp );
 my @data = qw( 42.35799 -71.014338 -44 2000 10 10 );
-my @also = qw( );
+my @also = qw( version latlon horiz_pre vert_pre );
 
 my $wire = '002513138916cb3c70c310df00988550';
 

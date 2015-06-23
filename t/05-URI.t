@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 8;
+use Test::More tests => 11;
 
 use Net::DNS;
 
@@ -45,6 +45,8 @@ my $wire = '000A00016674703A2F2F667470312E6578616D706C652E636F6D2F7075626C6963';
 
 
 	my $empty   = new Net::DNS::RR("$name NULL");
+	my $txtext  = new Net::DNS::RR("$name $type")->string;
+	my $rxtext  = new Net::DNS::RR($txtext)->encode;
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
 	my $hex1    = uc unpack 'H*', $decoded->encode;
@@ -52,9 +54,14 @@ my $wire = '000A00016674703A2F2F667470312E6578616D706C652E636F6D2F7075626C6963';
 	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
 	is( $hex1, $hex2, 'encode/decode transparent' );
 	is( $hex3, $wire, 'encoded RDATA matches example' );
+}
 
 
-	$rr->print;
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
 

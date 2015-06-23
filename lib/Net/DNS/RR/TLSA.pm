@@ -19,7 +19,7 @@ Net::DNS::RR::TLSA - DNS TLSA resource record
 
 use integer;
 
-use constant BABBLE => eval { require Digest::BubbleBabble; } || 0;
+use constant BABBLE => ref( eval { require Digest::BubbleBabble; \1; } );
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -66,7 +66,7 @@ sub usage {
 	my $self = shift;
 
 	$self->{usage} = 0 + shift if scalar @_;
-	return $self->{usage} || 0;
+	$self->{usage} || 0;
 }
 
 
@@ -74,7 +74,7 @@ sub selector {
 	my $self = shift;
 
 	$self->{selector} = 0 + shift if scalar @_;
-	return $self->{selector} || 0;
+	$self->{selector} || 0;
 }
 
 
@@ -82,7 +82,7 @@ sub matchingtype {
 	my $self = shift;
 
 	$self->{matchingtype} = 0 + shift if scalar @_;
-	return $self->{matchingtype} || 0;
+	$self->{matchingtype} || 0;
 }
 
 

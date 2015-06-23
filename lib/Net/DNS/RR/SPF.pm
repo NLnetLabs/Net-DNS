@@ -21,8 +21,8 @@ use integer;
 
 
 sub spfdata {
-	return shift->char_str_list(@_) if wantarray;
-	join '', shift->char_str_list(@_);
+	my @spf = shift->char_str_list(@_);
+	wantarray ? @spf : join '', @spf;
 }
 
 sub txtdata { &spfdata; }

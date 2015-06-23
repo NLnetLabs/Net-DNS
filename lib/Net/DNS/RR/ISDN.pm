@@ -51,7 +51,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->address(shift);
-	$self->sa( shift || '' );
+	$self->sa(@_);
 }
 
 

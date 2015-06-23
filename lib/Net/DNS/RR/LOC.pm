@@ -27,7 +27,6 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset ) = @_;
 
 	my $version = $self->{version} = unpack "\@$offset C", $$data;
-	warn "LOC version $version not supported" unless $version == 0;
 	@{$self}{qw(size hp vp latitude longitude altitude)} = unpack "\@$offset xC3N3", $$data;
 }
 
@@ -78,7 +77,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub defaults() {			## specify RR attribute default values
 	my $self = shift;
 
-	$self->version(0);
+	$self->{version} = 0;
 	$self->parse_rdata( 0, 0, 0, 1, 10000, 10 );
 }
 
@@ -133,19 +132,13 @@ sub vert_pre { &vp; }
 
 sub latlon {
 	my $self = shift;
-	$self->latitude(shift)	if scalar @_;
-	$self->longitude(shift) if scalar @_;
-	my $lat	 = $self->latitude;
-	my $long = $self->longitude;
-	my @pair = ( $lat, $long );
+	my ( $lat, @lon ) = @_;
+	my @pair = ( $self->latitude(@_), $self->longitude(@lon) );
 }
 
 
 sub version {
-	my $self = shift;
-
-	$self->{version} = 0 + shift if scalar @_;
-	return $self->{version} || 0;
+	shift->{version};
 }
 
 
@@ -170,9 +163,9 @@ sub _decode_lat {
 
 
 sub _encode_lat {
-	my @ang = scalar @_ > 1 ? (@_) : ( split /[\s\260'"]+/, shift || '0' );
+	my @ang = scalar @_ > 1 ? (@_) : ( split /[\s\260'"]+/, shift );
 	my $ang = ( 0 + shift @ang ) * 3600000;
-	my $neg = ( @ang ? pop @ang : '' ) =~ /[SWsw]/ && $ang > 0;
+	my $neg = ( @ang ? pop @ang : '' ) =~ /[SWsw]/;
 	$ang += ( @ang ? shift @ang : 0 ) * 60000;
 	$ang += ( @ang ? shift @ang : 0 ) * 1000;
 	return int( 0.5 + ( $neg ? $datum_loc - $ang : $datum_loc + $ang ) );
@@ -186,13 +179,13 @@ sub _decode_alt {
 
 
 sub _encode_alt {
-	( my $argument = shift || '0' ) =~ s/[Mm]$//;
+	( my $argument = shift ) =~ s/[Mm]$//;
 	$argument += 0;
 	return int( 0.5 + $datum_alt + 100 * $argument );
 }
 
 
-my @power10 = ( 0.01, 0.1, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8 );
+my @power10 = ( 0.01, 0.1, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e99 );
 
 sub _decode_prec {
 	my $argument = shift;
@@ -201,14 +194,12 @@ sub _decode_prec {
 }
 
 sub _encode_prec {
-	( my $argument = shift || '0' ) =~ s/[Mm]$//;
-	return 0x00 if $argument < 0.01;
+	( my $argument = shift ) =~ s/[Mm]$//;
 	foreach my $exponent ( 0 .. 9 ) {
 		next unless $argument < $power10[1 + $exponent];
 		my $mantissa = int( 0.5 + $argument / $power10[$exponent] );
 		return ( $mantissa & 0xF ) << 4 | $exponent;
 	}
-	return 0x99;
 }
 
 
@@ -309,7 +300,6 @@ signed floating-point degrees.
 =head2 version
 
     $version = $rr->version;
-    $rr->version( $version );
 
 Version of LOC protocol.
 

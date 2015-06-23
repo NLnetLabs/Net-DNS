@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{address} && length $self->{address};
+	return '' unless $self->{address};
 	pack 'a6', $self->{address};
 }
 
@@ -39,7 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{address} && length $self->{address};
+	return '' unless $self->{address};
 	return $self->address;
 }
 

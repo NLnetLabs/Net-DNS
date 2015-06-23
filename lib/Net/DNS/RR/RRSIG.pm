@@ -122,12 +122,12 @@ sub parse_rdata {			## populate RR from rdata in argument list
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
-		return $algbyname{$key} || croak "unknown algorithm $name";
+		$algbyname{$key} || croak "unknown algorithm $name";
 	}
 
 	sub algbyval {
 		my $value = shift;
-		return $algbyval{$value} || $value;
+		$algbyval{$value} || return $value;
 	}
 }
 
@@ -171,7 +171,7 @@ sub labels {
 	my $self = shift;
 
 	$self->{labels} = 0 + shift if scalar @_;
-	return $self->{labels} || 0;
+	$self->{labels} || 0;
 }
 
 
@@ -179,7 +179,7 @@ sub orgttl {
 	my $self = shift;
 
 	$self->{orgttl} = 0 + shift if scalar @_;
-	return $self->{orgttl} || 0;
+	$self->{orgttl} || 0;
 }
 
 
@@ -204,7 +204,7 @@ sub keytag {
 	my $self = shift;
 
 	$self->{keytag} = 0 + shift if scalar @_;
-	return $self->{keytag} || 0;
+	$self->{keytag} || 0;
 }
 
 

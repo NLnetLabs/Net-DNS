@@ -76,7 +76,7 @@ sub pkalgorithm {
 	my $self = shift;
 
 	$self->{pkalgorithm} = 0 + shift if scalar @_;
-	return $self->{pkalgorithm} || 0;
+	$self->{pkalgorithm} || 0;
 }
 
 
@@ -100,7 +100,7 @@ sub key {
 	my $self = shift;
 
 	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
+	MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
 }
 
 

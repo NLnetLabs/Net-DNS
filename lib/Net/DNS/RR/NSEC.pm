@@ -79,8 +79,7 @@ sub typelist {
 
 sub _type2bm {
 	my @typearray;
-	foreach my $typename ( map split( /\s+/, $_ ), @_ ) {
-		next unless $typename;
+	foreach my $typename ( map split(), @_ ) {
 		my $number = typebyname($typename);
 		my $window = $number >> 8;
 		my $bitnum = $number & 255;
@@ -89,7 +88,7 @@ sub _type2bm {
 		$typearray[$window][$octet] |= 0x80 >> $bit;
 	}
 
-	my $bitmap;
+	my $bitmap = '';
 	my $window = 0;
 	foreach (@typearray) {
 		if ( my $pane = $typearray[$window] ) {
@@ -99,15 +98,16 @@ sub _type2bm {
 		$window++;
 	}
 
-	return $bitmap || '';
+	return $bitmap;
 }
 
 
 sub _bm2type {
-	my $bitmap = shift || '';
-	my $index  = 0;
-	my $limit  = length $bitmap;
 	my @typelist;
+	my $bitmap = shift || return @typelist;
+
+	my $index = 0;
+	my $limit = length $bitmap;
 
 	while ( $index < $limit ) {
 		my ( $block, $size ) = unpack "\@$index C2", $bitmap;
@@ -131,8 +131,8 @@ sub _bm2type {
 
 sub typebm {				## historical
 	my $self = shift;
-	return $self->{typebm} unless scalar @_;
-	$self->{typebm} = shift;
+	$self->{typebm} = shift if scalar @_;
+	return $self->{typebm};
 }
 
 

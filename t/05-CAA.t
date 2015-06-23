@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 12;
+use Test::More tests => 17;
 
 use Net::DNS;
 
@@ -10,10 +10,10 @@ my $name = 'CAA.example';
 my $type = 'CAA';
 my $code = 257;
 my @attr = qw( flags tag value );
-my @data = qw( 0 issue example.net );
+my @data = qw( 128 issue example.net );
 my @also = qw( critical );
 
-my $wire = '000569737375656578616d706c652e6e6574';
+my $wire = '800569737375656578616d706c652e6e6574';
 
 
 {
@@ -60,6 +60,17 @@ my $wire = '000569737375656578616d706c652e6e6574';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+
+	ok( $rr->critical(1),  'set $rr->critical' );
+	ok( !$rr->critical(0), 'clear $rr->critical' );
 }
 
 

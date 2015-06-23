@@ -21,7 +21,7 @@ use integer;
 
 use Carp;
 
-use constant BABBLE => eval { require Digest::BubbleBabble; } || 0;
+use constant BABBLE => ref( eval { require Digest::BubbleBabble; \1; } );
 
 eval { require Digest::SHA };		## optional for simple Net::DNS RR
 eval { require Digest::GOST };
@@ -77,12 +77,12 @@ my %digest = (
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
-		return $algbyname{$key} || croak "unknown algorithm $name";
+		$algbyname{$key} || croak "unknown algorithm $name";
 	}
 
 	sub algbyval {
 		my $value = shift;
-		return $algbyval{$value} || $value;
+		$algbyval{$value} || return $value;
 	}
 }
 
@@ -117,12 +117,12 @@ my %digest = (
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
-		return $digestbyname{$key} || croak "unknown digest type $name";
+		$digestbyname{$key} || croak "unknown digest type $name";
 	}
 
 	sub digestbyval {
 		my $value = shift;
-		return $digestbyval{$value} || $value;
+		$digestbyval{$value} || return $value;
 	}
 }
 
@@ -166,7 +166,7 @@ sub keytag {
 	my $self = shift;
 
 	$self->{keytag} = 0 + shift if scalar @_;
-	return $self->{keytag} || 0;
+	$self->{keytag} || 0;
 }
 
 
@@ -174,7 +174,7 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	unless ( ref($self) ) {		## class method or simple function
-		my $argn = pop || croak 'undefined argument';
+		my $argn = pop;
 		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
 	}
 
@@ -188,7 +188,7 @@ sub digtype {
 	my ( $self, $arg ) = @_;
 
 	unless ( ref($self) ) {		## class method or simple function
-		my $argn = pop || croak 'undefined argument';
+		my $argn = pop;
 		return $argn =~ /[^0-9]/ ? digestbyname($argn) : digestbyval($argn);
 	}
 
@@ -245,7 +245,8 @@ sub create {
 	my $owner = $self->{owner}->encode();
 	my $data = pack 'a* a*', $owner, $keyrr->encode_rdata;
 
-	my $arglist = $digest{$self->digtype} || croak 'unsupported digest type';
+	my $arglist = $digest{$self->digtype};
+	croak 'unsupported digest type' unless $arglist;
 	my ( $object, @argument ) = @$arglist;
 	my $hash = $object->new(@argument);
 	$hash->add($data);

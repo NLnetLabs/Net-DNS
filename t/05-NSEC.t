@@ -1,32 +1,22 @@
 # $Id$	-*-perl-*-
-#
 
 use strict;
-use Test::More;
+use Test::More tests => 16;
+
+
 use Net::DNS;
 
-my @prerequisite = qw(
-		MIME::Base32
-		);
 
-foreach my $package (@prerequisite) {
-	next if eval "require $package";
-	plan skip_all => "$package not installed";
-	exit;
-}
+my $name = 'alpha.example.com';
+my $type = 'NSEC';
+my $code = 47;
+my @attr = qw( nxtdname typelist);
+my @data = qw( host.example.com A MX RRSIG NSEC TYPE1234 );
+my @hash = ( qw( host.example.com ), q(A MX NSEC RRSIG TYPE1234) );
+my @also = qw( );
 
-plan tests => 17;
-
-
-my $name = '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example';
-my $type = 'NSEC3';
-my $code = 50;
-my @attr = qw( algorithm flags iterations salt hnxtname typelist );
-my @data = qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr NS SOA MX RRSIG DNSKEY NSEC3PARAM );
-my @hash = ( qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr ), q(NS SOA MX RRSIG DNSKEY NSEC3PARAM) );
-my @also = qw( optout );
-
-my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b000722010000000290';
+my $wire =
+'04686f7374076578616d706c6503636f6d000006400100000003041b000000000000000000000000000000000000000000000000000020';
 
 
 {
@@ -78,18 +68,31 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 
 
 {
-	my @rdata = qw(1 1 12 - 2t7b4g4vsa5smi47k61mv5bv1a22bojr A);
-	my $rr	  = new Net::DNS::RR(". $type @rdata");
-	is( $rr->salt,	   '',	     'parse RR with salt field placeholder' );
-	is( $rr->rdstring, "@rdata", 'placeholder denotes empty salt field' );
+	my $lc		= new Net::DNS::RR( lc ". $type @data" );
+	my $rr		= new Net::DNS::RR( uc ". $type @data" );
+	my $hash	= {};
+	my $predecessor = $rr->encode( 0, $hash );
+	my $compressed	= $rr->encode( length $predecessor, $hash );
+	ok( !length $compressed < length $predecessor, 'encoded RDATA not compressible' );
+	isnt( $rr->encode,    $lc->encode, 'encoded RDATA names not downcased' );
+	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
 }
 
 
 {
-	my $rr = new Net::DNS::RR("$name $type @data");
-	$rr->print;
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
-exit;
 
+{
+	my $rr = new Net::DNS::RR(". $type");
+	$rr->typebm('');
+	is( $rr->typebm(), '',  "historical 'typebm'" );
+}
+
+
+exit;
 

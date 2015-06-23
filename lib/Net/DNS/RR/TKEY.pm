@@ -68,13 +68,6 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
-	my $self = shift;
-
-	croak 'zone file representation not defined for TKEY' if shift;
-}
-
-
 sub class {				## overide RR method
 	return 'ANY';
 }
@@ -100,7 +93,7 @@ sub inception {
 	my $self = shift;
 
 	$self->{inception} = 0 + shift if scalar @_;
-	return $self->{inception} || 0;
+	$self->{inception} || 0;
 }
 
 
@@ -108,7 +101,7 @@ sub expiration {
 	my $self = shift;
 
 	$self->{expiration} = 0 + shift if scalar @_;
-	return $self->{expiration} || 0;
+	$self->{expiration} || 0;
 }
 
 
@@ -116,7 +109,7 @@ sub mode {
 	my $self = shift;
 
 	$self->{mode} = 0 + shift if scalar @_;
-	return $self->{mode} || 0;
+	$self->{mode} || 0;
 }
 
 
@@ -124,7 +117,7 @@ sub error {
 	my $self = shift;
 
 	$self->{error} = 0 + shift if scalar @_;
-	return $self->{error} || 0;
+	$self->{error} || 0;
 }
 
 

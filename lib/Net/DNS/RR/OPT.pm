@@ -44,8 +44,6 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 		$self->option( $code, substr $$data, $offset, $length );
 		$offset += $length;
 	}
-
-	croak('corrupt OPT data') unless $offset == $limit;	# more or less FUBAR
 }
 
 
@@ -58,20 +56,6 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 		$rdata .= pack 'nna*', $_, length($value), $value;
 	}
 	return $rdata;
-}
-
-
-sub format_rdata {			## format rdata portion of RR string.
-	my $self = shift;
-
-	croak 'zone file representation not defined for OPT';
-}
-
-
-sub parse_rdata {			## populate RR from rdata in argument list
-	my $self = shift;
-
-	croak 'zone file representation not defined for OPT' if shift;
 }
 
 
@@ -97,41 +81,38 @@ sub string {				## overide RR method
 			map sprintf( "%s\t%s", ednsoptionbyval($_), unpack 'H*', $self->option($_) ), @option;
 
 	$rcode = 0 if $rcode < 16;				# weird: 1 .. 15 not EDNS codes!!
-	$rcode = exists( $self->{rdlength} ) && $rcode ? "$rcode + [4-bits]" : rcodebyval($rcode);
-	$rcode = 'BADVERS' if $rcode eq 'BADSIG';		# code 16 unambiguous here
+
+	my $rc = exists( $self->{rdlength} ) && $rcode ? "$rcode + [4-bits]" : rcodebyval($rcode);
+
+	$rc = 'BADVERS' if $rcode == 16;			# code 16 unambiguous here
 
 	return <<"QQ";
 ;; EDNS version $edns
 ;;	flags:	$flags
-;;	rcode:	$rcode
+;;	rcode:	$rc
 ;;	size:	$size
 ;;	option: @lines
 QQ
 }
 
 
-my $warned;
+my ( $class, $ttl );
 
 sub class {				## overide RR method
-	my ( $self, $argument ) = @_;
-	return &size() if $argument && $argument =~ /[^0-9]/;
-	carp qq[Usage: OPT has no "class" attribute, please use "size()"] unless $warned++;
+	carp qq[Usage: OPT has no "class" attribute, please use "size()"] unless $class++;
 	&size;
 }
 
 sub ttl {				## overide RR method
 	my $self = shift;
-	carp qq[Usage: OPT has no "ttl" attribute, please use "flags()" and "rcode()"] unless $warned++;
-	@{$self}{qw(rcode version flags)} = unpack 'C2 n', pack 'N', shift || 0 if scalar @_;
-	return pack 'C2 n', @{$self}{qw(rcode version flags)} if defined wantarray;
+	carp qq[Usage: OPT has no "ttl" attribute, please use "flags()" or "rcode()"] unless $ttl++;
+	@{$self}{qw(rcode flags)} = unpack 'Cxn', pack 'N', shift if scalar @_;
+	pack 'C2n', $self->rcode, $self->version, $self->flags;
 }
 
 
 sub version {
-	my $self = shift;
-
-	$self->{version} = 0 + shift if scalar @_;
-	return $self->{version} || 0;
+	shift->{version} || 0;
 }
 
 
@@ -151,18 +132,14 @@ sub rcode {
 	return $self->{rcode} || 0 unless scalar @_;
 	delete $self->{rdlength};				# (ab)used to signal incomplete value
 	my $val = shift || 0;
-	$val = 0 if $val < 16;					# discard non-EDNS rcodes 1 .. 15
-	$self->{rcode} = $val if $val or defined $self->{rcode};
-	return $val;
+	$self->{rcode} = $val < 16 ? 0 : $val;			# discard non-EDNS rcodes 1 .. 15
 }
 
 
 sub flags {
 	my $self = shift;
 	return $self->{flags} || 0 unless scalar @_;
-	my $val = shift;
-	$self->{flags} = $val if $val or defined $self->{flags};
-	return $val;
+	$self->{flags} = shift;
 }
 
 
@@ -175,14 +152,12 @@ sub options {
 sub option {
 	my $self = shift;
 
-	my $options = $self->{option} || {};
+	my $options = $self->{option} ||= {};
 	while ( scalar @_ ) {
-		my $option = shift;
-		my $number = ednsoptionbyname($option);
+		my $number = ednsoptionbyname(shift);
 		return $options->{$number} unless scalar @_;
 		my $value = shift;
-		delete $options->{$number} unless defined $value;
-		$options = $self->{option} ||= {};
+		delete $options->{$number};
 		$options->{$number} = $value if defined $value;
 	}
 }
@@ -190,11 +165,7 @@ sub option {
 
 sub defined {
 	my $self = shift;
-
-	foreach (qw(size flags rcode option)) {
-		return 1 if defined $self->{$_};
-	}
-	return 0;
+	scalar grep CORE::defined( $self->{$_} ), qw(size flags rcode option);
 }
 
 
@@ -235,7 +206,6 @@ other unpredictable behaviour.
 =head2 version
 
     $version = $rr->version;
-    $rr->version( $version );
 
 The version of EDNS used by this OPT record.
 

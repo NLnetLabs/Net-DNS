@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 14;
+use Test::More tests => 16;
 
 
 BEGIN {
@@ -77,6 +77,13 @@ my $wire = '005a0572656c6179057072696d6503636f6d00';
 }
 
 
-exit;
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
 
+
+exit;
 

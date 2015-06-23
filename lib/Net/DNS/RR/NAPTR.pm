@@ -69,7 +69,7 @@ sub order {
 	my $self = shift;
 
 	$self->{order} = 0 + shift if scalar @_;
-	return $self->{order} || 0;
+	$self->{order} || 0;
 }
 
 
@@ -77,7 +77,7 @@ sub preference {
 	my $self = shift;
 
 	$self->{preference} = 0 + shift if scalar @_;
-	return $self->{preference} || 0;
+	$self->{preference} || 0;
 }
 
 

@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 14;
+use Test::More tests => 17;
 
 
 use Net::DNS;
@@ -72,6 +72,14 @@ my $wire = '000a046e657432026974000950524d442d6e6574320541444d446204432d697400';
 	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
 	isnt( $rr->encode, $lc->encode, 'encoded RDATA names not downcased' );
 	is( $rr->canonical, $lc->encode, 'canonical RDATA names downcased' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
 

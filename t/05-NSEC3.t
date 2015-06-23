@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 17;
+plan tests => 27;
 
 
 my $name = '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example';
@@ -24,7 +24,7 @@ my $code = 50;
 my @attr = qw( algorithm flags iterations salt hnxtname typelist );
 my @data = qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr NS SOA MX RRSIG DNSKEY NSEC3PARAM );
 my @hash = ( qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr ), q(NS SOA MX RRSIG DNSKEY NSEC3PARAM) );
-my @also = qw( optout );
+my @also = qw( hashalgo nxtdname optout );
 
 my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b000722010000000290';
 
@@ -80,8 +80,31 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 {
 	my @rdata = qw(1 1 12 - 2t7b4g4vsa5smi47k61mv5bv1a22bojr A);
 	my $rr	  = new Net::DNS::RR(". $type @rdata");
+	my $class = ref($rr);
+
+	$rr->algorithm('SHA-1');
+	is( $rr->algorithm(),		1,	 'algorithm mnemonic accepted' );
+	is( $rr->algorithm('MNEMONIC'), 'SHA-1', "rr->algorithm('MNEMONIC')" );
+	is( $class->algorithm('SHA-1'), 1,	 "class method algorithm('SHA-1')" );
+	is( $class->algorithm(1),	'SHA-1', "class method algorithm(1)" );
+	is( $class->algorithm(255),	255,	 "class method algorithm(255)" );
+
+	eval { $rr->algorithm('X'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+}
+
+
+{
+	my @rdata = qw(1 1 12 - 2t7b4g4vsa5smi47k61mv5bv1a22bojr A);
+	my $rr	  = new Net::DNS::RR(". $type @rdata");
 	is( $rr->salt,	   '',	     'parse RR with salt field placeholder' );
 	is( $rr->rdstring, "@rdata", 'placeholder denotes empty salt field' );
+	is( unpack( 'H*', $rr->saltbin ), '', 'null salt binary value' );
+
+	eval { $rr->salt('123456789XBCDEF'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt hexadecimal\t[$exception]" );
 }
 
 

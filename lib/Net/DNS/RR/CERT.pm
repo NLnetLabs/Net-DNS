@@ -19,9 +19,11 @@ Net::DNS::RR::CERT - DNS CERT resource record
 
 use integer;
 
+use Carp;
 use MIME::Base64;
 
-my %formats = (
+
+my %certtype = (
 	PKIX	=> 1,						# X.509 as per PKIX
 	SPKI	=> 2,						# SPKI certificate
 	PGP	=> 3,						# OpenPGP packet
@@ -34,30 +36,65 @@ my %formats = (
 	OID	=> 254,						# OID private
 	);
 
-my %r_formats = reverse %formats;
 
+#
+# source: http://www.iana.org/assignments/dns-sec-alg-numbers
+#
+{
+	my @algbyname = (		## Reserved	=> 0,	# [RFC4034][RFC4398]
+		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
+		'DH'		     => 2,			# [RFC2539]
+		'DSA'		     => 3,			# [RFC3755][RFC2536]
+					## Reserved	=> 4,	# [RFC6725]
+		'RSASHA1'	     => 5,			# [RFC3110][RFC4034]
+		'DSA-NSEC3-SHA1'     => 6,			# [RFC5155]
+		'RSASHA1-NSEC3-SHA1' => 7,			# [RFC5155]
+		'RSASHA256'	     => 8,			# [RFC5702]
+					## Reserved	=> 9,	# [RFC6725]
+		'RSASHA512'	     => 10,			# [RFC5702]
+					## Reserved	=> 11,	# [RFC6725]
+		'ECC-GOST'	     => 12,			# [RFC5933]
+		'ECDSAP256SHA256'    => 13,			# [RFC6605]
+		'ECDSAP384SHA384'    => 14,			# [RFC6605]
 
-my %algorithms = (						# RFC4034 except where noted
-	RSAMD5	   => 1,
-	DH	   => 2,
-	DSA	   => 3,
-	ECC	   => 4,
-	RSASHA1	   => 5,
-	RESERVE123 => 123,					# RFC6014
-	RESERVE251 => 251,					# RFC6014
-	INDIRECT   => 252,
-	PRIVATEDNS => 253,
-	PRIVATEOID => 254,
-	);
+		'INDIRECT'   => 252,				# [RFC4034]
+		'PRIVATEDNS' => 253,				# [RFC4034]
+		'PRIVATEOID' => 254,				# [RFC4034]
+					## Reserved	=> 255,	# [RFC4034]
+		);
 
-my %r_algorithms = reverse %algorithms;
+	my %algbyval = reverse @algbyname;
+
+	my $map = sub {
+		my $arg = shift;
+		unless ( $algbyval{$arg} ) {
+			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
+			return uc $arg;
+		}
+		my @map = ( $arg, "$arg" => $arg );		# also accept number
+	};
+
+	my %algbyname = map &$map($_), @algbyname;
+
+	sub algbyname {
+		my $name = shift;
+		my $key	 = uc $name;				# synthetic key
+		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
+		$algbyname{$key} || croak "unknown algorithm $name";
+	}
+
+	sub algbyval {
+		my $value = shift;
+		$algbyval{$value} || return $value;
+	}
+}
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	@{$self}{qw(format tag algorithm)} = unpack "\@$offset n2 C", $$data;
+	@{$self}{qw(certtype keytag algorithm)} = unpack "\@$offset n2 C", $$data;
 	$self->{certbin} = substr $$data, $offset + 5, $self->{rdlength} - 5;
 }
 
@@ -65,69 +102,61 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{certbin};
-	pack "n2 C a*", @{$self}{qw(format tag algorithm certbin)};
+	my $certbin = $self->certbin || return '';
+	pack "n2 C a*", $self->certtype, $self->keytag, $self->algorithm, $certbin;
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @base64 = split /\s+/, encode_base64( $self->{certbin} || return '' );
-	my $algorithm = $r_algorithms{$self->{algorithm}} || $self->{algorithm};
-	my $format    = $r_formats{$self->{format}}	  || $self->{format};
-	my @rdata = $format, $self->{tag}, $algorithm, @base64;
+	my @base64 = split /\s+/, encode_base64( $self->certbin || return '' );
+	my @rdata = $self->certtype, $self->keytag, $self->algorithm, @base64;
 }
 
 
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(format tag algorithm);
+	$self->certtype(shift);
+	$self->keytag(shift);
+	$self->algorithm(shift);
 	$self->cert(@_);
 }
 
 
-sub format {
+sub certtype {
 	my $self = shift;
 
-	return $self->{format} unless scalar @_;
+	return $self->{certtype} unless scalar @_;
 
-	my $format = shift;
-	$format = '<undef>' unless defined $format;
-	$format = $formats{$format} || die "Unknown mnemonic: '$format'"
-			if $format =~ /\D/;			# look up mnemonic
-	$self->{format} = $format;
+	my $certtype = shift || 0;
+	return $self->{certtype} = $certtype unless $certtype =~ /\D/;
+
+	my $typenum = $certtype{$certtype};
+	$typenum || croak "unknown certtype $certtype";
+	$self->{certtype} = $typenum;
 }
 
 
-sub tag {
+sub keytag {
 	my $self = shift;
 
-	$self->{tag} = 0 + shift if scalar @_;
-	return $self->{tag} || 0;
+	$self->{keytag} = 0 + shift if scalar @_;
+	$self->{keytag} || 0;
 }
 
 
 sub algorithm {
-	my $self = shift;
+	my ( $self, $arg ) = @_;
 
-	return $self->{algorithm} unless scalar @_;
-
-	my $algorithm = shift;
-	$algorithm = '<undef>' unless defined $algorithm;
-	$algorithm = $algorithms{$algorithm} || die "Unknown mnemonic: '$algorithm'"
-			if $algorithm =~ /\D/;			# look up mnemonic
-	$self->{algorithm} = $algorithm;
+	return $self->{algorithm} unless defined $arg;
+	return algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = $arg ? algbyname($arg) : 0;
 }
 
 
-sub cert {
-	my $self = shift;
-
-	$self->certbin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	return MIME::Base64::encode( $self->certbin(), "" ) if defined wantarray;
-}
+sub certificate { &certbin; }
 
 
 sub certbin {
@@ -138,7 +167,16 @@ sub certbin {
 }
 
 
-sub certificate { &certbin; }		## historical
+sub cert {
+	my $self = shift;
+
+	$self->certbin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
+	MIME::Base64::encode( $self->certbin(), "" ) if defined wantarray;
+}
+
+
+sub format { &certtype; }		## historical
+sub tag	   { &keytag; }			## historical
 
 
 1;
@@ -148,7 +186,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name IN CERT format tag algorithm cert');
+    $rr = new Net::DNS::RR('name IN CERT certtype keytag algorithm cert');
 
 =head1 DESCRIPTION
 
@@ -164,16 +202,16 @@ structures is discouraged and could result in program termination or
 other unpredictable behaviour.
 
 
-=head2 format
+=head2 certtype
 
-    $format =  $rr->format;
+    $certtype = $rr->certtype;
 
-Returns the format code for the certificate (in numeric form)
+Returns the certtype code for the certificate (in numeric form).
 
-=head2 tag
+=head2 keytag
 
-    $tag = $rr->tag;
-    $rr->tag( $tag );
+    $keytag = $rr->keytag;
+    $rr->keytag( $keytag );
 
 Returns the key tag for the public key in the certificate
 
@@ -183,12 +221,7 @@ Returns the key tag for the public key in the certificate
 
 Returns the algorithm used by the certificate (in numeric form).
 
-=head2 cert
-
-    $cert = $rr->cert;
-    $rr->cert( $cert );
-
-Base64 representation of the certificate.
+=head2 certificate
 
 =head2 certbin
 
@@ -196,6 +229,13 @@ Base64 representation of the certificate.
     $rr->certbin( $certbin );
 
 Binary representation of the certificate.
+
+=head2 cert
+
+    $cert = $rr->cert;
+    $rr->cert( $cert );
+
+Base64 representation of the certificate.
 
 
 =head1 COPYRIGHT

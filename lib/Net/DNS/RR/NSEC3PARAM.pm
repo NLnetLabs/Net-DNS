@@ -61,7 +61,7 @@ sub algorithm {
 	my $self = shift;
 
 	$self->{algorithm} = 0 + shift if scalar @_;
-	return $self->{algorithm} || 0;
+	$self->{algorithm} || 0;
 }
 
 
@@ -69,7 +69,7 @@ sub flags {
 	my $self = shift;
 
 	$self->{flags} = 0 + shift if scalar @_;
-	return $self->{flags} || 0;
+	$self->{flags} || 0;
 }
 
 
@@ -77,7 +77,7 @@ sub iterations {
 	my $self = shift;
 
 	$self->{iterations} = 0 + shift if scalar @_;
-	return $self->{iterations} || 0;
+	$self->{iterations} || 0;
 }
 
 

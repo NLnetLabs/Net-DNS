@@ -19,7 +19,7 @@ Net::DNS::RR::SSHFP - DNS SSHFP resource record
 
 use integer;
 
-use constant BABBLE => eval { require Digest::BubbleBabble; } || 0;
+use constant BABBLE => ref( eval { require Digest::BubbleBabble; \1; } );
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -62,7 +62,7 @@ sub algorithm {
 	my $self = shift;
 
 	$self->{algorithm} = 0 + shift if scalar @_;
-	return $self->{algorithm} || 0;
+	$self->{algorithm} || 0;
 }
 
 
@@ -70,7 +70,7 @@ sub fptype {
 	my $self = shift;
 
 	$self->{fptype} = 0 + shift if scalar @_;
-	return $self->{fptype} || 0;
+	$self->{fptype} || 0;
 }
 
 

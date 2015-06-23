@@ -56,7 +56,7 @@ sub keys {
 	my $self = shift;
 
 	$self->keysbin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	return MIME::Base64::encode( $self->keysbin(), "" ) if defined wantarray;
+	MIME::Base64::encode( $self->keysbin(), "" ) if defined wantarray;
 }
 
 

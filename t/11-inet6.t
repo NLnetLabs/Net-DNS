@@ -54,7 +54,7 @@ eval {
 } || exit( plan skip_all => "Unable to access global root nameservers" );
 
 
-plan tests => 10;
+plan tests => 9;
 
 NonFatalBegin();
 
@@ -174,15 +174,5 @@ SKIP: { skip "axfr did not return an iterator", 2 unless defined($iter);
 }
 
 
-use Net::DNS::Nameserver;
-my $ns = Net::DNS::Nameserver->new(
-               LocalAddr        => ['::1'  ],
-               LocalPort        => "5363",
-               ReplyHandler => \&reply_handler,
-               Verbose          => 1
-        );
-
-
-ok($ns,"nameserver object created on IPv6 ::1");
-
 NonFatalEnd();
+

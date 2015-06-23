@@ -21,7 +21,8 @@ diag("set environment variable NET_DNS_DEBUG to get all versions\n\n");
 
 use_ok('Net::DNS');
 use_ok('Net::DNS::Resolver::Recurse');
-use_ok('Net::DNS::Nameserver');
+
+is( Net::DNS->version, $Net::DNS::VERSION, 'Net::DNS->version');
 
 
 #

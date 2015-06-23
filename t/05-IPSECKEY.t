@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 16;
+plan tests => 18;
 
 
 my $name = '38.1.0.192.in-addr.arpa';
@@ -23,7 +23,7 @@ my $type = 'IPSECKEY';
 my $code = 45;
 my @attr = qw( precedence gatetype algorithm gateway key );
 my @data = qw( 10 3 2 gateway.example.com AQNRU3mG7TVTO2BkR47usntb102uFJtugbo6BSGvgqt4AQ== );
-my @also = qw( );
+my @also = qw( pubkey keybin );
 
 my $wire =
 '0a03020767617465776179076578616d706c6503636f6d00010351537986ed35533b6064478eeeb27b5bd74dae149b6e81ba3a0521af82ab7801';

@@ -19,28 +19,30 @@ Net::DNS::RR::X25 - DNS X25 resource record
 
 use integer;
 
+use Net::DNS::Text;
+
 
 sub decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $asize = unpack "\@$offset C", $$data;
-	$self->{address} = unpack "\@$offset x a$asize", $$data;
+	$self->{address} = decode Net::DNS::Text( $data, $offset );
 }
 
 
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $length = length( $self->{address} || return '' );
-	pack 'C a*', $length, $self->{address};
+	my $address = $self->{address} || return '';
+	$address->encode;
 }
 
 
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	$self->address;
+	my $address = $self->{address} || return '';
+	$address->string;
 }
 
 
@@ -54,8 +56,8 @@ sub parse_rdata {			## populate RR from rdata in argument list
 sub address {
 	my $self = shift;
 
-	$self->{address} = shift if scalar @_;
-	$self->{address} || "";
+	$self->{address} = new Net::DNS::Text(shift) if scalar @_;
+	$self->{address}->value if defined wantarray && $self->{address};
 }
 
 

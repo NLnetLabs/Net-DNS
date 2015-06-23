@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 29;
 
 
 use Net::DNS;
@@ -14,7 +14,7 @@ my @attr = qw( keytag algorithm digtype digest );
 my @data = ( 60485, 5, 1, '2bb183af5f22588179a53b0a98631fad1a292118' );
 my @also = qw( digestbin babble );
 
-my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
+my $wire = qw( EC4505012BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
@@ -53,13 +53,56 @@ my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
 	is( $hex1, $hex2, 'encode/decode transparent' );
 	is( $hex3, $wire, 'encoded RDATA matches example' );
+}
 
+
+{
+	my $rr	  = new Net::DNS::RR(". $type @data");
+	my $class = ref($rr);
 
 	$rr->algorithm('RSASHA512');
-	is( $rr->algorithm(), 10, 'algorithm mnemonic accepted' );
+	is( $rr->algorithm(),		    10,		 'algorithm mnemonic accepted' );
+	is( $rr->algorithm('MNEMONIC'),	    'RSASHA512', "rr->algorithm('MNEMONIC')" );
+	is( $class->algorithm('RSASHA512'), 10,		 "class method algorithm('RSASHA512')" );
+	is( $class->algorithm(10),	    'RSASHA512', "class method algorithm(10)" );
+	is( $class->algorithm(255),	    255,	 "class method algorithm(255)" );
+
+	eval { $rr->algorithm('X'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+}
+
+
+{
+	my $rr	  = new Net::DNS::RR(". $type @data");
+	my $class = ref($rr);
 
 	$rr->digtype('SHA256');
-	is( $rr->digtype(), 2, 'digest type mnemonic accepted' );
+	is( $rr->digtype(),	       2,	  'digest type mnemonic accepted' );
+	is( $rr->digtype('MNEMONIC'),  'SHA-256', "rr->digtype('MNEMONIC')" );
+	is( $class->digtype('SHA256'), 2,	  "class method digtype('SHA256')" );
+	is( $class->digtype(2),	       'SHA-256', "class method digtype(2)" );
+	is( $class->digtype(255),      255,	  "class method digtype(255)" );
+
+	eval { $rr->digtype('X'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type @data");
+	eval { $rr->digest('123456789XBCDEF'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt hexadecimal\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach ( @attr, 'rdstring' ) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
 
@@ -67,6 +110,7 @@ my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 	my $rr = new Net::DNS::RR("$name $type @data");
 	$rr->print;
 }
+
 
 exit;
 

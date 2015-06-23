@@ -16,10 +16,10 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 6;
+plan tests => 16;
 
 
-my $key = new Net::DNS::RR <<'END';
+my $dnskey = new Net::DNS::RR <<'END';
 RSASHA1.example.	IN	DNSKEY	256 3 5 (
 	AwEAAZHbngk6sMoFHN8fsYY6bmGR4B9UYJIqDp+mORLEH53Xg0f6RMDtfx+H3/x7bHTUikTr26bV
 	AqsxOs2KxyJ2Xx9RGG0DB9O4gpANljtTq2tLjvaQknhJpSq9vj4CqUtr6Wu152J2aQYITBoQLHDV
@@ -27,21 +27,23 @@ RSASHA1.example.	IN	DNSKEY	256 3 5 (
 	)
 END
 
-ok( $key, 'set up DNSKEY record' );
+ok( $dnskey, 'set up DNSKEY record' );
 
+$dnskey->flags(0);
+foreach my $flag ( qw(sep zone revoke) ) {
+	my $boolean = $dnskey->$flag(0);
+	ok( !$boolean, "Boolean $flag flag has expected value" );
 
-my $sep = $key->sep;
-ok( !$sep, 'Boolean sep flag has expected value' );
+	my $keytag = $dnskey->keytag;
+	$dnskey->$flag( !$boolean );
+	ok( $dnskey->$flag, "Boolean $flag flag toggled" );
+	isnt( $dnskey->keytag, $keytag, "keytag recalculated using modified $flag flag" );
 
-my $keytag = $key->keytag;
-$key->sep( !$sep );
-ok( $key->sep, 'Boolean sep flag toggled' );
-isnt( $key->keytag, $keytag, 'keytag recalculated using modified sep flag' );
+	$dnskey->$flag($boolean);
+	ok( !$dnskey->$flag, "Boolean $flag flag restored" );
 
-$key->sep($sep);
-ok( !$sep, 'Boolean sep flag restored' );
-
-is( $key->keytag, $keytag, 'keytag recalculated using restored sep flag' );
+	is( $dnskey->keytag, $keytag, "keytag recalculated using restored $flag flag" );
+}
 
 exit;
 

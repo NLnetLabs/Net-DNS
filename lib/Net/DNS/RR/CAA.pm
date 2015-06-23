@@ -52,10 +52,16 @@ sub format_rdata {			## format rdata portion of RR string.
 sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	foreach my $attr (qw(flags tag value)) {
-		$self->$attr(shift) if scalar @_;
-	}
+	$self->flags(shift);
+	$self->tag(shift);
+	$self->value(shift);
+}
 
+
+sub defaults() {			## specify RR attribute default values
+	my $self = shift;
+
+	$self->flags(0);
 }
 
 
@@ -63,15 +69,15 @@ sub flags {
 	my $self = shift;
 
 	$self->{flags} = 0 + shift if scalar @_;
-	return $self->{flags} || 0;
+	$self->{flags} || 0;
 }
 
 
 sub critical {
 	my $bit = 0x0080;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{flags} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}

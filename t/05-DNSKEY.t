@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 15;
+plan tests => 29;
 
 
 my $name = 'DNSKEY.example';
@@ -32,7 +32,7 @@ my @data = (
 			742iU/TpPSEDhm2SNKLijfUppn1U
 			aNvv4w== )
 			);
-my @also = qw( keybin keylength keytag privatekeyname zone sep );
+my @also = qw( keybin keylength keytag privatekeyname zone revoke sep );
 
 my $wire = join '', qw( 010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E041647E1
 		BFF43D8D64C649AF1E371973C9E891FCE3DF519A8C840A63EE42A6D2EBDDBB97
@@ -77,6 +77,31 @@ my $wire = join '', qw( 010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E
 	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
 	is( $hex1, $hex2, 'encode/decode transparent' );
 	is( $hex3, $wire, 'encoded RDATA matches example' );
+}
+
+
+{
+	my $rr	  = new Net::DNS::RR(". $type @data");
+	my $class = ref($rr);
+
+	$rr->algorithm('RSASHA512');
+	is( $rr->algorithm(),		    10,		 'algorithm mnemonic accepted' );
+	is( $rr->algorithm('MNEMONIC'),	    'RSASHA512', "rr->algorithm('MNEMONIC')" );
+	is( $class->algorithm('RSASHA512'), 10,		 "class method algorithm('RSASHA512')" );
+	is( $class->algorithm(10),	    'RSASHA512', "class method algorithm(10)" );
+	is( $class->algorithm(255),	    255,	 "class method algorithm(255)" );
+
+	eval { $rr->algorithm('X'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach ( @attr, qw(keylength keytag rdstring) ) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
 

@@ -122,9 +122,9 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 
 	$rdata .= pack 'na*', length($macbin), $macbin;
 
-	$rdata .= pack 'nn', $self->original_id, $self->{error} || 0;
+	$rdata .= pack 'nn', $self->original_id, $self->{error};
 
-	my $other = $self->other || '';
+	my $other = $self->other;
 	$rdata .= pack 'na*', length($other), $other;
 
 	return $rdata;
@@ -141,7 +141,7 @@ sub format_rdata {			## format rdata portion of RR string.
 		join( "\t", 'time signed:', $self->time_signed, 'fudge:', $self->fudge ),
 		join( "\t", 'signature:',   $self->mac ),
 		join( "\t", 'original id:', $self->original_id ),
-		join( "\t", $self->error, $self->other || '' ) );
+		join( "\t", $self->error,   $self->other ) );
 }
 
 
@@ -150,6 +150,7 @@ sub defaults() {			## specify RR attribute default values
 
 	$self->algorithm(157);
 	$self->class('ANY');
+	$self->error(0);
 	$self->fudge(300);
 }
 
@@ -189,7 +190,7 @@ sub fudge {
 	my $self = shift;
 
 	$self->{fudge} = 0 + shift if scalar @_;
-	return $self->{fudge} || 0;
+	$self->{fudge} || 0;
 }
 
 
@@ -245,7 +246,7 @@ sub original_id {
 	my $self = shift;
 
 	$self->{original_id} = 0 + shift if scalar @_;
-	return $self->{original_id} || 0;
+	$self->{original_id} || 0;
 }
 
 
@@ -317,7 +318,7 @@ sub sig_data {
 
 	$sigdata .= pack 'n', $self->{error} || 0;
 
-	my $other = $self->other || '';
+	my $other = $self->other;
 	$sigdata .= pack 'na*', length($other), $other;
 
 	return $sigdata;

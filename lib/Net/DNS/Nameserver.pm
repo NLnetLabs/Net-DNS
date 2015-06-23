@@ -35,7 +35,7 @@ objects.  See L</EXAMPLE> for an example.
 use strict;
 use integer;
 use Carp qw(cluck);
-use Net::DNS;
+use Net::DNS 10.00;
 
 use IO::Socket;
 use IO::Socket::INET;

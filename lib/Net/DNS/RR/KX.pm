@@ -61,7 +61,7 @@ sub preference {
 	my $self = shift;
 
 	$self->{preference} = 0 + shift if scalar @_;
-	return $self->{preference} || 0;
+	$self->{preference} || 0;
 }
 
 

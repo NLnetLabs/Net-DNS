@@ -45,9 +45,8 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $mbx = $self->{mbox}	    || return '';
-	my $txt = $self->{txtdname} || return '';
-	join ' ', $mbx->string, $txt->string;
+	return '' unless $self->{mbox};
+	join ' ', map $self->{$_}->string, qw(mbox txtdname);
 }
 
 

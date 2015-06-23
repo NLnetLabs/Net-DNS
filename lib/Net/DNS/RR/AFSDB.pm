@@ -61,7 +61,7 @@ sub subtype {
 	my $self = shift;
 
 	$self->{subtype} = 0 + shift if scalar @_;
-	return $self->{subtype} || 0;
+	$self->{subtype} || 0;
 }
 
 

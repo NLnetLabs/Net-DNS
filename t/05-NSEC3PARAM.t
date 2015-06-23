@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 16;
+use Test::More tests => 22;
 
 
 use Net::DNS;
@@ -11,10 +11,10 @@ my $name = 'example';
 my $type = 'NSEC3PARAM';
 my $code = 51;
 my @attr = qw( algorithm flags iterations salt );
-my @data = qw( 1 0 12 aabbccdd );
-my @also = qw( );
+my @data = qw( 1 1 12 aabbccdd );
+my @also = qw( hashalgo );
 
-my $wire = '0100000c04aabbccdd';
+my $wire = '0101000c04aabbccdd';
 
 
 {
@@ -64,12 +64,22 @@ my $wire = '0100000c04aabbccdd';
 
 
 {
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
+
+{
 	# check parsing of RR with null salt (RT#95034)
-	my $rr = eval { Net::DNS::RR->new('nosalt.example NSEC3PARAM 2 0 12 -') };
+	my $string = 'nosalt.example.	IN	NSEC3PARAM	2 0 12 -';
+	my $rr = eval { Net::DNS::RR->new($string) };
 	diag $@ if $@;
 	ok( $rr, 'NSEC3PARAM created with null salt' );
 	is( $rr->salt, '', 'NSEC3PARAM null salt value' );
 	is( unpack( 'H*', $rr->saltbin ), '', 'NSEC3PARAM null salt binary value' );
+	is( $rr->string, $string, 'NSEC3PARAM null salt binary value' );
 }
 
 
@@ -77,6 +87,7 @@ my $wire = '0100000c04aabbccdd';
 	my $rr = eval { Net::DNS::RR->new('corrupt.example NSEC3PARAM 2 0 12 aabbccfs') };
 	ok( !$rr, 'NSEC3PARAM not created with corrupt hex data' );
 }
+
 
 exit;
 

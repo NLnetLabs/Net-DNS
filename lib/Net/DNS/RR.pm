@@ -52,7 +52,7 @@ you will get an error message and execution will be terminated.
 
 sub new {
 	return eval {
-		local $SIG{__WARN__} = sub { die @_ };
+		local $SIG{__WARN__} = sub { confess @_ };
 		scalar @_ > 2 ? &_new_hash : &_new_string;
 	} || do {
 		my $class = shift || __PACKAGE__;
@@ -650,23 +650,27 @@ sub _subclass {
 	my $rrtype  = shift;
 	my $default = shift;
 
-	unless ( $_LOADED{$rrtype} ) {				# load once only
+	unless ( $_LOADED{$rrtype} ) {
 		my $number = typebyname($rrtype);
 		my $mnemon = typebyval($number);
-		my $module = join '::', $class, $mnemon;
-		$module =~ s/[^A-Za-z0-9:]//g;			# expect the unexpected
-		my $subclass = eval("require $module") ? $module : __PACKAGE__;
 
-		# cache pre-built minimal and populated default object images
-		my @base = ( 'type' => $number, $@ ? ( 'exception' => $@ ) : () );
+		unless ( $_LOADED{$mnemon} ) {			# load once only
+			my $module = join '::', $class, $mnemon;
+			$module =~ s/[^A-Za-z0-9:]//g;		# expect the unexpected
+			my $subclass = eval("require $module") ? $module : __PACKAGE__;
 
-		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon} ||= bless [@base], $subclass;
+			# cache pre-built minimal and populated default object images
+			my @base = ( 'type' => $number, $@ ? ( 'exception' => $@ ) : () );
 
-		$_LOADED{$rrtype} = $_LOADED{$mnemon} ||= do {
+			$_MINIMAL{$mnemon} = bless [@base], $subclass;
+
 			my $object = bless {@base}, $subclass;
 			$object->defaults;
-			bless [%$object], $subclass;
+			$_LOADED{$mnemon} = bless [%$object], $subclass;
 		};
+
+		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon};
+		$_LOADED{$rrtype} = $_LOADED{$mnemon};
 	}
 
 	my $prebuilt = $default ? $_LOADED{$rrtype} : $_MINIMAL{$rrtype};

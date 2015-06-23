@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{nodeid} && length $self->{nodeid};
+	return '' unless $self->{nodeid};
 	pack 'n a8', $self->{preference}, $self->{nodeid};
 }
 
@@ -39,7 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{nodeid} && length $self->{nodeid};
+	return '' unless $self->{nodeid};
 	return join ' ', $self->preference, $self->nodeid;
 }
 
@@ -56,7 +56,7 @@ sub preference {
 	my $self = shift;
 
 	$self->{preference} = 0 + shift if scalar @_;
-	return $self->{preference} || 0;
+	$self->{preference} || 0;
 }
 
 
@@ -66,7 +66,8 @@ sub nodeid {
 
 	$self->{nodeid} = pack 'n4', map hex($_), split /:/, $idnt if defined $idnt;
 
-	sprintf '%0.4x:%0.4x:%0.4x:%0.4x', unpack 'n4', $self->{nodeid} if defined wantarray;
+	sprintf '%0.4x:%0.4x:%0.4x:%0.4x', unpack 'n4', $self->{nodeid}
+			if defined wantarray && $self->{nodeid};
 }
 
 

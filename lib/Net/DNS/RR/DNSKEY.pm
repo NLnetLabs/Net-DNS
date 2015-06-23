@@ -65,12 +65,12 @@ use MIME::Base64;
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
-		return $algbyname{$key} || croak "unknown algorithm $name";
+		$algbyname{$key} || croak "unknown algorithm $name";
 	}
 
 	sub algbyval {
 		my $value = shift;
-		return $algbyval{$value} || $value;
+		$algbyval{$value} || return $value;
 	}
 }
 
@@ -123,15 +123,15 @@ sub flags {
 	my $self = shift;
 
 	$self->{flags} = 0 + shift if scalar @_;
-	return $self->{flags} || 0;
+	$self->{flags} || 0;
 }
 
 
 sub zone {
 	my $bit = 0x0100;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{flags} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}
@@ -140,9 +140,9 @@ sub zone {
 
 sub revoke {
 	my $bit = 0x0080;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{flags} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}
@@ -151,9 +151,9 @@ sub revoke {
 
 sub sep {
 	my $bit = 0x0001;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{flags} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}
@@ -164,7 +164,7 @@ sub protocol {
 	my $self = shift;
 
 	$self->{protocol} = 0 + shift if scalar @_;
-	return $self->{protocol} || 0;
+	$self->{protocol} || 0;
 }
 
 
@@ -172,7 +172,7 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	unless ( ref($self) ) {		## class method or simple function
-		my $argn = pop || croak 'undefined argument';
+		my $argn = pop;
 		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
 	}
 
@@ -186,7 +186,7 @@ sub key {
 	my $self = shift;
 
 	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
+	MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
 }
 
 
@@ -264,19 +264,6 @@ sub keytag {
 	$ac += ( $ac >> 16 );
 	return $ac & 0xFFFF;
 }
-
-
-my $warned;
-
-sub is_sep {				## historical
-	my $self = shift;
-	carp "Deprecated method: please use rr->sep(@_)" unless $warned++;
-	return $self->sep(@_) ? 1 : 0;
-}
-
-sub set_sep   { shift->is_sep(1); }	## historical
-sub unset_sep { shift->is_sep(0); }	## historical
-sub clear_sep { shift->is_sep(0); }	## historical
 
 
 1;

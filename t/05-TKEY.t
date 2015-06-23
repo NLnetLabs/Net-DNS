@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 15;
+use Test::More tests => 24;
 
 
 use Net::DNS;
@@ -10,11 +10,11 @@ use Net::DNS;
 my $name = 'TKEY.example';
 my $type = 'TKEY';
 my $code = 249;
-my @attr = qw( algorithm inception expiration mode error );
-my @data = qw ( alg.example 0 0 1 0 );
-my @also = qw( key other );
+my @attr = qw( algorithm inception expiration mode error key other );
+my @data = qw( alg.example 1434806118 1434806118 1 17 dummy dummy );
+my @also = qw( other_data );
 
-my $wire = '03616c67076578616d706c650000000000000000000001000000000000';
+my $wire = '03616c67076578616d706c6500558567665585676600010011000564756d6d79000564756d6d79';
 
 
 {
@@ -60,6 +60,21 @@ my $wire = '03616c67076578616d706c650000000000000000000001000000000000';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+
+	my @wire = unpack 'C*', $encoded;
+	$wire[length($empty) - 1]--;
+	my $wireformat = pack 'C*', @wire;
+	eval { decode Net::DNS::RR( \$wireformat ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt wire-format\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
 

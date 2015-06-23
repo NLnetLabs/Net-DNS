@@ -51,7 +51,7 @@ sub format_rdata {			## format rdata portion of RR string.
 	my $mname  = $self->{mname}->string;
 	my $rname  = $self->{rname}->string;
 	my $serial = $self->serial;
-	my $spacer = $serial > 9999999 ? "" : "\t";
+	my $spacer = length "$serial" > 7 ? "" : "\t";
 	my @rdata  = $mname, $rname, join "\n\t\t\t\t",
 			"\t\t\t$serial$spacer\t;serial",
 			"$self->{refresh}\t\t;refresh",
@@ -116,7 +116,7 @@ sub refresh {
 	my $self = shift;
 
 	$self->{refresh} = 0 + shift if scalar @_;
-	return $self->{refresh} || 0;
+	$self->{refresh} || 0;
 }
 
 
@@ -124,7 +124,7 @@ sub retry {
 	my $self = shift;
 
 	$self->{retry} = 0 + shift if scalar @_;
-	return $self->{retry} || 0;
+	$self->{retry} || 0;
 }
 
 
@@ -132,7 +132,7 @@ sub expire {
 	my $self = shift;
 
 	$self->{expire} = 0 + shift if scalar @_;
-	return $self->{expire} || 0;
+	$self->{expire} || 0;
 }
 
 
@@ -140,7 +140,7 @@ sub minimum {
 	my $self = shift;
 
 	$self->{minimum} = 0 + shift if scalar @_;
-	return $self->{minimum} || 0;
+	$self->{minimum} || 0;
 }
 
 

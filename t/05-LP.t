@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 16;
 
 
 use Net::DNS;
@@ -12,7 +12,7 @@ my $type = 'LP';
 my $code = 107;
 my @attr = qw( preference locator );
 my @data = qw( 10 locator.example.com );
-my @also = qw( );
+my @also = qw( fqdn );
 
 my $wire = join '', qw( 000a076c6f6361746f72076578616d706c6503636f6d00 );
 
@@ -74,6 +74,14 @@ my $wire = join '', qw( 000a076c6f6361746f72076578616d706c6503636f6d00 );
 	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
 	isnt( $rr->encode,    $lc->encode, 'encoded RDATA names not downcased' );
 	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
 

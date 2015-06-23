@@ -8,7 +8,7 @@ use Net::DNS::Parameters;
 
 my @opt = keys %Net::DNS::Parameters::ednsoptionbyname;
 
-plan tests => 21 + scalar(@opt);
+plan tests => 25 + scalar(@opt);
 
 
 my $name = '.';
@@ -24,7 +24,7 @@ my $wire = '0000290500000080000000';
 {					## check conversion functions
 	foreach ( sort( keys %Net::DNS::Parameters::ednsoptionbyname ), 65500 ) {
 		my $expect = uc($_);
-		my $name = eval {
+		my $name   = eval {
 			my $val = ednsoptionbyname($_);
 			ednsoptionbyval( ednsoptionbyname($val) );
 		};
@@ -83,6 +83,24 @@ my $wire = '0000290500000080000000';
 		is( $rr->$_($changed), $changed, "rr->$_(x) returns function argument" );
 		is( $rr->$_(),	       $changed, "rr->$_(x) changes attribute value" );
 	}
+}
+
+
+foreach my $method (qw(class ttl)) {
+	my $rr = new Net::DNS::RR( name => '.', type => $type );
+	eval {
+		local $SIG{__WARN__} = sub { die @_ };
+		$rr->$method(1);
+	};
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "$method method:\t[$exception]" );
+
+	eval {
+		local $SIG{__WARN__} = sub { die @_ };
+		$rr->$method(0);
+	};
+	my $repeated = $1 if $@ =~ /^(.+)\n/;
+	ok( !$repeated, "$method exception not repeated $@" );
 }
 
 

@@ -52,12 +52,12 @@ my %digest = (
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
-		return $digestbyname{$key} || croak "unknown digest type $name";
+		$digestbyname{$key} || croak "unknown digest type $name";
 	}
 
 	sub digestbyval {
 		my $value = shift;
-		return $digestbyval{$value} || $value;
+		$digestbyval{$value} || return $value;
 	}
 }
 
@@ -126,7 +126,7 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	unless ( ref($self) ) {		## class method or simple function
-		my $argn = pop || croak 'undefined argument';
+		my $argn = pop;
 		return $argn =~ /[^0-9]/ ? digestbyname($argn) : digestbyval($argn);
 	}
 
@@ -140,15 +140,15 @@ sub flags {
 	my $self = shift;
 
 	$self->{flags} = 0 + shift if scalar @_;
-	return $self->{flags} || 0;
+	$self->{flags} || 0;
 }
 
 
 sub optout {
 	my $bit = 0x01;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{flags} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}
@@ -159,7 +159,7 @@ sub iterations {
 	my $self = shift;
 
 	$self->{iterations} = 0 + shift if scalar @_;
-	return $self->{iterations} || 0;
+	$self->{iterations} || 0;
 }
 
 
@@ -203,11 +203,11 @@ sub covered {
 
 	unless ( $ownerhash lt $nexthash ) {			# last or only NSEC3 RR
 		return 1 if $namehash lt $nexthash;
-		return $namehash gt $ownerhash ? 1 : 0;
+		return $namehash gt $ownerhash;
 	}
 
 	return 0 unless $namehash gt $ownerhash;		# general case
-	return $namehash lt $nexthash ? 1 : 0;
+	return $namehash lt $nexthash;
 }
 
 
@@ -218,7 +218,7 @@ sub match {
 	my ($ownerhash) = $self->{owner}->_wire;
 	my $namehash = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
 
-	return $namehash eq lc( $ownerhash || '' );
+	$namehash eq lc($ownerhash);
 }
 
 
@@ -226,10 +226,7 @@ sub match {
 
 sub hashalgo { &algorithm; }		## historical
 
-sub nxtdname {				## inherited method inapplicable
-	my $method = join '::', __PACKAGE__, 'nxtdname';
-	confess "method '$method' undefined";
-}
+sub nxtdname { }			## inherited method inapplicable
 
 
 sub name2hash {

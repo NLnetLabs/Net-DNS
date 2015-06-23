@@ -98,7 +98,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->$_(shift) for qw(precedence gatetype algorithm gateway);
-	$self->key(@_) if scalar @_;
+	$self->key(@_);
 }
 
 
@@ -106,7 +106,7 @@ sub precedence {
 	my $self = shift;
 
 	$self->{precedence} = 0 + shift if scalar @_;
-	return $self->{precedence} || 0;
+	$self->{precedence} || 0;
 }
 
 
@@ -124,7 +124,7 @@ sub algorithm {
 	my $self = shift;
 
 	$self->{algorithm} = 0 + shift if scalar @_;
-	return $self->{algorithm} || 0;
+	$self->{algorithm} || 0;
 }
 
 
@@ -176,7 +176,7 @@ sub key {
 	my $self = shift;
 
 	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
+	MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
 }
 
 

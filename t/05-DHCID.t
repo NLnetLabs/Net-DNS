@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 12;
+plan tests => 15;
 
 
 my $name = 'DHCID.example';
@@ -75,10 +75,18 @@ my $wire = '0002014f6266757363617465644964656e7469747944617461';
 
 
 {
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
+
+{
 	my $rr = new Net::DNS::RR("$name $type @data");
 	$rr->print;
 }
 
-exit;
 
+exit;
 

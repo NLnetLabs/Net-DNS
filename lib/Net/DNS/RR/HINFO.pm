@@ -51,8 +51,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->cpu(shift);
-	$self->os(shift);
-	die 'too many arguments for HINFO' if scalar @_;
+	$self->os(@_);
 }
 
 

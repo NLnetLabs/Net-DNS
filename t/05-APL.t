@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 31;
 
 
 use Net::DNS;
@@ -11,10 +11,10 @@ my $name = 'APL.example';
 my $type = 'APL';
 my $code = 42;
 my @attr = qw( aplist );
-my @data = qw( 1:224.0.0.0/4 2:FF00:0:0:0:0:0:0:0/8 !1:192.168.38.0/28 );
+my @data = qw( 1:224.0.0.0/4 2:FF00::0/16 !1:192.168.38.0/28 1:224.0.0.0/0 2:FF00::0/0 );
 my @also = qw( string negate family address );			# apitem attributes
 
-my $wire = '00010401e000020801ff00011c83c0a826';
+my $wire = '00010401e000021001ff00011c83c0a8260001000000020000';
 
 
 {
@@ -39,13 +39,14 @@ my $wire = '00010401e000020801ff00011c83c0a826';
 	foreach (@attr) {
 		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
 	}
+}
 
-	my @aplist1 = $rr->aplist;
-	my @aplist2 = $rr2->aplist;
-	foreach my $item (@aplist1) {
-		my $item2 = shift @aplist2;
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	foreach my $item ( $rr->aplist ) {
 		foreach (@also) {
-			is( $item2->$_, $item->$_, "aplist item->$_() attribute" );
+			ok( defined( $item->$_ ), "aplist item->$_() attribute" );
 		}
 	}
 }
@@ -68,6 +69,20 @@ my $wire = '00010401e000020801ff00011c83c0a826';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+
+	my @wire = unpack 'C*', $encoded;
+	$wire[length($empty) - 1]--;
+	my $wireformat = pack 'C*', @wire;
+	eval { decode Net::DNS::RR( \$wireformat ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt wire-format\t[$exception]" );
+}
+
+
+{
+	eval { new Net::DNS::RR("$name $type 0:0::0/0"); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown address family\t[$exception]" );
 }
 
 

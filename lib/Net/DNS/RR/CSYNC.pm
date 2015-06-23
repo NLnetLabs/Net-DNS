@@ -20,6 +20,7 @@ Net::DNS::RR::CSYNC - DNS CSYNC resource record
 use integer;
 
 use Net::DNS::Parameters;
+use Net::DNS::RR::NSEC;
 
 
 sub decode_rdata {			## decode rdata from wire-format octet string
@@ -62,7 +63,7 @@ sub SOAserial {
 	my $self = shift;
 
 	$self->{SOAserial} = 0 + shift if scalar @_;
-	return $self->{SOAserial} || 0;
+	$self->{SOAserial} || 0;
 }
 
 
@@ -73,15 +74,15 @@ sub flags {
 	my $self = shift;
 
 	$self->{flags} = 0 + shift if scalar @_;
-	return $self->{flags} || 0;
+	$self->{flags} || 0;
 }
 
 
 sub immediate {
 	my $bit = 0x0001;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{flags} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}
@@ -90,9 +91,9 @@ sub immediate {
 
 sub soaminimum {
 	my $bit = 0x0002;
-	for ( shift->{flags} ||= 0 ) {
-		return $_ & $bit unless scalar @_;
-		my $set = $_ | $bit;
+	for ( shift->{flags} ) {
+		my $set = $bit | ( $_ ||= 0 );
+		return $bit & $_ unless scalar @_;
 		$_ = (shift) ? $set : ( $set ^ $bit );
 		return $_ & $bit;
 	}
@@ -100,66 +101,7 @@ sub soaminimum {
 
 
 sub typelist {
-	my $self = shift;
-
-	$self->{typebm} = &_type2bm if scalar @_;
-
-	my @type = defined wantarray ? &_bm2type( $self->{typebm} ) : ();
-	return wantarray ? (@type) : "@type";
-}
-
-
-########################################
-
-sub _type2bm {
-	my @typearray;
-	foreach my $typename ( map split( /\s+/, $_ ), @_ ) {
-		next unless $typename;
-		my $number = typebyname($typename);
-		my $window = $number >> 8;
-		my $bitnum = $number & 255;
-		my $octet  = $bitnum >> 3;
-		my $bit	   = $bitnum & 7;
-		$typearray[$window][$octet] |= 0x80 >> $bit;
-	}
-
-	my @bitmap;
-	my $window = 0;
-	foreach (@typearray) {
-		if ( my $pane = $typearray[$window] ) {
-			my @content = map $_ || 0, @$pane;
-			push @bitmap, pack 'CC C*', $window, scalar(@content), @content;
-		}
-		$window++;
-	}
-
-	join '', @bitmap;
-}
-
-
-sub _bm2type {
-	my $bitmap = shift || '';
-	my $index  = 0;
-	my $limit  = length $bitmap;
-	my @typelist;
-
-	while ( $index < $limit ) {
-		my ( $block, $size ) = unpack "\@$index C2", $bitmap;
-		my $typenum = $block << 8;
-		foreach my $octet ( unpack "\@$index xxC$size", $bitmap ) {
-			my $i = $typenum += 8;
-			my @name;
-			while ($octet) {
-				--$i;
-				unshift @name, typebyval($i) if $octet & 1;
-				$octet = $octet >> 1;
-			}
-			push @typelist, @name;
-		}
-		$index += $size + 2;
-	}
-
-	return @typelist;
+	&Net::DNS::RR::NSEC::typelist;
 }
 
 

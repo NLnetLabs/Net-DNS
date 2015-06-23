@@ -6,7 +6,7 @@ BEGIN {
 	use Test::More;
 	use Net::DNS;
 
-	plan tests => 13;
+	plan tests => 18;
 }
 
 
@@ -15,7 +15,7 @@ my $type = 'SSHFP';
 my $code = 44;
 my @attr = qw( algorithm fptype fp );
 my @data = qw( 2 1 123456789abcdef67890123456789abcdef67890 );
-my @also = qw( fpbin babble );
+my @also = qw( fingerprint fpbin babble );
 
 my $wire = '0201123456789abcdef67890123456789abcdef67890';
 
@@ -67,11 +67,26 @@ my $wire = '0201123456789abcdef67890123456789abcdef67890';
 
 
 {
+	my $rr = new Net::DNS::RR(". $type @data");
+	eval { $rr->fp('123456789XBCDEF'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt hexadecimal\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
+
+{
 	my $rr = new Net::DNS::RR("$name $type @data");
 	$rr->print;
 }
 
 
 exit;
-
 

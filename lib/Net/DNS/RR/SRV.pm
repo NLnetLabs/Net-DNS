@@ -63,7 +63,7 @@ sub priority {
 	my $self = shift;
 
 	$self->{priority} = 0 + shift if scalar @_;
-	return $self->{priority} || 0;
+	$self->{priority} || 0;
 }
 
 
@@ -71,7 +71,7 @@ sub weight {
 	my $self = shift;
 
 	$self->{weight} = 0 + shift if scalar @_;
-	return $self->{weight} || 0;
+	$self->{weight} || 0;
 }
 
 
@@ -79,7 +79,7 @@ sub port {
 	my $self = shift;
 
 	$self->{port} = 0 + shift if scalar @_;
-	return $self->{port} || 0;
+	$self->{port} || 0;
 }
 
 

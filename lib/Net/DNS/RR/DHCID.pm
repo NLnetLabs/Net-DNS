@@ -76,7 +76,7 @@ sub identifiertype {
 	my $self = shift;
 
 	$self->{identifiertype} = 0 + shift if scalar @_;
-	return $self->{identifiertype} || 0;
+	$self->{identifiertype} || 0;
 }
 
 
@@ -84,7 +84,7 @@ sub digesttype {
 	my $self = shift;
 
 	$self->{digesttype} = 0 + shift if scalar @_;
-	return $self->{digesttype} || 0;
+	$self->{digesttype} || 0;
 }
 
 

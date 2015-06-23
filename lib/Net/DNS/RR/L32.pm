@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 sub encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{locator32} && length $self->{locator32};
+	return '' unless $self->{locator32};
 	pack 'n a4', $self->{preference}, $self->{locator32};
 }
 
@@ -39,7 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{locator32} && length $self->{locator32};
+	return '' unless $self->{locator32};
 	return join ' ', $self->preference, $self->locator32;
 }
 
@@ -56,7 +56,7 @@ sub preference {
 	my $self = shift;
 
 	$self->{preference} = 0 + shift if scalar @_;
-	return $self->{preference} || 0;
+	$self->{preference} || 0;
 }
 
 
@@ -66,7 +66,8 @@ sub locator32 {
 
 	$self->{locator32} = pack 'C* @4', split /\./, $prfx if defined $prfx;
 
-	join '.', unpack 'C4', $self->{locator32} if defined wantarray;
+	join '.', unpack 'C4', $self->{locator32}
+			if defined wantarray && $self->{locator32};
 }
 
 

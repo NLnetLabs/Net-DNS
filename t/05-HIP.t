@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 16;
+plan tests => 24;
 
 
 my $name = 'HIP.example';
@@ -88,6 +88,21 @@ my $wire = join '', qw( 10020084200100107b1a74df365639cc39f1d57803010001b771ca13
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+
+	my @wire = unpack 'C*', $encoded;
+	$wire[length($empty) - 1]--;
+	my $wireformat = pack 'C*', @wire;
+	eval { decode Net::DNS::RR( \$wireformat ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt wire-format\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type @data");
+	eval { $rr->hit('123456789XBCDEF'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt hexadecimal\t[$exception]" );
 }
 
 
@@ -104,10 +119,20 @@ my $wire = join '', qw( 10020084200100107b1a74df365639cc39f1d57803010001b771ca13
 
 
 {
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
+
+{
 	my $rr = new Net::DNS::RR("$name $type @data");
+	is( $rr->pubkey,		   $rr->key, "historical 'pubkey'" );
+	is( ref( $rr->rendezvousservers ), 'ARRAY',  "historical 'rendezvousservers'" );
 	$rr->print;
 }
 
-exit;
 
+exit;
 

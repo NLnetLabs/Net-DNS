@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 50;
+use Test::More tests => 52;
 
 
 use Net::DNS;
@@ -55,6 +55,13 @@ my $wire = '0e6172626974726172795f74657874';
 	is( length($empty),  length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
+
+	my @wire = unpack 'C*', $encoded;
+	$wire[length($empty) - 1]--;
+	my $wireformat = pack 'C*', @wire;
+	eval { decode Net::DNS::RR( \$wireformat ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "corrupt wire-format\t[$exception]" );
 }
 
 
@@ -89,6 +96,14 @@ my $wire = '0e6172626974726172795f74657874';
 		my $expect = new Net::DNS::RR($string)->string; # test for consistent parsing
 		my $result = new Net::DNS::RR($expect)->string;
 		is( $result, $expect, $string );
+	}
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
 	}
 }
 
