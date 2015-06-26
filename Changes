@@ -8,6 +8,10 @@ Feature
 	integrated with Net::DNS.  Net::DNS::SEC needs to be installed
 	to enable the signature generation and verification functions.
 
+Fix rt.cpan.org #105421
+
+	Dead link in Net::DNS::FAQ
+
 Fix rt.cpan.org #104657
 
 	Wrong split on Cygwin
@@ -1945,7 +1949,7 @@ incorrectly, reported by Dick Franks.
 
 Net::DNS had a few problems running under taint mode, especially under
 cygwin.  These issues have been fixed.  More issues with taint mode may
-lay undiscovered.
+lie undiscovered.
 
 Applied Matthew Darwin's patch added support for IPv6 reverse lookups to
 Net::DNS::Resolver::query.

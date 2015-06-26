@@ -648,15 +648,15 @@ on the final packet in the absence of more specific information.
 sub verify {
 	my $self = shift;
 
-	my $sig = $self->sigrr || return undef;
-	return $sig->verify( $self, @_ );
+	my $sig = $self->sigrr;
+	return $sig ? $sig->verify( $self, @_ ) : undef;
 }
 
 sub verifyerr {
 	my $self = shift;
 
-	my $sig = $self->sigrr || return 'not signed';
-	return $sig->vrfyerrstr;
+	my $sig = $self->sigrr;
+	return $sig ? $sig->vrfyerrstr : 'not signed';
 }
 
 

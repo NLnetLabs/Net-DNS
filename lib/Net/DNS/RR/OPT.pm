@@ -165,7 +165,8 @@ sub option {
 
 sub defined {
 	my $self = shift;
-	scalar grep CORE::defined( $self->{$_} ), qw(size flags rcode option);
+	my @defd = grep $self->{$_}, qw(size flags rcode option);
+	return scalar @defd;
 }
 
 
