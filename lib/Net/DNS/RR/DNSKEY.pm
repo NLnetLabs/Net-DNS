@@ -237,14 +237,9 @@ sub keylength {
 		# Modulus length, see RFC 2536
 		my $T = unpack 'C', $keybin;
 		return ( $T << 6 ) + 512;
-
-	} elsif (/^EC/) {
-
-		return length($keybin) << 2;
-
-	} else {
-		return undef;
 	}
+
+	length($keybin) << 2;		## ECDSA / ECC-GOST
 }
 
 

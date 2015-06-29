@@ -227,13 +227,14 @@ sub header {
 }
 
 
-=head2 EDNS extended header
+=head2 edns
 
     $edns    = $packet->edns;
     $version = $edns->version;
-    $size    = $edns->size;
+    $UDPsize = $edns->size;
 
-Auxiliary function edns() provides access to EDNS extensions.
+Auxiliary function which provides access to the EDNS protocol
+extension OPT RR.
 
 =cut
 
@@ -458,21 +459,14 @@ Adds RRs to the specified section of the packet.
 
 Returns the number of resource records in the specified section.
 
+Section names may be abbreviated to the first three characters.
+
 =cut
 
 sub push {
 	my $self = shift;
 	my $list = $self->_section(shift);
-	my @rr	 = grep ref($_), @_;
-
-	if ( $self->header->opcode eq 'UPDATE' ) {
-		my $zclass = ( $self->zone )[0]->zclass;
-		foreach (@rr) {
-			$_->class($zclass) unless $_->class =~ /ANY|NONE/;
-		}
-	}
-
-	return CORE::push( @$list, @rr );
+	CORE::push( @$list, grep ref($_), @_ );
 }
 
 
@@ -490,6 +484,8 @@ RRs are not already present in the same section.
 
 Returns the number of resource records in the specified section.
 
+Section names may be abbreviated to the first three characters.
+
 =cut
 
 sub unique_push {
@@ -497,17 +493,9 @@ sub unique_push {
 	my $list = $self->_section(shift);
 	my @rr	 = grep ref($_), @_;
 
-	if ( $self->header->opcode eq 'UPDATE' ) {
-		my $zclass = ( $self->zone )[0]->zclass;
-		foreach (@rr) {
-			$_->class($zclass) unless $_->class =~ /ANY|NONE/;
-		}
-	}
+	my %unique = map { ( bless( {%$_, ttl => 0}, ref $_ )->canonical => $_ ) } @rr, @$list;
 
-	my %unique = map { ( bless( {%$_, ttl => 0}, ref($_) )->canonical, $_ ) } @$list, @rr;
-
-	@$list = ();
-	return CORE::push( @$list, values %unique );
+	scalar( @$list = values %unique );
 }
 
 
@@ -524,8 +512,7 @@ Removes a single RR from the specified section of the packet.
 sub pop {
 	my $self = shift;
 	my $list = $self->_section(shift);
-
-	return CORE::pop(@$list);
+	CORE::pop(@$list);
 }
 
 
@@ -541,7 +528,7 @@ sub _section {				## returns array reference for section
 	my $self = shift;
 	my $name = shift;
 	my $list = $_section{unpack 'a3', $name} || $name;
-	return $self->{$list} || [];
+	$self->{$list} ||= [];
 }
 
 
@@ -822,7 +809,7 @@ Portions Copyright (c)2002-2004 Chris Reinhardt.
 
 Portions Copyright (c)2002-2009 Olaf Kolkman
 
-Portions Copyright (c)2007-2013 Dick Franks
+Portions Copyright (c)2007-2015 Dick Franks
 
 All rights reserved.
 

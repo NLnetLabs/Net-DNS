@@ -3,7 +3,7 @@
 use strict;
 
 BEGIN {
-	use Test::More tests => 39;
+	use Test::More tests => 45;
 
 	use_ok('Net::DNS');
 }
@@ -64,6 +64,12 @@ my @tests = (
 		Net::DNS::RR->new('foo.example.com 60 IN A 192.0.2.2'),
 		Net::DNS::RR->new('foo.example.com 60 IN A 192.0.2.1'),
 		Net::DNS::RR->new('foo.example.com 60 IN A 192.0.2.4'),
+		Net::DNS::RR->new('foo.example.com 60 HS A 192.0.2.4'),
+		],
+	[	3,
+		Net::DNS::RR->new('foo.example.com IN A'),
+		Net::DNS::RR->new('foo.example.com ANY A'),
+		Net::DNS::RR->new('foo.example.com NONE A'),
 		],
 	);
 

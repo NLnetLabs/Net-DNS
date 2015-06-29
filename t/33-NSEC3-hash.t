@@ -17,16 +17,19 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 10;
+plan tests => 12;
 
 
-my $algorithm = 1;			## test vectors from RFC5155
+my $algorithm = 1;
 my $iteration = 12;
 my $salt      = pack 'H*', 'aabbccdd';
 
-my @name = qw(example a.example ai.example ns1.example ns2.example
-		w.example *.w.example x.w.example y.w.example x.y.w.example);
-my %testcase = (
+
+ok( Net::DNS::RR::NSEC3::name2hash( 1, 'example' ), "defaulted arguments" );
+ok( Net::DNS::RR::NSEC3::name2hash( 1, 'example', 12, $salt ), "explicit arguments" );
+
+
+my %testcase = (			## test vectors from RFC5155
 	'example'	=> '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom',
 	'a.example'	=> '35mthgpgcu1qg68fab165klnsnk3dpvl',
 	'ai.example'	=> 'gjeqe526plbf1g8mklp59enfd789njgi',
@@ -39,6 +42,10 @@ my %testcase = (
 	'x.y.w.example' => '2vptu5timamqttgl4luu9kg21e0aor3s',
 	);
 
+
+my @name = qw(example a.example ai.example ns1.example ns2.example
+		w.example *.w.example x.w.example y.w.example x.y.w.example);
+
 foreach my $name (@name) {
 	my $hash = $testcase{$name};
 	my @args = ( $algorithm, $name, $iteration, $salt );
@@ -47,5 +54,4 @@ foreach my $name (@name) {
 
 
 exit;
-
 

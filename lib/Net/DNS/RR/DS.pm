@@ -229,8 +229,8 @@ sub create {
 	my $kname = $keyrr->name;
 	my $flags = $keyrr->flags;
 	croak "Unable to create $kname $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
-	croak "Unable to create $kname $type record for non-ZONE key"	unless ( $flags & 0x300 ) == 0x100;
 	croak "Unable to create $kname $type record for non-authentication key" if $flags & 0x8000;
+	croak "Unable to create $kname $type record for non-ZONE key" unless ( $flags & 0x300 ) == 0x100;
 
 	my $self = new Net::DNS::RR(
 		name	  => $kname,				# per definition, same as keyrr
@@ -246,7 +246,6 @@ sub create {
 	my $data = pack 'a* a*', $owner, $keyrr->encode_rdata;
 
 	my $arglist = $digest{$self->digtype};
-	croak 'unsupported digest type' unless $arglist;
 	my ( $object, @argument ) = @$arglist;
 	my $hash = $object->new(@argument);
 	$hash->add($data);

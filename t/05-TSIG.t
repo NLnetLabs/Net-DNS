@@ -18,7 +18,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 53;
+plan tests => 64;
 
 
 sub mysign {
@@ -34,7 +34,7 @@ my $type = 'TSIG';
 my $code = 250;
 my @attr = qw(	algorithm	time_signed	fudge	sig_function );
 my @data = ( qw( fake.alg	100001		600 ), \&mysign );
-my @also = qw( mac macbin error other );
+my @also = qw( mac prior_mac request_mac error sign_func other_data );
 
 my $wire = '0466616b6503616c67000000000186a102580010a5d31d3ce3b7122b4a598c225d9c3f2a04d200000000';
 
@@ -82,6 +82,27 @@ my $hash = {};
 	is( $hex3,	    $wire,	   'encoded RDATA matches example' );
 	is( length($empty), length($null), 'encoded RDATA can be empty' );
 	is( length($rxbin), length($null), 'decoded RDATA can be empty' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR( type => 'TSIG', key => '' );
+	ok( $rr, 'write-only key attribute' );
+	ok( !$rr->verify(), 'verify fails on empty TSIG' );
+	ok( $rr->vrfyerrstr(), 'vrfyerrstr() reports failure' );
+}
+
+
+{
+	my $correct = '123456789ABCDEF';
+	my $corrupt = '123456789XBCDEF';
+	foreach my $method ( qw(mac request_mac prior_mac) ) {
+		my $rr = new Net::DNS::RR( type => 'TSIG', $method => $correct );
+		ok( $rr->$method($correct), "correct hex $method" );
+		eval { $rr->$method($corrupt); };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "corrupt hex $method\t[$exception]" );
+	}
 }
 
 

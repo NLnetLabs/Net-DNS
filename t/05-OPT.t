@@ -8,7 +8,7 @@ use Net::DNS::Parameters;
 
 my @opt = keys %Net::DNS::Parameters::ednsoptionbyname;
 
-plan tests => 25 + scalar(@opt);
+plan tests => 29 + scalar(@opt);
 
 
 my $name = '.';
@@ -105,7 +105,27 @@ foreach my $method (qw(class ttl)) {
 
 
 {
+	my $rr = new Net::DNS::RR( name => '.', type => $type, rcode => 16 );
+	$rr->{rdlength} = 0;					# inbound OPT RR only
+	like( $rr->string, '/BADVER/', 'opt->rcode(16)' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR( name => '.', type => $type, rcode => 1 );
+	like( $rr->string, '/NOERROR/', 'opt->rcode(1)' );
+}
+
+
+{
 	my $rr = new Net::DNS::RR( name => '.', type => $type );
+
+	$rr->option( 99 => '' );
+	is( scalar( $rr->options ), 1, 'insert EDNS option' );
+
+	$rr->option( 99 => undef );
+	is( scalar( $rr->options ), 0, 'delete EDNS option' );
+
 	my $n = 3;
 	$n++ until ednsoptionbyval($n) eq "$n";
 	my @optn = ( ( $n - 3 ) .. $n );

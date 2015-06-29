@@ -72,7 +72,7 @@ eval {
 } || exit( plan skip_all => "Unable to access local nameserver" );
 
 
-plan tests => 103;
+plan tests => 105;
 
 NonFatalBegin();
 
@@ -154,7 +154,6 @@ SKIP: {
 	my $wanted_names = [qw(a.t.net-dns.org a2.t.net-dns.org)];
 	my $names = [map { $_->exchange } @mx];
 
-
 	is_deeply( $names, $wanted_names, "mx() seems to be working" );
 
 	# some people seem to use mx() in scalar context
@@ -228,8 +227,9 @@ SKIP: {
 		my $method = $test->{'method'};
 
 		my $packet = $res->$method( $test->{'name'} );
+
 SKIP: {
-			skip( "undefined packet", 2 )
+			skip( "undefined packet", 4 )
 					unless ok( $packet, "$method( $test->{'name'} )" );
 			ok( $packet->isa('Net::DNS::Packet'), "$method returns Net::DNS::Packet" );
 			is( $packet->header->ancount, 1, "Correct answer count (with $method)" );
@@ -309,13 +309,13 @@ SKIP: {
 
 	my $sock_id = $res->{'sockets'}[AF_INET]{"UDP"};
 
-	ok( $sock_id, "Persistent UDP socket identified" );
-
 	foreach my $test (@tests) {
 SKIP: {
 			my $method = $test->{'method'};
 			my $packet = $res->$method( $test->{'name'} );
 
+			skip( "undefined UDP socket id", 6 )
+					unless ok( $sock_id, "Persistent UDP socket identified" );
 			is( $res->{'sockets'}[AF_INET]{"UDP"}, $sock_id, "Persistent socket matches" );
 
 			skip( "undefined packet", 4 )

@@ -97,7 +97,7 @@ END
 }
 
 
-=head2 string
+=head2 print
 
     $packet->header->print;
 

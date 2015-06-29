@@ -183,7 +183,8 @@ t/34-NSEC3-flags.t
 t/35-NSEC3-match.t
 t/36-NSEC3-covered.t
 t/41-DNSKEY-keytag.t
-t/42-DNSKEY-sep.t
+t/42-DNSKEY-flags.t
+t/43-DNSKEY-keylength.t
 t/51-DS-SHA1.t
 t/52-DS-SHA256.t
 t/53-DS-GOST.t

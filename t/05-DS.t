@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 29;
+use Test::More tests => 32;
 
 
 use Net::DNS;
@@ -57,6 +57,14 @@ my $wire = qw( EC4505012BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
+	my $rr = new Net::DNS::RR(". $type");
+	foreach ( @attr, 'rdstring' ) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
+
+{
 	my $rr	  = new Net::DNS::RR(". $type @data");
 	my $class = ref($rr);
 
@@ -99,10 +107,26 @@ my $wire = qw( EC4505012BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
-	my $rr = new Net::DNS::RR(". $type");
-	foreach ( @attr, 'rdstring' ) {
-		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
-	}
+	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', protocol => 0 );
+	eval { create Net::DNS::RR::DS($keyrr); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "create: non-DNSSEC key\t[$exception]" );
+}
+
+
+{
+	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', flags => 0x8000 );
+	eval { create Net::DNS::RR::DS($keyrr); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "create: non-auth key\t[$exception]" );
+}
+
+
+{
+	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', flags => 0x200 );
+	eval { create Net::DNS::RR::DS($keyrr); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "create: non-ZONE key\t[$exception]" );
 }
 
 

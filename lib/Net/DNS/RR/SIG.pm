@@ -40,12 +40,12 @@ use Net::DNS::Parameters;
 use MIME::Base64;
 use Time::Local;
 
-use constant UTIL => eval { require Scalar::Util; } || 0;
+use constant UTIL => ref( eval { require Scalar::Util; \1; } );
 
-use constant PRIVATE => eval { require Net::DNS::SEC::Private; } || 0;
+use constant PRIVATE => ref( eval { require Net::DNS::SEC::Private; \1; } );
 
-use constant DSA => eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA' } || 0;
-use constant RSA => eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA' } || 0;
+use constant DSA => eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA'; };
+use constant RSA => eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA'; };
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA );
 
@@ -101,7 +101,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	for ( @field, qw(signame) ) {
-		$self->$_(shift) if scalar @_;
+		$self->$_(shift);
 	}
 	$self->signature(@_);
 }
@@ -111,7 +111,10 @@ sub defaults() {			## specify RR attribute default values
 	my $self = shift;
 
 	$self->class('ANY');
-	$self->parse_rdata( 'TYPE0', 1, 0, 0 );
+	$self->typecovered('TYPE0');
+	$self->algorithm(1);
+	$self->labels(0);
+	$self->orgttl(0);
 }
 
 
@@ -188,7 +191,7 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	unless ( ref($self) ) {		## class method or simple function
-		my $argn = pop || croak 'undefined argument';
+		my $argn = pop;
 		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
 	}
 

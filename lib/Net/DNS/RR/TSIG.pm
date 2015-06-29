@@ -299,9 +299,8 @@ sub sig_data {
 
 	# Insert the prior MAC if present (multi-packet message).
 	$self->prior_macbin( $self->{link}->macbin ) if $self->{link};
-	if ( my $prior_mac = $self->prior_macbin ) {
-		return pack 'na* a* a*', length($prior_mac), $prior_mac, $message, $time;
-	}
+	my $prior_macbin = $self->prior_macbin;
+	return pack 'na* a* a*', length($prior_macbin), $prior_macbin, $message, $time if $prior_macbin;
 
 	# Insert the request MAC if present (used to validate responses).
 	my $req_mac = $self->request_macbin;

@@ -232,17 +232,17 @@ sub nxtdname { }			## inherited method inapplicable
 sub name2hash {
 	my $hashalg    = shift;
 	my $name       = shift;
-	my $iterations = shift || 0;
+	my $iterations = shift;
 	my $salt       = shift || '';
 
-	my $arglist = $digest{$hashalg} || die 'unsupported hash algorithm';
+	my $arglist = $digest{$hashalg};
 	my ( $object, @argument ) = @$arglist;
 	my $hash = $object->new(@argument);
 
 	my $wirename = new Net::DNS::DomainName2535($name)->encode;
 	$iterations++;
 
-	while ( $iterations-- > 0 ) {
+	while ( $iterations-- ) {
 		$hash->add($wirename);
 		$hash->add($salt);
 		$wirename = $hash->digest;

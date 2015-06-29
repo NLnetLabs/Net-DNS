@@ -106,13 +106,15 @@ sub class {				## overide RR method
 sub ttl {				## overide RR method
 	my $self = shift;
 	carp qq[Usage: OPT has no "ttl" attribute, please use "flags()" or "rcode()"] unless $ttl++;
-	@{$self}{qw(rcode flags)} = unpack 'Cxn', pack 'N', shift if scalar @_;
-	pack 'C2n', $self->rcode, $self->version, $self->flags;
+	my @rcode = map unpack( 'C',   pack 'N', $_ ), @_;
+	my @flags = map unpack( 'x2n', pack 'N', $_ ), @_;
+	pack 'C2n', $self->rcode(@rcode), $self->version, $self->flags(@flags);
 }
 
 
 sub version {
-	shift->{version} || 0;
+	my $version = shift->{version};
+	return defined($version) ? $version : 0;
 }
 
 

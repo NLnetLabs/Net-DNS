@@ -372,13 +372,13 @@ be created.
 The Net::DNS module provides auxiliary functions which support
 policy-driven zone serial numbering regimes.
 
-=head2 Strictly Sequential
+=head2 SEQUENTIAL
 
     $successor = $soa->serial( SEQUENTIAL );
 
 The existing serial number is incremented modulo 2**32.
 
-=head2 Time Encoded
+=head2 UNIXTIME
 
     $successor = $soa->serial( UNIXTIME );
 
@@ -386,7 +386,7 @@ The Unix time scale will be used as the basis for zone serial
 numbering. The serial number will be incremented if the time
 elapsed since the previous update is less than one second.
 
-=head2 Date Encoded
+=head2 YYYYMMDDxx
 
     $successor = $soa->serial( YYYYMMDDxx );
 

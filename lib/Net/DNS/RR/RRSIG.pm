@@ -27,15 +27,15 @@ use Net::DNS::Parameters;
 use MIME::Base64;
 use Time::Local;
 
-use constant UTIL => eval { require Scalar::Util; } || 0;
+use constant UTIL => ref( eval { require Scalar::Util; \1; } );
 
-use constant PRIVATE => eval { require Net::DNS::SEC::Private; } || 0;
+use constant PRIVATE => ref( eval { require Net::DNS::SEC::Private; \1; } );
 
-use constant DSA => eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA' } || 0;
-use constant RSA => eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA' } || 0;
+use constant DSA => eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA'; };
+use constant RSA => eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA'; };
 
-use constant ECDSA => eval { require Net::DNS::SEC::ECDSA;   'Net::DNS::SEC::ECDSA' }	|| 0;
-use constant GOST  => eval { require Net::DNS::SEC::ECCGOST; 'Net::DNS::SEC::ECCGOST' } || 0;
+use constant ECDSA => eval { require Net::DNS::SEC::ECDSA;   'Net::DNS::SEC::ECDSA'; };
+use constant GOST  => eval { require Net::DNS::SEC::ECCGOST; 'Net::DNS::SEC::ECCGOST'; };
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA || ECDSA || GOST );
 
@@ -73,7 +73,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	for ( @field, qw(signame) ) {
-		$self->$_(shift) if scalar @_;
+		$self->$_(shift);
 	}
 	$self->signature(@_);
 }
@@ -157,7 +157,7 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	unless ( ref($self) ) {		## class method or simple function
-		my $argn = pop || croak 'undefined argument';
+		my $argn = pop;
 		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
 	}
 

@@ -82,6 +82,69 @@ sub new {
 }
 
 
+=head2 push
+
+    $ancount = $update->push( prereq => $rr );
+    $nscount = $update->push( update => $rr );
+    $arcount = $update->push( additional => $rr );
+
+    $nscount = $update->push( update => $rr1, $rr2, $rr3 );
+    $nscount = $update->push( update => @rr );
+
+Adds RRs to the specified section of the update packet.
+
+Returns the number of resource records in the specified section.
+
+Section names may be abbreviated to the first three characters.
+
+=cut
+
+sub push {
+	my $self = shift;
+	my $list = $self->_section(shift);
+	my @arg	 = grep ref($_), @_;
+
+	my ($zone) = $self->zone;
+	my $zclass = $zone->zclass;
+	my @rr = grep $_->class( $_->class =~ /ANY|NONE/ ? () : $zclass ), @arg;
+
+	CORE::push( @$list, @rr );
+}
+
+
+=head2 unique_push
+
+    $ancount = $update->unique_push( prereq => $rr );
+    $nscount = $update->unique_push( update => $rr );
+    $arcount = $update->unique_push( additional => $rr );
+
+    $nscount = $update->unique_push( update => $rr1, $rr2, $rr3 );
+    $nscount = $update->unique_push( update => @rr );
+
+Adds RRs to the specified section of the update packet provided
+that the RRs are not already present in the same section.
+
+Returns the number of resource records in the specified section.
+
+Section names may be abbreviated to the first three characters.
+
+=cut
+
+sub unique_push {
+	my $self = shift;
+	my $list = $self->_section(shift);
+	my @arg	 = grep ref($_), @_;
+
+	my ($zone) = $self->zone;
+	my $zclass = $zone->zclass;
+	my @rr = grep $_->class( $_->class =~ /ANY|NONE/ ? () : $zclass ), @arg;
+
+	my %unique = map { ( bless( {%$_, ttl => 0}, ref $_ )->canonical => $_ ) } @rr, @$list;
+
+	scalar( @$list = values %unique );
+}
+
+
 1;
 
 __END__
@@ -89,8 +152,8 @@ __END__
 
 =head1 EXAMPLES
 
-The first example below shows a complete program;
-subsequent examples show only the creation of the update packet .
+The first example below shows a complete program.
+Subsequent examples show only the creation of the update packet.
 
 =head2 Add a new host
 
@@ -165,8 +228,8 @@ subsequent examples show only the creation of the update packet .
 =head2 Signing the DNS update using a customised TSIG record
 
     $update->sign_tsig( "$dir/Khmac-sha512.example.com.+165+01018.private",
-                        fudge => 60
-                        );
+			fudge => 60
+			);
 
 =head2 Another way to sign a DNS update
 
@@ -186,6 +249,8 @@ subsequent examples show only the creation of the update packet .
 Copyright (c)1997-2000 Michael Fuhr. 
 
 Portions Copyright (c)2002,2003 Chris Reinhardt.
+
+Portions Copyright (c)2015 Dick Franks.
 
 All rights reserved.
 
