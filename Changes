@@ -20,11 +20,11 @@ Fix rt.cpan.org #104657
 
 	Wrong split on Cygwin
 
-Fix rt.cpan.org #101810
+Fix rt.cpan.org #102810
 
 	Dynamic update: rr_add overrides ttl of zero
 
-Fix rt.cpan.org #101809
+Fix rt.cpan.org #102809
 
 	CAA broken
 
