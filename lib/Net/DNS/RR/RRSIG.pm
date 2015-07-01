@@ -27,15 +27,15 @@ use Net::DNS::Parameters;
 use MIME::Base64;
 use Time::Local;
 
-use constant UTIL => ref( eval { require Scalar::Util; \1; } );
+use constant UTIL => defined eval { require Scalar::Util; };
 
-use constant PRIVATE => ref( eval { require Net::DNS::SEC::Private; \1; } );
+use constant PRIVATE => defined eval { require Net::DNS::SEC::Private; };
 
-use constant DSA => eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA'; };
-use constant RSA => eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA'; };
+use constant DSA => scalar eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA'; };
+use constant RSA => scalar eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA'; };
 
-use constant ECDSA => eval { require Net::DNS::SEC::ECDSA;   'Net::DNS::SEC::ECDSA'; };
-use constant GOST  => eval { require Net::DNS::SEC::ECCGOST; 'Net::DNS::SEC::ECCGOST'; };
+use constant ECDSA => scalar eval { require Net::DNS::SEC::ECDSA;   'Net::DNS::SEC::ECDSA'; };
+use constant GOST  => scalar eval { require Net::DNS::SEC::ECCGOST; 'Net::DNS::SEC::ECCGOST'; };
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA || ECDSA || GOST );
 

@@ -51,7 +51,7 @@ require FileHandle;
 
 use Net::DNS;
 
-use constant PERLIO => ref( eval { require PerlIO; \1; } );
+use constant PERLIO => defined eval { require PerlIO; };
 
 
 =head1 METHODS
@@ -270,7 +270,7 @@ sub _read {
 
 	use overload ( '<>' => 'readline' );
 
-	use constant OVERLOAD_OK => eval { no integer; $] > 5.006; };
+	use constant OVERLOAD_OK => scalar eval { no integer; $] > 5.006; };
 
 	sub new {
 		my $self = bless {}, shift;
@@ -345,7 +345,7 @@ sub parse {
 
 	use overload ( '<>' => 'readline' );
 
-	use constant OVERLOAD_OK => eval { no integer; $] > 5.006; };
+	use constant OVERLOAD_OK => scalar eval { no integer; $] > 5.006; };
 
 	sub new {
 		my $self = bless {}, shift;

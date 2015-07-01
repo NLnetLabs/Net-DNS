@@ -226,8 +226,6 @@ sub match {
 
 sub hashalgo { &algorithm; }		## historical
 
-sub nxtdname { }			## inherited method inapplicable
-
 
 sub name2hash {
 	my $hashalg    = shift;

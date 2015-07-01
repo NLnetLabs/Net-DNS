@@ -5,16 +5,17 @@ use FileHandle;
 
 use Test::More tests => 88;
 
-use constant UTF8 => eval {
-	require Encode;						# expect this to fail pre-5.8.0
-	die if Encode::decode_utf8( chr(91) ) ne '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
-	Encode::find_encoding('UTF8');
-} || 0;
 
-use constant LIBIDN => eval {
-	require Net::LibIDN;					# optional IDN support
-	UTF8 && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
-} || 0;
+use constant LIBUTF8 => scalar eval {
+	require Encode;
+	Encode::decode_utf8( chr(91) ) eq '[';			# not UTF-EBCDIC  [see UTR#16 3.6]
+};
+
+use constant UTF8 => ref eval {
+	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
+};
+
+use constant LIBIDN => UTF8 && defined eval { require Net::LibIDN; };
 
 
 BEGIN {

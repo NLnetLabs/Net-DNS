@@ -4,16 +4,23 @@ use strict;
 use Test::More tests => 59;
 
 
-use constant UTF8 => eval {
+use constant LIBUTF8 => scalar eval {
 	require Encode;
-	Encode::decode_utf8( chr(91) ) eq '[';			# specifically not UTF-EBCDIC
+	Encode::decode_utf8( chr(91) ) eq '[';			# not UTF-EBCDIC  [see UTR#16 3.6]
 };
 
-use constant LIBIDN => eval { require Net::LibIDN; };		# optional IDN support
-
-use constant LIBIDNOK => eval {					# tested and working
-	LIBIDN && Net::LibIDN::idn_to_ascii( pack( 'U*', 20013, 22269 ), 'utf-8' ) eq 'xn--fiqs8s';
+use constant UTF8 => ref eval {
+	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
 };
+
+use constant LIBIDN => UTF8 && defined eval { require Net::LibIDN; };
+
+use constant LIBIDNOK => scalar eval {
+	my $cn = pack( 'U*', 20013, 22269 );
+	my $xn = 'xn--fiqs8s';
+	LIBIDN && ( Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq $xn );
+};
+
 
 
 BEGIN {

@@ -21,7 +21,7 @@ use integer;
 
 use Carp;
 
-use constant BABBLE => ref( eval { require Digest::BubbleBabble; \1; } );
+use constant BABBLE => defined eval { require Digest::BubbleBabble; };
 
 eval { require Digest::SHA };		## optional for simple Net::DNS RR
 eval { require Digest::GOST };

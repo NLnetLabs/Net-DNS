@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 27;
+plan tests => 26;
 
 
 my $name = '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example';
@@ -24,7 +24,7 @@ my $code = 50;
 my @attr = qw( algorithm flags iterations salt hnxtname typelist );
 my @data = qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr NS SOA MX RRSIG DNSKEY NSEC3PARAM );
 my @hash = ( qw( 1 1 12 aabbccdd 2t7b4g4vsa5smi47k61mv5bv1a22bojr ), q(NS SOA MX RRSIG DNSKEY NSEC3PARAM) );
-my @also = qw( hashalgo nxtdname optout );
+my @also = qw( hashalgo optout );
 
 my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b000722010000000290';
 

@@ -41,27 +41,20 @@ use integer;
 use Carp;
 
 
-use constant ASCII => ref(
-	eval {
-		require Encode;
-		Encode::find_encoding('ascii');			# encoding object
-	} );
-
-use constant UTF8 => ref(
-	eval {
-		Encode::find_encoding('utf8');			# encoding object
-	} );
-
-use constant LIBIDN => eval {
-	require Net::LibIDN;
-	UTF8 && Encode::decode_utf8( chr(91) ) eq '[';		# not UTF-EBCDIC  [see UTR#16 3.6]
+use constant ASCII => ref eval {
+	require Encode;
+	Encode::find_encoding('ascii');				# encoding object
 };
 
-use constant IDN => eval {
-	my $cn = pack( 'U*', 20013, 22269 );
-	my $xn = 'xn--fiqs8s';
-	LIBIDN && ( Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq $xn );
+use constant LIBUTF8 => scalar eval {
+	Encode::decode_utf8( chr(91) ) eq '[';			# not UTF-EBCDIC  [see UTR#16 3.6]
 };
+
+use constant UTF8 => ref eval {
+	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
+};
+
+use constant LIBIDN => UTF8 && defined eval { require Net::LibIDN; };
 
 
 # perlcc: address of encoding objects must be determined at runtime
@@ -189,7 +182,7 @@ Net::LibIDN module is installed.
 =cut
 
 sub xname {
-	return &name unless IDN;
+	return &name unless LIBIDN;
 
 	my $name = &name;
 	return $name unless $name =~ /xn--/;
@@ -280,11 +273,12 @@ sub _encode_ascii {			## translate perl string to ASCII
 	my $s = shift;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return do {
+
+	if ( LIBIDN && $s =~ /[^\000-\177]/ ) {
 		my $xn = Net::LibIDN::idn_to_ascii( $s, 'utf-8' );
 		croak 'invalid name' unless $xn;
-		pack "a* x$z", $xn;
-	} if IDN && $s =~ /[^\000-\177]/;
+		return pack "a* x$z", $xn;
+	}
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr

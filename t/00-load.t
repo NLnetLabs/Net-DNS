@@ -5,9 +5,9 @@ use Test::More tests => 32;
 
 use Net::DNS;
 
-use constant DNSSEC => eval { require Net::DNS::SEC; } || 0;
-use constant INET6  => eval { require IO::Socket::INET6; } || 0;
-use constant LibIDN => eval { require Net::LibIDN; } || 0;
+use constant DNSSEC => defined eval { require Net::DNS::SEC; };
+use constant INET6  => defined eval { require IO::Socket::INET6; };
+use constant LibIDN => defined eval { require Net::LibIDN; };
 
 
 diag("\n\nThese tests were run using:\n");

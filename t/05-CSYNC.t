@@ -38,7 +38,9 @@ my $wire = '000000420003000460000008';
 	is( $rr2->encode, $rr->encode, 'new($string) and new(%hash) equivalent' );
 
 	foreach (@attr) {
-		is( $rr->$_, $hash->{$_}, "expected result from rr->$_()" );
+		my $a = join ' ', sort split /\s+/, $rr->$_;	# typelist order unspecified
+		my $b = join ' ', sort split /\s+/, $hash->{$_};
+		is( $a, $b, "expected result from rr->$_()" );
 	}
 
 	foreach (@also) {

@@ -21,7 +21,7 @@ use Net::DNS::Packet;
 use constant INT16SZ  => 2;
 use constant PACKETSZ => 512;
 
-use constant UTIL => eval { require Scalar::Util; } || 0;
+use constant UTIL => defined eval { require Scalar::Util; };
 sub tainted { return UTIL ? Scalar::Util::tainted(shift) : undef }
 sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
 
