@@ -72,7 +72,7 @@ eval {
 } || exit( plan skip_all => "Unable to access local nameserver" );
 
 
-plan tests => 105;
+plan tests => 120;
 
 NonFatalBegin();
 
@@ -114,14 +114,20 @@ foreach my $data (@rrs) {
 	my $packet = $res->send( $data->{'name'}, $data->{'type'}, 'IN' );
 
 SKIP: {
-		my $subtests = 7 + scalar( keys %{$data} );
+		my $subtests = 8 + scalar( keys %{$data} );
 		skip( "undefined packet", $subtests )
 				unless ok( $packet, "send( $data->{name} IN $data->{type} )" );
 
 		ok( $packet->isa('Net::DNS::Packet'), "Net::DNS::Packet returned" );
 
-		is( $packet->header->qdcount, 1, 'Only one question' );
-		is( $packet->header->ancount, 1, 'Got single answer' );
+		my $from = $packet->answerfrom || '';
+		my $header = $packet->header;
+		is( $header->qdcount, 1, 'Only one question' );
+
+		skip( join( ' ', "Empty response from $from", "RCODE:", $header->rcode ), $subtests - 3 )
+				unless ok( $header->ancount, "Received answer" );
+
+		is( $header->ancount, 1, 'Got single answer' );
 
 		my ($question) = $packet->question;
 		my ($answer)   = $packet->answer;
@@ -183,10 +189,15 @@ SKIP: {
 			my $packet = $res->$method( $test->{'ip'} );
 
 	SKIP: {
-				skip( "undefined packet", 2 )
+				skip( "undefined packet", 3 )
 						unless ok( $packet, "$method( $test->{'ip'} )" );
 
 				ok( $packet->isa('Net::DNS::Packet'), "$method returns Net::DNS::Packet" );
+				my $from = $packet->answerfrom || '';
+				my $header = $packet->header;
+				skip( join( ' ', "Empty response from $from", "RCODE:", $header->rcode ), 1 )
+						unless ok( $header->ancount, "Received answer" );
+
 				my ($rr) = $packet->answer;
 				is( lc( $rr->ptrdname ), lc( $test->{'host'} ), "$method($test->{'ip'}) works" );
 			}
@@ -229,10 +240,17 @@ SKIP: {
 		my $packet = $res->$method( $test->{'name'} );
 
 SKIP: {
-			skip( "undefined packet", 4 )
+			skip( "undefined packet", 5 )
 					unless ok( $packet, "$method( $test->{'name'} )" );
 			ok( $packet->isa('Net::DNS::Packet'), "$method returns Net::DNS::Packet" );
-			is( $packet->header->ancount, 1, "Correct answer count (with $method)" );
+
+			my $from = $packet->answerfrom || '';
+			my $header = $packet->header;
+			skip( join( ' ', "Empty response from $from", "RCODE:", $header->rcode ), 3 )
+					unless ok( $header->ancount, "Received answer" );
+
+			is( $header->ancount, 1, "Correct answer count (with $method)" );
+
 			my ($rr) = $packet->answer;
 
 			ok( $rr->isa('Net::DNS::RR::A'), 'answer is Net::DNS::RR::A' );
@@ -256,20 +274,25 @@ SKIP: {
 
 	ok( $res->bgisready($socket), "Socket is ready" );
 SKIP: {
-		skip( "undefined socket", 6 ) unless $res->bgisready($socket);
+		skip( "undefined socket", 7 ) unless $res->bgisready($socket);
 		$res->debug(0);
 		my $packet = $res->bgread($socket);
 
-		skip( "undefined packet", 5 )
+		skip( "undefined packet", 6 )
 				unless ok( $packet, "bgread( socket )" );
-		my $from = $packet->answerfrom || '';
-		my $size = $packet->answersize || '';
+
+		my $header = $packet->header;
+		my $from   = $packet->answerfrom || '';
+		my $size   = $packet->answersize || '';
 		ok( $from, "answerfrom defined $from" );
 		ok( $size, "answersize defined $size" );
 
 		undef $socket;
-		skip( join( ' ', "Empty response from $from", "with RCODE", $packet->header->rcode ), 2 )
-				unless ok( $packet->header->ancount, "Received answer" );
+		skip( join( ' ', "Empty response from $from", "RCODE:", $header->rcode ), 3 )
+				unless ok( $header->ancount, "Received answer" );
+
+		is( $header->ancount, 1, "Correct answer count" );
+
 		my ($rr) = $packet->answer;
 
 		ok( $rr->isa('Net::DNS::RR::A'), 'answer is Net::DNS::RR::A' );
@@ -314,13 +337,18 @@ SKIP: {
 			my $method = $test->{'method'};
 			my $packet = $res->$method( $test->{'name'} );
 
-			skip( "undefined UDP socket id", 6 )
+			skip( "undefined UDP socket id", 7 )
 					unless ok( $sock_id, "Persistent UDP socket identified" );
 			is( $res->{'sockets'}[AF_INET]{"UDP"}, $sock_id, "Persistent socket matches" );
 
-			skip( "undefined packet", 4 )
+			skip( "undefined packet", 5 )
 					unless ok( $packet, "$method( $test->{'name'} )" );
 			ok( $packet->isa('Net::DNS::Packet'), "$method returns Net::DNS::Packet" );
+
+			my $from = $packet->answerfrom || '';
+			my $header = $packet->header;
+			skip( join( ' ', "Empty response from $from", "RCODE:", $header->rcode ), 3 )
+					unless ok( $header->ancount, "Received answer" );
 
 			is( $packet->header->ancount, 1, "Correct answer count ($method with persistent socket)" );
 			my ($rr) = $packet->answer;

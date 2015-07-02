@@ -182,14 +182,14 @@ Net::LibIDN module is installed.
 =cut
 
 sub xname {
-	return &name unless LIBIDN;
-
 	my $name = &name;
-	return $name unless $name =~ /xn--/;
 
-	my $self = shift;
-	return $self->{xname} if defined $self->{xname};
-	$self->{xname} = $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' );
+	if ( LIBIDN && $name =~ /xn--/ ) {
+		my $self = shift;
+		return $self->{xname} if defined $self->{xname};
+		return $self->{xname} = $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' );
+	}
+	return $name;
 }
 
 
