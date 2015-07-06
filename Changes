@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.01 [unreleased]
+**** 1.01 Jul 6, 2015
 
 Feature
 	The RRs previously only available with Net::DNS::SEC are now
