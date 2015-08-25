@@ -150,7 +150,14 @@ sub encode {
 }
 
 
-# Returns unbounded wire-format text
+=head2 raw
+
+    $data = $object->raw;
+
+Returns the wire-format encoded representation of the text object
+without the explicit length field.
+
+=cut
 
 sub raw {
 	my $self = shift;

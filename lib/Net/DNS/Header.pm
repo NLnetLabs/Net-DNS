@@ -70,7 +70,7 @@ sub string {
 	my $ar	   = $self->arcount;
 
 	my $opt = $$self->edns;
-	my $edns = $opt->defined ? $opt->string : '';
+	my $edns = $opt->_specified ? $opt->string : '';
 
 	return <<END . $edns if $opcode eq 'UPDATE';
 ;;	id = $id
@@ -163,7 +163,7 @@ sub rcode {
 		my $opt = $$self->edns;
 		unless ( defined $arg ) {
 			my $rcode = $opt->rcode;
-			return rcodebyval( $_ & 0x0f ) unless $opt->defined;
+			return rcodebyval( $_ & 0x0f ) unless $opt->_specified;
 			$rcode = ( $rcode & 0xff0 ) | ( $_ & 0x00f );
 			$opt->rcode($rcode);			# write back full 12-bit rcode
 			return $rcode == 16 ? 'BADVERS' : rcodebyval($rcode);

@@ -1,6 +1,6 @@
 # $Id$  -*-perl-*-
 
-use Test::More tests => 80;
+use Test::More tests => 86;
 use strict;
 
 
@@ -74,7 +74,7 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $ttl $class $type";
 	my $rr	= yxrrset($arg);
 
-	ok( $rr, "yxrrset($arg)" );				#8
+	ok( $rr, "yxrrset($arg)" );				#9
 	is( $rr->name,	$name, 'yxrrset - right name' );
 	is( $rr->ttl,	0,     'yxrrset - ttl	0' );
 	is( $rr->class, 'ANY', 'yxrrset - class ANY' );
@@ -107,7 +107,7 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $ttl $class $type $rdata";
 	my $rr	= nxrrset($arg);
 
-	ok( $rr, "nxrrset($arg)" );				#20
+	ok( $rr, "nxrrset($arg)" );				#21
 	is( $rr->name,	$name,	'nxrrset - right name' );
 	is( $rr->ttl,	0,	'nxrrset - ttl	 0' );
 	is( $rr->class, 'NONE', 'nxrrset - class NONE' );
@@ -121,10 +121,22 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $arg = "$name $class";
-	my $rr	= yxdomain($arg);
+	my @arg = "$name";
+	my $rr	= yxdomain(@arg);
 
-	ok( $rr, "yxdomain($arg)" );
+	ok( $rr, "yxdomain(@arg)" );				#27
+	is( $rr->name,	$name, 'yxdomain - right name' );
+	is( $rr->ttl,	0,     'yxdomain - ttl	 0' );
+	is( $rr->class, 'ANY', 'yxdomain - class ANY' );
+	is( $rr->type,	'ANY', 'yxdomain - type	 ANY' );
+	ok( is_empty( $rr->rdstring ), 'yxdomain - data empty' );
+}
+
+{
+	my @arg = ( name => $name );
+	my $rr	= yxdomain(@arg);
+
+	ok( $rr, "yxdomain(@arg)" );
 	is( $rr->name,	$name, 'yxdomain - right name' );
 	is( $rr->ttl,	0,     'yxdomain - ttl	 0' );
 	is( $rr->class, 'ANY', 'yxdomain - class ANY' );
@@ -138,10 +150,22 @@ my $rdata  = "10.1.2.3";
 #------------------------------------------------------------------------------
 
 {
-	my $arg = "$name $class";
-	my $rr	= nxdomain($arg);
+	my @arg = "$name";
+	my $rr	= nxdomain(@arg);
 
-	ok( $rr, "nxdomain($arg)" );				#32
+	ok( $rr, "nxdomain(@arg)" );				#39
+	is( $rr->name,	$name,	'nxdomain - right name' );
+	is( $rr->ttl,	0,	'nxdomain - ttl	  0' );
+	is( $rr->class, 'NONE', 'nxdomain - class NONE' );
+	is( $rr->type,	'ANY',	'nxdomain - type  ANY' );
+	ok( is_empty( $rr->rdstring ), 'nxdomain - data empty' );
+}
+
+{
+	my @arg = ( name => $name );
+	my $rr	= nxdomain(@arg);
+
+	ok( $rr, "nxdomain(@arg)" );
 	is( $rr->name,	$name,	'nxdomain - right name' );
 	is( $rr->ttl,	0,	'nxdomain - ttl	  0' );
 	is( $rr->class, 'NONE', 'nxdomain - class NONE' );
@@ -158,7 +182,7 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $ttl $class $type $rdata";
 	my $rr	= rr_add($arg);
 
-	ok( $rr, "rr_add($arg)" );				#38
+	ok( $rr, "rr_add($arg)" );				#51
 	is( $rr->name,	   $name,  'rr_add - right name' );
 	is( $rr->ttl,	   $ttl,   "rr_add - ttl   $ttl" );
 	is( $rr->class,	   $class, "rr_add - class $class" );
@@ -187,7 +211,7 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $class $type";
 	my $rr	= rr_del($arg);
 
-	ok( $rr, "rr_del($arg)" );				#50
+	ok( $rr, "rr_del($arg)" );				#63
 	is( $rr->name,	$name, 'rr_del - right name' );
 	is( $rr->ttl,	0,     'rr_del - ttl   0' );
 	is( $rr->class, 'ANY', 'rr_del - class ANY' );
@@ -211,21 +235,6 @@ my $rdata  = "10.1.2.3";
 	ok( is_empty( $rr->rdstring ), 'rr_del - data empty' );
 }
 
-#------------------------------------------------------------------------------
-# Delete All RRsets From A Name (with gratuitous class name).
-#------------------------------------------------------------------------------
-
-{
-	my $arg = "$name $class";
-	my $rr	= rr_del($arg);
-
-	ok( $rr, "rr_del($arg)" );				#62
-	is( $rr->name,	$name, 'rr_del - right name' );
-	is( $rr->ttl,	0,     'rr_del - ttl   0' );
-	is( $rr->class, 'ANY', 'rr_del - class ANY' );
-	is( $rr->type,	'ANY', 'rr_del - type  ANY' );
-	ok( is_empty( $rr->rdstring ), 'rr_del - data empty' );
-}
 
 #------------------------------------------------------------------------------
 # Delete An RR From An RRset.
@@ -235,7 +244,7 @@ my $rdata  = "10.1.2.3";
 	my $arg = "$name $class $type $rdata";
 	my $rr	= rr_del($arg);
 
-	ok( $rr, "rr_del($arg)" );				#68
+	ok( $rr, "rr_del($arg)" );
 	is( $rr->name,	   $name,  'rr_del - right name' );
 	is( $rr->ttl,	   0,	   'rr_del - ttl   0' );
 	is( $rr->class,	   'NONE', 'rr_del - class NONE' );
@@ -251,7 +260,7 @@ my $rdata  = "10.1.2.3";
 
 {
 	my $packet = Net::DNS::Update->new( $zone, $class );
-	ok( $packet, 'packet created' );			#74
+	ok( $packet, 'packet created' );			#81
 
 	$packet->push( "pre", yxrrset("$name $class $type $rdata") );
 	$packet->push( "pre", yxrrset("$name $class2 $type $rdata") );

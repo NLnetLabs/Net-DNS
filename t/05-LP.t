@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 16;
+use Test::More tests => 17;
 
 
 use Net::DNS;
@@ -10,9 +10,9 @@ use Net::DNS;
 my $name = 'LP.example';
 my $type = 'LP';
 my $code = 107;
-my @attr = qw( preference locator );
+my @attr = qw( preference target );
 my @data = qw( 10 locator.example.com );
-my @also = qw( fqdn );
+my @also = qw( FQDN fqdn );
 
 my $wire = join '', qw( 000a076c6f6361746f72076578616d706c6503636f6d00 );
 

@@ -132,11 +132,11 @@ sub _new_string {
 		my $rdata = pack 'H*', join '', @token;
 		my $rdlen = $self->{rdlength} = length $rdata;
 		croak 'length and hexadecimal data inconsistent' unless $rdlen == $count;
-		$self->decode_rdata( \$rdata, 0 ) if $rdlen;	# unpack RDATA
+		$self->_decode_rdata( \$rdata, 0 ) if $rdlen;	# unpack RDATA
 		return $self;
 	}
 
-	$self->parse_rdata(@token);				# parse arguments
+	$self->_parse_rdata(@token);				# parse arguments
 	return $self;
 }
 
@@ -171,7 +171,7 @@ sections required for certain dynamic update operations.
 sub _new_hash {
 	my ( $base, %argument ) = @_;
 
-	my %attribute = ( name => '.' );
+	my %attribute = ( name => '.', type => 'ANY' );
 	while ( my ( $key, $value ) = each %argument ) {
 		$attribute{lc $key} = $value;
 	}
@@ -235,8 +235,8 @@ sub decode {
 	my $next = $index + $self->{rdlength};
 	die 'corrupt wire-format data' if length $$data < $next;
 
-	$self->{offset} = $offset;
-	$self->decode_rdata( $data, $index, @opaque ) if $next > $index or $self->type eq 'OPT';
+	$self->{offset} = $offset || 0;
+	$self->_decode_rdata( $data, $index, @opaque ) if $next > $index or $self->type eq 'OPT';
 	delete $self->{offset};
 
 	return wantarray ? ( $self, $next ) : $self;
@@ -266,7 +266,7 @@ sub encode {
 	my $type  = $self->{type};
 	my $class = $self->{class} || 1;
 	my $index = $offset + length($owner) + RRFIXEDSZ;
-	my $rdata = eval { $self->encode_rdata( $index, @opaque ); } || '';
+	my $rdata = eval { $self->_encode_rdata( $index, @opaque ); } || '';
 	return pack 'a* n2 N n a*', $owner, $type, $class, $self->ttl, length $rdata, $rdata;
 }
 
@@ -291,7 +291,7 @@ sub canonical {
 	my $type  = $self->{type};
 	my $class = $self->{class} || 1;
 	my $index = RRFIXEDSZ + length $owner;
-	my $rdata = eval { $self->encode_rdata($index); } || '';
+	my $rdata = eval { $self->_encode_rdata($index); } || '';
 	pack 'a* n2 N n a*', $owner, $type, $class, $self->ttl, length $rdata, $rdata;
 }
 
@@ -415,41 +415,63 @@ sub ttl {
 ##
 ################################################################################
 
-sub decode_rdata {			## decode rdata from wire-format octet string
-	my ( $self, $data, $offset ) = @_;
+sub _decode_rdata {			## decode rdata from wire-format octet string
+	shift->decode_rdata(@_);
+}
+
+sub decode_rdata {
+	my ( $self, $data, $offset ) = @_;			# uncoverable pod
 	$self->{rdata} = substr $$data, $offset, $self->{rdlength};
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
-	my $rdata = shift->{rdata};
+sub _encode_rdata {			## encode rdata as wire-format octet string
+	shift->encode_rdata(@_);
+}
+
+sub encode_rdata {
+	my $rdata = shift->{rdata};				# uncoverable pod
 	return defined $rdata ? $rdata : '';
 }
 
 
-sub format_rdata {			## format rdata portion of RR string
-	my $self = shift;
-	my $data = $self->encode_rdata;
+sub _format_rdata {			## format rdata portion of RR string
+	shift->format_rdata(@_);
+}
+
+sub format_rdata {
+	my $self = shift;					# uncoverable pod
+	my $data = $self->_encode_rdata;
 	my $size = length($data) || return '';
 	join ' ', '\\#', $size, unpack 'H*', $data;		# RFC3597 unknown RR format
 }
 
 
-sub parse_rdata {			## parse RR attributes in argument list
-	my $self = shift;
+sub _parse_rdata {			## parse RR attributes in argument list
+	shift->parse_rdata(@_);
+}
+
+sub parse_rdata {
+	my $self = shift;					# uncoverable pod
 	die join ' ', $self->type, 'not implemented' if ref($self) eq __PACKAGE__;
 	die join ' ', 'no zone file representation defined for', $self->type;
 }
 
 
-sub defaults { }			## set attribute default values
+sub _defaults { shift->defaults() }	## set attribute default values
+
+sub defaults { }						# uncoverable pod
 
 
 sub dump {				## print internal data structure
-	require Data::Dumper;
+	require Data::Dumper;					# uncoverable pod
 	local $Data::Dumper::Maxdepth = $Data::Dumper::Maxdepth || 6;
 	local $Data::Dumper::Sortkeys = $Data::Dumper::Sortkeys || 1;
 	print Data::Dumper::Dumper(@_);
+}
+
+sub rdatastr {				## obsolete RR subtype method
+	&rdstring;						# uncoverable pod
 }
 
 
@@ -464,12 +486,12 @@ Resource record data section when viewed as opaque octets.
 sub rdata {
 	my $self = shift;
 
-	return eval { $self->encode_rdata( 0x4000, {} ); } unless scalar @_;
+	return eval { $self->_encode_rdata( 0x4000, {} ); } unless scalar @_;
 
 	my $rdata = shift;
 	my $rdlen = $self->{rdlength} = length $rdata;
 	my $hash  = {};
-	$self->decode_rdata( \$rdata, 0, $hash ) if $rdlen;
+	$self->_decode_rdata( \$rdata, 0, $hash ) if $rdlen;
 	croak 'found compression pointer in rdata' if keys %$hash;
 }
 
@@ -487,7 +509,7 @@ sub rdstring {
 	my $coln = shift || 0;
 	my $cols = 80;
 
-	my @rdata = eval { $self->format_rdata; };
+	my @rdata = eval { $self->_format_rdata; };
 
 	carp $@ if $@;
 
@@ -508,8 +530,6 @@ sub rdstring {
 	return join "\n\t", @line, join( ' ', @fill ), ')';
 }
 
-sub rdatastr { &rdstring; }
-
 
 =head2 rdlength
 
@@ -520,7 +540,7 @@ Returns the length of the encoded RR-specific data.
 =cut
 
 sub rdlength {
-	length shift->encode_rdata;
+	length shift->_encode_rdata;
 }
 
 
@@ -571,29 +591,24 @@ comparator function used for a particular RR based on its attributes.
 
 =head2 set_rrsort_func
 
-    Net::DNS::RR::MX->set_rrsort_func(
-	'preference',
-	sub { $Net::DNS::a->preference <=> $Net::DNS::b->preference }
-	);
+    my $function = sub {		## numerically ascending order
+	$Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'};
+    };
 
-    Net::DNS::RR::MX->set_rrsort_func(
-	'default_sort',
-	Net::DNS::RR::MX->get_rrsort_func('preference')
-	);
+    Net::DNS::RR::MX->set_rrsort_func( 'preference', $function );
+
+    Net::DNS::RR::MX->set_rrsort_func( 'default_sort', $function );
 
 set_rrsort_func() must be called as a class method. The first argument is
 the attribute name on which the sorting is to take place. If you specify
 "default_sort" then that is the sort algorithm that will be used when
-set_rrsort_rrsort() is called without an RR attribute as argument.
+get_rrsort_func() is called without an RR attribute as argument.
 
 The second argument is a reference to a comparator function that uses the
 global variables $a and $b in the Net::DNS package. During sorting, the
 variables $a and $b will contain references to objects of the class whose
 set_rrsort_func() was called. The above sorting function will only be
 applied to Net::DNS::RR::MX objects.
-
-Both get_rrsort_func() and set_rrsort_func() return a reference to the
-comparator function.
 
 The above example is the sorting function implemented in MX.
 
@@ -604,29 +619,31 @@ use vars qw(%rrsortfunct);
 sub set_rrsort_func {
 	my $class     = shift;
 	my $attribute = shift;
-	my $funct     = shift;
+	my $function  = shift;
 
 	my ($type) = $class =~ m/::([^:]+)$/;
-	$rrsortfunct{$type}{$attribute} = $funct;
+	$rrsortfunct{$type}{$attribute} = $function;
 }
 
+
+=head2 get_rrsort_func
+
+    $function = Net::DNS::RR::MX->get_rrsort_func('preference');
+    $function = Net::DNS::RR::MX->get_rrsort_func();
+
+get_rrsort_func() returns a reference to the comparator function.
+
+=cut
+
+my $default = sub { $Net::DNS::a->canonical() cmp $Net::DNS::b->canonical(); };
+
 sub get_rrsort_func {
-	my $class     = shift;
-	my $attribute = shift;					# can be undefined.
+	my $class = shift;
+	my $attribute = shift || 'default_sort';
 
 	my ($type) = $class =~ m/::([^:]+)$/;
 
-	my $comparator = $attribute || 'default_sort';
-
-	return $rrsortfunct{$type}{$comparator} || do {
-
-		return sub { $Net::DNS::a->canonical() cmp $Net::DNS::b->canonical() }
-				unless $attribute && $class->can($attribute);
-
-		$rrsortfunct{$type}{$attribute} = sub {
-			$Net::DNS::a->$attribute() <=> $Net::DNS::b->$attribute();
-		};
-	};
+	$rrsortfunct{$type}{$attribute} || $default;
 }
 
 
@@ -644,6 +661,9 @@ sub get_rrsort_func {
 # to be copied into the newly created object.
 
 use vars qw(%_LOADED %_MINIMAL);
+
+$_MINIMAL{ANY} = bless [ type => 255 ], __PACKAGE__;
+%_LOADED = %_MINIMAL;
 
 sub _subclass {
 	my $class   = shift;
@@ -665,12 +685,12 @@ sub _subclass {
 			$_MINIMAL{$mnemon} = bless [@base], $subclass;
 
 			my $object = bless {@base}, $subclass;
-			$object->defaults;
+			$object->_defaults;
 			$_LOADED{$mnemon} = bless [%$object], $subclass;
-		};
+		}
 
 		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon};
-		$_LOADED{$rrtype} = $_LOADED{$mnemon};
+		$_LOADED{$rrtype}  = $_LOADED{$mnemon};
 	}
 
 	my $prebuilt = $default ? $_LOADED{$rrtype} : $_MINIMAL{$rrtype};
@@ -701,7 +721,7 @@ sub AUTOLOAD {				## Default method
 ***  FATAL PROGRAM ERROR!!	Unknown method '$method'
 ***  which the program has attempted to call for the object:
 ***
-    $string
+$string
 ***
 ***  The @object object has no method '$method'
 ***  THIS IS A BUG IN THE CALLING SOFTWARE, which incorrectly assumes

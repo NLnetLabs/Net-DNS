@@ -17,31 +17,34 @@ use strict;
 use base qw(Net::DNS::Resolver::Base);
 
 
-my $etc		= $ENV{ETC} || '/etc';
-my $resolv_conf = "$etc/resolv";
+my $config_dir	= $ENV{ETC} || '/etc';
+my $resolv_conf = "$config_dir/resolv";
 my $dotfile	= '.resolv.conf';
+
+my @resolv_conf = grep -f $_ && -r _, $resolv_conf;
 
 my @config_path;
 push( @config_path, $ENV{HOME} ) if exists $ENV{HOME};
 push( @config_path, '.' );
 
+my @config_file = grep -f $_ && -o _, map "$_/$dotfile", @config_path;
 
-sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
+
+sub _untaint {
+	map { m/^(.*)$/; $1 } grep defined, @_;
+}
 
 
 sub init {
-	my $defaults = shift->defaults;
+	my $defaults = shift->defaults;				# uncoverable pod
 
-	$defaults->read_config_file($resolv_conf) if -f $resolv_conf && -r _;
+	$defaults->read_config_file($_) for @resolv_conf;
 
 	$defaults->domain( _untaint $defaults->domain );	# untaint config values
 	$defaults->searchlist( _untaint $defaults->searchlist );
 	$defaults->nameservers( _untaint $defaults->nameservers );
 
-	foreach my $dir (@config_path) {
-		my $file = "$dir/$dotfile";
-		$defaults->read_config_file($file) if -f $file && -r _ && -o _;
-	}
+	$defaults->read_config_file($_) for @config_file;
 
 	$defaults->read_env;
 }

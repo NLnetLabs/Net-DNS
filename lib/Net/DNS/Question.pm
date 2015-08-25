@@ -218,8 +218,9 @@ sub qname {
 sub zname { &qname; }
 
 
-=head2 qtype, ztype
+=head2 qtype, ztype, type
 
+    $qtype = $question->type;
     $qtype = $question->qtype;
     $ztype = $question->ztype;
 
@@ -239,8 +240,9 @@ sub qtype { &type; }
 sub ztype { &type; }
 
 
-=head2 qclass, zclass
+=head2 qclass, zclass, class
 
+    $qclass = $question->class;
     $qclass = $question->qclass;
     $zclass = $question->zclass;
 

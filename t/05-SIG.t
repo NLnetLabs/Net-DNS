@@ -16,24 +16,24 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 25;
+plan tests => 68;
 
 
-my $name = 'net-dns.org';
+my $name = '.';
 my $type = 'SIG';
 my $code = 24;
 my @attr = qw( typecovered algorithm labels orgttl sigexpiration siginception keytag signame signature );
 my @data = (
-	qw( NS	7  2  3600 20130914141655 20130815141655 60909	net-dns.org ),
-	join '', qw(	IRlCjYNZCkddjoFw6UGxAga/EvxgENl+IESuyRH9vlrys
-			yqne0gPpclC++raP3+yRA+gDIHrMkIwsLudqod4iuoA73
-			Mw1NxETS6lm2eQTDNzLSY6dnJxZBqXypC3Of7bF3UmR/G
-			NhcFIThuV/qFq+Gs+g0TJ6eyMF6ydYhjS31k= )
+	qw( TYPE0 1 0 0 20150814181655 20150814181155 2871 rsamd5.example ),
+	join '', qw(	GOjsIo2JXz2ASClRhdbD5W+IYkq+Eo5iF9l3R+LYS/14Q
+			fxqX2M9YHPvuLfz5ORAdnqyuKJTi3/LsrHmF/cUzwY3UM
+			ZJDeGce77WiUJlR93VRKZ4fTs/wPP7JHxgAIhhlYFB4xs
+			vISZr/tgvblxwJSpa4pJIahUuitfaiijFwQw= )
 			);
-my @also = qw( sig vrfyerrstr );
+my @also = qw( sig vrfyerrstr _size );
 
 my $wire =
-'0002070200000E1052346FD7520CE2D7EDED076E65742D646E73036F7267002119428D83590A475D8E8170E941B10206BF12FC6010D97E2044AEC911FDBE5AF2B32AA77B480FA5C942FBEADA3F7FB2440FA00C81EB324230B0BB9DAA87788AEA00EF7330D4DC444D2EA59B67904C33732D263A767271641A97CA90B739FEDB17752647F18D85C1484E1B95FEA16AF86B3E8344C9E9EC8C17AC9D6218D2DF59';
+'000001000000000055CE309755CE2F6B0B37067273616D6435076578616D706C650018E8EC228D895F3D8048295185D6C3E56F88624ABE128E6217D97747E2D84BFD7841FC6A5F633D6073EFB8B7F3E4E440767AB2B8A2538B7FCBB2B1E617F714CF063750C6490DE19C7BBED689426547DDD544A6787D3B3FC0F3FB247C60008861958141E31B2F21266BFED82F6E5C70252A5AE292486A152E8AD7DA8A28C5C10C';
 
 
 {
@@ -72,6 +72,12 @@ my $wire =
 	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
 	is( $hex1, $hex2, 'encode/decode transparent' );
 	is( $hex3, $wire, 'encoded RDATA matches example' );
+
+	my @wire = unpack 'C*', $encoded;
+	my $wireformat = pack 'C*', @wire, 0;
+	eval { decode Net::DNS::RR( \$wireformat ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "misplaced SIG RR\t[$exception]" );
 }
 
 
@@ -103,6 +109,82 @@ my $wire =
 	eval { $rr->algorithm('X'); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
+
+{
+	my $object   = new Net::DNS::RR( type => $type );
+	my $class    = ref($object);
+	my $scalar   = '';
+	my %testcase = (		## test callable with invalid arguments
+		'_CreateSig'	 => [$object, $scalar, $object],
+		'_CreateSigData' => [$object, $object],
+		'_string2time'	 => [undef],
+		'_time2string'	 => [undef],
+		'_VerifySig'	 => [$object, $object, $object],
+		'create'	 => [$class,  $scalar, $object],
+		'verify'	 => [$object, $object, $object],
+		);
+
+	foreach my $method ( sort keys %testcase ) {
+		my $arglist = $testcase{$method};
+		$object->{algorithm} = 0;			# induce exception
+		no strict q/refs/;
+		eval { &{"$class::$method"}(@$arglist); };
+		my $exception = $1 if $@ =~ /^(.*)\n*/;
+		ok( defined $exception, "$method method callable\t[$exception]" );
+	}
+}
+
+
+{
+	my %testcase = (		## test time conversion edge cases
+		0x00000000 => '19700101000000',
+		0x7fffffff => '20380119031407',
+		0x80000000 => '20380119031408',
+		0xf4d41f7f => '21000228235959',
+		0xf4d41f80 => '21000301000000',
+		0xffffffff => '21060207062815',
+		);
+
+	foreach my $time ( sort keys %testcase ) {
+		my $string = $testcase{$time};
+		my $result = Net::DNS::RR::SIG::_time2string($time);
+		is( $result, $string, "_time2string($time)" );
+
+		# Test indirectly: $timeval can be 64-bit or negative 32-bit integer
+		my $timeval = Net::DNS::RR::SIG::_string2time($string);
+		my $timestr = Net::DNS::RR::SIG::_time2string($timeval);
+		is( $timestr, $string, "_string2time($string)" );
+	}
+
+	my $timenow = time();
+	my $timeval = Net::DNS::RR::SIG::_string2time($timenow);
+	is( $timeval, $timenow, "_string2time( time() )\t$timeval" );
+}
+
+
+{
+	ok( Net::DNS::RR::SIG::_ordered( undef,	     0 ),	   '_ordered( undef, 0 )' );
+	ok( Net::DNS::RR::SIG::_ordered( 0,	     1 ),	   '_ordered( 0, 1 )' );
+	ok( Net::DNS::RR::SIG::_ordered( 0x7fffffff, 0x80000000 ), '_ordered( 0x7fffffff, 0x80000000 )' );
+	ok( Net::DNS::RR::SIG::_ordered( 0xffffffff, 0 ),	   '_ordered( 0xffffffff, 0 )' );
+	ok( Net::DNS::RR::SIG::_ordered( -2,	     -1 ),	   '_ordered( -2, -1 )' );
+	ok( Net::DNS::RR::SIG::_ordered( -1,	     0 ),	   '_ordered( -1, 0 )' );
+	ok( !Net::DNS::RR::SIG::_ordered( undef,      undef ),	    '!_ordered( undef, undef )' );
+	ok( !Net::DNS::RR::SIG::_ordered( 0,	      undef ),	    '!_ordered( 0, undef )' );
+	ok( !Net::DNS::RR::SIG::_ordered( 0x80000000, 0x7fffffff ), '!_ordered( 0x80000000, 0x7fffffff )' );
+	ok( !Net::DNS::RR::SIG::_ordered( 0,	      0xffffffff ), '!_ordered( 0, 0xffffffff )' );
+	ok( !Net::DNS::RR::SIG::_ordered( -1,	      -2 ),	    '!_ordered( -1, -2 )' );
+	ok( !Net::DNS::RR::SIG::_ordered( 0,	      -1 ),	    '!_ordered( 0, -1 )' );
 }
 
 

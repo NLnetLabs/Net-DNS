@@ -4,8 +4,10 @@
 use strict;
 use Test::More;
 
-chdir 't/' || die "Couldn't chdir to t/\n";			# t/.resolv.conf
-unshift( @INC, '../blib/lib', '../blib/arch' );
+BEGIN {
+	chdir 't/' || die "Couldn't chdir to t/\n";		# t/.resolv.conf
+	unshift( @INC, '../blib/lib', '../blib/arch' );
+}
 
 use Net::DNS;
 

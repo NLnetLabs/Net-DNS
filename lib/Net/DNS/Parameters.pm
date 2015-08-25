@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2015-06-23)
+##	(last updated 2015-07-26)
 ##
 ################################################
 
@@ -149,26 +149,27 @@ use vars qw( %opcodebyname %opcodebyval );
 # Registry: DNS RCODEs
 use vars qw( %rcodebyname %rcodebyval );
 %rcodebyname = (
-	NOERROR	 => 0,						# RFC1035
-	FORMERR	 => 1,						# RFC1035
-	SERVFAIL => 2,						# RFC1035
-	NXDOMAIN => 3,						# RFC1035
-	NOTIMP	 => 4,						# RFC1035
-	REFUSED	 => 5,						# RFC1035
-	YXDOMAIN => 6,						# RFC2136 RFC6672
-	YXRRSET	 => 7,						# RFC2136
-	NXRRSET	 => 8,						# RFC2136
-	NOTAUTH	 => 9,						# RFC2136
-	NOTAUTH	 => 9,						# RFC2845
-	NOTZONE	 => 10,						# RFC2136
-	BADVERS	 => 16,						# RFC6891
-	BADSIG	 => 16,						# RFC2845
-	BADKEY	 => 17,						# RFC2845
-	BADTIME	 => 18,						# RFC2845
-	BADMODE	 => 19,						# RFC2930
-	BADNAME	 => 20,						# RFC2930
-	BADALG	 => 21,						# RFC2930
-	BADTRUNC => 22,						# RFC4635
+	NOERROR	  => 0,						# RFC1035
+	FORMERR	  => 1,						# RFC1035
+	SERVFAIL  => 2,						# RFC1035
+	NXDOMAIN  => 3,						# RFC1035
+	NOTIMP	  => 4,						# RFC1035
+	REFUSED	  => 5,						# RFC1035
+	YXDOMAIN  => 6,						# RFC2136 RFC6672
+	YXRRSET	  => 7,						# RFC2136
+	NXRRSET	  => 8,						# RFC2136
+	NOTAUTH	  => 9,						# RFC2136
+	NOTAUTH	  => 9,						# RFC2845
+	NOTZONE	  => 10,					# RFC2136
+	BADVERS	  => 16,					# RFC6891
+	BADSIG	  => 16,					# RFC2845
+	BADKEY	  => 17,					# RFC2845
+	BADTIME	  => 18,					# RFC2845
+	BADMODE	  => 19,					# RFC2930
+	BADNAME	  => 20,					# RFC2930
+	BADALG	  => 21,					# RFC2930
+	BADTRUNC  => 22,					# RFC4635
+	BADCOOKIE => 23,					# draft-ietf-dnsop-cookies
 	);
 %rcodebyval = reverse( BADSIG => 16, %rcodebyname );
 %rcodebyname = ( %rcodebyname, map /\D/ ? lc($_) : $_, %rcodebyname );
@@ -316,6 +317,19 @@ __END__
 Net::DNS::Parameters is a Perl package representing the DNS parameter
 allocation (key,value) tables as recorded in the definitive registry
 maintained and published by IANA.
+
+
+=head1 FUNCTIONS
+
+=head2 classbyname, typebyname, opcodebyname, rcodebyname, ednsoptionbyname
+
+Access functions which return the numerical code corresponding to
+the given mnemonic.
+
+=head2 classbyval, typebyval, opcodebyval, rcodebyval, ednsoptionbyval
+
+Access functions which return the canonical mnemonic corresponding to
+the given numerical code.
 
 
 =head1 COPYRIGHT

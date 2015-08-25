@@ -15,10 +15,10 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 18;
+plan tests => 39;
 
 
-my $name = '38.1.0.192.in-addr.arpa';
+my $name = '38.2.0.192.in-addr.arpa';
 my $type = 'IPSECKEY';
 my $code = 45;
 my @attr = qw( precedence gatetype algorithm gateway key );
@@ -84,6 +84,61 @@ my $wire =
 	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
 	isnt( $rr->encode,    $lc->encode, 'encoded RDATA names not downcased' );
 	isnt( $rr->canonical, $lc->encode, 'canonical RDATA names not downcased' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR("$name $type @data");
+	foreach ( undef, qw(192.0.2.38 2001:db8:0:8002:0:0:2000:1 gateway.example.com) ) {
+		my $gateway = $_ || '.';
+		$rr->gateway($gateway);
+		is( scalar( $rr->gateway ), $_, "rr->gateway( '$gateway' )" );
+		my $rr2 = new Net::DNS::RR( $rr->string );
+		is( $rr2->rdstring, $rr->rdstring, 'new/string transparent' );
+		my $encoded = $rr->encode;
+		my $decoded = decode Net::DNS::RR( \$encoded );
+		is( $decoded->rdstring, $rr->rdstring, 'encode/decode transparent' );
+	}
+}
+
+
+{
+	my $rr = eval { new Net::DNS::RR( type => $type, gateway => 'X' ); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unrecognised gateway type\t[$exception]" );
+}
+
+
+{
+	my $rr = eval { new Net::DNS::RR(". $type \\# 3 01ff05"); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "exception raised in decode\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type @data");
+	$rr->{gatetype} = 255;
+	$rr->encode;
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "exception raised in encode\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type @data");
+	$rr->{gatetype} = 255;
+	eval { my $gateway = $rr->gateway; };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "exception raised in gateway\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "$_ attribute of empty RR undefined" );
+	}
 }
 
 

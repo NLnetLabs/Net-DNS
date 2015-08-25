@@ -77,7 +77,7 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 
 {
 	use integer;
-	my $initial = 0;
+	my $initial = -1;		## exercise 32-bit compatibility code on 64-bit hardware
 	foreach my $serial ( 2E9, 3E9, 4E9, 1E9, 2E9, 4E9, 1E9, 3E9 ) {
 		my $rr = new Net::DNS::RR("name SOA mname rname $initial");
 		$rr->serial($serial);

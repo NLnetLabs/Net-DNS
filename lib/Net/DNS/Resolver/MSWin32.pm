@@ -31,7 +31,9 @@ BEGIN {
 }
 
 
-sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
+sub _untaint {
+	map { m/^(.*)$/; $1 } grep defined, @_;
+}
 
 
 sub init {

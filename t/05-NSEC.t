@@ -90,7 +90,7 @@ my $wire =
 {
 	my $rr = new Net::DNS::RR(". $type");
 	$rr->typebm('');
-	is( $rr->typebm(), '',  "historical 'typebm'" );
+	is( $rr->typebm(), '', "historical 'typebm'" );
 }
 
 

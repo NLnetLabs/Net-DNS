@@ -107,7 +107,7 @@ or corrupted during transmission.
 use constant HEADER_LENGTH => length pack 'n6', (0) x 6;
 
 sub decode {
-	my $class = shift;
+	my $class = shift;					# uncoverable pod
 	my $data  = shift;
 	my $debug = shift || 0;
 
@@ -182,25 +182,22 @@ Truncation may be specified using a non-zero optional size argument.
 =cut
 
 sub data {
-	my ( $self, $size ) = @_;
-	$self->truncate($size) if $size;			# temp fix for RT#91306
 	&encode;
 }
 
 sub encode {
-	my $self = shift;
+	my ( $self, $size ) = @_;				# uncoverable pod
 
-	my $ident = $self->header->id;				# packet header
+	my $edns = $self->edns;					# EDNS support
+	my @addl = grep !$_->isa('Net::DNS::RR::OPT'), @{$self->{additional}};
+	unshift( @addl, $edns ) if $edns->_specified;
+	$self->{additional} = \@addl;
 
-	for ( my $edns = $self->edns ) {			# EDNS support
-		my @xopt = grep !$_->isa('Net::DNS::RR::OPT'), @{$self->{additional}};
-		unshift( @xopt, $edns ) if $edns->defined;
-		$self->{additional} = \@xopt;
-	}
+	return $self->truncate($size) if $size;
 
 	my @part = qw(question answer authority additional);
 	my @size = map scalar( @{$self->{$_}} ), @part;
-	my $data = pack 'n6', $ident, $self->{status}, @size;
+	my $data = pack 'n6', $self->header->id, $self->{status}, @size;
 	$self->{count} = [];
 
 	my $hash = {};						# packet body
@@ -242,7 +239,7 @@ sub edns {
 	my $self = shift;
 	my $link = \$self->{xedns};
 	($$link) = grep $_->isa(qw(Net::DNS::RR::OPT)), @{$self->{additional}} unless $$link;
-	$$link ||= new Net::DNS::RR( type => 'OPT' );
+	$$link = new Net::DNS::RR( type => 'OPT' ) unless $$link;
 }
 
 
@@ -277,7 +274,7 @@ sub reply {
 	$header->rd( $qheadr->rd );				# copy these flags into reply
 	$header->cd( $qheadr->cd );
 
-	$reply->edns->size($UDPmax) if $query->edns->defined;
+	$reply->edns->size($UDPmax) if $query->edns->_specified;
 	return $reply;
 }
 
@@ -427,7 +424,7 @@ sub answerfrom {
 	my $self = shift;
 
 	$self->{answerfrom} = shift if scalar @_;
-	return $self->{answerfrom};
+	$self->{answerfrom};
 }
 
 
@@ -442,7 +439,7 @@ nameserver.  User-created packets will return undef for this method
 =cut
 
 sub answersize {
-	return shift->{answersize};
+	shift->{answersize};
 }
 
 
@@ -603,12 +600,14 @@ does not support the suppressed signature scheme described in RFC2845.
 sub sign_tsig {
 	my $self = shift;
 
-	return eval {
+	eval {
 		require Net::DNS::RR::TSIG;
 		my $tsig = Net::DNS::RR::TSIG->create(@_);
 		$self->push( 'additional' => $tsig );
 		return $tsig;
-	} || croak "$@\nTSIG: unable to sign packet";
+	} || do {
+		croak "$@\nTSIG: unable to sign packet";
+	};
 }
 
 
@@ -650,14 +649,15 @@ sub verifyerr {
 =head2 sign_sig0
 
 SIG0 support is provided through the Net::DNS::RR::SIG class.
-This class is not integrated into Net::DNS but resides in the
-Net::DNS::SEC distribution available from CPAN.
+The requisite cryptographic components are not integrated into
+Net::DNS but reside in the Net::DNS::SEC distribution available
+from CPAN.
 
     $update = new Net::DNS::Update('example.com');
     $update->push( update => rr_add('foo.example.com A 10.1.2.3'));
     $update->sign_sig0('Kexample.com+003+25317.private');
 
-Execution will be terminated if Net::DNS::RR::SIG is not available.
+Execution will be terminated if Net::DNS::SEC is not available.
 
 
 =head2 verify SIG0
@@ -671,30 +671,37 @@ Verify SIG0 packet signature against one or more specified KEY RRs.
 
 sub sign_sig0 {
 	my $self = shift;
-	my $karg = shift || return undef;
+	my $karg = shift;
 
-	return eval {
+	eval {
 		my $sig0;
-		unless ( my $kref = ref($karg) ) {
-			$sig0 = Net::DNS::RR::SIG->create( '', $karg );
+		require Net::DNS::RR::SIG;
 
-		} elsif ( $kref eq 'Net::DNS::RR::SIG' ) {
+		if ( ref($karg) eq 'Net::DNS::RR::SIG' ) {
 			$sig0 = $karg;
 
-		} elsif ( $kref eq 'Net::DNS::SEC::Private' ) {
-			$sig0 = Net::DNS::RR::SIG->create( '', $karg );
-
 		} else {
-			croak "sign_sig0: unexpected $kref argument";
+			$sig0 = Net::DNS::RR::SIG->create( '', $karg );
 		}
 
 		$self->push( 'additional' => $sig0 );
 		return $sig0;
-	} || croak "$@\nSIG0: unable to sign packet";
+	} || do {
+		croak "$@\nSIG0: unable to sign packet";
+	};
 }
 
 
-sub sigrr {				## obtain packet signature RR
+=head2 sigrr
+
+    $sigrr = $packet->sigrr() || die 'unsigned packet';
+
+The sigrr method returns the signature RR from a signed packet
+or undefined if the signature is absent.
+
+=cut
+
+sub sigrr {
 	my $self = shift;
 
 	my ($sig) = reverse $self->additional;
@@ -718,7 +725,8 @@ The minimum maximum length that is honoured is 512 octets.
 =cut
 
 # From RFC2181:
-#9. The TC (truncated) header bit
+#
+# 9. The TC (truncated) header bit
 #
 #   The TC bit should be set in responses only when an RRSet is required
 #   as a part of the response, but could not be included in its entirety.
@@ -735,62 +743,74 @@ The minimum maximum length that is honoured is 512 octets.
 #   set, it should ignore that response, and query again, using a
 #   mechanism, such as a TCP connection, that will permit larger replies.
 
-# Code inspired on a contribution from Aaron Crane via rt.cpan.org 33547
+# Code developed from a contribution by Aaron Crane via rt.cpan.org 33547
 
 sub truncate {
-	my $self=shift;
-	my $max_len=shift;
-	my $debug=0;
-	$max_len=$max_len>UDPSZ?$max_len:UDPSZ;
+	my $self = shift;
+	my $size = shift || UDPSZ;
 
-	print "Truncating to $max_len\n" if $debug;
+	my $sigrr = $self->sigrr;
+	$size = UDPSZ unless $size > UDPSZ;
+	$size -= $sigrr->_size if $sigrr;
 
-	if (length $self->encode() > $max_len) {
-		# first remove data from the additional section
-		while (length $self->encode() > $max_len){
-			# first remove _complete_ RRstes from the additonal section.
-			my $popped= CORE::pop(@{$self->{'additional'}});
-			last unless defined($popped);
-			print "Removed ".$popped->string." from additional \n" if $debug;
-			my $i=0;
-			my @stripped_additonal;
+	my $data = pack 'x' x 12;				# header placeholder
+	my $hdsz = length $data;
+	$self->{count} = [];
 
-			while ( $i < scalar @{$self->{'additional'}} ) {
-				#remove all of these same RRtypes
-				if  (
-				    ${$self->{'additional'}}[$i]->type eq $popped->type &&
-				    ${$self->{'additional'}}[$i]->name eq $popped->name &&
-				    ${$self->{'additional'}}[$i]->class eq $popped->class ){
-					print "       Also removed ". ${$self->{'additional'}}[$i]->string." from additonal \n" if $debug;				}else{
-					CORE::push @stripped_additonal,  ${$self->{'additional'}}[$i];
-				}
-				$i++;
-			}
-			$self->{'additional'}=\@stripped_additonal;
+	my $tc;
+	my $hash = {};
+	foreach my $section ( map $self->{$_}, qw(question answer authority) ) {
+		my @list;
+		foreach my $item (@$section) {
+			my $component = $item->encode( length $data, $hash );
+			last if length($data) + length($component) > $size;
+			last if $tc;
+			$data .= $component;
+			CORE::push @list, $item;
 		}
-
-		return $self if length $self->encode <= $max_len;
-
-      		my @sections = qw<authority answer question>;
-		while (@sections) {
-			while (my $popped=$self->pop($sections[0])) {
-				last unless defined($popped);
-				print "Popped ".$popped->string." from the $sections[0] section\n" if $debug;
-				$self->header->tc(1);
-				return $self if length $self->encode <= $max_len;
-				next;
-			}
-			shift @sections;
-		}
+		$tc++ if scalar(@list) < scalar(@$section);
+		@$section = @list;
 	}
-	return $self;
+	$self->header->tc(1) if $tc;				# only set if truncated here
+
+	my @list;
+	my @rrset;
+	my %rrset;
+	foreach my $item ( grep ref($_) ne ref($sigrr), @{$self->{additional}} ) {
+		my $name  = $item->{owner}->canonical;
+		my $class = $item->{class} || 0;
+		my $key	  = pack 'nna*', $class, $item->{type}, $name;
+		CORE::push @rrset, $key unless $rrset{$key};
+		CORE::push @{$rrset{$key}}, $item;
+	}
+
+	foreach my $key (@rrset) {
+		my $component = '';
+		my @item      = @{$rrset{$key}};
+		foreach my $item (@item) {
+			$component .= $item->encode( length $data, $hash );
+		}
+		last if length($data) + length($component) > $size;
+		$data .= $component;
+		CORE::push @list, @item;
+	}
+
+	if ($sigrr) {
+		$data .= $sigrr->encode( length $data, $hash, $self );
+		CORE::push @list, $sigrr;
+	}
+	$self->{additional} = \@list;
+
+	my @part = qw(question answer authority additional);
+	my @size = map scalar( @{$self->{$_}} ), @part;
+	pack 'n6 a*', $self->header->id, $self->{status}, @size, substr( $data, $hdsz );
 }
 
 
 ########################################
 
 sub dump {				## print internal data structure
-	require Data::Dumper;
+	require Data::Dumper;					# uncoverable pod
 	local $Data::Dumper::Maxdepth = $Data::Dumper::Maxdepth || 3;
 	local $Data::Dumper::Sortkeys = $Data::Dumper::Sortkeys || 1;
 	print Data::Dumper::Dumper(@_);

@@ -22,8 +22,12 @@ use constant INT16SZ  => 2;
 use constant PACKETSZ => 512;
 
 use constant UTIL => defined eval { require Scalar::Util; };
-sub tainted { return UTIL ? Scalar::Util::tainted(shift) : undef }
-sub _untaint { map defined && /^(.+)$/ ? $1 : (), @_; }
+
+sub _tainted { UTIL ? Scalar::Util::tainted(shift) : undef }
+
+sub _untaint {
+	map { m/^(.*)$/; $1 } grep defined, @_;
+}
 
 
 #
@@ -68,7 +72,7 @@ BEGIN {
 # Set up a closure to be our class data.
 #
 {
-	my %defaults = (
+	my $defaults = bless {
 		nameserver4	=> ['127.0.0.1'],
 		nameserver6	=> ['::1'],
 		port		=> 53,
@@ -106,16 +110,15 @@ BEGIN {
 					# USE WITH CARE, YOU ARE VULNERABLE TO
 					# SPOOFING IF SET.
 					# This may be a temporary feature
-		);
+		}, __PACKAGE__;
 
 	# If running under a SOCKSified Perl, use TCP instead of UDP
 	# and keep the sockets open.
 	if ( $Config::Config{'usesocks'} ) {
-		$defaults{'usevc'}	    = 1;
-		$defaults{'persistent_tcp'} = 1;
+		$defaults->{'usevc'}	      = 1;
+		$defaults->{'persistent_tcp'} = 1;
 	}
 
-	my $defaults = bless \%defaults, __PACKAGE__;
 
 	sub defaults { return $defaults; }
 }
@@ -839,7 +842,7 @@ NAMESERVER: foreach my $ns (@ns) {
 			}
 
 			# handle failure to detect taint inside socket->send()
-			die 'Insecure dependency while running with -T switch' if tainted($nsaddr);
+			die 'Insecure dependency while running with -T switch' if _tainted($nsaddr);
 
 
 			# See tickets #11931 and #97502
@@ -1020,7 +1023,7 @@ sub bgsend {
 		}
 
 		# handle failure to detect taint inside socket->send()
-		die 'Insecure dependency while running with -T switch' if tainted($dst_sockaddr);
+		die 'Insecure dependency while running with -T switch' if _tainted($dst_sockaddr);
 		return $socket;
 	}
 	$self->errorstring("Could not find a socket to send on");

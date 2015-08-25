@@ -45,7 +45,7 @@ use integer;
 #use Net::DNS::Text;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -61,7 +61,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	## Scalar attribute
@@ -73,7 +73,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	## Simple RRs may return rdata attributes as a single string.
@@ -90,7 +90,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	##	my @rdata = @_;			# non-empty list parsed from RR string
@@ -104,7 +104,7 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
-sub defaults() {			## specify RR attribute default values
+sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
 	## Note that this code is executed once only after module is loaded.
@@ -131,19 +131,15 @@ sub foo {
 
 
 ## If you wish to offer users a sorted order then you will need to
-## define functions similar to these, otherwise just remove them.
+## define the ordering function.
 
+# my $function = sub {	# order RRs by numerically increasing preference
+#	$Net::DNS::a->{preference} <=> $Net::DNS::b->{preference};
+# };
 #
-#__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
-#	'preference',
-#	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
-#	);
+# __PACKAGE__->set_rrsort_func( 'preference', $function );
 #
-#
-#__PACKAGE__->set_rrsort_func(
-#	'default_sort',
-#	__PACKAGE__->get_rrsort_func('preference')
-#	);
+# __PACKAGE__->set_rrsort_func( 'default_sort', $function );
 #
 
 

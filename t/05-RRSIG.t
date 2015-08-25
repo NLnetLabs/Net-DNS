@@ -16,7 +16,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 25;
+plan tests => 66;
 
 
 my $name = 'net-dns.org';
@@ -103,6 +103,82 @@ my $wire =
 	eval { $rr->algorithm('X'); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+}
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
+
+{
+	my $object   = new Net::DNS::RR( type => $type );
+	my $class    = ref($object);
+	my $scalar   = '';
+	my %testcase = (		## test callable with invalid arguments
+		'_CreateSig'	 => [$object, $scalar, $object],
+		'_CreateSigData' => [$object, $scalar],
+		'_string2time'	 => [undef],
+		'_time2string'	 => [undef],
+		'_VerifySig'	 => [$object, $object, $object],
+		'create'	 => [$class,  $scalar, $object],
+		'verify'	 => [$object, $object, $object],
+		);
+
+	foreach my $method ( sort keys %testcase ) {
+		my $arglist = $testcase{$method};
+		$object->{algorithm} = 0;			# induce exception
+		no strict q/refs/;
+		eval { &{"$class::$method"}(@$arglist); };
+		my $exception = $1 if $@ =~ /^(.*)\n*/;
+		ok( defined $exception, "$method method callable\t[$exception]" );
+	}
+}
+
+
+{
+	my %testcase = (		## test time conversion edge cases
+		0x00000000 => '19700101000000',
+		0x7fffffff => '20380119031407',
+		0x80000000 => '20380119031408',
+		0xf4d41f7f => '21000228235959',
+		0xf4d41f80 => '21000301000000',
+		0xffffffff => '21060207062815',
+		);
+
+	foreach my $time ( sort keys %testcase ) {
+		my $string = $testcase{$time};
+		my $result = Net::DNS::RR::RRSIG::_time2string($time);
+		is( $result, $string, "_time2string($time)" );
+
+		# Test indirectly: $timeval can be 64-bit or negative 32-bit integer
+		my $timeval = Net::DNS::RR::RRSIG::_string2time($string);
+		my $timestr = Net::DNS::RR::RRSIG::_time2string($timeval);
+		is( $timestr, $string, "_string2time($string)" );
+	}
+
+	my $timenow = time();
+	my $timeval = Net::DNS::RR::RRSIG::_string2time($timenow);
+	is( $timeval, $timenow, "_string2time( time() )\t$timeval" );
+}
+
+
+{
+	ok( Net::DNS::RR::RRSIG::_ordered( undef,      0 ),	     '_ordered( undef, 0 )' );
+	ok( Net::DNS::RR::RRSIG::_ordered( 0,	       1 ),	     '_ordered( 0, 1 )' );
+	ok( Net::DNS::RR::RRSIG::_ordered( 0x7fffffff, 0x80000000 ), '_ordered( 0x7fffffff, 0x80000000 )' );
+	ok( Net::DNS::RR::RRSIG::_ordered( 0xffffffff, 0 ),	     '_ordered( 0xffffffff, 0 )' );
+	ok( Net::DNS::RR::RRSIG::_ordered( -2,	       -1 ),	     '_ordered( -2, -1 )' );
+	ok( Net::DNS::RR::RRSIG::_ordered( -1,	       0 ),	     '_ordered( -1, 0 )' );
+	ok( !Net::DNS::RR::RRSIG::_ordered( undef,	undef ),      '!_ordered( undef, undef )' );
+	ok( !Net::DNS::RR::RRSIG::_ordered( 0,		undef ),      '!_ordered( 0, undef )' );
+	ok( !Net::DNS::RR::RRSIG::_ordered( 0x80000000, 0x7fffffff ), '!_ordered( 0x80000000, 0x7fffffff )' );
+	ok( !Net::DNS::RR::RRSIG::_ordered( 0,		0xffffffff ), '!_ordered( 0, 0xffffffff )' );
+	ok( !Net::DNS::RR::RRSIG::_ordered( -1,		-2 ),	      '!_ordered( -1, -2 )' );
+	ok( !Net::DNS::RR::RRSIG::_ordered( 0,		-1 ),	      '!_ordered( 0, -1 )' );
 }
 
 

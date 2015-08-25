@@ -17,7 +17,7 @@ Net::DNS::RR::KEY - DNS KEY resource record
 =cut
 
 
-sub defaults() {			## specify RR attribute default values
+sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
 	$self->algorithm(1);

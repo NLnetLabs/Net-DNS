@@ -92,14 +92,13 @@ sub send {
 	$original = $question unless ref($original);		# to preserve original request
 
 	my ( $head, @tail ) = $question->{qname}->label;
-	unless ($head) {
+	unless ( defined $head ) {
 		return $root if $root;				# root servers cached indefinitely
 
 		my $defres = new Net::DNS::Resolver();
-		$defres->nameservers( $res->hints ) || $defres->nameservers( $res->_hints );
+		$defres->nameservers( $res->hints );
 
 		my $packet = $defres->send( '.', 'NS' );	# specified hint server
-		$res->{callback}->($packet) if $res->{callback};
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
 		my %auth = map { lc $_->nsdname => 1 } @auth;
 		my @glue = grep $auth{lc $_->name}, $packet->additional;
@@ -107,32 +106,25 @@ sub send {
 		foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
 		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
 		my @ip = map @$_, values %glue;
-		return $root = $packet if @ip && $packet->header->aa;
 
+		$defres->nameservers( $res->_hints );
 		$defres->nameservers(@ip);
 		$defres->recurse(0);
-		foreach my $ns ( map $_->nsdname, @auth ) {
-			$defres->nameservers($ns) unless @ip;
-			$packet = $defres->send( '.', 'NS' );	# authoritative root server
-			$res->{callback}->($packet) if $res->{callback};
-			my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
-			my %auth = map { lc $_->nsdname => 1 } @auth;
-			my @glue = grep $auth{lc $_->name}, $packet->additional;
-			my @ip = grep $_->type eq 'A', @glue;
-			push @ip, grep $_->type eq 'AAAA', @glue;
-			return $root = $packet if @ip && @auth;
-		}
-		return $packet;
+		$packet = $defres->send( '.', 'NS' );		# authoritative server
+		$self->_callback($packet);
+		return $root = $packet;
 	}
 
 	my $domain = lc join( '.', @tail ) || '.';
 	my $nslist = $res->{cache}->{$domain} ||= [];
 	if ( scalar @$nslist ) {
-		print ";; using cached nameservers for $domain\n" if $res->{debug};
+		$self->_diag(";; using cached nameservers for $domain\n");
 	} else {
 		$domain = lc $question->qname if $question->qtype ne 'NULL';
-		my $packet = $res->send( $domain, 'NULL', 'ANY', $original ) || return;
-		return $packet unless $packet->header->rcode eq 'NOERROR';
+		my $packet = $res->send( $domain, 'NULL', 'IN', $original );
+
+		# uncoverable branch true	# depends on external data
+		return unless $packet;
 
 		my @answer = $packet->answer;			# return authoritative answer
 		return $packet if $packet->header->aa && grep $_->name eq $original->qname, @answer;
@@ -146,11 +138,11 @@ sub send {
 
 		my %zone = reverse %auth;
 		foreach my $zone ( keys %zone ) {
-			print ";; cache nameservers for $zone\n" if $res->{debug};
+			$self->_diag(";; cache nameservers for $zone\n");
 			my @nsname = grep $auth{$_} eq $zone, keys %auth;
-			$nslist = $res->{cache}->{$zone} ||= [];
-			@$nslist = map $glue{$_} || $_, @nsname;
-			last if $zone eq $domain;
+			my @list = map $glue{$_} ? $glue{$_} : $_, @nsname;
+			@{$res->{cache}->{$zone}} = @list;
+			push @$nslist, @list;
 		}
 	}
 
@@ -162,30 +154,45 @@ sub send {
 	splice @a, 0, 0, splice( @a, int( rand scalar @a ) );	# cut deck
 
 	foreach (@a) {
-		$res->empty_nameservers();
-		$res->nameservers( map @$_, @a );
-		my $reply = $res->send($query) || last;
-		$res->{callback}->($reply) if $res->{callback};
+		my @ns = $res->nameservers(@$_);
+
+		# uncoverable branch true	# depends on external data
+		next unless scalar @ns;
+
+		my $reply = $res->send($query);
+
+		# uncoverable branch true	# depends on external data
+		next unless $reply;
+
+		# uncoverable branch true	# depends on external data
+		next unless $reply->header->rcode eq 'NOERROR';
+
+		$self->_callback($reply);
 		return $reply;
 	}
 
-	foreach my $ns (@$nslist) {
-		next if ref($ns);
-		my $name = $ns;
-		print ";; find missing glue for $name\n" if $res->{debug};
-		$ns = [];					# substitute IP list in situ
-		$res->empty_nameservers();
-		@$ns = $res->nameservers($name);
+	foreach my $ns ( grep !ref($_), @$nslist ) {
+		$self->_diag(";; find missing glue for $ns\n");
+		$ns = [$res->nameservers($ns)];			# substitute IP list in situ
+
+		# uncoverable branch true	# depends on external data
 		next unless scalar @$ns;
-		my $reply = $res->send($query) || next;
-		$res->{callback}->($reply) if $res->{callback};
+
+		my $reply = $res->send($query);
+
+		# uncoverable branch true	# depends on external data
+		next unless $reply;
+
+		# uncoverable branch true	# depends on external data
+		next unless $reply->header->rcode eq 'NOERROR';
+
+		$self->_callback($reply);
 		return $reply;
 	}
-	return;
 }
 
 
-sub query_dorecursion { &send; }	## historical
+sub query_dorecursion { &send; }				# uncoverable pod
 
 
 =head2 callback
@@ -197,8 +204,6 @@ For example to emulate dig's C<+trace> function:
 
     my $coderef = sub {
 	my $packet = shift;
-
-	$_->print for $packet->additional;
 
 	printf ";; Received %d bytes from %s\n\n",
 		$packet->answersize, $packet->answerfrom;
@@ -212,23 +217,26 @@ for queries for missing glue records.
 =cut
 
 sub callback {
-	my ( $self, $sub ) = @_;
-
-	$self->{callback} = $sub if defined $sub && ref($sub) eq 'CODE';
-	return $self->{callback};
-}
-
-sub recursion_callback { &callback; }	## historical
-
-
-sub bgsend {
 	my $self = shift;
-	my $class = ref($self) || $self;
-	Carp::croak "method ${class}::bgsend undefined";
+
+	( $self->{callback} ) = grep ref($_) eq 'CODE', @_;
 }
+
+sub _callback {
+	my $callback = shift->{callback};
+	$callback->(@_) if $callback;
+}
+
+sub recursion_callback { &callback; }				# uncoverable pod
 
 
 ########################################
+
+sub _diag {				## debug output
+	my $self = shift;
+	print @_ if $self->{debug};				# uncoverable branch true
+}
+
 
 sub _hints {				## default hints
 	require Net::DNS::ZoneFile;
@@ -240,8 +248,12 @@ sub _hints {				## default hints
 	my %auth = map { lc $_->nsdname => 1 } @auth;
 	my @glue = grep $auth{lc $_->name}, @rr;
 	my %glue;
-	foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
-	foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
+	foreach ( grep $_->type eq 'A', @glue ) {
+		push @{$glue{lc $_->name}}, $_->address;
+	}
+	foreach ( grep $_->type eq 'AAAA', @glue ) {
+		push @{$glue{lc $_->name}}, $_->address;
+	}
 	my @ip = map @$_, values %glue;
 }
 

@@ -9,7 +9,8 @@ my %prerequisite = qw(
 		);
 
 while ( my ( $package, $rev ) = each %prerequisite ) {
-	next if eval "use $package $rev";
+	eval "use $package $rev";
+	next unless $@;
 	plan skip_all => "$package $rev required for testing POD";
 	exit;
 }

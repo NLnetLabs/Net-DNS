@@ -20,11 +20,14 @@ Net::DNS::RR::IPSECKEY - DNS IPSECKEY resource record
 use integer;
 
 use Carp;
-use Net::DNS::DomainName;
 use MIME::Base64;
 
+use Net::DNS::DomainName;
+use Net::DNS::RR::A;
+use Net::DNS::RR::AAAA;
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -51,14 +54,14 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 		$self->{gateway} = $name;
 
 	} else {
-		croak "unknown gateway type ($gatetype)";
+		die "unknown gateway type ($gatetype)";
 	}
 
 	$self->keybin( substr $$data, $offset, $limit - $offset );
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{algorithm};
@@ -84,7 +87,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{algorithm};
@@ -94,7 +97,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->$_(shift) for qw(precedence gatetype algorithm gateway);
@@ -111,12 +114,7 @@ sub precedence {
 
 
 sub gatetype {
-	my $self = shift;
-
-	$self->{gatespec} = shift if scalar @_;
-	my $gatetype = $self->{gatetype};
-	return $self->{gatespec} unless defined $gatetype;
-	return $gatetype;
+	return shift->{gatetype} || 0;
 }
 
 
@@ -131,43 +129,38 @@ sub algorithm {
 sub gateway {
 	my $self = shift;
 
-	my $gatetype = $self->gatetype;
-	if ( scalar @_ ) {
-		for ( shift || '.' ) {
-			( $_ eq '.' ) && do {
-				$gatetype = 0;
-				last;
-			};
-			/:.*:/ && do {
-				$gatetype = 2;
-				$self->{gateway} = pack 'n* @16', map hex($_), split /:/;
-				last;
-			};
-			/\.\d+$/ && do {
-				$gatetype = 1;
-				$self->{gateway} = pack 'C* @4', split /\./;
-				last;
-			};
-			/\..+/ && do {
-				$gatetype = 3;
-				$self->{gateway} = new Net::DNS::DomainName($_);
-				last;
-			};
-			croak "unrecognised gateway type";
-		}
-		my $declared = $self->{gatespec};
-		$declared = $gatetype unless defined $declared;
-		delete $self->{gatespec};
-		croak "gateway not type $declared" unless $gatetype == $declared;
-		$self->{gatetype} = $gatetype;
+	for (@_) {
+		/^\.*$/ && do {
+			$self->{gatetype} = 0;
+			$self->{gateway}  = undef;		# no gateway
+			last;
+		};
+		/:.*:/ && do {
+			$self->{gatetype} = 2;
+			$self->{gateway} = bless( {}, 'Net::DNS::RR::AAAA' )->address($_);
+			last;
+		};
+		/\.\d+$/ && do {
+			$self->{gatetype} = 1;
+			$self->{gateway} = bless( {}, 'Net::DNS::RR::A' )->address($_);
+			last;
+		};
+		/\..+/ && do {
+			$self->{gatetype} = 3;
+			$self->{gateway}  = new Net::DNS::DomainName($_);
+			last;
+		};
+		croak "unrecognised gateway type";
 	}
 
 	if ( defined wantarray ) {
-		return '.' if $gatetype == 0;
-		return join '.', unpack 'C4', $self->{gateway} if $gatetype == 1;
-		return sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack 'n8', $self->{gateway} if $gatetype == 2;
+		my $gatetype = $self->{gatetype};
+		return wantarray ? '.' : undef unless $gatetype;
 		return $self->{gateway}->name if $gatetype == 3;
-		croak "unknown gateway type ($gatetype)";
+		my $gateway = {address => $self->{gateway}};
+		return bless( $gateway, 'Net::DNS::RR::A' )->address	if $gatetype == 1;
+		return bless( $gateway, 'Net::DNS::RR::AAAA' )->address if $gatetype == 2;
+		die "unknown gateway type ($gatetype)";
 	}
 }
 
@@ -191,16 +184,13 @@ sub keybin {
 sub pubkey { &key; }
 
 
-# sort RRs in numerically ascending order.
-__PACKAGE__->set_rrsort_func(
-	'precedence',
-	sub {
-		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-		$a->{precedence} <=> $b->{precedence};
-	} );
+my $function = sub {			## sort RRs in numerically ascending order.
+	$Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'};
+};
 
+__PACKAGE__->set_rrsort_func( 'preference', $function );
 
-__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('precedence') );
+__PACKAGE__->set_rrsort_func( 'default_sort', $function );
 
 
 1;
@@ -252,9 +242,13 @@ algorithm and determines the format of the public key field.
 =head2 gateway
 
     $gateway = $rr->gateway;
+    $rr->gateway( $gateway );
 
 The gateway field indicates a gateway to which an IPsec tunnel may be
 created in order to reach the entity named by this resource record.
+
+=head2 pubkey
+
 
 =head2 key
 
@@ -275,7 +269,7 @@ Binary representation of the public key block for the resource record.
 
 Copyright (c)2007 Olaf Kolkman, NLnet Labs.
 
-Portions Copyright (c)2012 Dick Franks.
+Portions Copyright (c)2012,2015 Dick Franks.
 
 All rights reserved.
 

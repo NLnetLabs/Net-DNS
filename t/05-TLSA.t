@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 18;
+use Test::More tests => 19;
 
 
 use Net::DNS;
@@ -13,7 +13,7 @@ my $code = 52;
 my @attr = qw( usage selector matchingtype certificate );
 my @data =
 		qw( 1 1 2 92003ba34942dc74152e2f2c408d29eca5a520e7f2e06bb944f4dca346baf63c1b177615d466f6c4b71c216a50292bd58c9ebdd2f74e38fe51ffd48c43326cbc );
-my @also = qw( certbin );
+my @also = qw( certbin babble );
 
 my $wire =
 '01010292003ba34942dc74152e2f2c408d29eca5a520e7f2e06bb944f4dca346baf63c1b177615d466f6c4b71c216a50292bd58c9ebdd2f74e38fe51ffd48c43326cbc';

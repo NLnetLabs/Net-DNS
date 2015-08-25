@@ -87,17 +87,13 @@ sub mx {
 #
 sub rrsort {
 	my $rrtype = uc shift;
-	my @empty;
-	my ( $attribute, @rr_array ) = @_;
+	my ( $attribute, @rr ) = @_;	## NB: attribute is optional
+	( @rr, $attribute ) = @_ if ref($attribute) =~ /^Net::DNS::RR/;
 
-	return undef unless defined $attribute;			# attribute not specified
-	( @rr_array, $attribute ) = @_ if ref($attribute) =~ /^Net::DNS::RR/;
-
-	my @extracted_rr = grep $_->type eq $rrtype, @rr_array;
-	return @empty unless scalar @extracted_rr;
+	my @extracted = grep $_->type eq $rrtype, @rr;
+	return @extracted unless scalar @extracted;
 	my $func   = "Net::DNS::RR::$rrtype"->get_rrsort_func($attribute);
-	my @sorted = sort $func @extracted_rr;
-	return @sorted;
+	my @sorted = sort $func @extracted;
 }
 
 
@@ -124,15 +120,15 @@ sub YYYYMMDDxx {
 #
 
 sub yxrrset {
-	my $rr = new Net::DNS::RR(shift);
+	my $rr = new Net::DNS::RR(@_);
 	$rr->ttl(0);
 	$rr->class('ANY') unless $rr->rdata;
 	return $rr;
 }
 
 sub nxrrset {
-	my $rr = new Net::DNS::RR(shift);
-	return new Net::DNS::RR(
+	my $rr = new Net::DNS::RR(@_);
+	new Net::DNS::RR(
 		name  => $rr->name,
 		type  => $rr->type,
 		class => 'NONE'
@@ -140,26 +136,36 @@ sub nxrrset {
 }
 
 sub yxdomain {
-	my ($domain) = split /\s+/, shift;
-	return new Net::DNS::RR("$domain ANY ANY");
+	my ( $domain, @etc ) = map split, @_;
+	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain ) );
+	new Net::DNS::RR(
+		name  => $rr->name,
+		type  => 'ANY',
+		class => 'ANY'
+		);
 }
 
 sub nxdomain {
-	my ($domain) = split /\s+/, shift;
-	return new Net::DNS::RR("$domain NONE ANY");
+	my ( $domain, @etc ) = map split, @_;
+	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain ) );
+	new Net::DNS::RR(
+		name  => $rr->name,
+		type  => 'ANY',
+		class => 'NONE'
+		);
 }
 
 sub rr_add {
-	my $rr = new Net::DNS::RR(shift);
-	$rr->{ttl} = 86400 unless defined( $rr->{ttl} );
+	my $rr = new Net::DNS::RR(@_);
+	$rr->{ttl} = 86400 unless defined $rr->{ttl};
 	return $rr;
 }
 
 sub rr_del {
-	my ( $head, @tail ) = split /\s+/, shift;
-	my $rr = new Net::DNS::RR( scalar @tail ? "$head @tail" : "$head ANY" );
-	$rr->ttl(0);
+	my ( $domain, @etc ) = map split, @_;
+	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain ) );
 	$rr->class( $rr->rdata ? 'NONE' : 'ANY' );
+	$rr->ttl(0);
 	return $rr;
 }
 
@@ -267,6 +273,7 @@ See L</EXAMPLES> for a more complete example.
 The Net::DNS module provides auxiliary functions which support
 dynamic DNS update requests.
 
+
 =head2 yxrrset
 
 Use this method to add an "RRset exists" prerequisite to a dynamic
@@ -285,7 +292,7 @@ exist.
 Meaning:  At least one RR with the specified name and type must
 exist and must have matching data.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object could not
+Returns a L<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 nxrrset
@@ -297,7 +304,7 @@ a dynamic update packet.
 
 Meaning:  No RRs with the specified name and type can exist.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object could not
+Returns a L<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 yxdomain
@@ -309,7 +316,7 @@ update packet.
 
 Meaning:  At least one RR with the specified name must exist.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object could not
+Returns a L<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 nxdomain
@@ -321,7 +328,7 @@ dynamic update packet.
 
 Meaning:  No RR with the specified name can exist.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object could not
+Returns a L<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 rr_add
@@ -336,7 +343,7 @@ RR objects created by this method should be added to the "update"
 section of a dynamic update packet.  The TTL defaults to 86400
 seconds (24 hours) if not specified.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object could not
+Returns a L<Net::DNS::RR> object or C<undef> if the object could not
 be created.
 
 =head2 rr_del
@@ -362,9 +369,8 @@ Meaning:  Delete all RRs having the specified name, type, and data.
 RR objects created by this method should be added to the "update"
 section of a dynamic update packet.
 
-Returns a C<Net::DNS::RR> object or C<undef> if the object could not
+Returns a L<Net::DNS::RR> object or C<undef> if the object could not
 be created.
-
 
 
 =head1 Zone Serial Number Management

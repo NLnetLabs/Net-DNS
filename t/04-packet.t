@@ -113,7 +113,7 @@ ok( $decoded, 'new() from data buffer works' );
 is( $decoded->answersize, length($buffer), '$decoded->answersize() works' );
 $decoded->answerfrom('local');
 ok( $decoded->answerfrom(), '$decoded->answerfrom() works' );
-ok( $decoded->string(), '$decoded->string() works' );
+ok( $decoded->string(),	    '$decoded->string() works' );
 foreach my $count (qw(qdcount ancount nscount arcount)) {
 	is( $decoded->header->$count, $update->header->$count, "check header->$count correct" );
 }
@@ -182,21 +182,25 @@ is( $rr->size, '4096', 'EDNS0 packet size correct' );
 }
 
 
-{					## go through the motions of SIG0
-	my $packet = new Net::DNS::Packet('example.com');
-	is( $packet->sign_sig0(), undef, 'sign_sig0() undef for unsigned packet' );
-	is( $packet->sigrr(),	  undef, 'sigrr() undef for empty packet' );
-	$packet->push( add => new Net::DNS::RR( type => 'OPT' ) );
+{					## check $packet->sigrr
+	my $packet = new Net::DNS::Packet();
+	is( $packet->sigrr(), undef, 'sigrr() undef for empty packet' );
+	$packet->push( additional => new Net::DNS::RR( type => 'OPT' ) );
+	is( $packet->sigrr(),  undef, 'sigrr() undef for unsigned packet' );
 	is( $packet->verify(), undef, 'verify() fails for unsigned packet' );
 	ok( $packet->verifyerr(), 'verifyerr() returned for unsigned packet' );
+}
+
+
+{					## go through the motions of SIG0
+	my $packet = new Net::DNS::Packet('example.com');
+	my $sig = new Net::DNS::RR( type => 'SIG' );
+	ok( $packet->sign_sig0($sig), 'sign_sig0() returns SIG0 record' );
+	is( ref( $packet->sigrr() ), ref($sig), 'sigrr() returns SIG RR' );
 
 	eval { $packet->sign_sig0( [] ); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "sign_sig0([])\t[$exception]" );
-
-	my $sig = new Net::DNS::RR( type => 'SIG' );
-	ok( $packet->sign_sig0($sig), 'sign_sig0() returns SIG0 record' );
-	is( ref( $packet->sigrr() ), ref($sig), 'sigrr() returns SIG RR' );
 }
 
 

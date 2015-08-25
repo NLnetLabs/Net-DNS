@@ -20,37 +20,37 @@ Net::DNS::RR::LP - DNS LP resource record
 use integer;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
 	$self->{preference} = unpack( "\@$offset n", $$data );
-	$self->{locator} = decode Net::DNS::DomainName( $data, $offset + 2 );
+	$self->{target} = decode Net::DNS::DomainName( $data, $offset + 2 );
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{locator};
+	return '' unless $self->{target};
 	my $rdata = pack 'n', $self->preference;
-	$rdata .= $self->{locator}->encode();
+	$rdata .= $self->{target}->encode();
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{locator};
-	join ' ', $self->preference, $self->{locator}->string;
+	return '' unless $self->{target};
+	join ' ', $self->preference, $self->{target}->string;
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->preference(shift);
-	$self->locator(shift);
+	$self->target(shift);
 }
 
 
@@ -62,24 +62,25 @@ sub preference {
 }
 
 
-sub locator {
+sub target {
 	my $self = shift;
 
-	$self->{locator} = new Net::DNS::DomainName(shift) if scalar @_;
-	$self->{locator}->name if defined wantarray && $self->{locator};
+	$self->{target} = new Net::DNS::DomainName(shift) if scalar @_;
+	$self->{target}->name if defined wantarray && $self->{target};
 }
 
 
-sub fqdn { &locator; }
+sub FQDN { shift->{target}->fqdn; }
+sub fqdn { shift->{target}->fqdn; }
 
 
-__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
-	'preference',
-	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
+my $function = sub {			## sort RRs in numerically ascending order.
+	$Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'};
+};
 
-	);
+__PACKAGE__->set_rrsort_func( 'preference', $function );
 
-__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
+__PACKAGE__->set_rrsort_func( 'default_sort', $function );
 
 
 1;
@@ -89,13 +90,13 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name IN LP preference locator');
+    $rr = new Net::DNS::RR('name IN LP preference FQDN');
 
     $rr = new Net::DNS::RR(
 	name	   => 'example.com',
 	type	   => 'LP',
 	preference => 10,
-	locator	   => 'locator.example.com'
+	target	   => 'target.example.com.'
 	);
 
 =head1 DESCRIPTION
@@ -127,12 +128,15 @@ relative preference for this LP record among other LP records
 associated with this owner name.  Lower values are preferred over
 higher values.
 
-=head2 locator
+=head2 FQDN, fqdn
 
-    $locator = $rr->locator;
-    $rr->locator( $locator );
 
-The Locator field contains the DNS target name that is used to
+=head2 target
+
+    $target = $rr->target;
+    $rr->target( $target );
+
+The FQDN field contains the DNS target name that is used to
 reference L32 and/or L64 records.
 
 

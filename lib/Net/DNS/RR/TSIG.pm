@@ -20,15 +20,13 @@ Net::DNS::RR::TSIG - DNS TSIG resource record
 use integer;
 
 use Carp;
+use Digest::HMAC;
+use Digest::MD5;
+use Digest::SHA;
 use MIME::Base64;
 
+use Net::DNS::DomainName;
 use Net::DNS::Parameters;
-
-require Net::DNS::DomainName;
-
-require Digest::HMAC;
-require Digest::MD5;
-require Digest::SHA;
 
 use constant ANY  => classbyname qw(ANY);
 use constant TSIG => typebyname qw(TSIG);
@@ -53,33 +51,32 @@ use constant TSIG => typebyname qw(TSIG);
 
 	my $map = sub {
 		my $arg = shift;
-		unless ( $algbyval{$arg} ) {
-			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
-			return uc $arg;
-		}
-		my @map = ( $arg, "$arg" => $arg );		# also accept number
+		return $arg if $arg =~ /^\d/;
+		$arg =~ s/[^A-Za-z0-9]//g;			# strip non-alphanumerics
+		uc($arg);
 	};
 
-	my %algbyname = map &$map($_), @algbyalias, @algbyname;
+	my @pairedval = sort ( 1 .. 254, 1 .. 254 );		# also accept number
+	my %algbyname = map &$map($_), @algbyalias, @algbyname, @pairedval;
 
-
-	sub algbyname {
+	sub _algbyname {
 		my $key = uc shift;				# synthetic key
-		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
-		return $algbyname{$key};
+		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
+		$algbyname{$key};
 	}
 
-	sub algbyval {
+	sub _algbyval {
 		my $value = shift;
-		return $algbyval{$value} || $value;
+		$algbyval{$value};
 	}
 }
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
+	my $limit = $offset + $self->{rdlength};
 	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
@@ -97,13 +94,13 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 	$self->{other} = unpack "\@$offset xx a$other_size", $$data;
 	$offset += $other_size + 2;
 
-	croak('misplaced or corrupt TSIG') unless $offset == length $$data;
-	substr( $$data, $self->{offset} || $offset ) = '';
-	$self->{rawref} = $data;
+	croak('misplaced or corrupt TSIG') unless $limit == length $$data;
+	my $raw = substr $$data, 0, $self->{offset};
+	$self->{rawref} = \$raw;
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	my $macbin = $self->macbin;
@@ -131,27 +128,22 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
-	my $self = shift;
-
-	my @lines = (
-		"\n",
-		map "; $_\n",
-		join( "\t", 'algorithm:', $self->algorithm ),
-		join( "\t", 'time signed:', $self->time_signed, 'fudge:', $self->fudge ),
-		join( "\t", 'signature:',   $self->mac ),
-		join( "\t", 'original id:', $self->original_id ),
-		join( "\t", $self->error,   $self->other ) );
-}
-
-
-sub defaults() {			## specify RR attribute default values
+sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
 	$self->algorithm(157);
 	$self->class('ANY');
 	$self->error(0);
 	$self->fudge(300);
+	$self->other('');
+}
+
+
+sub _size {				## estimate encoded size
+	my $self = shift;
+	my $clone = bless {%$self}, ref($self);			   # shallow clone
+	$clone->macbin( $clone->_mac_function('dummy') );
+	length $clone->encode();
 }
 
 
@@ -159,8 +151,32 @@ sub encode {				## overide RR method
 	my $self = shift;
 
 	my $kname = $self->{owner}->encode();			# uncompressed key name
-	my $rdata = eval { $self->encode_rdata(@_) } || '';
-	return pack 'a* n2 N n a*', $kname, TSIG, ANY, 0, length $rdata, $rdata;
+	my $rdata = eval { $self->_encode_rdata(@_) } || '';
+	pack 'a* n2 N n a*', $kname, TSIG, ANY, 0, length $rdata, $rdata;
+}
+
+
+sub string {				## overide RR method
+	my $self = shift;
+
+	my $owner	= $self->{owner}->string;
+	my $type	= $self->type;
+	my $algorithm	= $self->algorithm;
+	my $time_signed = $self->time_signed;
+	my $fudge	= $self->fudge;
+	my $signature	= $self->mac;
+	my $original_id = $self->original_id;
+	my $error	= $self->error;
+	my $other	= $self->other;
+
+	return <<"QQ";
+; $owner	$type	
+;	algorithm:	$algorithm
+;	time signed:	$time_signed	fudge:	$fudge
+;	signature:	$signature
+;	original id:	$original_id
+;			$error	$other
+QQ
 }
 
 
@@ -171,7 +187,7 @@ sub key {
 	my $self = shift;
 
 	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	return MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
+	MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
 }
 
 
@@ -182,7 +198,7 @@ sub time_signed {
 	my $self = shift;
 
 	$self->{time_signed} = 0 + shift if scalar @_;
-	return $self->{time_signed} ||= time();
+	$self->{time_signed} = time() unless $self->{time_signed};
 }
 
 
@@ -253,19 +269,19 @@ sub original_id {
 sub error {
 	my $self = shift;
 	$self->{error} = rcodebyname(shift) if scalar @_;
-	rcodebyval( $self->{error} || 0 );
+	rcodebyval( $self->{error} );
 }
 
 
 sub other {
 	my $self = shift;
-
 	$self->{other} = shift if scalar @_;
-	$self->{other} || "";
+	my $time = $self->{error} == 18 ? pack 'xxN', time() : '';
+	$self->{other} = $time unless $self->{other};
 }
 
 
-sub other_data {&other}
+sub other_data {&other}						# uncoverable pod
 
 
 sub sig_function {
@@ -275,7 +291,7 @@ sub sig_function {
 	$self->{sig_function} = shift;
 }
 
-sub sign_func { &sig_function; }	## historical
+sub sign_func { &sig_function; }				# uncoverable pod
 
 
 sub sig_data {
@@ -287,11 +303,15 @@ sub sig_data {
 		local $message->{additional} = \@unsigned;	# remake header image
 		my @part = qw(question answer authority additional);
 		my @size = map scalar( @{$message->{$_}} ), @part;
-		my $data = $self->{rawref};
-		delete $self->{rawref};
-		my $orig = $data ? $self->original_id : $message->{id};
-		my $hbin = pack 'n6', $orig, $message->{status}, @size;
-		$message = $hbin . substr $data ? $$data : $message->data, length $hbin;
+		if ( my $rawref = $self->{rawref} ) {
+			delete $self->{rawref};
+			my $hbin = pack 'n6', $self->original_id, $message->{status}, @size;
+			$message = join '', $hbin, substr $$rawref, length $hbin;
+		} else {
+			my $data = $message->data;
+			my $hbin = pack 'n6', $message->{id}, $message->{status}, @size;
+			$message = join '', $hbin, substr $data, length $hbin;
+		}
 	}
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
@@ -315,7 +335,7 @@ sub sig_data {
 
 	$sigdata .= $time;
 
-	$sigdata .= pack 'n', $self->{error} || 0;
+	$sigdata .= pack 'n', $self->{error};
 
 	my $other = $self->other;
 	$sigdata .= pack 'na*', length($other), $other;
@@ -326,14 +346,16 @@ sub sig_data {
 
 sub create {
 	my $class = shift;
-	my $karg = shift || croak 'argument missing or undefined';
+	my $karg  = shift;
+	croak 'argument missing or undefined' unless defined $karg;
 
 	if ( ref($karg) ) {
 		return $karg->_chain if ref($karg) eq __PACKAGE__;
 		croak "Usage:	create $class( keyfile )\n\tcreate $class( keyname, key )"
 				unless $karg->isa('Net::DNS::Packet');
 
-		my $sigrr = $karg->sigrr || croak 'no TSIG in request packet';
+		my $sigrr = $karg->sigrr;
+		croak 'no TSIG in request packet' unless defined $sigrr;
 		return new Net::DNS::RR(			# ( request, options )
 			name	       => $sigrr->name,
 			type	       => 'TSIG',
@@ -363,7 +385,8 @@ sub create {
 		}
 
 		my ( $vol, $dir, $file ) = File::Spec->splitpath( $keyfile->name );
-		my $kname = $file =~ /^K([^+]+)+.+private$/ ? $1 : undef;
+		my $kname;
+		$kname = $1 if $file =~ /^K([^+]+)+.+private$/;
 		return new Net::DNS::RR(
 			name	  => $kname,
 			type	  => 'TSIG',
@@ -393,32 +416,38 @@ sub verify {
 
 	unless ( abs( time() - $self->time_signed ) < $self->fudge ) {
 		$self->error(18);				# bad time
-		$self->other( pack 'xxN', time() );
 		return;
 	}
 
 	if ( scalar @_ ) {
+		my $arg = shift;
 
-		unless ( my $arg = shift ) {
+		unless ( ref($arg) ) {
 			$self->error(16);			# bad sig (multi-packet)
 			return;
+		}
 
-		} elsif ( ref($arg) && $arg->isa('Net::DNS::Packet') ) {
-			my $sigrr = $arg->sigrr;		# query TSIG
-			$self->request_macbin( $sigrr->macbin );
-			$self->error(17) && return unless lc $self->name eq lc $sigrr->name;
-			$self->error(17) && return unless lc $self->algorithm eq lc $sigrr->algorithm;
+		my $signerkey = join '+', $self->name, $self->algorithm;
+		if ( $arg->isa('Net::DNS::Packet') ) {
+			my $request = $arg->sigrr;		# request TSIG
+			my $rqstkey = join '+', $request->name, $request->algorithm;
+			unless ( $signerkey eq $rqstkey ) {
+				$self->error(17);
+				return;
+			}
+			$self->request_macbin( $request->macbin );
 
-		} elsif ( ref($arg) && $arg->isa(__PACKAGE__) ) {
-			my $sigrr = $arg;			# multi-packet
-			$self->prior_macbin( $sigrr->macbin );
-			$self->error(17) && return unless lc $self->name eq lc $sigrr->name;
-			$self->error(17) && return unless lc $self->algorithm eq lc $sigrr->algorithm;
+		} elsif ( $arg->isa(__PACKAGE__) ) {
+			my $priorkey = join '+', $arg->name, $arg->algorithm;
+			unless ( $signerkey eq $priorkey ) {
+				$self->error(17);
+				return;
+			}
+			$self->prior_macbin( $arg->macbin );
 
 		} else {
 			croak 'Usage: $tsig->verify( $reply, $query )';
 		}
-
 	}
 
 	my $sigdata = $self->sig_data($data);			# form data to be verified
@@ -429,12 +458,14 @@ sub verify {
 	my $macbin = $self->macbin;
 	my $maclen = length $macbin;
 	my $minlen = length($tsigmac) >> 1;			# per RFC4635, 3.1
-	$self->error(1) && return if $maclen < 10;
-	$self->error(1) && return if $maclen < $minlen;
-	$self->error(1) && return if $maclen > length $tsigmac;
+	if ( $maclen < $minlen or $maclen < 10 or $maclen > length $tsigmac ) {
+		$self->error(1);
+		return;
+	}
 
-	$self->error(16) && return unless $macbin eq substr $tsigmac, 0, $maclen;
-	return $tsig;
+	return $tsig if $macbin eq substr $tsigmac, 0, $maclen;
+	$self->error(16);
+	return;
 }
 
 sub vrfyerrstr {
@@ -463,11 +494,11 @@ sub vrfyerrstr {
 
 		if ( my $algname = shift ) {
 
-			unless ( my $digtype = algbyname($algname) ) {
+			unless ( my $digtype = _algbyname($algname) ) {
 				$self->{algorithm} = new Net::DNS::DomainName($algname);
 
 			} else {
-				$algname = algbyval($digtype);
+				$algname = _algbyval($digtype);
 				$self->{algorithm} = new Net::DNS::DomainName($algname);
 
 				my ( $hash, @param ) = @{$digest{$digtype}};
@@ -506,11 +537,12 @@ sub vrfyerrstr {
 	sub _mac_function {		## apply keyed hash function to argument
 		my $self = shift;
 
-		my $keyref = $keytable{$self->{owner}->canonical} ||= {};
-		$self->algorithm( $self->algorithm ) unless $keyref->{digest};
-		$keyref->{digest} ||= $self->sig_function;
+		my $owner = $self->{owner}->canonical;
+		$self->algorithm( $self->algorithm ) unless $keytable{$owner}{digest};
+		my $keyref = $keytable{$owner};
+		$keyref->{digest} = $self->sig_function unless $keyref->{digest};
 		my $function = $keyref->{key};
-		return &$function(shift);
+		&$function(shift);
 	}
 }
 
@@ -520,7 +552,7 @@ sub vrfyerrstr {
 
 sub _chain {
 	my $self = shift;
-	return bless {%$self, macbin => undef, link => $self}, ref($self);
+	bless {%$self, macbin => undef, link => $self}, ref($self);
 }
 
 
@@ -641,6 +673,8 @@ The message ID from the header of the original packet.
 
 =head2 error
 
+=head2 vrfyerrstr
+
      $rcode = $tsig->error;
 
 Returns the RCODE covering TSIG processing.  Common values are
@@ -649,8 +683,7 @@ NOERROR, BADSIG, BADKEY, and BADTIME.  See RFC 2845 for details.
 
 =head2 other
 
-    $other = $rr->other;
-    $rr->other( $other );
+     $other = $tsig->other;
 
 This field should be empty unless the error is BADTIME, in which
 case it will contain the server time as the number of seconds since

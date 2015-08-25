@@ -5,6 +5,7 @@ use Test::More;
 use t::NonFatal;
 
 use Net::DNS;
+use Net::DNS::Resolver::Recurse;
 
 
 my @HINTS = qw(
@@ -47,8 +48,6 @@ plan 'no_plan';
 
 NonFatalBegin();
 
-use_ok('Net::DNS::Resolver::Recurse');
-
 {
 	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
 
@@ -56,19 +55,22 @@ use_ok('Net::DNS::Resolver::Recurse');
 
 	$res->udp_timeout(20);
 
-	ok( scalar($res->hints(@HINTS)), "hints() set" );
-
-	my $packet;
-
-	# Try a domain that is a CNAME
-	$packet = $res->query_dorecursion( "www.google.com.", "A" );
-	ok( $packet,		    'got a packet' );
+	my $packet = $res->query_dorecursion( "www.google.com.", "A" );
+	ok( $packet, 'got a packet' );
 	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
+}
 
-	# Try a big hairy one
-	undef $packet;
-	$packet = $res->query_dorecursion( "www.rob.com.au.", "A" );
-	ok( $packet,		    'got a packet' );
+
+{
+	# test hints()
+	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
+
+	$res->udp_timeout(20);
+
+	ok( scalar( $res->hints(@HINTS) ), "hints() set" );
+
+	my $packet = $res->query_dorecursion( 'www.net-dns.org', 'A' );
+	ok( $packet, 'got a packet' );
 	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
 }
 
@@ -77,19 +79,33 @@ use_ok('Net::DNS::Resolver::Recurse');
 	# test the callback
 	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
 
-	$res->hints(@HINTS);
-
 	my $count = 0;
 
 	$res->recursion_callback(
 		sub {
-			ok( shift->isa('Net::DNS::Packet'), 'callback argument' );
+			ok( shift->isa('Net::DNS::Packet'), 'callback argument is a packet' );
 			$count++;
 		} );
 
 	$res->query_dorecursion( 'a.t.net-dns.org', 'A' );
 
-	ok( $count >= 3, "Lookup took $count queries which is at least 3." );
+	ok( $count >= 3, "Lookup took $count queries which is at least 3" );
+}
+
+
+{
+	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
+
+	my $count = 0;
+
+	$res->recursion_callback(
+		sub {
+			$count++;
+		} );
+
+	$res->query_dorecursion( '2a04:b900:0:0:8:0:0:60', 'A' );
+
+	ok( $count >= 3, "Reverse lookup took $count queries" );
 }
 
 

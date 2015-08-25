@@ -20,29 +20,29 @@ Net::DNS::RR::RRSIG - DNS RRSIG resource record
 use integer;
 
 use Carp;
-
-my $debug = 0;
-
-use Net::DNS::Parameters;
 use MIME::Base64;
 use Time::Local;
+
+use Net::DNS::Parameters;
+
+use constant DEBUG => 0;
 
 use constant UTIL => defined eval { require Scalar::Util; };
 
 use constant PRIVATE => defined eval { require Net::DNS::SEC::Private; };
 
-use constant DSA => scalar eval { require Net::DNS::SEC::DSA; 'Net::DNS::SEC::DSA'; };
-use constant RSA => scalar eval { require Net::DNS::SEC::RSA; 'Net::DNS::SEC::RSA'; };
+use constant DSA => scalar eval { require Net::DNS::SEC::DSA; };
+use constant RSA => scalar eval { require Net::DNS::SEC::RSA; };
 
-use constant ECDSA => scalar eval { require Net::DNS::SEC::ECDSA;   'Net::DNS::SEC::ECDSA'; };
-use constant GOST  => scalar eval { require Net::DNS::SEC::ECCGOST; 'Net::DNS::SEC::ECCGOST'; };
+use constant ECDSA => scalar eval { require Net::DNS::SEC::ECDSA; };
+use constant GOST  => scalar eval { require Net::DNS::SEC::ECCGOST; };
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA || ECDSA || GOST );
 
 my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -53,7 +53,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	my $sigbin = $self->sigbin || return '';
@@ -61,15 +61,15 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @sig64 = split /\s+/, encode_base64( $self->sigbin || return '' );
+	my @sig64 = split /\s+/, encode_base64( $self->sigbin );
 	my @rdata = map( $self->$_, @field ), $self->{signame}->string, @sig64;
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	for ( @field, qw(signame) ) {
@@ -109,47 +109,52 @@ sub parse_rdata {			## populate RR from rdata in argument list
 
 	my $map = sub {
 		my $arg = shift;
-		unless ( $algbyval{$arg} ) {
-			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
-			return uc $arg;
-		}
-		my @map = ( $arg, "$arg" => $arg );		# also accept number
+		return $arg if $arg =~ /^\d/;
+		$arg =~ s/[^A-Za-z0-9]//g;			# strip non-alphanumerics
+		uc($arg);
 	};
 
-	my %algbyname = map &$map($_), @algbyname;
+	my @pairedval = sort ( 1 .. 254, 1 .. 254 );		# also accept number
+	my %algbyname = map &$map($_), @algbyname, @pairedval;
 
-	sub algbyname {
+	sub _algbyname {
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
 		$algbyname{$key} || croak "unknown algorithm $name";
 	}
 
-	sub algbyval {
+	sub _algbyval {
 		my $value = shift;
 		$algbyval{$value} || return $value;
 	}
 }
 
 
+my $RSA	  = RSA	  ? 'Net::DNS::SEC::RSA'     : 0;
+my $DSA	  = DSA	  ? 'Net::DNS::SEC::DSA'     : 0;
+my $ECDSA = ECDSA ? 'Net::DNS::SEC::ECDSA'   : 0;
+my $GOST  = GOST  ? 'Net::DNS::SEC::ECCGOST' : 0;
+
 my %SEC = (
-	1  => RSA,
-	3  => DSA,
-	5  => RSA,
-	6  => DSA,
-	7  => RSA,
-	8  => RSA,
-	10 => RSA,
-	12 => GOST,
-	13 => ECDSA,
-	14 => ECDSA,
+	1  => $RSA,
+	3  => $DSA,
+	5  => $RSA,
+	6  => $DSA,
+	7  => $RSA,
+	8  => $RSA,
+	10 => $RSA,
+	12 => $GOST,
+	13 => $ECDSA,
+	14 => $ECDSA,
 	);
 
 
 sub typecovered {
 	my $self = shift;
 	$self->{typecovered} = typebyname(shift) if scalar @_;
-	return typebyval( $self->{typecovered} );
+	my $typecode = $self->{typecovered};
+	typebyval($typecode) if defined wantarray && defined $typecode;
 }
 
 
@@ -158,12 +163,12 @@ sub algorithm {
 
 	unless ( ref($self) ) {		## class method or simple function
 		my $argn = pop;
-		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
+		return $argn =~ /[^0-9]/ ? _algbyname($argn) : _algbyval($argn);
 	}
 
 	return $self->{algorithm} unless defined $arg;
-	return algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
-	return $self->{algorithm} = algbyname($arg);
+	return _algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = _algbyname($arg);
 }
 
 
@@ -186,16 +191,16 @@ sub orgttl {
 sub sigexpiration {
 	my $self = shift;
 	$self->{sigexpiration} = _string2time(shift) if scalar @_;
-	return unless defined wantarray;
 	my $time = $self->{sigexpiration};
+	return unless defined wantarray && defined $time;
 	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
 sub siginception {
 	my $self = shift;
 	$self->{siginception} = _string2time(shift) if scalar @_;
-	return unless defined wantarray;
 	my $time = $self->{siginception};
+	return unless defined wantarray && defined $time;
 	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
@@ -212,19 +217,16 @@ sub signame {
 	my $self = shift;
 
 	$self->{signame} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{signame}->name if defined wantarray;
+	$self->{signame}->name if defined wantarray && $self->{signame};
 }
 
 
-sub signature {
+sub sig {
 	my $self = shift;
 
-	$self->sigbin( decode_base64( join '', @_ ) ) if scalar @_;
-	my $sigbin = $self->sigbin || return '';
-	encode_base64( $sigbin, '' ) if defined wantarray;
+	$self->sigbin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
+	MIME::Base64::encode( $self->sigbin(), "" ) if defined wantarray;
 }
-
-sub sig { &signature; }
 
 
 sub sigbin {
@@ -235,213 +237,221 @@ sub sigbin {
 }
 
 
+sub signature { &sig; }
+
+
 sub create {
-	my ( $class, $datarrset, $priv_key, %args ) = @_;
+	unless (DNSSEC) {
+		croak 'Net::DNS::SEC support not available';
+	} else {
+		my ( $class, $datarrset, $priv_key, %args ) = @_;
 
-	croak 'Net::DNS::SEC support not available' unless DNSSEC;
+		my $private = ref($priv_key) ? $priv_key : Net::DNS::SEC::Private->new($priv_key);
+		croak 'unable to parse private key' unless ref($private) eq 'Net::DNS::SEC::Private';
 
-	my $private = ref($priv_key) ? $priv_key : Net::DNS::SEC::Private->new($priv_key);
-	croak 'unable to parse private key' unless ref($private) eq 'Net::DNS::SEC::Private';
+		croak '$datarrset argument is not a reference to an array' unless ref($datarrset) =~ /ARRAY/;
 
-	croak '$datarrset argument is not a reference to an array' unless ref($datarrset) =~ /ARRAY/;
+		my $RR = $datarrset->[0];
 
-	my $RR = $datarrset->[0] || {};
+		croak '$datarrset is not a reference to an array of RRs' unless ref($RR) =~ /Net::DNS::RR/;
 
-	croak '$datarrset is not a reference to an array of RRs' unless ref($RR) =~ /Net::DNS::RR/;
+		# All the TTLs need to be the same in the data RRset.
+		my $ttl = $RR->ttl;
+		my @ttl = grep $_->ttl != $ttl, @$datarrset;
+		croak 'RRs in RRset have different TTLs' if scalar @ttl;
 
-	# All the TTLs need to be the same in the data RRset.
-	my $ttl = $RR->ttl;
-	my @ttl = grep $_->ttl != $ttl, @$datarrset;
-	croak 'RRs in RRset have different TTLs' if scalar @ttl;
+		my @label = grep $_ ne chr(42), $RR->{owner}->_wire;	# count labels
 
-	my @label = grep $_ ne chr(42), $RR->{owner}->_wire;	# count labels
+		my $self = new Net::DNS::RR(
+			name	    => $RR->name,
+			type	    => 'RRSIG',
+			class	    => 'IN',
+			ttl	    => defined $args{ttl} ? $args{ttl} : $ttl,
+			typecovered => $RR->type,
+			labels	    => scalar @label,
+			orgttl	    => $ttl,
+			siginception  => $args{sigin} || time(),
+			sigexpiration => $args{sigex} || 0,
+			algorithm     => $private->algorithm,
+			keytag	      => $private->keytag,
+			signame	      => $private->signame,
+			);
 
-	my $self = new Net::DNS::RR(
-		name	    => $RR->name,
-		type	    => 'RRSIG',
-		class	    => 'IN',
-		ttl	    => defined $args{ttl} ? $args{ttl} : $ttl,
-		typecovered => $RR->type,
-		labels	    => scalar @label,
-		orgttl	    => $ttl,
-		siginception  => $args{sigin} || time(),
-		sigexpiration => $args{sigex} || 0,
-		algorithm     => $private->algorithm,
-		keytag	      => $private->keytag,
-		signame	      => $private->signame,
-		);
+		$args{sigval} ||= 30 unless $self->{sigexpiration};
+		if ( $args{sigval} ) {
+			my $sigin = $self->{siginception};
+			my $sigval = eval { no integer; int( $args{sigval} * 86400 ) };
+			$self->sigexpiration( $sigin + $sigval );
+		}
 
-	$args{sigval} ||= 30 unless $self->{sigexpiration};
-	if ( $args{sigval} ) {
-		my $sigin = $self->{siginception};
-		my $sigval = eval { no integer; int( $args{sigval} * 86400 ) };
-		$self->sigexpiration( $sigin + $sigval );
+		my $sigdata = $self->_CreateSigData($datarrset);
+		$self->_CreateSig( $sigdata, $private );
+
+		return $self;
 	}
-
-	my $sigdata = $self->_CreateSigData($datarrset);
-	$self->_CreateSig( $sigdata, $private );
-
-	return $self;
 }
 
 
 sub verify {
-	my ( $self, $dataref, $keyref ) = @_;
 
 	# Reminder...
 
 	# $dataref must be a reference to an array of RR objects.
 
-	# $keyref is either a reference to an array of keys or a a key object.
+	# $keyref is either a key object or a reference to an array
+	# of key objects.
 
+	if (DNSSEC) {
+		my ( $self, $dataref, $keyref ) = @_;
 
-	my $sigzero_verify = 0;
-	my $packet_verify  = 0;
-	my $rrarray_verify = 0;
+		my $sigzero_verify = 0;
+		my $packet_verify  = 0;
+		my $rrarray_verify = 0;
 
-	my $algorithm = $self->algorithm;
-	my $keyrr;						# This will be used to store the key
+		my $algorithm = $self->algorithm;
+		my $keyrr;					# This will be used to store the key
 								# against which we want to verify.
 
-	print "Second argument is of class ", ref($keyref), "\n" if $debug;
-	if ( ref($keyref) eq "ARRAY" ) {
+		print "Second argument is of class ", ref($keyref), "\n" if DEBUG;
+		if ( ref($keyref) eq "ARRAY" ) {
 
-		#  We will recurse for each key that matches algorithm and key-id
-		#  we return when there is a successful verification.
-		#  If not we'll continue so that we even survive key-id collision.
-		#  The downside of this is that the error string only matches the
-		#  last error.
-		my @keyarray	= @{$keyref};
-		my $errorstring = "";
-		my $i		= 0;
-		print "Iterating over " . @keyarray . " keys \n" if $debug;
-		foreach my $keyrr (@keyarray) {
-			$i++;
-			unless ( $algorithm == $keyrr->algorithm ) {
-				print "key $i: algorithm does not match\n" if $debug;
-				$errorstring .= "key $i: algorithm does not match ";
-				next;
-			}
-			unless ( $self->keytag == $keyrr->keytag ) {
-				print "key $i: keytag does not match (", $keyrr->keytag, " ", $self->keytag, ")\n"
-						if $debug;
-				$errorstring .= "key $i: keytag does not match ";
-				next;
-			}
+			#  We will recurse for each key that matches algorithm and key-id
+			#  we return when there is a successful verification.
+			#  If not we'll continue so that we even survive key-id collision.
+			#  The downside of this is that the error string only matches the
+			#  last error.
+			my @keyarray	= @{$keyref};
+			my $errorstring = "";
+			my $i		= 0;
+			print "Iterating over " . @keyarray . " keys \n" if DEBUG;
+			foreach my $keyrr (@keyarray) {
+				$i++;
+				unless ( $algorithm == $keyrr->algorithm ) {
+					print "key $i: algorithm does not match\n" if DEBUG;
+					$errorstring .= "key $i: algorithm does not match ";
+					next;
+				}
+				unless ( $self->keytag == $keyrr->keytag ) {
+					my $tag = $self->keytag;
+					my $key = $keyrr->keytag;
+					print "key $i: keytag does not match ( $tag, $key )\n" if DEBUG;
+					$errorstring .= "key $i: keytag does not match ";
+					next;
+				}
 
-			my $result = $self->verify( $dataref, $keyrr );
-			print "key $i:" . $self->{vrfyerrstr} if $debug;
-			return $result if $result;
-			$errorstring .= "key $i:" . $self->vrfyerrstr . " ";
-		}
-
-		$self->{vrfyerrstr} = $errorstring;
-		return (0);
-
-	} elsif (  ref($keyref) eq 'Net::DNS::RR::DNSKEY'
-		|| ref($keyref) eq 'Net::DNS::RR::KEY' ) {	# we are liberal...
-
-		# substitute and continue processing after this conditional
-		$keyrr = $keyref;
-		print "Validating using key with keytag: ", $keyrr->keytag, "\n" if $debug;
-
-	} else {
-		$self->{vrfyerrstr} = "You are trying to pass " . ref($keyref) . " data for a key";
-		return (0);
-	}
-
-	print "Verifying data of class: ", ref($dataref), "\n" if $debug;
-	$sigzero_verify = 1 unless ref($dataref);
-	if ( !$sigzero_verify ) {
-		if ( ref($dataref) eq "ARRAY" ) {
-
-			if ( ref( $dataref->[0] ) and $dataref->[0]->isa('Net::DNS::RR') ) {
-				$rrarray_verify = 1;
-			} else {
-				die "Trying to verify an array of " . ref( $dataref->[0] ) . "\n";
+				my $result = $self->verify( $dataref, $keyrr );
+				print "key $i:" . $self->{vrfyerrstr} if DEBUG;
+				return $result if $result;
+				$errorstring .= "key $i:" . $self->vrfyerrstr . " ";
 			}
 
-		} elsif ( ref($dataref) and $dataref->isa("Net::DNS::Packet") ) {
-			$packet_verify = 1;
-			die "Trying to verify a packet using non-SIG0 signature" unless $self->{typecovered};
+			$self->{vrfyerrstr} = $errorstring;
+			return (0);
+
+		} elsif ( ref($keyref) eq 'Net::DNS::RR::DNSKEY' ) {
+
+			# substitute and continue processing after this conditional
+			$keyrr = $keyref;
+			print "Validating using key with keytag: ", $keyrr->keytag, "\n" if DEBUG;
 
 		} else {
-			die "Do not know what kind of data this is: " . ref($dataref) . ")\n";
+			$self->{vrfyerrstr} = "You are trying to pass " . ref($keyref) . " data for a key";
+			return (0);
 		}
-	}
 
-	$self->{vrfyerrstr} = '';
-	if ($debug) {
-		print "\n ---------------------- RRSIG DEBUG ----------------------------";
-		print "\n  Reference:\t", ref($dataref);
-		print "\n  RRSIG:\t",	  $self->string;
-		if ($rrarray_verify) {
-			print "\n  DATA:\t\t", $_->string for @{$dataref};
+		print "Verifying data of class: ", ref($dataref), "\n" if DEBUG;
+		$sigzero_verify = 1 unless ref($dataref);
+		if ( !$sigzero_verify ) {
+			if ( ref($dataref) eq "ARRAY" ) {
+
+				if ( ref( $dataref->[0] ) and $dataref->[0]->isa('Net::DNS::RR') ) {
+					$rrarray_verify = 1;
+				} else {
+					die "Trying to verify an array of " . ref( $dataref->[0] ) . "\n";
+				}
+
+			} elsif ( ref($dataref) and $dataref->isa("Net::DNS::Packet") ) {
+				$packet_verify = 1;
+				die "Trying to verify a packet using non-SIG0 signature" unless $self->{typecovered};
+
+			} else {
+				die "Do not know what kind of data this is: " . ref($dataref) . ")\n";
+			}
 		}
-		print "\n  KEY:\t\t", $keyrr->string;
-		print "\n ---------------------------------------------------------------\n";
-	}
 
-	if ( !$sigzero_verify && !$packet_verify && $dataref->[0]->type ne $self->typecovered ) {
-		$self->{vrfyerrstr} = join ' ', 'Cannot verify datatype', $dataref->[0]->type,
-				'with key intended for', $self->typecovered, 'verification';
-		return 0;
-	}
-
-	if ( $rrarray_verify && !$dataref->[0]->type eq "RRSIG" ) {
-
-		# if [0] has type RRSIG the whole RRset is type RRSIG.
-		# There are no SIGs over SIG RRsets
-		$self->{vrfyerrstr} = "RRSIGs over RRSIGs???\nThis is not possible.\n";
-		return 0;
-	}
-
-	if ( $algorithm != $keyrr->algorithm ) {
-		$self->{vrfyerrstr} = join ' ',
-				'signature created using algorithm',   $algorithm,
-				'can not be verified using algorithm', $keyrr->algorithm;
-		return 0;
-	}
-
-
-	if ($packet_verify) {
-
-		my $clone = bless {%$dataref}, ref($dataref);	# shallow clone
-		my @addnl = grep $_ != $self, @{$dataref->{additional}};
-		$clone->{additional} = \@addnl;			# without SIG RR
-
-		my @part = qw(question answer authority additional);
-		my @size = map scalar( @{$clone->{$_}} ), @part;
-		$dataref = pack 'n6', $clone->{ident}, $clone->{status}, @size;
-		foreach my $rr ( map @{$clone->{$_}}, @part ) {
-			$dataref .= $rr->canonical;
+		$self->{vrfyerrstr} = '';
+		if (DEBUG) {
+			print "\n ---------------------- RRSIG DEBUG ----------------------------";
+			print "\n  Reference:\t", ref($dataref);
+			print "\n  RRSIG:\t",	  $self->string;
+			if ($rrarray_verify) {
+				print "\n  DATA:\t\t", $_->string for @{$dataref};
+			}
+			print "\n  KEY:\t\t", $keyrr->string;
+			print "\n ---------------------------------------------------------------\n";
 		}
+
+		if ( !$sigzero_verify && !$packet_verify && $dataref->[0]->type ne $self->typecovered ) {
+			$self->{vrfyerrstr} = join ' ', 'Cannot verify datatype', $dataref->[0]->type,
+					'with key intended for', $self->typecovered, 'verification';
+			return 0;
+		}
+
+		if ( $rrarray_verify && !$dataref->[0]->type eq "RRSIG" ) {
+
+			# if [0] has type RRSIG the whole RRset is type RRSIG.
+			# There are no SIGs over SIG RRsets
+			$self->{vrfyerrstr} = "RRSIGs over RRSIGs???\nThis is not possible.\n";
+			return 0;
+		}
+
+		if ( $algorithm != $keyrr->algorithm ) {
+			$self->{vrfyerrstr} = join ' ',
+					'signature created using algorithm',   $algorithm,
+					'can not be verified using algorithm', $keyrr->algorithm;
+			return 0;
+		}
+
+
+		if ($packet_verify) {
+
+			my $clone = bless {%$dataref}, ref($dataref);		   # shallow clone
+			my @addnl = grep $_ != $self, @{$dataref->{additional}};
+			$clone->{additional} = \@addnl;		# without SIG RR
+
+			my @part = qw(question answer authority additional);
+			my @size = map scalar( @{$clone->{$_}} ), @part;
+			$dataref = pack 'n6', $clone->{ident}, $clone->{status}, @size;
+			foreach my $rr ( map @{$clone->{$_}}, @part ) {
+				$dataref .= $rr->canonical;
+			}
+		}
+
+
+		# The data that is to be verified
+		my $sigdata = $self->_CreateSigData($dataref);
+
+		my $verified = $self->_VerifySig( $sigdata, $keyrr ) || return 0;
+
+		# time to do some time checking.
+		my $t = time;
+
+		if ( _ordered( $self->{sigexpiration}, $t ) ) {
+			$self->{vrfyerrstr} = join ' ', 'Signature expired at', $self->sigexpiration;
+			return 0;
+		} elsif ( _ordered( $t, $self->{siginception} ) ) {
+			$self->{vrfyerrstr} = join ' ', 'Signature valid from', $self->siginception;
+			return 0;
+		}
+
+		return 1;
 	}
-
-
-	# The data that is to be verified
-	my $sigdata = $self->_CreateSigData($dataref);
-
-	my $verified = $self->_VerifySig( $sigdata, $keyrr ) || return 0;
-
-	# time to do some time checking.
-	my $t = time;
-
-	if ( _ordered( $self->{sigexpiration}, $t ) ) {
-		$self->{vrfyerrstr} = join ' ', 'Signature expired at', $self->sigexpiration;
-		return 0;
-	} elsif ( _ordered( $t, $self->{siginception} ) ) {
-		$self->{vrfyerrstr} = join ' ', 'Signature valid from', $self->siginception;
-		return 0;
-	}
-
-	return 1;
 }								#END verify
 
 
 sub vrfyerrstr {
 	my $self = shift;
-	$self->{vrfyerrstr} || '';
+	$self->{vrfyerrstr};
 }
 
 
@@ -502,7 +512,6 @@ sub _time2string {			## format time specification string
 
 
 sub _CreateSigData {
-	my ( $self, $rawdata ) = @_;
 
 	# This method creates the data string that will be signed.
 	# See RFC4034(6) and RFC6840(5.1) on how this string is constructed
@@ -514,101 +523,106 @@ sub _CreateSigData {
 	# to the TTL of the data. This method will set the datarr->ttl
 	# to the sig->orgttl for all the RR in the dataref.
 
-	print "_CreateSigData\n" if $debug;
+	if (DNSSEC) {
+		my ( $self, $rawdata ) = @_;
 
-	$self->{typecovered} = 0 unless ref($rawdata);		# SIG0
+		print "_CreateSigData\n" if DEBUG;
 
-	my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
-	my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode;
-	print "\npreamble\t", unpack( 'H*', $sigdata ), "\n" if $debug;
+		croak 'SIG0 using RRSIG not permitted' unless ref($rawdata);
 
-	unless ( ref($rawdata) ) {				# SIG0 case
-		print "\nSIG0 processing\nrawdata\t", unpack( 'H100', $rawdata ), "\n" if $debug;
-		return join '', $sigdata, $rawdata;
-	}
+		my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
+		my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode;
+		print "\npreamble\t", unpack( 'H*', $sigdata ), "\n" if DEBUG;
 
-	my $owner = $self->{owner};				# create wildcard domain name
-	my $limit = $self->{labels};
-	my @label = $owner->_wire;
-	shift @label while scalar @label > $limit;
-	my $wild = bless {label => \@label}, ref($owner);	# DIY to avoid wrecking name cache
-	my $suffix = $wild->encode(0);
-	unshift @label, chr(42);				# asterisk
+		my $owner = $self->{owner};			# create wildcard domain name
+		my $limit = $self->{labels};
+		my @label = $owner->_wire;
+		shift @label while scalar @label > $limit;
+		my $wild = bless {label => \@label}, ref($owner);    # DIY to avoid wrecking name cache
+		my $suffix = $wild->encode(0);
+		unshift @label, chr(42);			# asterisk
 
-	my @RR	  = map bless( {%$_}, ref($_) ), @$rawdata;	# shallow RR clone
-	my $RR	  = $RR[0];
-	my $class = $RR->class;
-	my $type  = $RR->type;
+		my @RR	  = map bless( {%$_}, ref($_) ), @$rawdata;  # shallow RR clone
+		my $RR	  = $RR[0];
+		my $class = $RR->class;
+		my $type  = $RR->type;
 
-	my $ttl = $self->orgttl;
-	my %table;
-	foreach my $RR (@RR) {
-		my $ident = $self->{owner}->encode(0);
-		my $match = substr $ident, -length($suffix);
-		croak 'RRs in RRset have different NAMEs' if $match ne $suffix;
-		croak 'RRs in RRset have different TYPEs' if $type ne $RR->type;
-		croak 'RRs in RRset have different CLASS' if $class ne $RR->class;
-		$RR->ttl($ttl);					# reset TTL
+		my $ttl = $self->orgttl;
+		my %table;
+		foreach my $RR (@RR) {
+			my $ident = $self->{owner}->encode(0);
+			my $match = substr $ident, -length($suffix);
+			croak 'RRs in RRset have different NAMEs' if $match ne $suffix;
+			croak 'RRs in RRset have different TYPEs' if $type ne $RR->type;
+			croak 'RRs in RRset have different CLASS' if $class ne $RR->class;
+			$RR->ttl($ttl);				# reset TTL
 
-		my $offset = 10 + length($suffix);		# RDATA offset
-		if ( $ident ne $match ) {
-			$RR->{owner} = $wild;
-			$offset += 2;
-			print "\nsubstituting wildcard name: ", $RR->name if $debug;
+			my $offset = 10 + length($suffix);	# RDATA offset
+			if ( $ident ne $match ) {
+				$RR->{owner} = $wild;
+				$offset += 2;
+				print "\nsubstituting wildcard name: ", $RR->name if DEBUG;
+			}
+
+			# For sorting we create a hash table of canonical data keyed on RDATA
+			my $canonical = $RR->canonical;
+			$table{substr $canonical, $offset} = $canonical;
 		}
 
-		# For sorting we create a hash table of canonical data keyed on RDATA
-		my $canonical = $RR->canonical;
-		$table{substr $canonical, $offset} = $canonical;
-	}
+		$sigdata = join '', $sigdata, map $table{$_}, sort keys %table;
 
-	$sigdata = join '', $sigdata, map $table{$_}, sort keys %table;
-
-	if ($debug) {
-		my $i = 0;
-		foreach my $rdata ( sort keys %table ) {
-			print "\n>>> ", $i++, "\tRDATA:\t", unpack 'H*', $rdata;
-			print "\nRR: ", unpack( 'H*', $table{$rdata} ), "\n";
+		if (DEBUG) {
+			my $i = 0;
+			foreach my $rdata ( sort keys %table ) {
+				print "\n>>> ", $i++, "\tRDATA:\t", unpack 'H*', $rdata;
+				print "\nRR: ", unpack( 'H*', $table{$rdata} ), "\n";
+			}
+			print "\n sigdata:\t", unpack( 'H*', $sigdata ), "\n";
 		}
-		print "\n sigdata:\t", unpack( 'H*', $sigdata ), "\n";
-	}
 
-	return $sigdata;
+		return $sigdata;
+	}
 }
 
 
 ########################################
 
 sub _CreateSig {
-	my $self = shift;
+	if (DNSSEC) {
+		my $self = shift;
 
-	my $algorithm = $self->algorithm;
+		my $algorithm = $self->algorithm;
+		my $class = $SEC{$algorithm} || croak "algorithm $algorithm not supported";
 
-	eval {
-		my $class = $SEC{$algorithm} || die "algorithm $algorithm not supported";
-		$self->sigbin( $class->sign(@_) );
-	} || croak 'signature generation failed', $@ ? "\n\t$@" : '';
+		eval {
+			my $sigbin = $class->sign(@_);
+			$self->sigbin($sigbin);
+		} || croak 'signature generation failed', $@ ? "\n\t$@" : '';
+	}
 }
 
 
 sub _VerifySig {
-	my $self = shift;
+	if (DNSSEC) {
+		my $self = shift;
 
-	my $algorithm = $self->algorithm;
+		my $algorithm = $self->algorithm;
+		my $class = $SEC{$algorithm} || croak "algorithm $algorithm not supported";
 
-	my $retval = eval {
-		my $class = $SEC{$algorithm} || die "algorithm $algorithm not supported";
-		$class->verify( @_, $self->sigbin );
-	} || do {
-		$self->{vrfyerrstr} = 'signature verification failed';
-		$self->{vrfyerrstr} .= "\n\t$@" if $@;
-		print "\n", $self->{vrfyerrstr}, "\n" if $debug;
-		return 0;
-	};
+		my $retval = eval {
+			my $sigbin = $self->sigbin;
+			$class->verify( @_, $sigbin );
+		} || do {
+			$self->{vrfyerrstr} = 'signature verification failed';
+			$self->{vrfyerrstr} .= "\n\t$@" if $@;
+			print "\n", $self->{vrfyerrstr}, "\n" if DEBUG;
+			return 0;
+		};
 
-	croak "unknown error in algorithm $algorithm verify" unless $retval == 1;
-	print "\nalgorithm $algorithm verification successful\n" if $debug;
-	return 1;
+		croak "unknown error in algorithm $algorithm verify" unless $retval == 1;
+		print "\nalgorithm $algorithm verification successful\n" if DEBUG;
+		return 1;
+	}
 }
 
 
@@ -719,7 +733,11 @@ RR that a validator is supposed to use to validate this signature.
 
 =head2 signature
 
-    $signature = $rr->signature;
+
+=head2 sig
+
+    $sig = $rr->sig;
+    $rr->sig( $sig );
 
 The Signature field contains the cryptographic signature that covers
 the RRSIG RDATA (excluding the Signature field) and the RRset

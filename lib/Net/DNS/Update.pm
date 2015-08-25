@@ -155,6 +155,9 @@ __END__
 The first example below shows a complete program.
 Subsequent examples show only the creation of the update packet.
 
+Although the examples are presented using the string form of RRs,
+the corresponding ( name => value ) form may also be used.
+
 =head2 Add a new host
 
     #!/usr/bin/perl
@@ -195,7 +198,7 @@ Subsequent examples show only the creation of the update packet.
     $update->push( prereq => yxdomain('example.com') );
     $update->push( update => rr_add('example.com MX 10 mailhost.example.com') );
 
-=head2 Add a TXT record for a name that doesn't exist
+=head2 Add a TXT record for a name that does not exist
 
     my $update = new Net::DNS::Update('example.com');
     $update->push( prereq => nxdomain('info.example.com') );

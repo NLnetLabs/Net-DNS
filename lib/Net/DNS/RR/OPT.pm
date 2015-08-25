@@ -27,7 +27,7 @@ use constant CLASS_TTL_RDLENGTH => length pack 'n N n', (0) x 3;
 use constant OPT => typebyname qw(OPT);
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -47,7 +47,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	my $rdata = '';
@@ -62,7 +62,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 sub encode {				## overide RR method
 	my $self = shift;
 
-	my $data = $self->encode_rdata;
+	my $data = $self->_encode_rdata;
 	my $size = $self->size;
 	my @xttl = ( $self->rcode >> 4, $self->version, $self->flags );
 	pack 'C n n C2n n a*', 0, OPT, $size, @xttl, length($data), $data;
@@ -165,10 +165,10 @@ sub option {
 }
 
 
-sub defined {
+sub _specified {
 	my $self = shift;
-	my @defd = grep $self->{$_}, qw(size flags rcode option);
-	return scalar @defd;
+	my @spec = grep $self->{$_}, qw(size flags rcode option);
+	return scalar @spec;
 }
 
 
@@ -238,7 +238,7 @@ header.
 
 16 bit field containing EDNS extended header flags.
 
-=head2 Options
+=head2 options, option
 
 	@option = $packet->edns->options;
 

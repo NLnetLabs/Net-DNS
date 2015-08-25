@@ -122,6 +122,8 @@ sub decode {
 		} else {					# compression pointer
 			my $link = 0x3FFF & unpack( "\@$index n", $$buffer );
 			croak 'corrupt compression pointer' unless $link < $offset;
+
+			# uncoverable condition false
 			$self->{origin} = $cache->{$link} ||= decode Net::DNS::DomainName( $buffer, $link, $cache );
 			return wantarray ? ( $self, $index + 2 ) : $self;
 		}

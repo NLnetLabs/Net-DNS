@@ -283,8 +283,7 @@ BEGIN {
 {					## check RR sorting functions
 	foreach my $attr ( [], ['preference'], ['X'] ) {
 		my $func = Net::DNS::RR::MX->get_rrsort_func(@$attr);
-		ok( $func, "MX->get_rrsort_func(@$attr)" );
-		my $exec = eval { &$func; };
+		is( ref($func), 'CODE', "MX->get_rrsort_func(@$attr)" );
 	}
 }
 

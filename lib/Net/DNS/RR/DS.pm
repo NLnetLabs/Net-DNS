@@ -64,23 +64,22 @@ my %digest = (
 
 	my $map = sub {
 		my $arg = shift;
-		unless ( $algbyval{$arg} ) {
-			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
-			return uc $arg;
-		}
-		my @map = ( $arg, "$arg" => $arg );		# also accept number
+		return $arg if $arg =~ /^\d/;
+		$arg =~ s/[^A-Za-z0-9]//g;			# strip non-alphanumerics
+		uc($arg);
 	};
 
-	my %algbyname = map &$map($_), @algbyname;
+	my @pairedval = sort ( 1 .. 254, 1 .. 254 );		# also accept number
+	my %algbyname = map &$map($_), @algbyname, @pairedval;
 
-	sub algbyname {
+	sub _algbyname {
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
 		$algbyname{$key} || croak "unknown algorithm $name";
 	}
 
-	sub algbyval {
+	sub _algbyval {
 		my $value = shift;
 		$algbyval{$value} || return $value;
 	}
@@ -113,21 +112,21 @@ my %digest = (
 	my %digestbyname = map &$map($_), @digestbyalias, @digestbyname;
 
 
-	sub digestbyname {
+	sub _digestbyname {
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
 		$digestbyname{$key} || croak "unknown digest type $name";
 	}
 
-	sub digestbyval {
+	sub _digestbyval {
 		my $value = shift;
 		$digestbyval{$value} || return $value;
 	}
 }
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -136,7 +135,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{digtype};
@@ -144,7 +143,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{digtype};
@@ -154,7 +153,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	foreach (qw(keytag algorithm digtype)) { $self->$_(shift) }
@@ -175,12 +174,12 @@ sub algorithm {
 
 	unless ( ref($self) ) {		## class method or simple function
 		my $argn = pop;
-		return $argn =~ /[^0-9]/ ? algbyname($argn) : algbyval($argn);
+		return $argn =~ /[^0-9]/ ? _algbyname($argn) : _algbyval($argn);
 	}
 
 	return $self->{algorithm} unless defined $arg;
-	return algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
-	return $self->{algorithm} = algbyname($arg);
+	return _algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = _algbyname($arg);
 }
 
 
@@ -189,12 +188,12 @@ sub digtype {
 
 	unless ( ref($self) ) {		## class method or simple function
 		my $argn = pop;
-		return $argn =~ /[^0-9]/ ? digestbyname($argn) : digestbyval($argn);
+		return $argn =~ /[^0-9]/ ? _digestbyname($argn) : _digestbyval($argn);
 	}
 
 	return $self->{digtype} unless defined $arg;
-	return digestbyval( $self->{digtype} ) if $arg =~ /MNEMONIC/i;
-	return $self->{digtype} = digestbyname($arg);
+	return _digestbyval( $self->{digtype} ) if $arg =~ /MNEMONIC/i;
+	return $self->{digtype} = _digestbyname($arg);
 }
 
 
@@ -243,7 +242,7 @@ sub create {
 		);
 
 	my $owner = $self->{owner}->encode();
-	my $data = pack 'a* a*', $owner, $keyrr->encode_rdata;
+	my $data = pack 'a* a*', $owner, $keyrr->_encode_rdata;
 
 	my $arglist = $digest{$self->digtype};
 	my ( $object, @argument ) = @$arglist;

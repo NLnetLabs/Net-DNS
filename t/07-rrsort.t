@@ -32,7 +32,7 @@ my @expectedpriority=($rr1, $rr7, $rr2, $rr3, $rr8, $rr6, $rr5, $rr4);
 
 
 
-is (scalar rrsort("SRV"),undef,"rrsort returns properly with undefined arguments");
+is (scalar rrsort("SRV"),0,"rrsort returns properly with undefined arguments");
 
 is (scalar rrsort("SRV",@rrarray),8,"rrsort returns properly with undefined attribute (1)");
 
