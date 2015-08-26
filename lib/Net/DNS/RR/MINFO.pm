@@ -22,7 +22,7 @@ use integer;
 use Net::DNS::Mailbox;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset, @opaque ) = @_;
 
@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
@@ -41,7 +41,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{emailbx};
@@ -49,7 +49,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->rmailbx(shift);

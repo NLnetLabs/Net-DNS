@@ -22,7 +22,7 @@ use integer;
 use Net::DNS::Text;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -33,7 +33,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	my $target = $self->{target} || return '';
@@ -41,7 +41,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $target = $self->{target} || return '';
@@ -49,7 +49,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	map $self->$_(shift), qw(priority weight target);
@@ -81,14 +81,13 @@ sub target {
 
 
 # order RRs by numerically increasing priority, decreasing weight
-my $function = __PACKAGE__->set_rrsort_func(
-	'priority',
-	sub {
-		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-		$a->{priority} <=> $b->{priority}
-				|| $b->{weight} <=> $a->{weight};
-	} );
+my $function = sub {
+	my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
+	$a->{priority} <=> $b->{priority}
+			|| $b->{weight} <=> $a->{weight};
+};
 
+__PACKAGE__->set_rrsort_func( 'priority', $function );
 
 __PACKAGE__->set_rrsort_func( 'default_sort', $function );
 

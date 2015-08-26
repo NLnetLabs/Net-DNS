@@ -28,7 +28,7 @@ use constant ANY  => classbyname qw(ANY);
 use constant TKEY => typebyname qw(TKEY);
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -51,7 +51,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless defined $self->{algorithm};
@@ -76,7 +76,7 @@ sub encode {				## overide RR method
 	my $self = shift;
 
 	my $owner = $self->{owner}->encode();
-	my $rdata = eval { $self->encode_rdata() } || '';
+	my $rdata = eval { $self->_encode_rdata() } || '';
 	return pack 'a* n2 N n a*', $owner, TKEY, ANY, 0, length $rdata, $rdata;
 }
 
@@ -137,7 +137,7 @@ sub other {
 }
 
 
-sub other_data { &other; }		## historical
+sub other_data { &other; }					# uncoverable pod
 
 
 1;

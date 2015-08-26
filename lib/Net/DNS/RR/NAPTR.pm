@@ -23,7 +23,7 @@ use Net::DNS::DomainName;
 use Net::DNS::Text;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset, @opaque ) = @_;
 
@@ -35,7 +35,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
@@ -48,7 +48,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{replacement};
@@ -58,7 +58,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	map { $self->$_(shift) } qw(order preference flags service regexp replacement);
@@ -113,23 +113,15 @@ sub replacement {
 }
 
 
-__PACKAGE__->set_rrsort_func(
-	'order',
-	sub {
-		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-		$a->{order} <=> $b->{order}
-				|| $a->{preference} <=> $b->{preference};
-	} );
+my $function = sub {
+	my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
+	$a->{order} <=> $b->{order}
+			|| $a->{preference} <=> $b->{preference};
+};
 
-__PACKAGE__->set_rrsort_func(
-	'preference',
-	sub {
-		my ( $a, $b ) = ( $Net::DNS::a, $Net::DNS::b );
-		$a->{preference} <=> $b->{preference}
-				|| $a->{order} <=> $b->{order};
-	} );
+__PACKAGE__->set_rrsort_func( 'order', $function );
 
-__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('order') );
+__PACKAGE__->set_rrsort_func( 'default_sort', $function );
 
 
 1;

@@ -20,7 +20,7 @@ Net::DNS::RR::L64 - DNS L64 resource record
 use integer;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -28,7 +28,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{locator64};
@@ -36,7 +36,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{locator64};
@@ -44,7 +44,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->preference(shift);
@@ -71,13 +71,13 @@ sub locator64 {
 }
 
 
-__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
-	'preference',
-	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
+my $function = sub {			## sort RRs in numerically ascending order.
+	$Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'};
+};
 
-	);
+__PACKAGE__->set_rrsort_func( 'preference', $function );
 
-__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
+__PACKAGE__->set_rrsort_func( 'default_sort', $function );
 
 
 1;

@@ -142,6 +142,7 @@ sub send {
 			my @nsname = grep $auth{$_} eq $zone, keys %auth;
 			my @list = map $glue{$_} ? $glue{$_} : $_, @nsname;
 			@{$res->{cache}->{$zone}} = @list;
+			return $packet if length($zone) > length($domain);
 			push @$nslist, @list;
 		}
 	}

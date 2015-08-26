@@ -66,6 +66,8 @@ other unpredictable behaviour.
 
 =head2 spfdata
 
+=head2 txtdata
+
     $string = $rr->spfdata;
     @list   = $rr->spfdata;
 

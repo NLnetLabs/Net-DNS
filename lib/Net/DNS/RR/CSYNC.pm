@@ -23,51 +23,51 @@ use Net::DNS::Parameters;
 use Net::DNS::RR::NSEC;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
 	my $limit = $offset + $self->{rdlength};
-	@{$self}{qw(SOAserial flags)} = unpack "\@$offset Nn", $$data;
+	@{$self}{qw(soaserial flags)} = unpack "\@$offset Nn", $$data;
 	$offset += 6;
 	$self->{typebm} = substr $$data, $offset, $limit - $offset;
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{typebm};
-	pack 'N n a*', $self->SOAserial, $self->flags, $self->{typebm};
+	pack 'N n a*', $self->soaserial, $self->flags, $self->{typebm};
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{typebm};
-	my @rdata = $self->SOAserial, $self->flags, $self->typelist;
+	my @rdata = $self->soaserial, $self->flags, $self->typelist;
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->SOAserial(shift);
+	$self->soaserial(shift);
 	$self->flags(shift);
 	$self->typelist(@_);
 }
 
 
-sub SOAserial {
+sub soaserial {
 	my $self = shift;
 
-	$self->{SOAserial} = 0 + shift if scalar @_;
-	$self->{SOAserial} || 0;
+	$self->{soaserial} = 0 + shift if scalar @_;
+	$self->{soaserial} || 0;
 }
 
 
-sub soaserial {&SOAserial}
+sub SOAserial {&soaserial}
 
 
 sub flags {
@@ -130,8 +130,11 @@ other unpredictable behaviour.
 
 =head2 SOAserial
 
-    $SOAserial = $rr->SOAserial;
-    $rr->SOAserial( $SOAserial );
+
+=head2 soaserial
+
+    $soaserial = $rr->soaserial;
+    $rr->soaserial( $soaserial );
 
 The SOA Serial field contains a copy of the 32-bit SOA serial number from
 the child zone.

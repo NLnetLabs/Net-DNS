@@ -23,7 +23,7 @@ use Net::DNS::DomainName;
 use Net::DNS::Mailbox;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset, @opaque ) = @_;
 
@@ -33,7 +33,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
@@ -44,7 +44,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{rname};
@@ -61,7 +61,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->mname(shift);
@@ -73,10 +73,10 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
-sub defaults() {			## specify RR attribute default values
+sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
-	$self->parse_rdata(qw(. . 0 4h 1h 3w 1h));
+	$self->_parse_rdata(qw(. . 0 4h 1h 3w 1h));
 	$self->{serial} = undef;
 }
 

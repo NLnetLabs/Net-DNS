@@ -23,7 +23,7 @@ use Net::DNS::DomainName;
 use Net::DNS::Parameters;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -33,7 +33,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{typebm};
@@ -41,7 +41,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $nxtdname = $self->{nxtdname} || return '';
@@ -49,7 +49,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->nxtdname(shift);
@@ -130,7 +130,7 @@ sub _bm2type {
 
 
 sub typebm {				## historical
-	my $self = shift;
+	my $self = shift;					# uncoverable pod
 	$self->{typebm} = shift if scalar @_;
 	return $self->{typebm};
 }

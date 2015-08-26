@@ -67,30 +67,29 @@ my %certtype = (
 
 	my $map = sub {
 		my $arg = shift;
-		unless ( $algbyval{$arg} ) {
-			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
-			return uc $arg;
-		}
-		my @map = ( $arg, "$arg" => $arg );		# also accept number
+		return $arg if $arg =~ /^\d/;
+		$arg =~ s/[^A-Za-z0-9]//g;			# strip non-alphanumerics
+		uc($arg);
 	};
 
-	my %algbyname = map &$map($_), @algbyname;
+	my @pairedval = sort ( 1 .. 254, 1 .. 254 );		# also accept number
+	my %algbyname = map &$map($_), @algbyname, @pairedval;
 
-	sub algbyname {
+	sub _algbyname {
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
 		$algbyname{$key} || croak "unknown algorithm $name";
 	}
 
-	sub algbyval {
+	sub _algbyval {
 		my $value = shift;
 		$algbyval{$value} || return $value;
 	}
 }
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -99,7 +98,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	my $certbin = $self->certbin || return '';
@@ -107,7 +106,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my @base64 = split /\s+/, encode_base64( $self->certbin || return '' );
@@ -115,7 +114,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->certtype(shift);
@@ -151,8 +150,8 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	return $self->{algorithm} unless defined $arg;
-	return algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
-	return $self->{algorithm} = $arg ? algbyname($arg) : 0;
+	return _algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = $arg ? _algbyname($arg) : 0;
 }
 
 
@@ -175,8 +174,9 @@ sub cert {
 }
 
 
-sub format { &certtype; }		## historical
-sub tag	   { &keytag; }			## historical
+sub format { &certtype; }					# uncoverable pod
+
+sub tag { &keytag; }						# uncoverable pod
 
 
 1;

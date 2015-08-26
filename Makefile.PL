@@ -56,7 +56,7 @@ my %prerequisite = (
 
 
 my %optional = (
-	Net::DNS::SEC	     => 0.22,
+	Net::DNS::SEC	     => 1.01,
 	Digest::BubbleBabble => 0.01,
 	Digest::GOST	     => 0.06,
 	IO::Socket::INET6    => 2.01,

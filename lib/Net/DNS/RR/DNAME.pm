@@ -22,14 +22,14 @@ use integer;
 use Net::DNS::DomainName;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 
 	$self->{target} = decode Net::DNS::DomainName2535(@_);
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{target};
@@ -37,7 +37,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{target};
@@ -45,7 +45,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->target(shift);
@@ -60,7 +60,7 @@ sub target {
 }
 
 
-sub dname { &target; }			## historical
+sub dname { &target; }						# uncoverable pod
 
 
 1;

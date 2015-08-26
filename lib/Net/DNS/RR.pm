@@ -416,31 +416,19 @@ sub ttl {
 ################################################################################
 
 sub _decode_rdata {			## decode rdata from wire-format octet string
-	shift->decode_rdata(@_);
-}
-
-sub decode_rdata {
-	my ( $self, $data, $offset ) = @_;			# uncoverable pod
+	my ( $self, $data, $offset ) = @_;
 	$self->{rdata} = substr $$data, $offset, $self->{rdlength};
 }
 
 
 sub _encode_rdata {			## encode rdata as wire-format octet string
-	shift->encode_rdata(@_);
-}
-
-sub encode_rdata {
-	my $rdata = shift->{rdata};				# uncoverable pod
+	my $rdata = shift->{rdata};
 	return defined $rdata ? $rdata : '';
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string
-	shift->format_rdata(@_);
-}
-
-sub format_rdata {
-	my $self = shift;					# uncoverable pod
+	my $self = shift;
 	my $data = $self->_encode_rdata;
 	my $size = length($data) || return '';
 	join ' ', '\\#', $size, unpack 'H*', $data;		# RFC3597 unknown RR format
@@ -448,19 +436,13 @@ sub format_rdata {
 
 
 sub _parse_rdata {			## parse RR attributes in argument list
-	shift->parse_rdata(@_);
-}
-
-sub parse_rdata {
-	my $self = shift;					# uncoverable pod
+	my $self = shift;
 	die join ' ', $self->type, 'not implemented' if ref($self) eq __PACKAGE__;
 	die join ' ', 'no zone file representation defined for', $self->type;
 }
 
 
-sub _defaults { shift->defaults() }	## set attribute default values
-
-sub defaults { }						# uncoverable pod
+sub _defaults { }			## set attribute default values
 
 
 sub dump {				## print internal data structure
@@ -662,7 +644,7 @@ sub get_rrsort_func {
 
 use vars qw(%_LOADED %_MINIMAL);
 
-$_MINIMAL{ANY} = bless [ type => 255 ], __PACKAGE__;
+$_MINIMAL{ANY} = bless [type => 255], __PACKAGE__;
 %_LOADED = %_MINIMAL;
 
 sub _subclass {

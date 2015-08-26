@@ -22,7 +22,7 @@ use integer;
 use Carp;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless defined $self->{longitude};
@@ -39,7 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{longitude};
@@ -48,7 +48,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	my @lat;
@@ -74,11 +74,11 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
-sub defaults() {			## specify RR attribute default values
+sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
 	$self->{version} = 0;
-	$self->parse_rdata( 0, 0, 0, 1, 10000, 10 );
+	$self->_parse_rdata( 0, 0, 0, 1, 10000, 10 );
 }
 
 
@@ -118,7 +118,7 @@ sub hp {
 	_decode_prec( $self->{hp} ) if defined wantarray;
 }
 
-sub horiz_pre { &hp; }
+sub horiz_pre { &hp; }						# uncoverable pod
 
 
 sub vp {
@@ -127,7 +127,7 @@ sub vp {
 	_decode_prec( $self->{vp} ) if defined wantarray;
 }
 
-sub vert_pre { &vp; }
+sub vert_pre { &vp; }						# uncoverable pod
 
 
 sub latlon {

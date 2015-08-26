@@ -48,21 +48,21 @@ my %digest = (
 	my %digestbyname = map { s /[^A-Za-z0-9]//g; $_ } @digestbyalias, @digestbyname, @digestbynum;
 
 
-	sub digestbyname {
+	sub _digestbyname {
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
 		$digestbyname{$key} || croak "unknown digest type $name";
 	}
 
-	sub digestbyval {
+	sub _digestbyval {
 		my $value = shift;
 		$digestbyval{$value} || return $value;
 	}
 }
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -78,7 +78,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{typebm};
@@ -91,7 +91,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{hnxtname};
@@ -102,7 +102,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->algorithm(shift);
@@ -115,10 +115,10 @@ sub parse_rdata {			## populate RR from rdata in argument list
 }
 
 
-sub defaults() {			## specify RR attribute default values
+sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
-	$self->parse_rdata( 1, 0, 0, '' );
+	$self->_parse_rdata( 1, 0, 0, '' );
 }
 
 
@@ -127,12 +127,12 @@ sub algorithm {
 
 	unless ( ref($self) ) {		## class method or simple function
 		my $argn = pop;
-		return $argn =~ /[^0-9]/ ? digestbyname($argn) : digestbyval($argn);
+		return $argn =~ /[^0-9]/ ? _digestbyname($argn) : _digestbyval($argn);
 	}
 
 	return $self->{algorithm} unless defined $arg;
-	return digestbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
-	return $self->{algorithm} = digestbyname($arg);
+	return _digestbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
+	return $self->{algorithm} = _digestbyname($arg);
 }
 
 
@@ -224,11 +224,11 @@ sub match {
 
 ########################################
 
-sub hashalgo { &algorithm; }		## historical
+sub hashalgo { &algorithm; }					# uncoverable pod
 
 
 sub name2hash {
-	my $hashalg    = shift;
+	my $hashalg    = shift;					# uncoverable pod
 	my $name       = shift;
 	my $iterations = shift;
 	my $salt       = shift || '';
@@ -358,7 +358,7 @@ The Type List identifies the RRset types that exist at the domain name
 matched by the NSEC3 RR.  When called in scalar context, the list is
 interpolated into a string.
 
-=head2 covered, matched
+=head2 covered, match
 
     print "covered" if $rr->covered{'example.foo'}
 

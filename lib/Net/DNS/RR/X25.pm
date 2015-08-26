@@ -22,7 +22,7 @@ use integer;
 use Net::DNS::Text;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -30,7 +30,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	my $address = $self->{address} || return '';
@@ -38,7 +38,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $address = $self->{address} || return '';
@@ -46,7 +46,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->address(shift);
@@ -85,6 +85,9 @@ by the type-specific methods defined in this package.
 Use of undocumented package features or direct access to internal data
 structures is discouraged and could result in program termination or
 other unpredictable behaviour.
+
+
+=head2 PSDNaddress
 
 
 =head2 address

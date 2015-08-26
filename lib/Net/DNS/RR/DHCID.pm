@@ -22,7 +22,7 @@ use integer;
 use MIME::Base64;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{digest};
@@ -39,14 +39,14 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @base64 = split /\s+/, encode_base64( $self->encode_rdata );
+	my @base64 = split /\s+/, encode_base64( $self->_encode_rdata );
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->rdata(@_);
@@ -104,7 +104,7 @@ sub rdata {
 		my $size = length($data) - 3;
 		@{$self}{qw(identifiertype digesttype digest)} = unpack "n C a$size", $data;
 	}
-	return MIME::Base64::encode( $self->encode_rdata, "" ) if defined wantarray;
+	return MIME::Base64::encode( $self->_encode_rdata, "" ) if defined wantarray;
 }
 
 

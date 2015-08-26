@@ -22,7 +22,7 @@ use integer;
 use constant BABBLE => defined eval { require Digest::BubbleBabble; };
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless $self->{fpbin};
@@ -39,7 +39,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{fpbin};
@@ -49,7 +49,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->algorithm(shift);
@@ -136,6 +136,9 @@ construct the public key.
 
 The 8-bit fingerprint type number describes the message-digest
 algorithm used to calculate the fingerprint of the public key.
+
+=head2 fingerprint
+
 
 =head2 fp
 

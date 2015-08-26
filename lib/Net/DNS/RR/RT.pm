@@ -22,7 +22,7 @@ use integer;
 use Net::DNS::DomainName;
 
 
-sub decode_rdata {			## decode rdata from wire-format octet string
+sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset, @opaque ) = @_;
 
@@ -31,7 +31,7 @@ sub decode_rdata {			## decode rdata from wire-format octet string
 }
 
 
-sub encode_rdata {			## encode rdata as wire-format octet string
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
@@ -40,7 +40,7 @@ sub encode_rdata {			## encode rdata as wire-format octet string
 }
 
 
-sub format_rdata {			## format rdata portion of RR string.
+sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless $self->{intermediate};
@@ -48,7 +48,7 @@ sub format_rdata {			## format rdata portion of RR string.
 }
 
 
-sub parse_rdata {			## populate RR from rdata in argument list
+sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->preference(shift);
@@ -72,13 +72,13 @@ sub intermediate {
 }
 
 
-__PACKAGE__->set_rrsort_func(		## sort RRs in numerically ascending order.
-	'preference',
-	sub { $Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'} }
+my $function = sub {			## sort RRs in numerically ascending order.
+	$Net::DNS::a->{'preference'} <=> $Net::DNS::b->{'preference'};
+};
 
-	);
+__PACKAGE__->set_rrsort_func( 'preference', $function );
 
-__PACKAGE__->set_rrsort_func( 'default_sort', __PACKAGE__->get_rrsort_func('preference') );
+__PACKAGE__->set_rrsort_func( 'default_sort', $function );
 
 
 1;
@@ -134,8 +134,21 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 =head1 LICENSE
 
-This program is free software; you may redistribute it and/or
-modify it under the same terms as Perl itself.
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted, provided
+that the above copyright notice appear in all copies and that both that
+copyright notice and this permission notice appear in supporting
+documentation, and that the name of the author not be used in advertising
+or publicity pertaining to distribution of the software without specific
+prior written permission.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
 
 
 =head1 SEE ALSO
