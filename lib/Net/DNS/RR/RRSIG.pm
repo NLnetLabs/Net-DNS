@@ -79,6 +79,13 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 }
 
 
+sub _defaults {				## specify RR attribute default values
+	my $self = shift;
+
+	$self->sigval(30);
+}
+
+
 #
 # source: http://www.iana.org/assignments/dns-sec-alg-numbers
 #
@@ -204,6 +211,16 @@ sub siginception {
 	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
+sub sigex { &sigexpiration; }		## historical
+
+sub sigin { &siginception; }		## historical
+
+sub sigval {
+	my $self = shift;
+	no integer;
+	( $self->{sigval} ) = map int( 86400 * $_ ), @_;
+}
+
 
 sub keytag {
 	my $self = shift;
@@ -244,49 +261,44 @@ sub create {
 	unless (DNSSEC) {
 		croak 'Net::DNS::SEC support not available';
 	} else {
-		my ( $class, $datarrset, $priv_key, %args ) = @_;
+		my ( $class, $rrsetref, $priv_key, %etc ) = @_;
+
+		$rrsetref = [$rrsetref] unless ref($rrsetref) eq 'ARRAY';
+		my $RR = $rrsetref->[0];
+		croak '$rrsetref is not reference to RR array' unless ref($RR) =~ /^Net::DNS::RR/;
+
+		# All the TTLs need to be the same in the data RRset.
+		my $ttl = $RR->ttl;
+		my @ttl = grep $_->ttl != $ttl, @$rrsetref;
+		croak 'RRs in RRset do not have same TTL' if scalar @ttl;
 
 		my $private = ref($priv_key) ? $priv_key : Net::DNS::SEC::Private->new($priv_key);
 		croak 'unable to parse private key' unless ref($private) eq 'Net::DNS::SEC::Private';
 
-		croak '$datarrset argument is not a reference to an array' unless ref($datarrset) =~ /ARRAY/;
-
-		my $RR = $datarrset->[0];
-
-		croak '$datarrset is not a reference to an array of RRs' unless ref($RR) =~ /Net::DNS::RR/;
-
-		# All the TTLs need to be the same in the data RRset.
-		my $ttl = $RR->ttl;
-		my @ttl = grep $_->ttl != $ttl, @$datarrset;
-		croak 'RRs in RRset have different TTLs' if scalar @ttl;
-
 		my @label = grep $_ ne chr(42), $RR->{owner}->_wire;	# count labels
 
 		my $self = new Net::DNS::RR(
-			name	    => $RR->name,
-			type	    => 'RRSIG',
-			class	    => 'IN',
-			ttl	    => defined $args{ttl} ? $args{ttl} : $ttl,
-			typecovered => $RR->type,
-			labels	    => scalar @label,
-			orgttl	    => $ttl,
-			siginception  => $args{sigin} || time(),
-			sigexpiration => $args{sigex} || 0,
-			algorithm     => $private->algorithm,
-			keytag	      => $private->keytag,
-			signame	      => $private->signame,
+			name	     => $RR->name,
+			type	     => 'RRSIG',
+			class	     => 'IN',
+			ttl	     => $ttl,
+			typecovered  => $RR->type,
+			labels	     => scalar @label,
+			orgttl	     => $ttl,
+			siginception => time(),
+			algorithm    => $private->algorithm,
+			keytag	     => $private->keytag,
+			signame	     => $private->signame,
 			);
 
-		$args{sigval} ||= 30 unless $self->{sigexpiration};
-		if ( $args{sigval} ) {
-			my $sigin = $self->{siginception};
-			my $sigval = eval { no integer; int( $args{sigval} * 86400 ) };
-			$self->sigexpiration( $sigin + $sigval );
+		while ( my ( $attribute, $value ) = each %etc ) {
+			$self->$attribute($value);
 		}
 
-		my $sigdata = $self->_CreateSigData($datarrset);
-		$self->_CreateSig( $sigdata, $private );
+		$self->{sigexpiration} = $self->{siginception} + $self->{sigval}
+				unless $self->{sigexpiration};
 
+		$self->_CreateSig( $self->_CreateSigData($rrsetref), $private );
 		return $self;
 	}
 }
@@ -296,142 +308,71 @@ sub verify {
 
 	# Reminder...
 
-	# $dataref must be a reference to an array of RR objects.
+	# $rrsetref must be a reference to an array of RR objects.
 
 	# $keyref is either a key object or a reference to an array
 	# of key objects.
 
 	if (DNSSEC) {
-		my ( $self, $dataref, $keyref ) = @_;
+		my ( $self, $rrsetref, $keyref ) = @_;
 
-		my $sigzero_verify = 0;
-		my $packet_verify  = 0;
-		my $rrarray_verify = 0;
-
-		my $algorithm = $self->algorithm;
-		my $keyrr;					# This will be used to store the key
-								# against which we want to verify.
-
-		print "Second argument is of class ", ref($keyref), "\n" if DEBUG;
+		print '$keyref argument is of class ', ref($keyref), "\n" if DEBUG;
 		if ( ref($keyref) eq "ARRAY" ) {
 
 			#  We will recurse for each key that matches algorithm and key-id
-			#  we return when there is a successful verification.
-			#  If not we'll continue so that we even survive key-id collision.
+			#  and return when there is a successful verification.
+			#  If not, we will continue so that we can survive key-id collision.
 			#  The downside of this is that the error string only matches the
 			#  last error.
-			my @keyarray	= @{$keyref};
-			my $errorstring = "";
-			my $i		= 0;
-			print "Iterating over " . @keyarray . " keys \n" if DEBUG;
-			foreach my $keyrr (@keyarray) {
-				$i++;
-				unless ( $algorithm == $keyrr->algorithm ) {
-					print "key $i: algorithm does not match\n" if DEBUG;
-					$errorstring .= "key $i: algorithm does not match ";
-					next;
-				}
-				unless ( $self->keytag == $keyrr->keytag ) {
-					my $tag = $self->keytag;
-					my $key = $keyrr->keytag;
-					print "key $i: keytag does not match ( $tag, $key )\n" if DEBUG;
-					$errorstring .= "key $i: keytag does not match ";
-					next;
-				}
 
-				my $result = $self->verify( $dataref, $keyrr );
-				print "key $i:" . $self->{vrfyerrstr} if DEBUG;
+			print "Iterating over ", scalar(@$keyref), " keys\n" if DEBUG;
+			my @error;
+			my $i;
+			foreach my $keyrr (@$keyref) {
+				my $result = $self->verify( $rrsetref, $keyrr );
 				return $result if $result;
-				$errorstring .= "key $i:" . $self->vrfyerrstr . " ";
+				my $error = $self->{vrfyerrstr};
+				$i++;
+				push @error, "key $i: $error";
+				print "key $i: $error\n" if DEBUG;
+				next;
 			}
 
-			$self->{vrfyerrstr} = $errorstring;
-			return (0);
+			$self->{vrfyerrstr} = join "\n", @error;
+			return 0;
 
-		} elsif ( ref($keyref) eq 'Net::DNS::RR::DNSKEY' ) {
+		} elsif ( $keyref->isa('Net::DNS::RR::DNSKEY') ) {
 
-			# substitute and continue processing after this conditional
-			$keyrr = $keyref;
-			print "Validating using key with keytag: ", $keyrr->keytag, "\n" if DEBUG;
+			print "Validating using key with keytag: ", $keyref->keytag, "\n" if DEBUG;
 
 		} else {
-			$self->{vrfyerrstr} = "You are trying to pass " . ref($keyref) . " data for a key";
-			return (0);
+			croak join ' ', ref($keyref), 'can not be used as DNSSEC key';
 		}
 
-		print "Verifying data of class: ", ref($dataref), "\n" if DEBUG;
-		$sigzero_verify = 1 unless ref($dataref);
-		if ( !$sigzero_verify ) {
-			if ( ref($dataref) eq "ARRAY" ) {
 
-				if ( ref( $dataref->[0] ) and $dataref->[0]->isa('Net::DNS::RR') ) {
-					$rrarray_verify = 1;
-				} else {
-					die "Trying to verify an array of " . ref( $dataref->[0] ) . "\n";
-				}
+		$rrsetref = [$rrsetref] unless ref($rrsetref) eq 'ARRAY';
+		my $RR = $rrsetref->[0];
+		croak '$rrsetref not a reference to array of RRs' unless ref($RR) =~ /^Net::DNS::RR/;
 
-			} elsif ( ref($dataref) and $dataref->isa("Net::DNS::Packet") ) {
-				$packet_verify = 1;
-				die "Trying to verify a packet using non-SIG0 signature" unless $self->{typecovered};
-
-			} else {
-				die "Do not know what kind of data this is: " . ref($dataref) . ")\n";
-			}
+		if (DEBUG) {
+			print "\n ---------------------- RRSIG DEBUG --------------------";
+			print "\n  SIG:\t", $self->string;
+			print "\n  KEY:\t", $keyref->string;
+			print "\n -------------------------------------------------------\n";
 		}
 
 		$self->{vrfyerrstr} = '';
-		if (DEBUG) {
-			print "\n ---------------------- RRSIG DEBUG ----------------------------";
-			print "\n  Reference:\t", ref($dataref);
-			print "\n  RRSIG:\t",	  $self->string;
-			if ($rrarray_verify) {
-				print "\n  DATA:\t\t", $_->string for @{$dataref};
-			}
-			print "\n  KEY:\t\t", $keyrr->string;
-			print "\n ---------------------------------------------------------------\n";
-		}
-
-		if ( !$sigzero_verify && !$packet_verify && $dataref->[0]->type ne $self->typecovered ) {
-			$self->{vrfyerrstr} = join ' ', 'Cannot verify datatype', $dataref->[0]->type,
-					'with key intended for', $self->typecovered, 'verification';
+		unless ( $self->algorithm == $keyref->algorithm ) {
+			$self->{vrfyerrstr} = 'algorithm does not match';
 			return 0;
 		}
 
-		if ( $rrarray_verify && !$dataref->[0]->type eq "RRSIG" ) {
-
-			# if [0] has type RRSIG the whole RRset is type RRSIG.
-			# There are no SIGs over SIG RRsets
-			$self->{vrfyerrstr} = "RRSIGs over RRSIGs???\nThis is not possible.\n";
+		unless ( $self->keytag == $keyref->keytag ) {
+			$self->{vrfyerrstr} = 'keytag does not match';
 			return 0;
 		}
 
-		if ( $algorithm != $keyrr->algorithm ) {
-			$self->{vrfyerrstr} = join ' ',
-					'signature created using algorithm',   $algorithm,
-					'can not be verified using algorithm', $keyrr->algorithm;
-			return 0;
-		}
-
-
-		if ($packet_verify) {
-
-			my $clone = bless {%$dataref}, ref($dataref);		   # shallow clone
-			my @addnl = grep $_ != $self, @{$dataref->{additional}};
-			$clone->{additional} = \@addnl;		# without SIG RR
-
-			my @part = qw(question answer authority additional);
-			my @size = map scalar( @{$clone->{$_}} ), @part;
-			$dataref = pack 'n6', $clone->{ident}, $clone->{status}, @size;
-			foreach my $rr ( map @{$clone->{$_}}, @part ) {
-				$dataref .= $rr->canonical;
-			}
-		}
-
-
-		# The data that is to be verified
-		my $sigdata = $self->_CreateSigData($dataref);
-
-		my $verified = $self->_VerifySig( $sigdata, $keyrr ) || return 0;
+		$self->_VerifySig( $self->_CreateSigData($rrsetref), $keyref ) || return 0;
 
 		# time to do some time checking.
 		my $t = time;
@@ -519,16 +460,16 @@ sub _CreateSigData {
 	# This method is called by the method that creates a signature
 	# and by the method that verifies the signature. It is assumed
 	# that the creation method has checked that all the TTLs are
-	# the same for the dataref and that sig->orgttl has been set
+	# the same for the rrsetref and that sig->orgttl has been set
 	# to the TTL of the data. This method will set the datarr->ttl
-	# to the sig->orgttl for all the RR in the dataref.
+	# to the sig->orgttl for all the RR in the rrsetref.
 
 	if (DNSSEC) {
-		my ( $self, $rawdata ) = @_;
+		my ( $self, $rrsetref ) = @_;
 
 		print "_CreateSigData\n" if DEBUG;
 
-		croak 'SIG0 using RRSIG not permitted' unless ref($rawdata);
+		croak 'SIG0 using RRSIG not permitted' unless ref($rrsetref);
 
 		my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 		my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode;
@@ -542,7 +483,7 @@ sub _CreateSigData {
 		my $suffix = $wild->encode(0);
 		unshift @label, chr(42);			# asterisk
 
-		my @RR	  = map bless( {%$_}, ref($_) ), @$rawdata;  # shallow RR clone
+		my @RR	  = map bless( {%$_}, ref($_) ), @$rrsetref; # shallow RR clone
 		my $RR	  = $RR[0];
 		my $class = $RR->class;
 		my $type  = $RR->type;
@@ -550,7 +491,7 @@ sub _CreateSigData {
 		my $ttl = $self->orgttl;
 		my %table;
 		foreach my $RR (@RR) {
-			my $ident = $self->{owner}->encode(0);
+			my $ident = $RR->{owner}->encode(0);
 			my $match = substr $ident, -length($suffix);
 			croak 'RRs in RRset have different NAMEs' if $match ne $suffix;
 			croak 'RRs in RRset have different TYPEs' if $type ne $RR->type;
@@ -592,12 +533,12 @@ sub _CreateSig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class = $SEC{$algorithm} || croak "algorithm $algorithm not supported";
+		my $class     = $SEC{$algorithm};
 
 		eval {
-			my $sigbin = $class->sign(@_);
-			$self->sigbin($sigbin);
-		} || croak 'signature generation failed', $@ ? "\n\t$@" : '';
+			die "algorithm $algorithm not supported" unless $class;
+			$self->sigbin( $class->sign(@_) );
+		} || croak "${@}signature generation failed";
 	}
 }
 
@@ -607,19 +548,21 @@ sub _VerifySig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class = $SEC{$algorithm} || croak "algorithm $algorithm not supported";
+		my $class     = $SEC{$algorithm};
 
 		my $retval = eval {
-			my $sigbin = $self->sigbin;
-			$class->verify( @_, $sigbin );
-		} || do {
-			$self->{vrfyerrstr} = 'signature verification failed';
-			$self->{vrfyerrstr} .= "\n\t$@" if $@;
-			print "\n", $self->{vrfyerrstr}, "\n" if DEBUG;
-			return 0;
+			die "algorithm $algorithm not supported" unless $class;
+			$class->verify( @_, $self->sigbin );
 		};
 
-		croak "unknown error in algorithm $algorithm verify" unless $retval == 1;
+		unless ($retval) {
+			$self->{vrfyerrstr} = "${@}signature verification failed";
+			print "\n", $self->{vrfyerrstr}, "\n" if DEBUG;
+			return 0;
+		}
+
+		# uncoverable branch true	# bug in Net::DNS::SEC or dependencies
+		croak "unknown error in $class->verify" unless $retval == 1;
 		print "\nalgorithm $algorithm verification successful\n" if DEBUG;
 		return 1;
 	}
@@ -699,7 +642,9 @@ RR owner name.
 The original TTL field specifies the TTL of the covered RRset as it
 appears in the authoritative zone.
 
-=head2 sigexpiration and siginception time
+=head2 sigexpiration and siginception times
+
+=head2 sigex sigin sigval
 
     $expiration = $rr->sigexpiration;
     $expiration = $rr->sigexpiration( $value );
@@ -733,7 +678,6 @@ RR that a validator is supposed to use to validate this signature.
 
 =head2 signature
 
-
 =head2 sig
 
     $sig = $rr->sig;
@@ -759,9 +703,9 @@ Create a signature over a RR set.
 
     $keypath = '/home/olaf/keys/Kbla.foo.+001+60114.private';
 
-    $sigrr = create Net::DNS::RR::RRSIG( \@datarrset, $keypath );
+    $sigrr = create Net::DNS::RR::RRSIG( \@rrsetref, $keypath );
 
-    $sigrr = create Net::DNS::RR::RRSIG( \@datarrset, $keypath,
+    $sigrr = create Net::DNS::RR::RRSIG( \@rrsetref, $keypath,
 					sigex => 20151231010101
 					sigin => 20151201010101
 					);
@@ -772,12 +716,12 @@ Create a signature over a RR set.
 
     $private = Net::DNS::SEC::Private->new($keypath);
 
-    $sigrr= create Net::DNS::RR::RRSIG( \@datarrset, $private );
+    $sigrr= create Net::DNS::RR::RRSIG( \@rrsetref, $private );
 
 
 create() is an alternative constructor for a RRSIG RR object.  
 
-This method returns an RRSIG with the signature over the datarrset
+This method returns an RRSIG with the signature over the subject rrset
 (an array of RRs) made with the private key stored in the key file.
 
 The first argument is a reference to an array that contains the RRset
@@ -807,10 +751,10 @@ By default the TTL matches the RRset that is presented for signing.
 
 =head2 verify
 
-    $verify = $sigrr->verify( $dataref, $keyrr );
-    $verify = $sigrr->verify( $dataref, [$keyrr, $keyrr2, $keyrr3] );
+    $verify = $sigrr->verify( $rrsetref, $keyrr );
+    $verify = $sigrr->verify( $rrsetref, [$keyrr, $keyrr2, $keyrr3] );
 
-$dataref contains a reference to an array of RR objects and the
+$rrsetref contains a reference to an array of RR objects and the
 method verifies the RRset against the signature contained in the
 $sigrr object itself using the public key in $keyrr.
 
@@ -823,10 +767,10 @@ Returns 0 on error and sets $sig->vrfyerrstr
 
 =head2 vrfyerrstr
 
-    $verify = $sigrr->verify( $dataref, $keyrr );
+    $verify = $sigrr->verify( $rrsetref, $keyrr );
     print $sigrr->vrfyerrstr unless $verify;
 
-    $sigrr->verify( $dataref, $keyrr ) || die $sigrr->vrfyerrstr;
+    $sigrr->verify( $rrsetref, $keyrr ) || die $sigrr->vrfyerrstr;
 
 =head1 KEY GENERATION
 
@@ -847,11 +791,11 @@ algorithm and the keyid (keytag).
 
 =head1 REMARKS
 
-The code is not optimized for speed.
+The code is not optimised for speed.
 It is probably not suitable to be used for signing large zones.
 
-If this code is still around in 2100 (not a leapyear) you will need
-to check for proper handling of times ...
+If this code is still around in 2100 (not a leap year) you will
+need to check for proper handling of times ...
 
 =head1 ACKNOWLEDGMENTS
 

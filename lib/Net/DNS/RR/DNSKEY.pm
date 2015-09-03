@@ -352,7 +352,6 @@ to perform mnemonic and numeric code translation.
 
 =head2 publickey
 
-
 =head2 key
 
     $key = $rr->key;

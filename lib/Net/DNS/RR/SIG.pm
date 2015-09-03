@@ -114,6 +114,7 @@ sub _defaults {				## specify RR attribute default values
 	$self->algorithm(1);
 	$self->labels(0);
 	$self->orgttl(0);
+	$self->sigval(10);
 }
 
 
@@ -195,10 +196,9 @@ my %siglen = (
 
 
 sub _size {				## estimate encoded size
-	my $self  = shift;
-	my $clone = bless {%$self}, ref($self);			# shallow clone
-	my $dummy = 'x' x $siglen{$clone->algorithm};
-	$clone->sigbin($dummy);
+	my $self = shift;
+	my $clone = bless {%$self}, ref($self);			   # shallow clone
+	$clone->sigbin( 'x' x $siglen{$self->algorithm} );
 	length $clone->encode();
 }
 
@@ -251,6 +251,16 @@ sub siginception {
 	return UTIL ? Scalar::Util::dualvar( $time, _time2string($time) ) : _time2string($time);
 }
 
+sub sigex { &sigexpiration; }		## historical
+
+sub sigin { &siginception; }		## historical
+
+sub sigval {
+	my $self = shift;
+	no integer;
+	( $self->{sigval} ) = map int( 60.0 * $_ ), @_;
+}
+
 
 sub keytag {
 	my $self = shift;
@@ -291,36 +301,30 @@ sub create {
 	unless (DNSSEC) {
 		croak 'Net::DNS::SEC support not available';
 	} else {
-		my ( $class, $data, $priv_key, %args ) = @_;
+		my ( $class, $data, $priv_key, %etc ) = @_;
 
 		my $private = ref($priv_key) ? $priv_key : Net::DNS::SEC::Private->new($priv_key);
 		croak 'Unable to parse private key' unless ref($private) eq 'Net::DNS::SEC::Private';
 
 		my $self = new Net::DNS::RR(
-			type	    => 'SIG',
-			typecovered => 'TYPE0',
-			siginception  => $args{sigin} || time(),
-			sigexpiration => $args{sigex} || 0,
-			algorithm     => $private->algorithm,
-			keytag	      => $private->keytag,
-			signame	      => $private->signame,
+			type	     => 'SIG',
+			typecovered  => 'TYPE0',
+			siginception => time(),
+			algorithm    => $private->algorithm,
+			keytag	     => $private->keytag,
+			signame	     => $private->signame,
 			);
 
-		$args{sigval} ||= 10 unless $self->{sigexpiration};
-		if ( $args{sigval} ) {
-			my $sigin = $self->{siginception};
-			my $sigval = eval { no integer; int( $args{sigval} * 60 ) };
-			$self->sigexpiration( $sigin + $sigval );
+		while ( my ( $attribute, $value ) = each %etc ) {
+			$self->$attribute($value);
 		}
 
-		unless ($data) {				# mark packet for SIG0 generation
-			$self->{private} = $private;
-			return $self;
-		}
+		$self->{sigexpiration} = $self->{siginception} + $self->{sigval}
+				unless $self->{sigexpiration};
 
-		my $sigdata = $self->_CreateSigData($data);
-		$self->_CreateSig( $sigdata, $private );
+		$self->_CreateSig( $self->_CreateSigData($data), $private ) if $data;
 
+		$self->{private} = $private unless $data;	# mark packet for SIG0 generation
 		return $self;
 	}
 }
@@ -340,12 +344,12 @@ sub verify {
 		my ( $self, $dataref, $keyref ) = @_;
 
 		if ( my $isa = ref($dataref) ) {
-			print "First argument is of class $isa\n" if DEBUG;
-			croak "verify argument can not be $isa"	  unless $isa =~ /Net::DNS::/;
-			croak 'SIG RR deprecated except for SIG0' unless $dataref->isa('Net::DNS::Packet');
+			print '$dataref argument is ', $isa, "\n" if DEBUG;
+			croak '$dataref can not be ', $isa unless $isa =~ /^Net::DNS::/;
+			croak '$dataref can not be ', $isa unless $dataref->isa('Net::DNS::Packet');
 		}
 
-		print "Second argument is of class ", ref($keyref), "\n" if DEBUG;
+		print '$keyref argument is of class ', ref($keyref), "\n" if DEBUG;
 		if ( ref($keyref) eq "ARRAY" ) {
 
 			#  We will recurse for each key that matches algorithm and key-id
@@ -354,32 +358,20 @@ sub verify {
 			#  The downside of this is that the error string only matches the
 			#  last error.
 
-			my $errorstring = "";
 			print "Iterating over ", scalar(@$keyref), " keys\n" if DEBUG;
-			my $i = 0;
+			my @error;
+			my $i;
 			foreach my $keyrr (@$keyref) {
-				$i++;
-				unless ( $self->algorithm == $keyrr->algorithm ) {
-					my $error = "key $i: algorithm does not match";
-					print "$error\n" if DEBUG;
-					$errorstring .= "$error ";
-					next;
-				}
-				unless ( $self->keytag == $keyrr->keytag ) {
-					my $error = "key $i: keytag does not match";
-					print "$error (", $keyrr->keytag, " ", $self->keytag, ")\n"
-							if DEBUG;
-					$errorstring .= "$error: ";
-					next;
-				}
-
 				my $result = $self->verify( $dataref, $keyrr );
-				print "key $i: ", $self->{vrfyerrstr} if DEBUG;
 				return $result if $result;
-				$errorstring .= "key $i:" . $self->vrfyerrstr . " ";
+				my $error = $self->{vrfyerrstr};
+				$i++;
+				push @error, "key $i: $error";
+				print "key $i: $error\n" if DEBUG;
+				next;
 			}
 
-			$self->{vrfyerrstr} = $errorstring;
+			$self->{vrfyerrstr} = join "\n", @error;
 			return 0;
 
 		} elsif ( $keyref->isa('Net::DNS::RR::DNSKEY') ) {
@@ -387,25 +379,27 @@ sub verify {
 			print "Validating using key with keytag: ", $keyref->keytag, "\n" if DEBUG;
 
 		} else {
-			$self->{vrfyerrstr} = join ' ', ref($keyref), 'can not be used as SIG0 key';
+			croak join ' ', ref($keyref), 'can not be used as SIG0 key';
+		}
+
+
+		if (DEBUG) {
+			print "\n ---------------------- SIG DEBUG ----------------------";
+			print "\n  SIG:\t", $self->string;
+			print "\n  KEY:\t", $keyref->string;
+			print "\n -------------------------------------------------------\n";
+		}
+
+		croak "Trying to verify SIG0 using non-SIG0 signature" if $self->{typecovered};
+
+		$self->{vrfyerrstr} = '';
+		unless ( $self->algorithm == $keyref->algorithm ) {
+			$self->{vrfyerrstr} = 'algorithm does not match';
 			return 0;
 		}
 
-
-		$self->{vrfyerrstr} = '';
-		if (DEBUG) {
-			print "\n ---------------------- SIG DEBUG ------------------------------";
-			print "\n  SIG:\t", $self->string;
-			print "\n  KEY:\t", $keyref->string;
-			print "\n ---------------------------------------------------------------\n";
-		}
-
-		croak "Trying to verify SIG0 using non-SIG0 signature" unless $self->typecovered eq 'TYPE0';
-
-		if ( $self->algorithm != $keyref->algorithm ) {
-			$self->{vrfyerrstr} = join ' ',
-					'signature created using algorithm',   $self->algorithm,
-					'can not be verified using algorithm', $keyref->algorithm;
+		unless ( $self->keytag == $keyref->keytag ) {
+			$self->{vrfyerrstr} = 'keytag does not match';
 			return 0;
 		}
 
@@ -526,12 +520,12 @@ sub _CreateSig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class = $SEC{$algorithm} || croak "algorithm $algorithm not supported";
+		my $class     = $SEC{$algorithm};
 
 		eval {
-			my $sigbin = $class->sign(@_);
-			$self->sigbin($sigbin);
-		} || croak 'signature generation failed', $@ ? "\n\t$@" : '';
+			die "algorithm $algorithm not supported" unless $class;
+			$self->sigbin( $class->sign(@_) );
+		} || croak "${@}signature generation failed";
 	}
 }
 
@@ -541,19 +535,21 @@ sub _VerifySig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class = $SEC{$algorithm} || croak "algorithm $algorithm not supported";
+		my $class     = $SEC{$algorithm};
 
 		my $retval = eval {
-			my $sigbin = $self->sigbin;
-			$class->verify( @_, $sigbin );
-		} || do {
-			$self->{vrfyerrstr} = 'signature verification failed';
-			$self->{vrfyerrstr} .= "\n\t$@" if $@;
-			print "\n", $self->{vrfyerrstr}, "\n" if DEBUG;
-			return 0;
+			die "algorithm $algorithm not supported" unless $class;
+			$class->verify( @_, $self->sigbin );
 		};
 
-		croak "unknown error in algorithm $algorithm verify" unless $retval == 1;
+		unless ($retval) {
+			$self->{vrfyerrstr} = "${@}signature verification failed";
+			print "\n", $self->{vrfyerrstr}, "\n" if DEBUG;
+			return 0;
+		}
+
+		# uncoverable branch true	# bug in Net::DNS::SEC or dependencies
+		croak "unknown error in $class->verify" unless $retval == 1;
 		print "\nalgorithm $algorithm verification successful\n" if DEBUG;
 		return 1;
 	}
@@ -610,7 +606,9 @@ used to create the signature.
 algorithm() may also be invoked as a class method or simple function
 to perform mnemonic and numeric code translation.
 
-=head2 sigexpiration and siginception time
+=head2 sigexpiration and siginception times
+
+=head2 sigex sigin sigval
 
     $expiration = $rr->sigexpiration;
     $expiration = $rr->sigexpiration( $value );
@@ -644,7 +642,6 @@ The signer name field value identifies the owner name of the KEY
 RR that a validator is supposed to use to validate this signature.
 
 =head2 signature
-
 
 =head2 sig
 
@@ -751,8 +748,8 @@ Returns false on error and sets $sig->vrfyerrstr
 
 The code is not optimised for speed.
 
-If this code is still around in 2100 (not a leapyear) you will need
-to check for proper handling of times ...
+If this code is still around in 2100 (not a leap year) you will
+need to check for proper handling of times ...
 
 =head1 ACKNOWLEDGMENTS
 
