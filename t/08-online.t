@@ -8,7 +8,7 @@ use t::NonFatal;
 use Socket;
 
 
-my @HINTS = qw(
+my @hints = qw(
 		192.33.4.12
 		199.7.91.13
 		192.203.230.10
@@ -30,40 +30,40 @@ exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
+	my $res = new Net::DNS::Resolver( retry => 1 );
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
 	my $reply = $res->send( ".", "NS" ) || die;
 
-	exit plan skip_all => "Local nameserver broken" unless $reply->header->ancount;
+	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
+	exit plan skip_all => "Local nameserver broken" unless scalar @ns;
 
 	1;
-} || exit( plan skip_all => "Unable to access local nameserver" );
+} || exit( plan skip_all => "Non-responding local nameserver" );
 
 
 eval {
-	my $res = new Net::DNS::Resolver( nameservers => [@HINTS] );
+	my $res = new Net::DNS::Resolver( retry => 1 );
+	exit plan skip_all => "No nameservers" unless $res->nameservers(@hints);
 
-	my $reply = $res->send( "a.t.", "A" ) || die;
+	my $reply = $res->send( ".", "NS" ) || die;
 
-	if ( $reply->header->ancount ) {
-		diag "There seems to be a middle box in the path that modifies your packets";
-		exit( plan skip_all => "Modifying middlebox detected" );
-	}
+	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
+	exit plan skip_all => "Unexpected response from root server" unless scalar @ns;
 
 	1;
 } || exit( plan skip_all => "Unable to access global root nameservers" );
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
+	my $res = new Net::DNS::Resolver( retry => 1 );
 
 	my $reply = $res->send( "a.t.", "A" ) || die;
 
 	if ( $reply->header->ancount ) {
 		my $server = $reply->answerfrom;
 		my ($rr) = $reply->answer;
-		diag "\nFor unexplained reasons a query for 'a.t' resolves as";
+		diag "\nFor unexplained reasons a query for 'a.t.' resolves as";
 		diag $rr->string;
 		diag "\nUsers of 'dig' may try 'dig a.t.' to test this hypothesis";
 	}
@@ -72,7 +72,7 @@ eval {
 } || exit( plan skip_all => "Unable to access local nameserver" );
 
 
-plan tests => 120;
+plan tests => 128;
 
 NonFatalBegin();
 
@@ -172,20 +172,20 @@ SKIP: {
 
 
 #
-# test that search() and query() DTRT with reverse lookups
+# test that send(), query() and search() DTRT with reverse lookups
 #
 {
 	my @tests = (
 		{	ip   => '198.41.0.4',
 			host => 'a.root-servers.net',
 			},
-		{	ip   => '2001:500:1::803f:235',
+		{	ip   => '2001:500:1::53',
 			host => 'h.root-servers.net',
 			},
 		);
 
 	foreach my $test (@tests) {
-		foreach my $method (qw(search query)) {
+		foreach my $method (qw(send query search)) {
 			my $packet = $res->$method( $test->{'ip'} );
 
 	SKIP: {

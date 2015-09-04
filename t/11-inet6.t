@@ -9,7 +9,7 @@ use Socket;
 
 my $debug = 0;
 
-my @HINTS = qw(
+my @hints = qw(
 		2001:500:2::c
 		2001:7fd::1
 		2001:500:3::42
@@ -29,38 +29,52 @@ exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/IPv6.enabled';
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
+	my $res = new Net::DNS::Resolver( retry => 1 );
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
 	my $reply = $res->send( ".", "NS" ) || die;
 
-	exit plan skip_all => "Local nameserver broken" unless $reply->header->ancount;
+	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
+	exit plan skip_all => "Local nameserver broken" unless scalar @ns;
 
 	1;
-} || exit( plan skip_all => "Unable to access local nameserver" );
+} || exit( plan skip_all => "Non-responding local nameserver" );
 
 
 eval {
-	my $res = new Net::DNS::Resolver( nameservers => [@HINTS] );
+	my $res = new Net::DNS::Resolver( retry => 1 );
+	exit plan skip_all => "No nameservers" unless $res->nameservers(@hints);
 
-	my $reply = $res->send( "a.t.", "A" ) || die;
+	my $reply = $res->send( ".", "NS" ) || die;
 
-	if ( $reply->header->ancount ) {
-		diag "There seems to be a middle box in the path that modifies your packets";
-		exit( plan skip_all => "Modifying middlebox detected" );
-	}
+	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
+	exit plan skip_all => "Unexpected response from root server" unless scalar @ns;
 
 	1;
 } || exit( plan skip_all => "Unable to access global root nameservers" );
 
 
+eval {
+	my $res = new Net::DNS::Resolver( retry => 1 );
+
+	my $reply = $res->send( "a.t.", "A" ) || die;
+
+	if ( $reply->header->ancount ) {
+		my $server = $reply->answerfrom;
+		my ($rr) = $reply->answer;
+		diag "\nFor unexplained reasons a query for 'a.t.' resolves as";
+		diag $rr->string;
+		diag "\nUsers of 'dig' may try 'dig a.t.' to test this hypothesis";
+	}
+
+	1;
+} || exit( plan skip_all => "Unable to access local nameserver" );
+
+
 plan tests => 9;
 
+
 NonFatalBegin();
-
-
-
-
 
 my $answer;
 my $res= Net::DNS::Resolver->new;
@@ -87,7 +101,7 @@ foreach my $ns ($nsanswer->answer){
     last;
 }
 
-ok(1,"Dummy test: No AAA Records found, we will skip some other tests") unless $found_ns;
+ok(1,"Dummy test: No AAAA Records found, we will skip some other tests") unless $found_ns;
 
 $res->nameservers($AAAA_address);
 #$res->print;

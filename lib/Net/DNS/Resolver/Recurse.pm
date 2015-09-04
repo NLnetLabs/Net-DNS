@@ -42,8 +42,8 @@ Additional module-specific methods are described below.
 
 =head2 hints
 
-This method specifies a list of the IP addresses used to locate
-the authoritative name servers for the root (.) zone.
+This method specifies a list of the IP addresses of nameservers to
+be used to discover the addresses of the root nameservers.
 
     $resolver->hints(@ip);
 
@@ -61,8 +61,9 @@ my $root;
 sub hints {
 	my $self = shift;
 
-	@hints = @_ if scalar @_;
-	return @hints;
+	return @hints unless scalar @_;
+	$root  = undef;
+	@hints = @_;
 }
 
 
@@ -95,24 +96,29 @@ sub send {
 	unless ( defined $head ) {
 		return $root if $root;				# root servers cached indefinitely
 
-		my $defres = new Net::DNS::Resolver();
-		$defres->nameservers( $res->hints );
+		my $defres = new Net::DNS::Resolver( retry => 1 );
+		my @config = $defres->nameservers( $res->hints );
+		$defres->nameservers( @config, $res->_hints );	# resolv.conf, hints, _hints
+		$defres->udppacketsize(1280);
 
-		my $packet = $defres->send( '.', 'NS' );	# specified hint server
-		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
-		my %auth = map { lc $_->nsdname => 1 } @auth;
-		my @glue = grep $auth{lc $_->name}, $packet->additional;
+		my $packet = $defres->send( '.', 'NS' );
 		my %glue;
-		foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
-		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
-		my @ip = map @$_, values %glue;
+
+		# uncoverable branch false	# depends on external data
+		if ($packet) {
+			my @rr = $packet->answer, $packet->authority;
+			my @auth = grep $_->type eq 'NS', @rr;
+			my %auth = map { lc $_->nsdname => 1 } @auth;
+			my @glue = grep $auth{lc $_->name}, $packet->additional;
+			foreach ( grep $_->can('address'), @glue ) {
+				push @{$glue{lc $_->name}}, $_->address;
+			}
+		}
 
 		$defres->nameservers( $res->_hints );
-		$defres->nameservers(@ip);
+		$defres->nameservers( map @$_, values %glue );
 		$defres->recurse(0);
-		$packet = $defres->send( '.', 'NS' );		# authoritative server
-		$self->_callback($packet);
-		return $root = $packet;
+		return $root = $defres->send( '.', 'NS' );	# authoritative server
 	}
 
 	my $domain = lc join( '.', @tail ) || '.';
@@ -131,10 +137,11 @@ sub send {
 
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
 		my %auth = map { lc $_->nsdname => lc $_->name } @auth;
-		my @glue = grep $auth{lc $_->name}, $packet->additional;
 		my %glue;
-		foreach ( grep $_->type eq 'A',	   @glue ) { push @{$glue{lc $_->name}}, $_->address }
-		foreach ( grep $_->type eq 'AAAA', @glue ) { push @{$glue{lc $_->name}}, $_->address }
+		my @glue = grep $auth{lc $_->name}, $packet->additional;
+		foreach ( grep $_->can('address'), @glue ) {
+			push @{$glue{lc $_->name}}, $_->address;
+		}
 
 		my %zone = reverse %auth;
 		foreach my $zone ( keys %zone ) {
@@ -239,7 +246,7 @@ sub _diag {				## debug output
 }
 
 
-sub _hints {				## default hints
+{
 	require Net::DNS::ZoneFile;
 
 	my $dug = new Net::DNS::ZoneFile( \*DATA );
@@ -247,15 +254,15 @@ sub _hints {				## default hints
 
 	my @auth = grep $_->type eq 'NS', @rr;
 	my %auth = map { lc $_->nsdname => 1 } @auth;
-	my @glue = grep $auth{lc $_->name}, @rr;
 	my %glue;
-	foreach ( grep $_->type eq 'A', @glue ) {
-		push @{$glue{lc $_->name}}, $_->address;
-	}
-	foreach ( grep $_->type eq 'AAAA', @glue ) {
+	my @glue = grep $auth{lc $_->name}, @rr;
+	foreach ( grep $_->can('address'), @glue ) {
 		push @{$glue{lc $_->name}}, $_->address;
 	}
 	my @ip = map @$_, values %glue;
+
+
+	sub _hints { @ip; }		## default hints
 }
 
 

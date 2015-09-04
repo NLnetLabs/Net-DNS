@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 32;
+use Test::More tests => 31;
 
 use Net::DNS;
 
@@ -20,7 +20,6 @@ diag("set environment variable NET_DNS_DEBUG to get all versions\n\n");
 
 
 use_ok('Net::DNS');
-use_ok('Net::DNS::Resolver::Recurse');
 
 is( Net::DNS->version, $Net::DNS::VERSION, 'Net::DNS->version');
 

@@ -8,40 +8,39 @@ use Net::DNS;
 use Net::DNS::Resolver::Recurse;
 
 
-my @HINTS = qw(
-		192.33.4.12
-		199.7.91.13
-		192.203.230.10
-		192.5.5.241
-		192.112.36.4
-		128.63.2.53
-		192.36.148.17
-		192.58.128.30
-		193.0.14.129
-		199.7.83.42
-		202.12.27.33
-		198.41.0.4
-		192.228.79.201
-		);
-
-
 exit( plan skip_all => 'Online tests disabled.' ) if -e 't/online.disabled';
 exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
 
 
+my @hints = new Net::DNS::Resolver::Recurse()->_hints;
+
+
 eval {
-	my $res = Net::DNS::Resolver->new( retry => 1 );
-	$res->nameservers(@HINTS);
+	my $res = new Net::DNS::Resolver( retry => 1 );
+	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
-	my $reply = $res->send( "a.t.", "A" ) || die;
+	my $reply = $res->send( ".", "NS" ) || die;
 
-	if ( $reply->header->ancount ) {
-		diag "There seems to be a middle box in the path that modifies your packets";
-		exit( plan skip_all => "Modifying middlebox detected" );
-	}
+	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
+	exit plan skip_all => "Local nameserver broken" unless scalar @ns;
 
 	1;
-} || exit( plan skip_all => "Unable to access global root nameservers" );
+};
+# } || exit( plan skip_all => "Non-responding local nameserver" );
+
+
+eval {
+	my $res = new Net::DNS::Resolver( retry => 1 );
+	exit plan skip_all => "No nameservers" unless $res->nameservers(@hints);
+
+	my $reply = $res->send( ".", "NS" ) || die;
+
+	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
+	exit plan skip_all => "Unexpected response from root server" unless scalar @ns;
+
+	1;
+};
+# } || exit( plan skip_all => "Unable to access global root nameservers" );
 
 
 plan 'no_plan';
@@ -67,7 +66,7 @@ NonFatalBegin();
 
 	$res->udp_timeout(20);
 
-	ok( scalar( $res->hints(@HINTS) ), "hints() set" );
+	ok( scalar( $res->hints(@hints) ), "hints() set" );
 
 	my $packet = $res->query_dorecursion( 'www.net-dns.org', 'A' );
 	ok( $packet, 'got a packet' );
