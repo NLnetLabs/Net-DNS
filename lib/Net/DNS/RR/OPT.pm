@@ -76,9 +76,9 @@ sub string {				## overide RR method
 	my $flags  = sprintf '%04x', $self->flags;
 	my $rcode  = $self->rcode;
 	my $size   = $self->size;
-	my @option = sort $self->options;
-	my @lines  = join "\n;;\t\t",
-			map sprintf( "%s\t%s", ednsoptionbyval($_), unpack 'H*', $self->option($_) ), @option;
+	my @option = sort { $a <=> $b } $self->options;
+	my @lines  = map sprintf( "%s\t%s", ednsoptionbyval($_), unpack 'H*', $self->option($_) ), @option;
+	my @format = join "\n;;\t\t", @lines;
 
 	$rcode = 0 if $rcode < 16;				# weird: 1 .. 15 not EDNS codes!!
 
@@ -91,7 +91,7 @@ sub string {				## overide RR method
 ;;	flags:	$flags
 ;;	rcode:	$rc
 ;;	size:	$size
-;;	option: @lines
+;;	option: @format
 QQ
 }
 
@@ -168,7 +168,7 @@ sub option {
 sub _specified {
 	my $self = shift;
 	my @spec = grep $self->{$_}, qw(size flags rcode option);
-	return scalar @spec;
+	scalar @spec;
 }
 
 

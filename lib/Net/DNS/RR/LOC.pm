@@ -44,7 +44,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 
 	return '' unless defined $self->{longitude};
 	my ( $alt, @other ) = map $self->$_() . 'm', qw(altitude size hp vp);
-	my @rdata = $self->latitude, '', $self->longitude, '', $alt, join ' ', @other;
+	my @rdata = ( $self->latitude, '', $self->longitude, '', $alt, join ' ', @other );
 }
 
 
@@ -133,7 +133,7 @@ sub vert_pre { &vp; }						# uncoverable pod
 sub latlon {
 	my $self = shift;
 	my ( $lat, @lon ) = @_;
-	my @pair = ( $self->latitude(@_), $self->longitude(@lon) );
+	my @pair = scalar $self->latitude(@_), scalar $self->longitude(@lon);
 }
 
 
@@ -250,9 +250,9 @@ or formatted string. Trailing zero values are optional.
     $longitude = $rr->longitude;
     ($deg, $min, $sec, $ew ) = $rr->longitude;
 
-    $rr->latitude( 71.014338 );
-    $rr->latitude( 71, 0, 51.617, 'W' );
-    $rr->latitude( '71 0 51.617 W' );
+    $rr->longitude( -71.014338 );
+    $rr->longitude( 71, 0, 51.617, 'W' );
+    $rr->longitude( '71 0 51.617 W' );
 
 When invoked in scalar context, longitude is returned in degrees,
 a negative ordinate being west of the prime meridian.
