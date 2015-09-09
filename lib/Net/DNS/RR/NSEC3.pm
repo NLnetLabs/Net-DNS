@@ -20,7 +20,6 @@ Net::DNS::RR::NSEC3 - DNS NSEC3 resource record
 use integer;
 
 use Carp;
-use MIME::Base32;
 
 use base qw(Exporter);
 use vars qw(@EXPORT_OK);
@@ -70,9 +69,8 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $ssize = unpack "\@$offset x4 C", $$data;
 	@{$self}{qw(algorithm flags iterations saltbin)} = unpack "\@$offset CCnx a$ssize", $$data;
 	$offset += 5 + $ssize;
-	my $hsize = unpack "\@$offset C",	  $$data;
-	my $hname = unpack "\@$offset x a$hsize", $$data;
-	$self->hnxtname( MIME::Base32::encode_09AV $hname, '' );
+	my $hsize = unpack "\@$offset C", $$data;
+	$self->{hnxtname} = unpack "\@$offset x a$hsize", $$data;
 	$offset += 1 + $hsize;
 	$self->{typebm} = substr $$data, $offset, ( $limit - $offset );
 }
@@ -81,9 +79,9 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{typebm};
+	return '' unless defined $self->{typebm};
 	my $salt = $self->saltbin;
-	my $hash = MIME::Base32::decode_09AV uc( $self->hnxtname );
+	my $hash = $self->{hnxtname};
 	pack 'CCn C a* C a* a*', $self->algorithm, $self->flags, $self->iterations,
 			length($salt), $salt,
 			length($hash), $hash,
@@ -94,11 +92,11 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{hnxtname};
-	my @rdata = $self->algorithm, $self->flags, $self->iterations,
-			$self->salt || '-',
-			$self->hnxtname,
-			$self->typelist;
+	return '' unless defined $self->{typebm};
+	my @rdata = (
+		$self->algorithm, $self->flags, $self->iterations,
+		$self->salt || '-', $self->hnxtname, $self->typelist
+		);
 }
 
 
@@ -181,8 +179,8 @@ sub saltbin {
 
 sub hnxtname {
 	my $self = shift;
-	return $self->{hnxtname} unless scalar @_;
-	$self->{hnxtname} = lc( shift || '' );
+	$self->{hnxtname} = _decode_base32(shift) if scalar @_;
+	_encode_base32( $self->{hnxtname} ) if defined wantarray;
 }
 
 
@@ -192,14 +190,15 @@ sub covered {
 
 	# first test if the domain name is in the NSEC3 zone.
 	my @domainlabels = new Net::DNS::DomainName($name)->_wire;
-	my ( $ownerhash, @zonelabels ) = map lc($_), $self->{owner}->_wire;
+	my ( $owner, @zonelabels ) = $self->{owner}->_wire;
+	my $ownerhash = _decode_base32($owner);
 
 	foreach ( reverse @zonelabels ) {
-		return 0 unless $_ eq lc( pop(@domainlabels) || return 0 );
+		return 0 unless lc($_) eq lc( pop(@domainlabels) || return 0 );
 	}
 
-	my $namehash = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
-	my $nexthash = $self->hnxtname;
+	my $namehash = _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
+	my $nexthash = "$self->{hnxtname}";
 
 	unless ( $ownerhash lt $nexthash ) {			# last or only NSEC3 RR
 		return 1 if $namehash lt $nexthash;
@@ -215,20 +214,43 @@ sub match {
 	my $self = shift;
 	my $name = shift;
 
-	my ($ownerhash) = $self->{owner}->_wire;
-	my $namehash = name2hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
+	my $namehash = _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
 
-	$namehash eq lc($ownerhash);
+	my ($owner) = $self->{owner}->_wire;
+	my $ownerhash = _decode_base32($owner);
+
+	$namehash eq $ownerhash;
 }
 
 
 ########################################
 
-sub hashalgo { &algorithm; }					# uncoverable pod
+sub _decode_base32 {
+	local $_ = shift || '';
+	tr [0-9a-vA-V] [\000-\037\012-\037];
+	$_ = unpack 'B*', $_;
+	s/000(.....)/$1/g;
+	my $l = length;
+	$_ = substr $_, 0, $l & ~7 if $l & 7;
+	pack 'B*', $_;
+}
 
 
-sub name2hash {
-	my $hashalg    = shift;					# uncoverable pod
+sub _encode_base32 {
+	local $_ = unpack 'B*', shift;
+	s/(.....)/000$1/g;
+	my $l = length;
+	my $x = substr $_, $l & ~7;
+	my $n = length $x;
+	substr( $_, $l & ~7 ) = join '', '000', $x, '0' x ( 5 - $n ) if $n;
+	$_ = pack( 'B*', $_ );
+	tr [\000-\037] [0-9a-v];
+	return $_;
+}
+
+
+sub _hash {
+	my $hashalg    = shift;
 	my $name       = shift;
 	my $iterations = shift;
 	my $salt       = shift || '';
@@ -237,7 +259,7 @@ sub name2hash {
 	my ( $object, @argument ) = @$arglist;
 	my $hash = $object->new(@argument);
 
-	my $wirename = new Net::DNS::DomainName2535($name)->encode;
+	my $wirename = new Net::DNS::DomainName($name)->canonical;
 	$iterations++;
 
 	while ( $iterations-- ) {
@@ -246,9 +268,14 @@ sub name2hash {
 		$wirename = $hash->digest;
 	}
 
-	local $_;						# CPAN RT#16528
-	return lc MIME::Base32::encode_09AV( $wirename, '' );	# per RFC4648, 7.
+	return $wirename;
 }
+
+
+sub name2hash { _encode_base32(&_hash); }			# uncoverable pod
+
+
+sub hashalgo { &algorithm; }					# uncoverable pod
 
 
 1;

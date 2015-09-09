@@ -7,7 +7,6 @@ use Net::DNS;
 
 my @prerequisite = qw(
 		Digest::SHA
-		MIME::Base32
 		Net::DNS::RR::NSEC3;
 		);
 

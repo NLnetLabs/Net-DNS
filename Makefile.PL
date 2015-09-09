@@ -48,7 +48,6 @@ my %prerequisite = (
 	Digest::SHA  => 5.23,
 	File::Spec   => 0.86,
 	IO::Socket   => 1.24,
-	MIME::Base32 => 1.01,
 	MIME::Base64 => 2.11,
 	Time::Local  => 1.19,
 	Test::More   => 0.52,

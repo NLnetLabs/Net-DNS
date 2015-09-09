@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.02 [unreleased]
 
+Fix rt.cpan.org #106916
+
+	Dependency on MIME::Base32 makes Net::DNS not installable on MSWin32
+
 Fix rt.cpan.org #106565
 
 	Net::DNS::Resolver::Recurse and IPv6 Reverse DNS

@@ -6,7 +6,6 @@ use Test::More;
 use Net::DNS;
 
 my @prerequisite = qw(
-		MIME::Base32
 		Net::DNS::RR::NSEC3;
 		);
 

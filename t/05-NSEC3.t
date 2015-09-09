@@ -2,20 +2,8 @@
 #
 
 use strict;
-use Test::More;
+use Test::More tests => 26;
 use Net::DNS;
-
-my @prerequisite = qw(
-		MIME::Base32
-		);
-
-foreach my $package (@prerequisite) {
-	next if eval "require $package";
-	plan skip_all => "$package not installed";
-	exit;
-}
-
-plan tests => 26;
 
 
 my $name = '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example';
