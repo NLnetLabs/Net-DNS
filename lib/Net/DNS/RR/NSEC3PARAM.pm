@@ -32,8 +32,8 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{algorithm};
-	my $salt = $self->{saltbin};
+	return '' unless defined $self->{algorithm};
+	my $salt = $self->saltbin;
 	pack 'CCnCa*', @{$self}{qw(algorithm flags iterations)}, length($salt), $salt;
 }
 
@@ -41,7 +41,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{algorithm};
+	return '' unless defined $self->{algorithm};
 	join ' ', $self->algorithm, $self->flags, $self->iterations, $self->salt || '-';
 }
 

@@ -34,7 +34,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{digest};
+	return '' unless defined $self->{digest};
 	pack 'nC a*', map $self->$_, qw(identifiertype digesttype digest);
 }
 
@@ -49,7 +49,9 @@ sub _format_rdata {			## format rdata portion of RR string.
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->rdata(@_);
+	my $data = MIME::Base64::decode( join "", @_ );
+	my $size = length($data) - 3;
+	@{$self}{qw(identifiertype digesttype digest)} = unpack "n C a$size", $data;
 }
 
 
@@ -96,18 +98,6 @@ sub digest {
 }
 
 
-sub rdata {
-	my $self = shift;
-
-	if ( scalar @_ ) {
-		my $data = MIME::Base64::decode( join "", @_ );
-		my $size = length($data) - 3;
-		@{$self}{qw(identifiertype digesttype digest)} = unpack "n C a$size", $data;
-	}
-	return MIME::Base64::encode( $self->_encode_rdata, "" ) if defined wantarray;
-}
-
-
 1;
 __END__
 
@@ -115,7 +105,16 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name DHCID algorithm fptype fingerprint');
+    $rr = new Net::DNS::RR('client.example.com. DHCID ( AAAB
+	xLmlskllE0MVjd57zHcWmEH3pCQ6VytcKD//7es/deY=');
+
+    $rr = new Net::DNS::RR(
+	name	       => 'client.example.com',
+	type	       => 'DHCID',
+	digest	       => 'ObfuscatedIdentityData',
+	digesttype     => 1,
+	identifiertype => 2,
+	);
 
 =head1 DESCRIPTION
 
@@ -153,15 +152,6 @@ algorithm used to obfuscate the DHCP identity information.
     $rr->digest( $digest );
 
 Binary representation of the digest of DHCP identity information.
-
-=head2 rdata
-
-The RDATA for this record is stored in master files as a single
-block using Base64 representation.
-
-White space characters may appear anywhere within the Base64 text
-and will be silently ignored.
-
 
 
 =head1 COPYRIGHT

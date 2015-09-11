@@ -48,7 +48,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 
 	my $limit = $offset + $self->{rdlength};
 	@{$self}{@field} = unpack "\@$offset n C2 N3 n", $$data;
-	( $self->{signame}, $offset ) = decode Net::DNS::DomainName2535( $data, $offset + 18 );
+	( $self->{signame}, $offset ) = decode Net::DNS::DomainName( $data, $offset + 18 );
 	$self->{sigbin} = substr $$data, $offset, $limit - $offset;
 }
 
@@ -56,25 +56,24 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $sigbin = $self->sigbin || return '';
-	pack 'n C2 N3 n a* a*', @{$self}{@field}, $self->{signame}->encode, $sigbin;
+	my $signame = $self->{signame} || return '';
+	pack 'n C2 N3 n a* a*', @{$self}{@field}, $signame->canonical, $self->sigbin;
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
+	my $signame = $self->{signame} || return '';
 	my @sig64 = split /\s+/, encode_base64( $self->sigbin );
-	my @rdata = map( $self->$_, @field ), $self->{signame}->string, @sig64;
+	my @rdata = ( map( $self->$_, @field ), $signame->string, @sig64 );
 }
 
 
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	for ( @field, qw(signame) ) {
-		$self->$_(shift);
-	}
+	foreach ( @field, qw(signame) ) { $self->$_(shift) }
 	$self->signature(@_);
 }
 
@@ -233,7 +232,7 @@ sub keytag {
 sub signame {
 	my $self = shift;
 
-	$self->{signame} = new Net::DNS::DomainName2535(shift) if scalar @_;
+	$self->{signame} = new Net::DNS::DomainName(shift) if scalar @_;
 	$self->{signame}->name if defined wantarray && $self->{signame};
 }
 
@@ -472,7 +471,7 @@ sub _CreateSigData {
 		croak 'SIG0 using RRSIG not permitted' unless ref($rrsetref);
 
 		my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
-		my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->encode;
+		my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->canonical;
 		print "\npreamble\t", unpack( 'H*', $sigdata ), "\n" if DEBUG;
 
 		my $owner = $self->{owner};			# create wildcard domain name
@@ -480,7 +479,7 @@ sub _CreateSigData {
 		my @label = $owner->_wire;
 		shift @label while scalar @label > $limit;
 		my $wild = bless {label => \@label}, ref($owner);    # DIY to avoid wrecking name cache
-		my $suffix = $wild->encode(0);
+		my $suffix = $wild->canonical;
 		unshift @label, chr(42);			# asterisk
 
 		my @RR	  = map bless( {%$_}, ref($_) ), @$rrsetref; # shallow RR clone
@@ -491,7 +490,7 @@ sub _CreateSigData {
 		my $ttl = $self->orgttl;
 		my %table;
 		foreach my $RR (@RR) {
-			my $ident = $RR->{owner}->encode(0);
+			my $ident = $RR->{owner}->canonical;
 			my $match = substr $ident, -length($suffix);
 			croak 'RRs in RRset have different NAMEs' if $match ne $suffix;
 			croak 'RRs in RRset have different TYPEs' if $type ne $RR->type;
@@ -672,6 +671,7 @@ validates this signature.
 =head2 signame
 
     $signame = $rr->signame;
+    $rr->signame( $signame );
 
 The signer name field value identifies the owner name of the DNSKEY
 RR that a validator is supposed to use to validate this signature.

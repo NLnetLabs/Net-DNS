@@ -86,25 +86,26 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $keybin = $self->keybin || return '';
-	pack 'n C2 a*', $self->flags, $self->protocol, $self->algorithm, $keybin;
+	return '' unless defined $self->{keybin};
+	pack 'n C2 a*', $self->flags, $self->protocol, $self->algorithm, $self->{keybin};
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @base64 = split /\s+/, encode_base64( $self->keybin || return '' );
+	return '' unless defined $self->{keybin};
+	my @base64 = split /\s+/, encode_base64( $self->{keybin} );
 	my $keytag = $self->keytag;
 	my @params = map $self->$_, qw(flags protocol algorithm);
-	my @rdata  = @params, @base64, "; Key ID = $keytag\n";
+	my @rdata  = ( @params, @base64, "; Key ID = $keytag\n" );
 }
 
 
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(flags protocol algorithm);
+	foreach (qw(flags protocol algorithm)) { $self->$_(shift) }
 	$self->key(@_);
 }
 

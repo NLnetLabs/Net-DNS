@@ -32,16 +32,16 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{ptrdname};
-	$self->{ptrdname}->encode(@_);
+	my $ptrdname = $self->{ptrdname} || return '';
+	$ptrdname->encode(@_);
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{ptrdname};
-	$self->{ptrdname}->string;
+	my $ptrdname = $self->{ptrdname} || return '';
+	$ptrdname->string;
 }
 
 

@@ -46,7 +46,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{hitbin};
+	return '' unless defined $self->{hitbin};
 	my $hit = $self->hitbin;
 	my $key = $self->keybin;
 	my $nos = pack 'C2n a* a*', length($hit), $self->pkalgorithm, length($key), $hit, $key;
@@ -57,17 +57,17 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{hitbin};
+	return '' unless defined $self->{hitbin};
 	my $base64 = encode_base64( $self->keybin, '' );
 	my @server = map $_->string, @{$self->{servers}};
-	my @rdata = $self->pkalgorithm, $self->hit, $base64, @server;
+	my @rdata = ( $self->pkalgorithm, $self->hit, $base64, @server );
 }
 
 
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(pkalgorithm hit key);
+	foreach (qw(pkalgorithm hit key)) { $self->$_(shift) }
 	$self->servers(@_);
 }
 
@@ -175,7 +175,6 @@ The hexadecimal representation of the host identity tag.
 The binary representation of the host identity tag.
 
 =head2 pubkey
-
 
 =head2 key
 

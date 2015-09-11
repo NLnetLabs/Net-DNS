@@ -36,8 +36,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my ( $offset, @opaque ) = @_;
 
 	my $exchange = $self->{exchange} || return '';
-	my $rdata = pack 'n', $self->preference;
-	$rdata .= $exchange->encode( $offset + length($rdata), @opaque );
+	pack 'n a*', $self->preference, $exchange->encode( $offset + 2, @opaque );
 }
 
 

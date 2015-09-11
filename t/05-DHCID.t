@@ -83,7 +83,14 @@ my $wire = '0002014f6266757363617465644964656e7469747944617461';
 
 
 {
-	my $rr = new Net::DNS::RR("$name $type @data");
+	my $hash = {};
+	@{$hash}{@attr} = @data;
+
+	my $rr = new Net::DNS::RR(
+		name => $name,
+		type => $type,
+		%$hash
+		);
 	$rr->print;
 }
 

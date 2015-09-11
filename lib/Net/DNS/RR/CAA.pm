@@ -45,7 +45,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $tag = $self->{tag} || return '';
-	my @rdata = $self->flags, $tag->string, $self->{value}->string;
+	my @rdata = ( $self->flags, $tag->string, $self->{value}->string );
 }
 
 

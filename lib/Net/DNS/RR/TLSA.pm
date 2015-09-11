@@ -48,7 +48,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	return '' unless defined $self->{certbin};
 	my @babble = BABBLE ? ( join '', ';', $self->babble, "\n" ) : ();
 	my @cert = split /(\S{64})/, $self->cert;
-	my @rdata = $self->usage, $self->selector, $self->matchingtype, @cert, @babble;
+	my @rdata = ( $self->usage, $self->selector, $self->matchingtype, @cert, @babble );
 }
 
 
@@ -162,7 +162,6 @@ presented by the server will be matched against the association data.
 is presented.
 
 =head2 certificate
-
 
 =head2 cert
 

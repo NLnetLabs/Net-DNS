@@ -34,7 +34,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	pack 'a*', $self->keysbin || '';
+	pack 'a*', $self->keysbin;
 }
 
 

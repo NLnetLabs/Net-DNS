@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 18;
+use Test::More tests => 24;
 
 
 use Net::DNS;
@@ -29,7 +29,6 @@ my $wire = '002513138916cb3c70c310df00988550';
 		type => $type,
 		%$hash
 		);
-
 
 	my $string = $rr->string;
 	my $rr2	   = new Net::DNS::RR($string);
@@ -63,6 +62,15 @@ my $wire = '002513138916cb3c70c310df00988550';
 	is( length($rxbin),  length($null), 'decoded RDATA can be empty' );
 	is( length($rxtext), length($null), 'string RDATA can be empty' );
 }
+
+
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach (@attr) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
+
 
 exit;
 

@@ -64,7 +64,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{algorithm};
+	return '' unless defined $self->{algorithm};
 	my $gatetype   = $self->gatetype;
 	my $gateway    = $self->{gateway};
 	my $precedence = $self->precedence;
@@ -90,17 +90,17 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{algorithm};
+	return '' unless defined $self->{algorithm};
 	my @params = map $self->$_, qw(precedence gatetype algorithm);
 	my @base64 = split /\s+/, encode_base64( $self->keybin );
-	my @rdata = @params, $self->gateway, @base64;
+	my @rdata = ( @params, $self->gateway, @base64 );
 }
 
 
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->$_(shift) for qw(precedence gatetype algorithm gateway);
+	foreach (qw(precedence gatetype algorithm gateway)) { $self->$_(shift) }
 	$self->key(@_);
 }
 
@@ -248,7 +248,6 @@ The gateway field indicates a gateway to which an IPsec tunnel may be
 created in order to reach the entity named by this resource record.
 
 =head2 pubkey
-
 
 =head2 key
 

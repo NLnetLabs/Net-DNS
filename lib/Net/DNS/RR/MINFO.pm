@@ -35,17 +35,17 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	return '' unless $self->{emailbx};
+	my $emailbx = $self->{emailbx} || return '';
 	my $rdata = $self->{rmailbx}->encode(@_);
-	$rdata .= $self->{emailbx}->encode( $offset + length $rdata, @opaque );
+	$rdata .= $emailbx->encode( $offset + length $rdata, @opaque );
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{emailbx};
-	join ' ', map $self->{$_}->string, qw(rmailbx emailbx);
+	my $emailbx = $self->{emailbx} || return '';
+	my @rdata = ( $self->{rmailbx}->string, $emailbx->string );
 }
 
 

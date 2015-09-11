@@ -36,18 +36,18 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	return '' unless $self->{mapx400};
+	my $mapx400 = $self->{mapx400} || return '';
 	my $rdata = pack( 'n', $self->{preference} );
-	$rdata .= $self->{map822}->encode( $offset + length($rdata), @opaque );
-	$rdata .= $self->{mapx400}->encode( $offset + length($rdata), @opaque );
+	$rdata .= $self->{map822}->encode( $offset + 2, @opaque );
+	$rdata .= $mapx400->encode( $offset + length($rdata), @opaque );
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{mapx400};
-	join ' ', $self->preference, $self->{map822}->string, $self->{mapx400}->string;
+	my $mapx400 = $self->{mapx400} || return '';
+	join ' ', $self->preference, $self->{map822}->string, $mapx400->string;
 }
 
 

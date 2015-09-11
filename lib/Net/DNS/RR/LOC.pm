@@ -43,8 +43,14 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{longitude};
-	my ( $alt, @other ) = map $self->$_() . 'm', qw(altitude size hp vp);
-	my @rdata = ( $self->latitude, '', $self->longitude, '', $alt, join ' ', @other );
+	my ( $altitude, @precision ) = map $self->$_() . 'm', qw(altitude size hp vp);
+	my $precision = join ' ', @precision;
+	for ($precision) {
+		s/\s+10m$//;
+		s/\s+10000m$//;
+		s/\s*1m$//;
+	}
+	my @rdata = ( $self->latitude, '', $self->longitude, '', $altitude, $precision );
 }
 
 
@@ -68,9 +74,9 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	$self->longitude(@long);
 
 	foreach my $attr (qw(altitude size hp vp)) {
-		$self->$attr(shift) if scalar @_;
+		$self->$attr(@_);
+		shift;
 	}
-
 }
 
 
@@ -78,7 +84,9 @@ sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
 	$self->{version} = 0;
-	$self->_parse_rdata( 0, 0, 0, 1, 10000, 10 );
+	$self->size(1);
+	$self->hp(10000);
+	$self->vp(10);
 }
 
 
@@ -146,19 +154,19 @@ sub version {
 
 no integer;
 
-my $datum_alt = 10000000;
-my $datum_loc = 0x80000000;
+use constant ALTITUDE0 => 10000000;
+use constant LATITUDE0 => 0x80000000;
 
 sub _decode_lat {
-	my $msec = shift;
-	return int( 0.5 + ( $msec - $datum_loc ) / 0.36 ) / 10000000 unless wantarray;
+	my $msec = shift || LATITUDE0;
+	return int( 0.5 + ( $msec - LATITUDE0 ) / 0.36 ) / 10000000 unless wantarray;
 	use integer;
-	my $abs = abs( $msec - $datum_loc );
+	my $abs = abs( $msec - LATITUDE0 );
 	my $deg = int( $abs / 3600000 );
 	my $min = int( $abs / 60000 ) % 60;
 	no integer;
 	my $sec = ( $abs % 60000 ) / 1000;
-	return ( $deg, $min, $sec, ( $msec < $datum_loc ? 'S' : 'N' ) );
+	return ( $deg, $min, $sec, ( $msec < LATITUDE0 ? 'S' : 'N' ) );
 }
 
 
@@ -168,12 +176,12 @@ sub _encode_lat {
 	my $neg = ( @ang ? pop @ang : '' ) =~ /[SWsw]/;
 	$ang += ( @ang ? shift @ang : 0 ) * 60000;
 	$ang += ( @ang ? shift @ang : 0 ) * 1000;
-	return int( 0.5 + ( $neg ? $datum_loc - $ang : $datum_loc + $ang ) );
+	return int( 0.5 + ( $neg ? LATITUDE0 - $ang : LATITUDE0 + $ang ) );
 }
 
 
 sub _decode_alt {
-	my $cm = (shift) - $datum_alt;
+	my $cm = ( shift || ALTITUDE0 ) - ALTITUDE0;
 	return 0.01 * $cm;
 }
 
@@ -181,14 +189,14 @@ sub _decode_alt {
 sub _encode_alt {
 	( my $argument = shift ) =~ s/[Mm]$//;
 	$argument += 0;
-	return int( 0.5 + $datum_alt + 100 * $argument );
+	return int( 0.5 + ALTITUDE0 + 100 * $argument );
 }
 
 
-my @power10 = ( 0.01, 0.1, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e99 );
+my @power10 = ( 0.01, 0.1, 1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 0, 0, 0, 0, 0 );
 
 sub _decode_prec {
-	my $argument = shift;
+	my $argument = shift || 0;
 	my $mantissa = $argument >> 4;
 	return $mantissa * $power10[$argument & 0x0F];
 }

@@ -101,16 +101,17 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $certbin = $self->certbin || return '';
-	pack "n2 C a*", $self->certtype, $self->keytag, $self->algorithm, $certbin;
+	return '' unless defined $self->{certbin};
+	pack "n2 C a*", $self->certtype, $self->keytag, $self->algorithm, $self->{certbin};
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @base64 = split /\s+/, encode_base64( $self->certbin || return '' );
-	my @rdata = $self->certtype, $self->keytag, $self->algorithm, @base64;
+	return '' unless defined $self->{certbin};
+	my @base64 = split /\s+/, encode_base64( $self->{certbin} );
+	my @rdata = ( $self->certtype, $self->keytag, $self->algorithm, @base64 );
 }
 
 

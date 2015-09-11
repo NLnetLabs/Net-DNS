@@ -65,6 +65,7 @@ my $wire =
 
 
 	my $empty   = new Net::DNS::RR("$name $type");
+	my $nodata  = $empty->string;
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
 	my $hex1    = uc unpack 'H*', $decoded->encode;

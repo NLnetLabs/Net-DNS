@@ -32,17 +32,16 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{target};
-	my $rdata = pack 'n', $self->preference;
-	$rdata .= $self->{target}->encode();
+	my $target = $self->{target} || return '';
+	pack 'n a*', $self->preference, $target->encode();
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{target};
-	join ' ', $self->preference, $self->{target}->string;
+	my $target = $self->{target} || return '';
+	join ' ', $self->preference, $target->string;
 }
 
 
@@ -129,7 +128,6 @@ associated with this owner name.  Lower values are preferred over
 higher values.
 
 =head2 FQDN, fqdn
-
 
 =head2 target
 

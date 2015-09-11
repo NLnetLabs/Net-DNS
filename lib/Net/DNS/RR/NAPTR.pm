@@ -39,7 +39,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	return '' unless $self->{replacement};
+	return '' unless defined $self->{replacement};
 	my $rdata = pack 'n2', @{$self}{qw(order preference)};
 	$rdata .= $self->{flags}->encode;
 	$rdata .= $self->{service}->encode;
@@ -51,17 +51,16 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{replacement};
-	my @number = @{$self}{qw(order preference)};
-	my @string = map { $_->string } @{$self}{qw(flags service regexp replacement)};
-	my @rdata  = @number, @string;
+	return '' unless defined $self->{replacement};
+	my @order = @{$self}{qw(order preference)};
+	my @rdata = ( @order, map $_->string, @{$self}{qw(flags service regexp replacement)} );
 }
 
 
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	map { $self->$_(shift) } qw(order preference flags service regexp replacement);
+	foreach (qw(order preference flags service regexp replacement)) { $self->$_(shift) }
 }
 
 

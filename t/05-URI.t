@@ -44,9 +44,8 @@ my $wire = '000A00016674703A2F2F667470312E6578616D706C652E636F6D2F7075626C6963';
 	}
 
 
-	my $empty   = new Net::DNS::RR("$name NULL");
-	my $txtext  = new Net::DNS::RR("$name $type")->string;
-	my $rxtext  = new Net::DNS::RR($txtext)->encode;
+	my $empty   = new Net::DNS::RR("$name $type");
+	my $nodata  = $empty->string;
 	my $encoded = $rr->encode;
 	my $decoded = decode Net::DNS::RR( \$encoded );
 	my $hex1    = uc unpack 'H*', $decoded->encode;

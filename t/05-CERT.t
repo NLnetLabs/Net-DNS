@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 23;
+plan tests => 24;
 
 
 my $name = 'CERT.example';
@@ -76,9 +76,10 @@ my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f7071727374
 
 
 {
-	is( Net::DNS::RR->new("foo IN CERT 0 2 3 foo=")->certtype,  0, 'certtype may be zero' );
-	is( Net::DNS::RR->new("foo IN CERT 1 0 3 foo=")->keytag,    0, 'keytag may be zero' );
-	is( Net::DNS::RR->new("foo IN CERT 1 2 0 foo=")->algorithm, 0, 'algorithm may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 0 2 3 foo=")->certtype,  0,	'certtype may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 1 0 3 foo=")->keytag,    0,	'keytag may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 1 2 0 foo=")->algorithm, 0,	'algorithm may be zero' );
+	is( Net::DNS::RR->new("foo IN CERT 1 2 3 ''  ")->cert,	    '', 'cert may be empty' );
 }
 
 
@@ -86,7 +87,7 @@ my $wire = '00010002033132333435363738396162636465666768696a6b6c6d6e6f7071727374
 	my $rr = Net::DNS::RR->new("foo IN CERT 1 2 3 foo=");
 	is( $rr->algorithm('MNEMONIC'), 'DSA', 'algorithm mnemonic' );
 	$rr->algorithm(0);
-	is( $rr->algorithm('MNEMONIC'), 0, 'no algorithm mnemonic' );
+	is( $rr->algorithm('MNEMONIC'), 0, 'algorithm with no mnemonic' );
 
 	eval { $rr->algorithm('X'); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;

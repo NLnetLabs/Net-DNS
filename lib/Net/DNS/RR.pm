@@ -676,7 +676,7 @@ sub _subclass {
 	}
 
 	my $prebuilt = $default ? $_LOADED{$rrtype} : $_MINIMAL{$rrtype};
-	return bless {@$prebuilt}, ref($prebuilt);		# create object
+	bless {@$prebuilt}, ref($prebuilt);			# create object
 }
 
 

@@ -98,7 +98,7 @@ sub send {
 
 		my $defres = new Net::DNS::Resolver( retry => 1 );
 		my @config = $defres->nameservers( $res->hints );
-		$defres->nameservers( @config, $res->_hints );	# resolv.conf, hints, _hints
+		$defres->nameservers( @config, $res->_hints );	# hints, resolv.conf, _hints
 		$defres->udppacketsize(1280);
 
 		my $packet = $defres->send( '.', 'NS' );

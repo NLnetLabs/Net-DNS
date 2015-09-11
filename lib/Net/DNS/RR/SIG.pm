@@ -92,16 +92,14 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my @sig64 = split /\s+/, encode_base64( $self->sigbin );
-	my @rdata = map( $self->$_, @field ), $self->{signame}->string, @sig64;
+	my @rdata = ( map( $self->$_, @field ), $self->{signame}->string, @sig64 );
 }
 
 
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	for ( @field, qw(signame) ) {
-		$self->$_(shift);
-	}
+	foreach ( @field, qw(signame) ) { $self->$_(shift) }
 	$self->signature(@_);
 }
 

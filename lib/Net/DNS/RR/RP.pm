@@ -36,17 +36,17 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	return '' unless $self->{txtdname};
+	my $txtdname = $self->{txtdname} || return '';
 	my $rdata = $self->{mbox}->encode( $offset, @opaque );
-	$rdata .= $self->{txtdname}->encode( $offset + length($rdata), @opaque );
+	$rdata .= $txtdname->encode( $offset + length($rdata), @opaque );
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{mbox};
-	join ' ', map $self->{$_}->string, qw(mbox txtdname);
+	my $txtdname = $self->{txtdname} || return '';
+	my @rdata = ( $self->{mbox}->string, $txtdname->string );
 }
 
 

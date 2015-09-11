@@ -36,8 +36,8 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{typebm};
-	join '', $self->{nxtdname}->encode(), $self->{typebm};
+	my $nxtdname = $self->{nxtdname} || return '';
+	join '', $nxtdname->encode(), $self->{typebm};
 }
 
 
@@ -45,7 +45,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $nxtdname = $self->{nxtdname} || return '';
-	my @rdata = $nxtdname->string(), $self->typelist;
+	my @rdata = ( $nxtdname->string(), $self->typelist );
 }
 
 

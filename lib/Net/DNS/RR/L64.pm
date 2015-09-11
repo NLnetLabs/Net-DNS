@@ -31,7 +31,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{locator64};
+	return '' unless defined $self->{locator64};
 	pack 'n a8', $self->{preference}, $self->{locator64};
 }
 
@@ -39,8 +39,8 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{locator64};
-	return join ' ', $self->preference, $self->locator64;
+	return '' unless defined $self->{locator64};
+	join ' ', $self->preference, $self->locator64;
 }
 
 

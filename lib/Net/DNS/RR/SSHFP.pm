@@ -34,7 +34,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{fpbin};
+	return '' unless defined $self->{fpbin};
 	pack 'C2 a*', @{$self}{qw(algorithm fptype fpbin)};
 }
 
@@ -42,10 +42,10 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{fpbin};
+	return '' unless defined $self->{fpbin};
 	my @babble = BABBLE ? ( join '', ';', $self->babble, "\n" ) : ();
 	my @fprint = split /(\S{64})/, $self->fp;
-	my @rdata = $self->algorithm, $self->fptype, @fprint, @babble;
+	my @rdata = ( $self->algorithm, $self->fptype, @fprint, @babble );
 }
 
 
@@ -138,7 +138,6 @@ The 8-bit fingerprint type number describes the message-digest
 algorithm used to calculate the fingerprint of the public key.
 
 =head2 fingerprint
-
 
 =head2 fp
 

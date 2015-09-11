@@ -34,8 +34,8 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{address};
-	join '', $self->{address}->encode, $self->{sa}->encode;
+	my $address = $self->{address} || return '';
+	join '', $address->encode, $self->{sa}->encode;
 }
 
 
@@ -105,7 +105,6 @@ other unpredictable behaviour.
 
 
 =head2 ISDNaddress
-
 
 =head2 address
 

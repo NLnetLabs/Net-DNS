@@ -36,17 +36,17 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	return '' unless $self->{target};
-	my $nums = pack 'n3', $self->priority, $self->weight, $self->port;
-	$nums .= $self->{target}->encode( $offset + length($nums), @opaque );
+	my $target = $self->{target} || return '';
+	my @nums = ( $self->priority, $self->weight, $self->port );
+	pack 'n3 a*', @nums, $target->encode( $offset + 6, @opaque );
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{target};
-	my @rdata = $self->priority, $self->weight, $self->port, $self->{target}->string;
+	my $target = $self->{target} || return '';
+	my @rdata = ( $self->priority, $self->weight, $self->port, $target->string );
 }
 
 

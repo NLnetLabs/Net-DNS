@@ -28,7 +28,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 
 	my $limit = $offset + $self->{rdlength};
 
-	$self->{aplist} = [];
+	my $aplist = $self->{aplist} = [];
 	while ( $offset < $limit ) {
 		my $xlen = unpack "\@$offset x3 C", $$data;
 		my $size = ( $xlen & 0x7F );
@@ -36,7 +36,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 		$item->negate(1) if $xlen & 0x80;
 		@{$item}{qw(family prefix address)} = unpack "\@$offset n C x a$size", $$data;
 		$offset += $size + 4;
-		push @{$self->{aplist}}, $item;
+		push @$aplist, $item;
 	}
 	croak('corrupt APL data') unless $offset == $limit;	# more or less FUBAR
 }
@@ -45,22 +45,22 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $rdata = '';
-	return $rdata unless $self->{aplist};
-	foreach ( @{$self->{aplist}} ) {
+	my @rdata;
+	my $aplist = $self->{aplist} || [];
+	foreach (@$aplist) {
 		my $address = $_->{address};
 		my $xlength = $_->negate | length($address);
-		$rdata .= pack 'n C2 a*', @{$_}{qw(family prefix)}, $xlength, $address;
+		push @rdata, pack 'n C2 a*', @{$_}{qw(family prefix)}, $xlength, $address;
 	}
-	return $rdata;
+	join '', @rdata;
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{aplist};
-	my @rdata = map $_->string, @{$self->{aplist}};
+	my $aplist = $self->{aplist} || [];
+	my @rdata = map $_->string, @$aplist;
 }
 
 

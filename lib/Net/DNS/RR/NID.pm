@@ -31,7 +31,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{nodeid};
+	return '' unless defined $self->{nodeid};
 	pack 'n a8', $self->{preference}, $self->{nodeid};
 }
 
@@ -39,7 +39,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{nodeid};
+	return '' unless defined $self->{nodeid};
 	return join ' ', $self->preference, $self->nodeid;
 }
 
