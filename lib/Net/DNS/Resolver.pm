@@ -20,7 +20,9 @@ use vars qw(@ISA);
 BEGIN {
 	for ( $^O, 'UNIX' ) {
 		my $class = join '::', __PACKAGE__, $_;
-		return @ISA = ($class) if eval "require $class;";
+		local $SIG{__DIE__}  = sub { };
+		local $SIG{__WARN__} = sub { };
+		return @ISA = ($class) if scalar eval "require $class;";
 	}
 }
 

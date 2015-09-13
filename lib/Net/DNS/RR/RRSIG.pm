@@ -315,7 +315,9 @@ sub verify {
 	if (DNSSEC) {
 		my ( $self, $rrsetref, $keyref ) = @_;
 
-		print '$keyref argument is of class ', ref($keyref), "\n" if DEBUG;
+		croak '$keyref argument is scalar or undefined' unless ref($keyref);
+
+		print '$keyref argument is ', ref($keyref), "\n" if DEBUG;
 		if ( ref($keyref) eq "ARRAY" ) {
 
 			#  We will recurse for each key that matches algorithm and key-id

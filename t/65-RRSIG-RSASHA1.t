@@ -20,7 +20,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 29;
+plan tests => 30;
 
 use_ok('Net::DNS::SEC');
 
@@ -200,13 +200,15 @@ my @badrrset = ($bad1);
 	my $packet   = new Net::DNS::Packet();
 	my $dnskey   = new Net::DNS::RR( type => 'DNSKEY' );
 	my $dsrec    = new Net::DNS::RR( type => 'DS' );
+	my $scalar   = 'SCALAR';
 	my @testcase = (		## test verify() with invalid arguments
 		[$packet, $dnskey],
 		[$dnskey, $dsrec],
+		[$dnskey, $scalar],
 		);
 
 	foreach my $arglist (@testcase) {
-		my @argtype = map ref($_), @$arglist;
+		my @argtype = map ref($_) || $_, @$arglist;
 		eval { $object->verify(@$arglist); };
 		my $exception = $1 if $@ =~ /^(.*)\n*/;
 		ok( defined $exception, "verify(@argtype)\t[$exception]" );

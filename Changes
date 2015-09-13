@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.02 [unreleased]
 
+Fix rt.cpan.org #107052
+
+ 	suppress messages: Can't locate Net/DNS/Resolver/linux.pm
+
 Fix rt.cpan.org #106916
 
 	Dependency on MIME::Base32 makes Net::DNS not installable on MSWin32
