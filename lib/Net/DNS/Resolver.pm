@@ -17,18 +17,17 @@ use strict;
 
 use vars qw(@ISA);
 
-BEGIN {
-	for ( $^O, 'UNIX' ) {
-		my $class = join '::', __PACKAGE__, $_;
-		local $SIG{__DIE__}  = sub { };
-		local $SIG{__WARN__} = sub { };
-		return @ISA = ($class) if scalar eval "require $class;";
-	}
+
+local $SIG{__DIE__};
+local $SIG{__WARN__} = sub { };
+
+for ( $^O, 'UNIX' ) {
+	my @parent = ( join '::', __PACKAGE__, $_ );
+	@ISA = @parent if scalar eval "require @parent";
+	last if @ISA;
 }
 
-
 die 'failed to load platform specific resolver component' unless @ISA;
-
 
 1;
 
