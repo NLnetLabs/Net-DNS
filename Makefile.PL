@@ -47,7 +47,7 @@ my %prerequisite = (
 	Digest::MD5  => 2.13,
 	Digest::SHA  => 5.23,
 	File::Spec   => 0.86,
-	IO::Socket   => 1.24,
+	IO::Socket   => 1.16,
 	MIME::Base64 => 2.11,
 	Time::Local  => 1.19,
 	Test::More   => 0.52,
@@ -58,7 +58,9 @@ my %optional = (
 	Net::DNS::SEC	     => 1.01,
 	Digest::BubbleBabble => 0.01,
 	Digest::GOST	     => 0.06,
+	IO::Socket::INET     => 1.25,
 	IO::Socket::INET6    => 2.01,
+	IO::Socket::IP	     => 0.29,
 	Net::LibIDN	     => 0.12,
 	);
 

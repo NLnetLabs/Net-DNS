@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 59;
+use Test::More tests => 62;
 
 
 use constant LIBUTF8 => scalar eval {
@@ -23,9 +23,7 @@ use constant LIBIDNOK => scalar eval {
 
 
 
-BEGIN {
-	use_ok('Net::DNS::Domain');
-}
+use_ok('Net::DNS::Domain');
 
 
 {
@@ -65,11 +63,19 @@ BEGIN {
 
 
 {
-	my $domain = new Net::DNS::Domain('');
-	is( $domain->name,   '.', 'name: DNS root represented as single dot' );
-	is( $domain->fqdn,   '.', 'fqdn: DNS root represented as single dot' );
-	is( $domain->xname,  '.', 'xname: DNS root represented as single dot' );
-	is( $domain->string, '.', 'string: DNS root represented as single dot' );
+	my $domain = new Net::DNS::Domain('name');
+	is( $domain->name,   'name',  '$domain->name() without trailing dot' );
+	is( $domain->fqdn,   'name.', '$domain->fqdn() with trailing dot' );
+	is( $domain->string, 'name.', '$domain->string() with trailing dot' );
+}
+
+
+{
+	my $root = new Net::DNS::Domain('.');
+	is( $root->name,   '.', '$root->name() represented by single dot' );
+	is( $root->fqdn,   '.', '$root->fqdn() represented by single dot' );
+	is( $root->xname,  '.', '$root->xname() represented by single dot' );
+	is( $root->string, '.', '$root->string() represented by single dot' );
 }
 
 

@@ -15,19 +15,13 @@ Net::DNS::Resolver - DNS resolver class
 
 use strict;
 
-use vars qw(@ISA);
+use constant OS_CONF => "Net::DNS::Resolver::$^O";
+use constant DEFAULT => "Net::DNS::Resolver::UNIX";
 
+use constant CONFIG => scalar eval join ' ', 'require', OS_CONF;
 
-local $SIG{__DIE__};
-local $SIG{__WARN__} = sub { };
+use base ( CONFIG ? OS_CONF : DEFAULT );
 
-for ( $^O, 'UNIX' ) {
-	my @parent = ( join '::', __PACKAGE__, $_ );
-	@ISA = @parent if scalar eval "require @parent";
-	last if @ISA;
-}
-
-die 'failed to load platform specific resolver component' unless @ISA;
 
 1;
 

@@ -25,8 +25,7 @@ eval {
 	exit plan skip_all => "Local nameserver broken" unless scalar @ns;
 
 	1;
-};
-# } || exit( plan skip_all => "Non-responding local nameserver" );
+} || exit( plan skip_all => "Non-responding local nameserver" );
 
 
 eval {
@@ -39,8 +38,7 @@ eval {
 	exit plan skip_all => "Unexpected response from root server" unless scalar @ns;
 
 	1;
-};
-# } || exit( plan skip_all => "Unable to access global root nameservers" );
+} || exit( plan skip_all => "Unable to access global root nameservers" );
 
 
 plan 'no_plan';

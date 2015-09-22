@@ -3,7 +3,7 @@
 use strict;
 use Test::More;
 
-use Net::DNS;
+use Net::DNS::Packet;
 use Net::DNS::Parameters;
 
 my @op = keys %Net::DNS::Parameters::opcodebyname;
@@ -103,9 +103,9 @@ like( $header->string, '/adcount = 0/',	    'string() has adcount correct' );
 #
 my $rr = new Net::DNS::RR('example.com. 10800 A 192.0.2.1');
 my @rr = ( $rr, $rr );
-$packet->push( prereq	  => nxrrset('foo.example.com. A'), $rr );
-$packet->push( update	  => $rr,			    @rr );
-$packet->push( additional => @rr,			    @rr );
+$packet->push( prereq	  => $rr );
+$packet->push( update	  => $rr, @rr );
+$packet->push( additional => @rr, @rr );
 
 is( $header->zocount, $header->qdcount, 'zocount value matches qdcount' );
 is( $header->prcount, $header->ancount, 'prcount value matches ancount' );

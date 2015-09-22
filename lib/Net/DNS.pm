@@ -73,7 +73,7 @@ sub mx {
 	# Then we return the list.
 
 	my @list = sort { $a->preference <=> $b->preference }
-			grep { $_->type eq 'MX' } $ans->answer
+			grep $_->type eq 'MX', $ans->answer
 			if $ans;
 	return @list;
 }
@@ -405,28 +405,27 @@ date information to remain useful.
 
 =head1 Sorting of RR arrays
 
-As of version 0.55 there is functionality to help you sort RR arrays.
-rrsort() is the function that is available to do the sorting. In most
-cases rrsort() will give you the answer that you want but you can specify
-your own sorting method by using the Net::DNS::RR::FOO->set_rrsort_func()
-class method. See Net::DNS::RR for details.
+rrsort() provides functionality to help you sort RR arrays. In most cases
+rrsort() will give you the answer that you want, but you can specify your
+own sorting method by using the Net::DNS::RR::FOO->set_rrsort_func() class
+method. See Net::DNS::RR for details.
 
 =head2 rrsort()
 
-    use Net::DNS qw(rrsort);
+    use Net::DNS 0.55;
 
-    @sorted = rrsort( $rrtype, $attribute, @rr_array );
+    my @sorted = rrsort( $rrtype, $attribute, @rr_array );
 
 rrsort() selects all RRs from the input array that are of the type defined
 by the first argument. Those RRs are sorted based on the attribute that is
 specified as second argument.
 
 There are a number of RRs for which the sorting function is defined in the
-code. The function can be overidden using the set_rrsort_func() method.
+code.
 
 For instance:
 
-    @prioritysorted = rrsort( "SRV", "priority", @rr_array );
+    my @prioritysorted = rrsort( "SRV", "priority", @rr_array );
 
 returns the SRV records sorted from lowest to highest priority and for
 equal priorities from highest to lowest weight.
@@ -434,15 +433,15 @@ equal priorities from highest to lowest weight.
 If the function does not exist then a numerical sort on the attribute
 value is performed.
 
-    @portsorted = rrsort( "SRV", "port", @rr_array );
+    my @portsorted = rrsort( "SRV", "port", @rr_array );
 
 If the attribute is not defined then either the default_sort() function or
 "canonical sorting" (as defined by DNSSEC) will be used.
 
 rrsort() returns a sorted array containing only elements of the specified
-RR type or undef.
+RR type.  Any other RR types are silently discarded.
 
-rrsort() returns undef when arguments are incorrect.
+rrsort() returns an empty list when arguments are incorrect.
 
 
 =head1 EXAMPLES

@@ -3,19 +3,21 @@
 use strict;
 use Test::More tests => 31;
 
-use Net::DNS;
 
-use constant DNSSEC => defined eval { require Net::DNS::SEC; };
-use constant INET6  => defined eval { require IO::Socket::INET6; };
-use constant LibIDN => defined eval { require Net::LibIDN; };
-
+my @module = qw(
+	IO::Socket
+	IO::Socket::INET
+	IO::Socket::INET6
+	IO::Socket::IP
+	Net::LibIDN
+	);
 
 diag("\n\nThese tests were run using:\n");
-diag("$^O, perl\t$]");
-diag("Net::DNS\t$Net::DNS::VERSION");
-diag("optional: Net::DNS::SEC\t$Net::DNS::SEC::VERSION") if DNSSEC;
-diag("optional: Net::LibIDN\t\t$Net::LibIDN::VERSION") if LibIDN;
-diag("optional: IO::Socket::INET6\t$IO::Socket::INET6::VERSION") if INET6;
+foreach my $module (@module) {
+	eval("require $module") || next;
+	diag sprintf "\t%-20s  %s", $module, $module->VERSION;
+}
+
 diag("set environment variable NET_DNS_DEBUG to get all versions\n\n");
 
 
