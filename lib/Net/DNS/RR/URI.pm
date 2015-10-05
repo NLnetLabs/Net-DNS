@@ -76,7 +76,7 @@ sub target {
 	my $self = shift;
 
 	$self->{target} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{target}->value if defined wantarray && $self->{target};
+	$self->{target}->value if $self->{target};
 }
 
 

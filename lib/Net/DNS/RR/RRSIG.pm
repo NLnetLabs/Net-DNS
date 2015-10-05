@@ -233,7 +233,7 @@ sub signame {
 	my $self = shift;
 
 	$self->{signame} = new Net::DNS::DomainName(shift) if scalar @_;
-	$self->{signame}->name if defined wantarray && $self->{signame};
+	$self->{signame}->name if $self->{signame};
 }
 
 

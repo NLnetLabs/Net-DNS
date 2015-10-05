@@ -6,6 +6,7 @@ package Net::DNS::Resolver::cygwin;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
+
 =head1 NAME
 
 Net::DNS::Resolver::cygwin - Cygwin resolver class
@@ -17,7 +18,7 @@ use strict;
 use base qw(Net::DNS::Resolver::Base);
 
 
-sub getregkey {
+sub _getregkey {
 	my $key = join '/', @_;
 
 	local *LM;
@@ -35,8 +36,8 @@ sub _untaint {
 }
 
 
-sub init {
-	my $defaults = shift->defaults;
+sub _init {
+	my $defaults = shift->_defaults;
 
 	local *LM;
 
@@ -52,21 +53,19 @@ sub init {
 	# Best effort to find a useful domain name for the current host
 	# if domain ends up blank, we're probably (?) not connected anywhere
 	# a DNS server is interesting either...
-	my $domain = getregkey( $root, 'Domain' ) || getregkey( $root, 'DhcpDomain' );
+	my $domain = _getregkey( $root, 'Domain' ) || _getregkey( $root, 'DhcpDomain' );
 
 	# If nothing else, the searchlist should probably contain our own domain
 	# also see below for domain name devolution if so configured
 	# (also remove any duplicates later)
-	my $devolution = getregkey( $root, 'UseDomainNameDevolution' );
-	my $searchlist = getregkey( $root, 'SearchList' );
-	my @searchlist = _untaint $domain;
-	$defaults->domain(@searchlist);
-	push @searchlist, split m/[\s,]+/, $searchlist;
+	my $devolution = _getregkey( $root, 'UseDomainNameDevolution' );
+	my $searchlist = _getregkey( $root, 'SearchList' );
+	my @searchlist = _untaint $domain, split m/[\s,]+/, $searchlist;
 
 
 	# This is (probably) adequate on NT4
 	my @nt4nameservers;
-	foreach ( grep length, getregkey( $root, 'NameServer' ), getregkey( $root, 'DhcpNameServer' ) ) {
+	foreach ( grep length, _getregkey( $root, 'NameServer' ), _getregkey( $root, 'DhcpNameServer' ) ) {
 		push @nt4nameservers, split m/[\s,]+/;
 		last;
 	}
@@ -85,7 +84,7 @@ sub init {
 		my @adapters = grep !/^\.\.?$/, readdir(LM);
 		closedir(LM);
 		foreach my $adapter (@adapters) {
-			my $ns = getregkey( $dnsadapters, $adapter, 'DNSServerAddresses' );
+			my $ns = _getregkey( $dnsadapters, $adapter, 'DNSServerAddresses' );
 			until ( length($ns) < 4 ) {
 				push @nameservers, join '.', unpack( 'C4', $ns );
 				substr( $ns, 0, 4 ) = '';
@@ -98,15 +97,15 @@ sub init {
 		my @ifacelist = grep !/^\.\.?$/, readdir(LM);
 		closedir(LM);
 		foreach my $iface (@ifacelist) {
-			my $ip = getregkey( $interfaces, $iface, 'DhcpIPAddress' )
-					|| getregkey( $interfaces, $iface, 'IPAddress' );
+			my $ip = _getregkey( $interfaces, $iface, 'DhcpIPAddress' )
+					|| _getregkey( $interfaces, $iface, 'IPAddress' );
 			next unless $ip;
 			next if $ip eq '0.0.0.0';
 
 			foreach (
 				grep length,
-				getregkey( $interfaces, $iface, 'NameServer' ),
-				getregkey( $interfaces, $iface, 'DhcpNameServer' )
+				_getregkey( $interfaces, $iface, 'NameServer' ),
+				_getregkey( $interfaces, $iface, 'DhcpNameServer' )
 				) {
 				push @nameservers, split m/[\s,]+/;
 				last;
@@ -133,9 +132,9 @@ sub init {
 			push @list, $entry unless $seen{$entry}++;
 		}
 	}
-	$defaults->searchlist( _untaint @list );
+	$defaults->searchlist(@list);
 
-	$defaults->read_env;
+	$defaults->_read_env;
 }
 
 

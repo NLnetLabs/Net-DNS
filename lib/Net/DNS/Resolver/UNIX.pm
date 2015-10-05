@@ -35,18 +35,22 @@ sub _untaint {
 }
 
 
-sub init {
-	my $defaults = shift->defaults;				# uncoverable pod
+sub _init {
+	my $defaults = shift->_defaults;
 
-	$defaults->read_config_file($_) for @resolv_conf;
+	foreach (@resolv_conf) {
+		$defaults->_read_config_file($_);
+	}
 
-	$defaults->domain( _untaint $defaults->domain );	# untaint config values
-	$defaults->searchlist( _untaint $defaults->searchlist );
-	$defaults->nameservers( _untaint $defaults->nameservers );
+	foreach my $attr (qw(nameservers searchlist)) {
+		$defaults->$attr( _untaint $defaults->$attr() );
+	}
 
-	$defaults->read_config_file($_) for @config_file;
+	foreach (@config_file) {
+		$defaults->_read_config_file($_);
+	}
 
-	$defaults->read_env;
+	$defaults->_read_env;
 }
 
 

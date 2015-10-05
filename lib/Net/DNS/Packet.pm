@@ -773,18 +773,18 @@ sub truncate {
 	}
 	$self->header->tc(1) if $tc;				# only set if truncated here
 
-	my @list;
-	my @rrset;
 	my %rrset;
+	my @order;
 	foreach my $item ( grep ref($_) ne ref($sigrr), @{$self->{additional}} ) {
 		my $name  = $item->{owner}->canonical;
 		my $class = $item->{class} || 0;
 		my $key	  = pack 'nna*', $class, $item->{type}, $name;
-		CORE::push @rrset, $key unless $rrset{$key};
+		CORE::push @order, $key unless $rrset{$key};
 		CORE::push @{$rrset{$key}}, $item;
 	}
 
-	foreach my $key (@rrset) {
+	my @list;
+	foreach my $key (@order) {
 		my $component = '';
 		my @item      = @{$rrset{$key}};
 		foreach my $item (@item) {

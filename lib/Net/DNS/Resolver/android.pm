@@ -36,25 +36,28 @@ sub _untaint {
 }
 
 
-sub init {
-	my $defaults = shift->defaults;				# uncoverable pod
+sub _init {
+	my $defaults = shift->_defaults;
 
-	$defaults->read_config_file($_) for @resolv_conf;
+	foreach (@resolv_conf) {
+		$defaults->_read_config_file($_);
+	}
 
-	my @nameservers;
+	my @nameservers = $defaults->nameservers;
 	for ( 1 .. 4 ) {
 		my $ret = `getprop net.dns$_` || next;
 		chomp $ret;
 		push @nameservers, $ret || next;
 	}
 
-	$defaults->domain( _untaint $defaults->domain );	# untaint config values
+	$defaults->nameservers( _untaint @nameservers );
 	$defaults->searchlist( _untaint $defaults->searchlist );
-	$defaults->nameservers( _untaint $defaults->nameservers(@nameservers) );
 
-	$defaults->read_config_file($_) for @config_file;
+	foreach (@config_file) {
+		$defaults->_read_config_file($_);
+	}
 
-	$defaults->read_env;
+	$defaults->_read_env;
 }
 
 

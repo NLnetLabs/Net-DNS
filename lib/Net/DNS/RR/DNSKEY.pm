@@ -20,7 +20,8 @@ Net::DNS::RR::DNSKEY - DNS DNSKEY resource record
 use integer;
 
 use Carp;
-use MIME::Base64;
+
+eval { require MIME::Base64 };
 
 #
 # source: http://www.iana.org/assignments/dns-sec-alg-numbers
@@ -95,7 +96,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{keybin};
-	my @base64 = split /\s+/, encode_base64( $self->{keybin} );
+	my @base64 = split /\s+/, MIME::Base64::encode( $self->{keybin} );
 	my $keytag = $self->keytag;
 	my @params = map $self->$_, qw(flags protocol algorithm);
 	my @rdata  = ( @params, @base64, "; Key ID = $keytag\n" );

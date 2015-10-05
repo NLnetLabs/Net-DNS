@@ -59,11 +59,11 @@ sub new {
 	s/>.*$//g;						# strip excess on right
 
 	s/\\\@/\\064/g;						# disguise escaped @
-	s/^(".*)\@(.*")/$1\\064$2/g;				# disguise quoted @
+	s/("[^"]*)\@([^"]*")/$1\\064$2/g;			# disguise quoted @
 
 	my ( $mbox, @host ) = split /\@/;			# split on @ if present
 	for ( $mbox ||= '' ) {
-		s/^"(.*)"/$1/;					# strip quotes
+		s/^.*"(.*)".*$/$1/;				# strip quotes
 		s/\\\./\\046/g;					# disguise escaped dot
 		s/\./\\046/g if @host;				# escape dots in local part
 	}
@@ -83,11 +83,14 @@ in RFC1035 section 8.
 =cut
 
 sub address {
+	return unless defined wantarray;
 	my @label = shift->label;
 	local $_ = shift(@label) || return '<>';
+	s/\\\\//g;						# delete escaped \
+	s/\\\d\d\d//g;						# delete non-printable
 	s/\\\./\./g;						# unescape dots
-	s/\\032/ /g;						# unescape space
-	s/^(.+)$/"$1"/ if /[^-.A-Za-z0-9]/;			# quote local part
+	s/[\\"]//g;						# delete \ "
+	s/^(.*)$/"$1"/ if /["(),:;<>@\[\\\]]/;			# quote local part
 	return $_ unless scalar(@label);
 	join '@', $_, join '.', @label;
 }
@@ -151,7 +154,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::DomainName>, RFC822, RFC1035, RFC5322
+L<perl>, L<Net::DNS>, L<Net::DNS::DomainName>, RFC1035, RFC5322 (RFC822)
 
 =cut
 

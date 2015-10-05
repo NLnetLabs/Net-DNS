@@ -104,6 +104,9 @@ Except for F</etc/resolv.conf>, files will only be read if owned by the
 effective userid running the program.  In addition, several environment
 variables may contain configuration information; see L</ENVIRONMENT>.
 
+Note that the domain and searchlist keywords are mutually exclusive.
+If both are present, the resulting behaviour is unspecified.
+
 On Windows systems, an attempt is made to determine the system defaults
 using the registry.  Systems with many dynamically configured network
 interfaces may confuse Net::DNS.
@@ -177,6 +180,7 @@ Domain name suffix to be appended to queries of unqualified names.
 For more information on any of these options, please consult the method
 of the same name.
 
+
 =head2 search
 
     $packet = $resolver->search( 'mailhost' );
@@ -213,6 +217,7 @@ Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
 If you need to examine the response packet, whether it contains
 any answers or not, use the send() method instead.
 
+
 =head2 query
 
     $packet = $resolver->query( 'mailhost' );
@@ -233,10 +238,13 @@ Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
 If you need to examine the response packet, whether it contains
 any answers or not, use the send() method instead.
 
+
 =head2 send
 
     $packet = $resolver->send( $packet );
+
     $packet = $resolver->send( 'mailhost.example.com' );
+    $packet = $resolver->query( '192.0.2.1' );
     $packet = $resolver->send( 'example.com', 'MX' );
     $packet = $resolver->send( 'annotation.example.com', 'TXT', 'HS' );
 
@@ -321,12 +329,6 @@ Gets or sets the nameservers to be queried.
 
 Also see the IPv6 transport notes below
 
-=head2 empty_nameservers
-
-    $resolver->empty_nameservers();
-
-Empties the list of nameservers.
- 
 =head2 print
 
     $resolver->print;
@@ -346,12 +348,6 @@ Returns a string representation of the resolver state.
 
 Gets or sets the resolver search list.
 
-=head2 empty_searchlist
-
-    $resolver->empty_searchlist();
-
-Empties the searchlist.
- 
 =head2 port
 
     print 'sending queries to port ', $resolver->port, "\n";
@@ -377,73 +373,74 @@ The default is 0, meaning any port.
 Gets or sets the source address from which queries are sent.
 Convenient for forcing queries from a specific interface on a
 multi-homed host.
-The default is 0.0.0.0, meaning any local address.
+The default is 0, meaning any local address.
+
 
 =head2 bgsend
 
-    $socket = $resolver->bgsend( $packet ) || die $resolver->errorstring;
+    $handle = $resolver->bgsend( $packet ) || die $resolver->errorstring;
 
-    $socket = $resolver->bgsend( 'mailhost.example.com' );
-    $socket = $resolver->bgsend( 'example.com', 'MX' );
-    $socket = $resolver->bgsend( 'annotation.example.com', 'TXT', 'HS' );
+    $handle = $resolver->bgsend( 'mailhost.example.com' );
+    $handle = $resolver->bgsend( '192.0.2.1' );
+    $handle = $resolver->bgsend( 'example.com', 'MX' );
+    $handle = $resolver->bgsend( 'annotation.example.com', 'TXT', 'HS' );
 
-Performs a background DNS query for the given name, i.e., sends a
-query packet to the first destination in the C<nameservers> list and
-returns immediately without waiting for a response.  The program can
-then perform other tasks while awaiting the response from the nameserver.
+Performs a background DNS query for the given name, returns immediately
+without waiting for a response.  The program can then perform other
+tasks while awaiting the response from the nameserver.
 
 The argument list can be either a C<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (IPv4 or IPv6),
 an appropriate PTR query will be performed.
 
-Returns an C<IO::Socket::INET> object or C<undef> on error in which
-case the reason for failure can be found through a call to the
-errorstring method.
+Returns an L<IO::Select> object which serves as a handle which is passed
+to subsequent invocations of the C<bgisready> and C<bgread> methods.
+Errors are indicated by returning C<undef> in which case the
+reason for failure can be found by calling the errorstring method.
 
-The program must determine when the socket is ready for reading and
-call C<bgread> to get the response packet.  Either C<bgisready> or
-C<IO::Select> may be used to find out if the socket is ready.
-
-C<bgsend> does not support persistent sockets.
+The program must determine when the underlying socket is ready for
+reading by calling C<bgisready>, then call C<bgread> to get the response. 
+C<bgread> returns C<undef> if no response is received or timeout occurred. 
 
 B<BEWARE>:
-C<bgsend> does not support the usevc option (TCP) and operates on UDP only.
 Answers may not fit in an UDP packet and might be truncated. Truncated 
 packets will B<not> be retried over TCP automatically and should be handled
 by the caller.
 
+
 =head2 bgread
 
-    $packet = $resolver->bgread($socket);
+    $packet = $resolver->bgread($handle);
+
     if ($packet->header->tc) { 
 	# Retry over TCP (blocking).
     }
-    undef $socket;
 
-Reads the answer from a background query (see L</bgsend>).  The argument
-is an C<IO::Socket> object returned by C<bgsend>.
+Reads the answer from a background query (see L</bgsend>).
+The argument is the handle returned by C<bgsend>.
 
-Returns a C<Net::DNS::Packet> object or C<undef> on error.
+Returns a C<Net::DNS::Packet> object or C<undef> if an error
+was encountered or the transaction timed out.
 
-The programmer should close or destroy the socket object after reading it.
 
 =head2 bgisready
 
-    $socket = $resolver->bgsend( 'foo.example.com' );
-    until ($resolver->bgisready($socket)) {
+    $handle = $resolver->bgsend( 'foo.example.com' );
+
+    until ($resolver->bgisready($handle)) {
 	# do some other processing
     }
-    $packet = $resolver->bgread($socket);
+
+    $packet = $resolver->bgread($handle);
+
     if ($packet->header->tc) { 
 	# Retry over TCP (blocking).
     }
-    $socket = undef;
 
-Determines whether a socket is ready for reading.  The argument is
-an C<IO::Socket> object returned by C<bgsend>.
-
-Returns true if the socket is ready, false if not.
+Returns true when the response is available for reading
+or the transaction timed out.
+The argument is the handle returned by C<bgsend>.
 
 
 =head2 tsig
@@ -726,8 +723,8 @@ take values are specified as C<option:value>.
 =head1 IPv6 TRANSPORT
 
 The Net::DNS::Resolver library will enable IPv6 transport if the
-appropriate libraries (Socket6 and IO::Socket::INET6) are available
-and the destination nameserver has at least one IPv6 address.
+appropriate libraries (IO::Socket::INET6 or IO::Socket::IP) are
+available and the destination nameserver has an IPv6 address.
 
 The force_v4(), force_v6() and prefer_v6() methods with a non-zero
 argument may be used to configure transport selection.
@@ -766,11 +763,6 @@ For example, if we wanted to cache lookups:
     }
 
 
-=head1 BUGS
-
-bgsend() does not honour the usevc flag and only uses UDP for transport.
-
-
 =head1 COPYRIGHT
 
 Copyright (c)1997-2000 Michael Fuhr.
@@ -779,7 +771,7 @@ Portions Copyright (c)2002-2004 Chris Reinhardt.
 
 Portions Copyright (c)2005 Olaf M. Kolkman, NLnet Labs.
 
-Portions Copyright (c)2014 Dick Franks.
+Portions Copyright (c)2014,2015 Dick Franks.
 
 All rights reserved.
 

@@ -62,7 +62,7 @@ sub mbox {
 	my $self = shift;
 
 	$self->{mbox} = new Net::DNS::Mailbox2535(shift) if scalar @_;
-	$self->{mbox}->address if defined wantarray && $self->{mbox};
+	$self->{mbox}->address if $self->{mbox};
 }
 
 
@@ -70,7 +70,7 @@ sub txtdname {
 	my $self = shift;
 
 	$self->{txtdname} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{txtdname}->name if defined wantarray && $self->{txtdname};
+	$self->{txtdname}->name if $self->{txtdname};
 }
 
 

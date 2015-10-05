@@ -88,7 +88,7 @@ sub tag {
 	my $self = shift;
 
 	$self->{tag} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{tag}->value if defined wantarray && $self->{tag};
+	$self->{tag}->value if $self->{tag};
 }
 
 
@@ -96,7 +96,7 @@ sub value {
 	my $self = shift;
 
 	$self->{value} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{value}->value if defined wantarray && $self->{value};
+	$self->{value}->value if $self->{value};
 }
 
 

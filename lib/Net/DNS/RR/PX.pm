@@ -72,7 +72,7 @@ sub map822 {
 	my $self = shift;
 
 	$self->{map822} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{map822}->name if defined wantarray && $self->{map822};
+	$self->{map822}->name if $self->{map822};
 }
 
 
@@ -80,7 +80,7 @@ sub mapx400 {
 	my $self = shift;
 
 	$self->{mapx400} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{mapx400}->name if defined wantarray && $self->{mapx400};
+	$self->{mapx400}->name if $self->{mapx400};
 }
 
 

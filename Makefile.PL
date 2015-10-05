@@ -233,7 +233,7 @@ sub MY::postamble {
 test_cover : pure_all
 	cover -delete
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
-	cover
+	cover -summary
 END
 
 }

@@ -85,7 +85,7 @@ sub algorithm {
 	my $self = shift;
 
 	$self->{algorithm} = new Net::DNS::DomainName(shift) if scalar @_;
-	$self->{algorithm}->name if defined wantarray && $self->{algorithm};
+	$self->{algorithm}->name if $self->{algorithm};
 }
 
 

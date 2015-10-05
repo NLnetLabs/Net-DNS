@@ -66,7 +66,7 @@ sub address {
 	my $self = shift;
 
 	$self->{address} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{address}->value if defined wantarray && $self->{address};
+	$self->{address}->value if $self->{address};
 }
 
 
@@ -74,7 +74,7 @@ sub sa {
 	my $self = shift;
 
 	$self->{sa} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{sa}->value if defined wantarray && $self->{sa};
+	$self->{sa}->value if $self->{sa};
 }
 
 

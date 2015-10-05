@@ -144,6 +144,7 @@ sub name {
 	my ($self) = @_;
 
 	return $self->{name} if defined $self->{name};
+	return unless defined wantarray;
 
 	my $lref = $self->{label};
 	my $head = _decode_ascii( join chr(46), map _escape($_), @$lref );

@@ -16,7 +16,7 @@ my @hints = new Net::DNS::Resolver::Recurse()->_hints;
 
 
 eval {
-	my $res = new Net::DNS::Resolver( retry => 1 );
+	my $res = new Net::DNS::Resolver();
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
 	my $reply = $res->send( ".", "NS" ) || die;
@@ -29,8 +29,8 @@ eval {
 
 
 eval {
-	my $res = new Net::DNS::Resolver( retry => 1 );
-	exit plan skip_all => "No nameservers" unless $res->nameservers(@hints);
+	my $res = new Net::DNS::Resolver( nameservers => [@hints] );
+	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
 	my $reply = $res->send( ".", "NS" ) || die;
 
@@ -45,12 +45,11 @@ plan 'no_plan';
 
 NonFatalBegin();
 
+
 {
 	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
 
 	ok( $res->isa('Net::DNS::Resolver::Recurse'), 'new() created object' );
-
-	$res->udp_timeout(20);
 
 	my $packet = $res->query_dorecursion( "www.google.com.", "A" );
 	ok( $packet, 'got a packet' );
@@ -61,8 +60,6 @@ NonFatalBegin();
 {
 	# test hints()
 	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
-
-	$res->udp_timeout(20);
 
 	ok( scalar( $res->hints(@hints) ), "hints() set" );
 
@@ -100,7 +97,7 @@ NonFatalBegin();
 			$count++;
 		} );
 
-	$res->query_dorecursion( '2a04:b900:0:0:8:0:0:60', 'A' );
+	$res->query_dorecursion( '2a04:b900:0:0:8:0:0:60', 'PTR' );
 
 	ok( $count >= 3, "Reverse lookup took $count queries" );
 }

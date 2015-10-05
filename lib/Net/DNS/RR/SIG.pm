@@ -34,8 +34,9 @@ Net::DNS::RR::SIG - DNS SIG resource record
 use integer;
 
 use Carp;
-use MIME::Base64;
 use Time::Local;
+
+eval { require MIME::Base64 };
 
 use Net::DNS::Parameters;
 
@@ -91,7 +92,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @sig64 = split /\s+/, encode_base64( $self->sigbin );
+	my @sig64 = split /\s+/, MIME::Base64::encode( $self->sigbin );
 	my @rdata = ( map( $self->$_, @field ), $self->{signame}->string, @sig64 );
 }
 
@@ -272,7 +273,7 @@ sub signame {
 	my $self = shift;
 
 	$self->{signame} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{signame}->name if defined wantarray && $self->{signame};
+	$self->{signame}->name if $self->{signame};
 }
 
 

@@ -20,10 +20,11 @@ Net::DNS::RR::TSIG - DNS TSIG resource record
 use integer;
 
 use Carp;
-use Digest::HMAC;
-use Digest::MD5;
-use Digest::SHA;
-use MIME::Base64;
+
+eval { require Digest::HMAC };
+eval { require Digest::MD5 };
+eval { require Digest::SHA };
+eval { require MIME::Base64 };
 
 use Net::DNS::DomainName;
 use Net::DNS::Parameters;
@@ -142,8 +143,7 @@ sub _defaults {				## specify RR attribute default values
 sub _size {				## estimate encoded size
 	my $self = shift;
 	my $clone = bless {%$self}, ref($self);			   # shallow clone
-	$clone->macbin( $clone->_mac_function('dummy') );
-	length $clone->encode();
+	length $clone->encode( 0, undef, new Net::DNS::Packet() );
 }
 
 

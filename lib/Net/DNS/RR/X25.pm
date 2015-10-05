@@ -57,7 +57,7 @@ sub address {
 	my $self = shift;
 
 	$self->{address} = new Net::DNS::Text(shift) if scalar @_;
-	$self->{address}->value if defined wantarray && $self->{address};
+	$self->{address}->value if $self->{address};
 }
 
 
@@ -88,7 +88,6 @@ other unpredictable behaviour.
 
 
 =head2 PSDNaddress
-
 
 =head2 address
 

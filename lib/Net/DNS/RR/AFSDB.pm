@@ -68,7 +68,7 @@ sub hostname {
 	my $self = shift;
 
 	$self->{hostname} = new Net::DNS::DomainName2535(shift) if scalar @_;
-	$self->{hostname}->name if defined wantarray && $self->{hostname};
+	$self->{hostname}->name if $self->{hostname};
 }
 
 

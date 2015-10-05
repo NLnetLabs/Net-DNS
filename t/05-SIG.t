@@ -16,7 +16,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 70;
+plan tests => 72;
 
 
 my $name = '.';
@@ -121,7 +121,7 @@ my $wire =
 
 
 {
-	my $object   = new Net::DNS::RR( type => $type );
+	my $object   = new Net::DNS::RR(". $type");
 	my $class    = ref($object);
 	my $scalar   = '';
 	my %testcase = (		## test callable with invalid arguments
@@ -138,7 +138,8 @@ my $wire =
 		my $arglist = $testcase{$method};
 		$object->{algorithm} = 0;			# induce exception
 		no strict q/refs/;
-		eval { &{"$class::$method"}(@$arglist); };
+		my $subroutine = join '::', $class, $method;
+		eval { &$subroutine(@$arglist); };
 		my $exception = $1 if $@ =~ /^(.*)\n*/;
 		ok( defined $exception, "$method method callable\t[$exception]" );
 	}
@@ -147,6 +148,7 @@ my $wire =
 
 {
 	my %testcase = (		## test time conversion edge cases
+		-1	   => '21060207062815',
 		0x00000000 => '19700101000000',
 		0x7fffffff => '20380119031407',
 		0x80000000 => '20380119031408',

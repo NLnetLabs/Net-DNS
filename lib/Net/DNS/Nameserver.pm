@@ -87,10 +87,9 @@ sub new {
 			ref $self{LocalAddr}
 			? @{$self{LocalAddr}}
 			: ( $self{LocalAddr} || DEFAULT_ADDR );
-	my $resolver = new Net::DNS::Resolver;
+	my $resolver = new Net::DNS::Resolver( nameservers => [@LocalAddr] );
 	$resolver->force_v4(1) unless $has_inet6;
-	$resolver->empty_nameservers;
-	my @localaddresses = $resolver->nameservers(@LocalAddr);
+	my @localaddresses = $resolver->nameservers;
 
 	my $port = $self{LocalPort} || DEFAULT_PORT;
 	$self{Truncate}	   = 1	 unless defined( $self{Truncate} );

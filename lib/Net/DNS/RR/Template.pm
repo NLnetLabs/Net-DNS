@@ -126,7 +126,7 @@ sub foo {
 	my $self = shift;
 
 	$self->{foo} = new Net::DNS::DomainName(shift) if scalar @_;
-	$self->{foo}->name if defined wantarray && $self->{foo};
+	$self->{foo}->name if $self->{foo};
 }
 
 

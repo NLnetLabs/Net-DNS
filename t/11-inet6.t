@@ -2,10 +2,9 @@
 
 use strict;
 use Test::More;
+use t::NonFatal;
 
 use Net::DNS;
-use t::NonFatal;
-use Socket;
 
 my $debug = 0;
 
@@ -29,7 +28,7 @@ exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/IPv6.enabled';
 
 
 eval {
-	my $res = new Net::DNS::Resolver( retry => 1 );
+	my $res = new Net::DNS::Resolver();
 	exit plan skip_all => 'No nameservers' unless $res->nameservers;
 
 	my $reply = $res->send( '.', 'NS' ) || die;
@@ -42,7 +41,7 @@ eval {
 
 
 eval {
-	my $res = new Net::DNS::Resolver( retry => 1 );
+	my $res = new Net::DNS::Resolver();
 	exit plan skip_all => 'No IPv6 transport' unless $res->nameservers(@hints);
 
 	my $reply = $res->send( '.', 'NS' ) || die;

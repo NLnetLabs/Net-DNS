@@ -75,7 +75,7 @@ sub exchange {
 	my $self = shift;
 
 	$self->{exchange} = new Net::DNS::DomainName1035(shift) if scalar @_;
-	$self->{exchange}->name if defined wantarray && $self->{exchange};
+	$self->{exchange}->name if $self->{exchange};
 }
 
 

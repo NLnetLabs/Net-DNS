@@ -174,6 +174,7 @@ Character string representation of the text object.
 =cut
 
 sub value {
+	return unless defined wantarray;
 	my $self = shift;
 	_decode_utf8( join '', @$self );
 }

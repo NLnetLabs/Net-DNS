@@ -30,7 +30,7 @@ exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
 
 
 eval {
-	my $res = new Net::DNS::Resolver( retry => 1 );
+	my $res = new Net::DNS::Resolver();
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
 	my $reply = $res->send( ".", "NS" ) || die;
@@ -43,7 +43,7 @@ eval {
 
 
 eval {
-	my $res = new Net::DNS::Resolver( retry => 1 );
+	my $res = new Net::DNS::Resolver();
 	exit plan skip_all => "No nameservers" unless $res->nameservers(@hints);
 
 	my $reply = $res->send( ".", "NS" ) || die;
@@ -56,7 +56,7 @@ eval {
 
 
 eval {
-	my $res = new Net::DNS::Resolver( retry => 1 );
+	my $res = new Net::DNS::Resolver();
 
 	my $reply = $res->send( "a.t.", "A" ) || die;
 
@@ -259,27 +259,26 @@ SKIP: {
 	}
 
 
-	my $socket = $res->bgsend( 'a.t.net-dns.org', 'A' );
-	diag( join ' ', 'Error:', $res->errorstring, 'Socket ref:', ref($socket) )
-			unless ok( ref($socket) =~ /^IO::Socket::INET(6?)$/, "bgsend returns socket" );
+	my $handle = $res->bgsend( 'a.t.net-dns.org', 'A' );
+	ok( ref($handle), "bgsend returns handle" );
 	my $loop = 200000;
-	while ( $loop-- ) { }					# burn CPU to get the socket ready
+	while ( $loop-- ) { }					# burn CPU to get the handle ready
 
 	$loop = 6;
 	while ( $loop-- ) {
-		last if $res->bgisready($socket);
+		last if $res->bgisready($handle);
 		sleep(1);					# If burning CPU not sufficient
 	}
 
 
-	ok( $res->bgisready($socket), "Socket is ready" );
+	ok( $res->bgisready($handle), "Handle is ready" );
 SKIP: {
-		skip( "undefined socket", 7 ) unless $res->bgisready($socket);
+		skip( "undefined handle", 7 ) unless $res->bgisready($handle);
 		$res->debug(0);
-		my $packet = $res->bgread($socket);
+		my $packet = $res->bgread($handle);
 
 		skip( "undefined packet", 6 )
-				unless ok( $packet, "bgread( socket )" );
+				unless ok( $packet, "bgread( handle )" );
 
 		my $header = $packet->header;
 		my $from   = $packet->answerfrom || '';
@@ -287,7 +286,6 @@ SKIP: {
 		ok( $from, "answerfrom defined $from" );
 		ok( $size, "answersize defined $size" );
 
-		undef $socket;
 		skip( join( ' ', "Empty response from $from", "RCODE:", $header->rcode ), 3 )
 				unless ok( $header->ancount, "Received answer" );
 

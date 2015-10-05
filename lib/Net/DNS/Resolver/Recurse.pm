@@ -124,7 +124,7 @@ sub send {
 	my $domain = lc join( '.', @tail ) || '.';
 	my $nslist = $res->{cache}->{$domain} ||= [];
 	if ( scalar @$nslist ) {
-		$self->_diag(";; using cached nameservers for $domain\n");
+		$self->_diag("using cached nameservers for $domain");
 	} else {
 		$domain = lc $question->qname if $question->qtype ne 'NULL';
 		my $packet = $res->send( $domain, 'NULL', 'IN', $original );
@@ -145,11 +145,11 @@ sub send {
 
 		my %zone = reverse %auth;
 		foreach my $zone ( keys %zone ) {
-			$self->_diag(";; cache nameservers for $zone\n");
 			my @nsname = grep $auth{$_} eq $zone, keys %auth;
 			my @list = map $glue{$_} ? $glue{$_} : $_, @nsname;
 			@{$res->{cache}->{$zone}} = @list;
 			return $packet if length($zone) > length($domain);
+			$self->_diag("cache nameservers for $zone");
 			push @$nslist, @list;
 		}
 	}
@@ -180,7 +180,7 @@ sub send {
 	}
 
 	foreach my $ns ( grep !ref($_), @$nslist ) {
-		$self->_diag(";; find missing glue for $ns\n");
+		$self->_diag("find missing glue for $ns");
 		$ns = [$res->nameservers($ns)];			# substitute IP list in situ
 
 		# uncoverable branch true	# depends on external data
@@ -242,7 +242,7 @@ sub recursion_callback { &callback; }				# uncoverable pod
 
 sub _diag {				## debug output
 	my $self = shift;
-	print @_ if $self->{debug};				# uncoverable branch true
+	print "\n;; @_\n" if $self->{debug};			# uncoverable branch true
 }
 
 

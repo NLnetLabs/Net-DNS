@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 45;
+use Test::More tests => 43;
 
 
 BEGIN {
@@ -61,14 +61,12 @@ BEGIN {
 
 {
 	my %testcase = (
-		'"a b"@c.d'  => '"a b"@c.d',
-		'"a,b"@c.d'  => '"a,b"@c.d',
-		'"a.b"@c.d'  => 'a.b@c.d',
-		'"a@b"@c.d'  => '"a@b"@c.d',
-		'a\ b@c.d'   => '"a b"@c.d',
-		'a\032b@c.d' => '"a b"@c.d',
-		'a\@b.c.d'   => '"a@b"@c.d',
-		'a\@b@c.d'   => '"a@b"@c.d',
+		'"(a.b)"@c.d' => '"(a.b)"@c.d',
+		'"[a.b]"@c.d' => '"[a.b]"@c.d',
+		'"a,b"@c.d'   => '"a,b"@c.d',
+		'"a:b"@c.d'   => '"a:b"@c.d',
+		'"a;b"@c.d'   => '"a;b"@c.d',
+		'"a@b"@c.d'   => '"a@b"@c.d',
 		);
 
 	foreach my $test ( sort keys %testcase ) {

@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 95;
+use Test::More tests => 94;
 
 
 BEGIN {
@@ -266,11 +266,15 @@ BEGIN {
 
 {					## check plain format and long RR strings
 	foreach my $testcase (
-		['example.com SOA mname rname'],
 		[join( ' ', 'example.com TXT', ' text' x 30 )],
-		['example.com DNSKEY 257 3 13
-		z72glzDFUwYbpcruyKn+qYSbBGDymZJBt0wSFpY05Rfu
-		G32tqSqesr98/mt8i7fa4faC8UvmL2zjkOsTo3t2og=='],
+		['example.com.	600	IN	SOA	(
+				sns.dns.icann.org. noc.dns.icann.org.
+				2015082417	;serial
+				7200		;refresh
+				3600		;retry
+				1209600		;expire
+				3600		;minimum
+		)'],
 		) {
 		my $rr = new Net::DNS::RR(@$testcase);
 		my $test = new Net::DNS::RR( $rr->plain );

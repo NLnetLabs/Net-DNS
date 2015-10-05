@@ -6,6 +6,7 @@ package Net::DNS::Resolver::MSWin32;
 use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
+
 =head1 NAME
 
 Net::DNS::Resolver::MSWin32 - MS Windows resolver class
@@ -36,8 +37,8 @@ sub _untaint {
 }
 
 
-sub init {
-	my $defaults = shift->defaults;
+sub _init {
+	my $defaults = shift->_defaults;
 
 	my $debug = 0;
 
@@ -55,8 +56,7 @@ sub init {
 	$defaults->nameservers( _untaint @nameservers );
 
 	my $devolution = 0;
-	my @searchlist = _untaint lc $FIXED_INFO->{DomainName};
-	$defaults->domain(@searchlist);
+	my @searchlist = lc $FIXED_INFO->{DomainName};
 
 	if (WINREG) {
 
@@ -100,7 +100,7 @@ sub init {
 	}
 	$defaults->searchlist( _untaint @list );
 
-	$defaults->read_env;
+	$defaults->_read_env;
 }
 
 

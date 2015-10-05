@@ -49,11 +49,16 @@ my @rr = $source->read;
 
 
 {
+	my $tsig = Net::DNS::RR->new(
+                    name            => 'tsig.example',
+                    type            => 'TSIG',
+                    macbin    => 'dummy-signature'
+                    );
+
 	my $packet = new Net::DNS::Packet('query.example.');
 	$packet->push( answer	  => @rr );
 	$packet->push( authority  => @rr );
-	$packet->push( additional => @rr );
-	$packet->sign_tsig( 'tsig.example.', 'xdX9m8UtQNbJUzUgQ4xDtUNZAmU=' );
+	$packet->push( additional => @rr, $tsig );
 	my $unlimited = length $packet->data;
 	my %before    = map { ( $_, scalar $packet->$_ ) } qw(answer authority additional);
 	my $truncated = length $packet->data(512);		# explicit minimum size
@@ -75,7 +80,6 @@ my @rr = $source->read;
 	$packet->unique_push( authority => @auth );
 	$packet->push( additional => @rr );
 	$packet->edns->size(2048);				# + all bells and whistles
-	$packet->sign_tsig( 'tsig.example.', 'xdX9m8UtQNbJUzUgQ4xDtUNZAmU=' );
 	my $unlimited = length $packet->data;
 	my %before    = map { ( $_, scalar $packet->$_ ) } qw(answer authority additional);
 	my $truncated = length $packet->truncate;

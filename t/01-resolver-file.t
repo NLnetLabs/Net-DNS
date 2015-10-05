@@ -33,7 +33,7 @@ my @search = $res->searchlist;
 is( $search[0], 'net-dns.org',	   'searchlist correct' );
 is( $search[1], 'lib.net-dns.org', 'searchlist correct' );
 
-is( $res->domain, 't.net-dns.org', 'domain works' );
+is( $res->domain, 'net-dns.org', 'domain correct' );
 
 
 exit;

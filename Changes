@@ -1,6 +1,25 @@
 $Id$                       -*-text-*-
 
 
+**** 1.03 [unreleased]
+
+Fix rt.cpan.org #101978
+
+	Update Net::DNS to use IO::Socket::IP
+
+Fix rt.cpan.org #84375
+
+	Timeout doesn't work with bgsend/bgread
+
+Fix rt.cpan.org #47050
+
+	persistent sockets for Resolver::bg(send|read|isready)
+
+Fix rt.cpan.org #15515
+
+	bgsend on TCP
+
+
 **** 1.02 September 16, 2015
 
 Fix rt.cpan.org #107052
