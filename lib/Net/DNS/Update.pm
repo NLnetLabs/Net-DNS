@@ -52,9 +52,9 @@ Section 2.3).
 Programs must use the push() method to add RRs to the prerequisite,
 update, and additional sections before performing the update.
 
-Arguments are the zone name and the class.  If the zone is omitted,
-the default domain will be taken from the resolver configuration.
-If the class is omitted, it defaults to IN.
+Arguments are the zone name and the class.  The zone and class may
+be undefined or omitted and default to the default domain from the
+resolver configuration and IN respectively.
 
 =cut
 
@@ -62,14 +62,16 @@ sub new {
 	shift;
 	my ( $zone, @class ) = @_;
 
-	unless ( scalar @_ ) {
+	unless ( defined $zone ) {
 		require Net::DNS::Resolver;
 		my $resolver = new Net::DNS::Resolver();
 
-		($zone) = $resolver->searchlist;		# default from resolver config
+		$zone = $resolver->domain;			# default from resolver config
 	}
 
 	eval {
+		local $SIG{__DIE__};
+
 		my $self = __PACKAGE__->SUPER::new( $zone, 'SOA', @class );
 
 		my $header = $self->header;

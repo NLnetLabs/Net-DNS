@@ -41,8 +41,8 @@ eval {
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
-	exit plan skip_all => 'No IPv6 transport' unless $res->nameservers(@hints);
+	my $res = new Net::DNS::Resolver( nameservers => [@hints] );
+	exit plan skip_all => 'No IPv6 transport' unless $res->nameservers;
 
 	my $reply = $res->send( '.', 'NS' ) || die;
 
@@ -146,5 +146,6 @@ SKIP: {
 NonFatalEnd();
 
 exit;
+
 __END__
 

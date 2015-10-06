@@ -66,8 +66,7 @@ sub nodeid {
 
 	$self->{nodeid} = pack 'n4', map hex($_), split /:/, $idnt if defined $idnt;
 
-	sprintf '%0.4x:%0.4x:%0.4x:%0.4x', unpack 'n4', $self->{nodeid}
-			if defined wantarray && $self->{nodeid};
+	sprintf '%0.4x:%0.4x:%0.4x:%0.4x', unpack 'n4', $self->{nodeid} if $self->{nodeid};
 }
 
 

@@ -120,6 +120,8 @@ sub read {
 
 	return &_read unless ref $self;				# compatibility interface
 
+	local $SIG{__DIE__};
+
 	if (wantarray) {
 		my @zone;					# return entire zone
 		eval {
@@ -255,6 +257,7 @@ sub _read {
 	my $zonefile = new Net::DNS::ZoneFile( _filename($filename) );
 	my @zone;
 	eval {
+		local $SIG{__DIE__};
 		my $rr;
 		push( @zone, $rr ) while $rr = $zonefile->_getRR;
 	};

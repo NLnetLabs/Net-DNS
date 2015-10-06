@@ -52,6 +52,7 @@ you will get an error message and execution will be terminated.
 
 sub new {
 	return eval {
+		local $SIG{__DIE__};
 		local $SIG{__WARN__} = sub { die @_ };
 		scalar @_ > 2 ? &_new_hash : &_new_string;
 	} || do {

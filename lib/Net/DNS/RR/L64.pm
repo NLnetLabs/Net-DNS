@@ -66,8 +66,7 @@ sub locator64 {
 
 	$self->{locator64} = pack 'n4', map hex($_), split /:/, $prfx if defined $prfx;
 
-	sprintf '%x:%x:%x:%x', unpack 'n4', $self->{locator64}
-			if defined wantarray && $self->{locator64};
+	sprintf '%x:%x:%x:%x', unpack 'n4', $self->{locator64} if $self->{locator64};
 }
 
 

@@ -66,8 +66,7 @@ sub locator32 {
 
 	$self->{locator32} = pack 'C* @4', split /\./, $prfx if defined $prfx;
 
-	join '.', unpack 'C4', $self->{locator32}
-			if defined wantarray && $self->{locator32};
+	join '.', unpack 'C4', $self->{locator32} if $self->{locator32};
 }
 
 

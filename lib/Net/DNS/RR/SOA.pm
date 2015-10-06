@@ -106,7 +106,7 @@ sub serial {
 	return $self->{serial} = 0 + $value if _ordered( $self->{serial}, $value );
 
 	# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
-	my $serial = 0xFFFFFFFF & ( $self->{serial} || 0 );
+	my $serial = ( 0 + $self->{serial} ) & 0xFFFFFFFF;
 	return $self->{serial} = $serial ^ 0xFFFFFFFF if ( $serial & 0x7FFFFFFF ) == 0x7FFFFFFF;    # wrap
 	return $self->{serial} = $serial + 1;			# increment
 }

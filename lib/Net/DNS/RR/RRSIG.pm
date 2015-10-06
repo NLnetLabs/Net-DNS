@@ -420,6 +420,10 @@ my $y1998 = timegm( 0, 0, 0, 1, 0, 1998 );
 my $y2026 = timegm( 0, 0, 0, 1, 0, 2026 );
 my $y2082 = $y2026 << 1;
 my $y2054 = $y2082 - $y1998;
+my $m2026 = int( 0x80000000 - $y2026 );
+my $m2054 = int( 0x80000000 - $y2054 );
+my $t2082 = int( $y2082 & 0x7FFFFFFF );
+my $t2100 = 1960058752;
 
 sub _string2time {			## parse time specification string
 	my $arg = shift;
@@ -440,16 +444,26 @@ sub _string2time {			## parse time specification string
 sub _time2string {			## format time specification string
 	my $arg = shift;
 	croak 'undefined time' unless defined $arg;
-	unless ( $arg < 0 ) {
-		my ( $yy, $mm, @dhms ) = reverse( ( gmtime $arg )[0 .. 5] );
-		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1900, $mm + 1, @dhms;
-	} elsif ( $arg > $y2082 ) {
-		$arg += 86400 unless $arg < $y2054 + 1456704000;      # expunge 29 Feb 2100
-		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $arg - $y2054 ) )[0 .. 5] );
-		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1984, $mm + 1, @dhms;
+	my $ls31 = int( $arg & 0x7FFFFFFF );
+	if ( $arg & 0x80000000 ) {
+
+		if ( $ls31 > $t2082 ) {
+			$ls31 += 86400 unless $ls31 < $t2100;	# expunge 29 Feb 2100
+			my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 + $m2054 ) )[0 .. 5] );
+			return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1984, $mm + 1, @dhms;
+		}
+
+		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 + $m2026 ) )[0 .. 5] );
+		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
+
+
+	} elsif ( $ls31 > $y2026 ) {
+		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 - $y2026 ) )[0 .. 5] );
+		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
 	}
-	my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $arg - $y2026 ) )[0 .. 5] );
-	return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
+
+	my ( $yy, $mm, @dhms ) = reverse( ( gmtime $ls31 )[0 .. 5] );
+	return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1900, $mm + 1, @dhms;
 }
 
 

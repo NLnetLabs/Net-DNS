@@ -38,17 +38,13 @@ sub _untaint {
 sub _init {
 	my $defaults = shift->_defaults;
 
-	foreach (@resolv_conf) {
-		$defaults->_read_config_file($_);
-	}
+	map $defaults->_read_config_file($_), @resolv_conf;
 
 	foreach my $attr (qw(nameservers searchlist)) {
 		$defaults->$attr( _untaint $defaults->$attr() );
 	}
 
-	foreach (@config_file) {
-		$defaults->_read_config_file($_);
-	}
+	map $defaults->_read_config_file($_), @config_file;
 
 	$defaults->_read_env;
 }

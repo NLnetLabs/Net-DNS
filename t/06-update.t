@@ -1,10 +1,9 @@
 # $Id$  -*-perl-*-
 
-use Test::More tests => 86;
 use strict;
+use Test::More tests => 84;
 
-
-BEGIN { use_ok('Net::DNS'); }
+use Net::DNS;
 
 
 sub is_empty {
@@ -49,17 +48,7 @@ my $rdata  = "10.1.2.3";
 
 
 {
-	my $default = 'example.com';
-	my ($zone) = eval {
-		local $ENV{'RES_SEARCHLIST'} = $default;	# overides config files
-		my $update = new Net::DNS::Update();
-		my @domain = map $_->name, $update->zone;
-	};
-	is( $zone, $default, 'using default domain' );
-}
-
-
-{
+	local $ENV{'LOCALDOMAIN'};				# overides config files
 	my $packet = eval { new Net::DNS::Update(undef); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "argument undefined\t[$exception]" );
@@ -134,7 +123,7 @@ my $rdata  = "10.1.2.3";
 
 {
 	my @arg = ( name => $name );
-	my $rr	= yxdomain(@arg);
+	my $rr = yxdomain(@arg);
 
 	ok( $rr, "yxdomain(@arg)" );
 	is( $rr->name,	$name, 'yxdomain - right name' );
@@ -163,7 +152,7 @@ my $rdata  = "10.1.2.3";
 
 {
 	my @arg = ( name => $name );
-	my $rr	= nxdomain(@arg);
+	my $rr = nxdomain(@arg);
 
 	ok( $rr, "nxdomain(@arg)" );
 	is( $rr->name,	$name,	'nxdomain - right name' );

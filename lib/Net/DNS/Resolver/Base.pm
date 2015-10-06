@@ -222,7 +222,6 @@ sub _read_config_file {			## read resolver config file
 
 	open( FILE, $file ) or croak "Could not open $file: $!";
 
-	local $SIG{__WARN__} = sub { die @_ };
 	local $_;
 	while (<FILE>) {
 		s/[;#].*$//;					# strip comments
@@ -363,7 +362,7 @@ sub nameservers {
 	return @returnval;
 }
 
-sub nameserver { &nameservers; }					# uncoverable pod
+sub nameserver { &nameservers; }				# uncoverable pod
 
 sub _cname_addr {
 
@@ -873,13 +872,15 @@ sub _make_query_packet {
 }
 
 
+my $null_iter = sub {undef};
+
 sub axfr {				## zone transfer
 	my $self = shift;
 
 	my $whole = wantarray;
 	my @null;
-	my $query = $self->_axfr_start(@_) || return $whole ? @null : sub {undef};
-	my $reply = $self->_axfr_next()	   || return $whole ? @null : sub {undef};
+	my $query = $self->_axfr_start(@_) || return $whole ? @null : $null_iter;
+	my $reply = $self->_axfr_next()	   || return $whole ? @null : $null_iter;
 	my @rr	  = $reply->answer;
 	my $soa	  = $rr[0];
 	my $verfy = $query->sigrr();
@@ -928,14 +929,16 @@ sub axfr {				## zone transfer
 
 
 sub axfr_start {			## historical
-	my $self = shift;						# uncoverable pod
+								# uncoverable subroutine
+	my $self = shift;					# uncoverable pod
 	my $iter = $self->{axfr_iter} = $self->axfr(@_);
 	return defined($iter) || undef;
 }
 
 
 sub axfr_next {				## historical
-	my $self = shift;						# uncoverable pod
+								# uncoverable subroutine
+	my $self = shift;					# uncoverable pod
 	my $iter = $self->{axfr_iter} || return undef;
 	$iter->() || return $self->{axfr_iter} = undef;
 }
@@ -1057,6 +1060,7 @@ sub tsig {
 
 	return $self->{tsig_rr} unless scalar @_;
 	$self->{tsig_rr} = eval {
+		local $SIG{__DIE__};
 		require Net::DNS::RR::TSIG;
 		Net::DNS::RR::TSIG->create(@_);
 	} || croak "$@\nunable to create TSIG record";
@@ -1329,9 +1333,8 @@ sub udppacketsize {
 #
 my $warned;
 
-sub make_query_packet {			## historical
+sub make_query_packet {						# uncoverable subroutine
 	&_make_query_packet;					# uncoverable pod
-
 	carp 'deprecated method; see RT#37104' unless $warned++;
 }
 
@@ -1341,8 +1344,6 @@ sub _diag {				## debug output
 	print "\n;; @_\n" if $self->{debug};
 }
 
-
-sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 use vars qw($AUTOLOAD);
 
