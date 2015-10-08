@@ -174,9 +174,10 @@ t/06-packet-unique-push.t
 t/06-update.t
 t/07-rrsort.t
 t/07-zonefile.t
+t/08-IPv4.t
+t/08-IPv6.t
 t/08-online.t
 t/10-recurse.t
-t/11-inet6.t
 t/21-TSIG-create.t
 t/22-TSIG-verify.t
 t/31-NSEC-typelist.t

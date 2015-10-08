@@ -19,7 +19,7 @@ eval {
 	my $res = new Net::DNS::Resolver();
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
-	my $reply = $res->send( ".", "NS" ) || die;
+	my $reply = $res->send( ".", "NS" ) || return 0;
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
 	exit plan skip_all => "Local nameserver broken" unless scalar @ns;
@@ -32,10 +32,11 @@ eval {
 	my $res = new Net::DNS::Resolver( nameservers => [@hints] );
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
-	my $reply = $res->send( ".", "NS" ) || die;
+	my $reply = $res->send( ".", "NS" ) || return 0;
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
-	exit plan skip_all => "Unexpected response from root server" unless scalar @ns;
+	my @root = grep $_->nsdname =~ /^[a-m]\.root-servers\.net$/i, @ns;
+	exit plan skip_all => "Unexpected response from root server" unless scalar @root;
 
 	1;
 } || exit( plan skip_all => "Unable to access global root nameservers" );

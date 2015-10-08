@@ -140,6 +140,7 @@ my %public_attr = map { $_ => $_ } qw(
 		dnssec
 		adflag
 		cdflag
+		prefer_v4
 		prefer_v6
 		);
 
@@ -857,7 +858,7 @@ sub _make_query_packet {
 	$header->cd(1) if $self->{cdflag};			# RFC6840, 5.9
 
 	if ( $self->dnssec ) {
-		print ";; Set EDNS DO flag\n" if $self->{debug};
+		$self->_diag('Set EDNS DO flag');
 		$header->ad(0);
 		$header->do(1);
 	}
@@ -885,17 +886,17 @@ sub axfr {				## zone transfer
 	my $soa	  = $rr[0];
 	my $verfy = $query->sigrr();
 	$verfy = $reply->verify($query) || croak $reply->verifyerr if $verfy;
-	print ';; ', $verfy ? '' : 'not ', "verified\n" if $self->{debug};
+	$self->_diag( $verfy ? 'verified' : 'not verified' );
 
 	if ($whole) {
 		my @zone = shift @rr;
 
-		until ( scalar @rr && $rr[$#rr]->type eq 'SOA' ) {
+		until ( scalar(@rr) && $rr[$#rr]->type eq 'SOA' ) {
 			push @zone, @rr;			# unpack non-terminal packet
 			@rr    = @null;
 			$reply = $self->_axfr_next() || last;
 			$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
-			print ';; ', $verfy ? '' : 'not ', "verified\n" if $self->{debug};
+			$self->_diag( $verfy ? 'verified' : 'not verified' );
 			@rr = $reply->answer;
 		}
 
@@ -921,7 +922,7 @@ sub axfr {				## zone transfer
 
 		$reply = $self->_axfr_next() || return undef;	# end of packet
 		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
-		print ';; ', $verfy ? '' : 'not ', "verified\n" if $self->{debug};
+		$self->_diag( $verfy ? 'verified' : 'not verified' );
 		@rr = $reply->answer;
 		return $rr;
 	};
@@ -929,15 +930,13 @@ sub axfr {				## zone transfer
 
 
 sub axfr_start {			## historical
-								# uncoverable subroutine
 	my $self = shift;					# uncoverable pod
 	my $iter = $self->{axfr_iter} = $self->axfr(@_);
-	return defined($iter) || undef;
+	return defined($iter);
 }
 
 
 sub axfr_next {				## historical
-								# uncoverable subroutine
 	my $self = shift;					# uncoverable pod
 	my $iter = $self->{axfr_iter} || return undef;
 	$iter->() || return $self->{axfr_iter} = undef;
@@ -946,22 +945,22 @@ sub axfr_next {				## historical
 
 sub _axfr_start {
 	my $self  = shift;
-	my $dname = shift || $self->{searchlist}->[0];
-	my $class = shift || 'IN';
+	my $dname = shift || $self->domain;
+	my @class = @_;
 
 	unless ($dname) {
 		$self->_diag( $self->errorstring('no zone specified') );
 		return;
 	}
 
-	$self->_diag("axfr_start( $dname, $class )");
+	$self->_diag("axfr_start( $dname, @class )");
 
-	my $packet = $self->_make_query_packet( $dname, 'AXFR', $class );
+	my $packet = $self->_make_query_packet( $dname, 'AXFR', @class );
 
 	foreach my $ns ( $self->nameservers ) {
-		$self->_diag("axfr_start nameserver [$ns]");
-
 		my $sock = $self->_create_tcp_socket($ns) || next;
+
+		$self->_diag("axfr_start nameserver [$ns]");
 
 		my $packet_data = $packet->data;
 		my $TCP_msg = pack 'n a*', length($packet_data), $packet_data;
@@ -1333,7 +1332,7 @@ sub udppacketsize {
 #
 my $warned;
 
-sub make_query_packet {						# uncoverable subroutine
+sub make_query_packet {			## historical
 	&_make_query_packet;					# uncoverable pod
 	carp 'deprecated method; see RT#37104' unless $warned++;
 }
@@ -1346,6 +1345,8 @@ sub _diag {				## debug output
 
 
 use vars qw($AUTOLOAD);
+
+sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
 sub AUTOLOAD {				## Default method
 	my ($self) = @_;
