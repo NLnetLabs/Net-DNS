@@ -53,22 +53,15 @@ eval {
 } || exit( plan skip_all => 'Unable to access global root nameservers' );
 
 
-plan tests => 20;
-
-
-NonFatalBegin();
-
-
 my $res = Net::DNS::Resolver->new( prefer_v6 => 1 );
 
 my $IP;
 
-
 # query local nameserver using any available transport
 my $nsanswer = $res->send( 'net-dns.org', 'NS', 'IN' );
-is( ( $nsanswer->answer )[0]->type, 'NS', 'got NS records for net-dns.org' );
 
 foreach my $ns ( $nsanswer->answer ) {
+	next unless $ns->type eq 'NS';
 
 	# assume any net-dns.org nameserver will do
 	my $qtype = 'AAAA';
@@ -81,7 +74,12 @@ foreach my $ns ( $nsanswer->answer ) {
 	last;
 }
 
-ok( defined($IP), 'got IP address of nameserver' );
+exit( plan skip_all => 'Unable to access target nameserver' ) unless $IP;
+
+
+plan tests => 19;
+
+NonFatalBegin();
 
 
 {
@@ -168,11 +166,15 @@ ok( defined($IP), 'got IP address of nameserver' );
 #
 {
 	my $res = Net::DNS::Resolver->new( nameserver => $IP );
+	$res->tcp_timeout(10);
 	$res->tsig( 'MD5.example', 'ARDJZgtuTDzAWeSGYPAu9uJUkX0=' );
+
 	my $iter = $res->axfr('example.com');
 	is( ref($iter), 'CODE', 'axfr returns CODE ref' );
-	my ($rr) = $iter->();
-	is( $res->errorstring, 'RCODE from server: NOTAUTH', 'connection worked (NOTAUTH)' );
+	like( $res->errorstring, '/RCODE/', 'RCODE from server: NOTAUTH' );
+
+	my @zone = eval { $res->axfr('example.com') };
+	ok( $res->errorstring, 'axfr in list context' );
 
 	ok( $res->axfr_start('example.com'), 'axfr_start	(historical)' );
 	is( $res->axfr_next(), undef, 'axfr_next' );

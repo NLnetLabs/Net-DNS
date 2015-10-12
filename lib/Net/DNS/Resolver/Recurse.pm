@@ -86,43 +86,28 @@ sub send {
 	return &Net::DNS::Resolver::Base::send if ref $_[1];	# send Net::DNS::Packet
 
 	my $self = shift;
-	my $res	 = bless {cache => {}, %$self}, ref($self);	# Note: cache discarded after query
+	my $res = bless {cache => {'.' => $root}, %$self}, ref($self);
 
 	my $question = new Net::DNS::Question(@_);
 	my $original = pop(@_);					# sneaky extra argument needed
 	$original = $question unless ref($original);		# to preserve original request
 
 	my ( $head, @tail ) = $question->{qname}->label;
-	unless ( defined $head ) {
-		return $root if $root;				# root servers cached indefinitely
-
-		my $defres = new Net::DNS::Resolver( retry => 1 );
-		my @config = $defres->nameservers( $res->hints );
-		$defres->nameservers( @config, $res->_hints );	# hints, resolv.conf, _hints
-		$defres->udppacketsize(1280);
-
-		my $packet = $defres->send( '.', 'NS' );
-		my %glue;
-
-		# uncoverable branch false	# depends on external data
-		if ($packet) {
-			my @rr = $packet->answer, $packet->authority;
-			my @auth = grep $_->type eq 'NS', @rr;
-			my %auth = map { lc $_->nsdname => 1 } @auth;
-			my @glue = grep $auth{lc $_->name}, $packet->additional;
-			foreach ( grep $_->can('address'), @glue ) {
-				push @{$glue{lc $_->name}}, $_->address;
-			}
-		}
-
-		$defres->nameservers( $res->_hints );
-		$defres->nameservers( map @$_, values %glue );
-		$defres->recurse(0);
-		return $root = $defres->send( '.', 'NS' );	# authoritative server
-	}
-
 	my $domain = lc join( '.', @tail ) || '.';
 	my $nslist = $res->{cache}->{$domain} ||= [];
+	unless ( defined $head ) {
+		$root = $nslist;				# root servers cached indefinitely
+
+		my $defres = new Net::DNS::Resolver();
+		my @config = $defres->nameservers( $res->hints );
+
+		my $packet = $defres->send( '.', 'NS' );
+		$defres->nameservers( $res->_hints );
+		$defres->recurse(0);
+		$packet = $defres->send( '.', 'NS' ) unless $packet;	# uncoverable branch true
+		return $packet;
+	}
+
 	if ( scalar @$nslist ) {
 		$self->_diag("using cached nameservers for $domain");
 	} else {

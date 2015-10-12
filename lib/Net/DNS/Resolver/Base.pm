@@ -72,7 +72,7 @@ sub _untaint {
 {
 	my $defaults = bless {
 		nameserver4	=> ['127.0.0.1'],
-		nameserver6	=> ['::1'],
+		nameserver6	=> ( IPv6 ? ['::1'] : [] ),
 		port		=> 53,
 		srcaddr		=> 0,
 		srcport		=> 0,
@@ -229,16 +229,18 @@ sub _read_config_file {			## read resolver config file
 
 		/^nameserver/ && do {
 			my ( $keyword, @ip ) = grep defined, split;
-			push @ns, map $_ eq '0' ? '0.0.0.0' : $_, @ip;
+			push @ns, @ip;
 			next;
 		};
 
 		/^option/ && do {
-			my ( $keyword, $option ) = grep defined, split;
-			my ( $name, $val ) = split( m/:/, $option, 2 );
-			my $attribute = $resolv_conf{$name} || next;
-			$val = 1 unless defined $val;
-			$self->$attribute($val);
+			my ( $keyword, @option ) = grep defined, split;
+			foreach (@option) {
+				my ( $name, $val ) = split( m/:/, $_, 2 );
+				my $attribute = $resolv_conf{$name} || next;
+				$val = 1 unless defined $val;
+				$self->$attribute($val);
+			}
 			next;
 		};
 
@@ -255,17 +257,15 @@ sub _read_config_file {			## read resolver config file
 		};
 	}
 
-	close(FILE) || croak "close $file: $!";
+	close(FILE);
 
 	$self->nameservers(@ns);
 }
 
 
-sub print { print shift->string; }
-
-
 sub string {
 	my $self = shift;
+	$self = $self->_defaults unless ref($self);
 
 	my $IP6line = "prefer_v6\t= $self->{prefer_v6}\tforce_v6    = $self->{force_v6}";
 	my $IP6conf = IPv6 ? $IP6line : '(no IPv6 transport)';
@@ -289,6 +289,9 @@ END
 }
 
 
+sub print { print &string; }
+
+
 sub domain {
 	my $self = shift;
 	my @list = ( $self->searchlist(@_), '' );
@@ -297,6 +300,8 @@ sub domain {
 
 sub searchlist {
 	my $self = shift;
+	$self = $self->_defaults unless ref($self);
+
 	return $self->{searchlist} = [@_] unless defined wantarray;
 	$self->{searchlist} = [@_] if scalar @_;
 	my @searchlist = @{$self->{searchlist}};
@@ -309,7 +314,6 @@ sub nameservers {
 
 	my ( @ipv4, @ipv6 );
 	foreach my $ns (@_) {
-		croak 'nameservers: invalid argument' unless $ns;
 		do { push @ipv6, $ns; next } if _ip_is_ipv6($ns);
 		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
@@ -317,19 +321,17 @@ sub nameservers {
 			udp_timeout => $self->udp_timeout,
 			tcp_timeout => $self->tcp_timeout,
 			debug	    => $self->{debug} );
-		$defres->{cache} = $self->{cache} if $self->{cache};
+		$defres->{cache} = $self->{cache};
 
 		my $packet = $defres->search( $ns, 'A' );
 		$self->errorstring( $defres->errorstring );
-		my @names = ($ns);
-		push @names, $packet ? ( map $_->qname, $packet->question ) : ();
-		my @address = $packet ? _cname_addr( [@names], $packet ) : ();
+		my $names = {$ns => 1};
+		my @address = _cname_addr( $packet, $names );
 
 		if (IPv6) {
 			$packet = $defres->search( $ns, 'AAAA' );
 			$self->errorstring( $defres->errorstring );
-			push @names, $packet ? ( map $_->qname, $packet->question ) : ();
-			push @address, $packet ? _cname_addr( [@names], $packet ) : ();
+			push @address, _cname_addr( $packet, $names );
 		}
 
 		my %address = map { ( $_ => $_ ) } @address;	# tainted
@@ -341,17 +343,17 @@ sub nameservers {
 
 	unless ( defined wantarray ) {
 		$self->{nameserver4} = \@ipv4;
-		$self->{nameserver6} = \@ipv6;
+		$self->{nameserver6} = \@ipv6 if IPv6;
 		return;
 	}
 
 	if ( scalar @_ ) {
 		$self->{nameserver4} = \@ipv4;
-		$self->{nameserver6} = \@ipv6;
+		$self->{nameserver6} = \@ipv6 if IPv6;
 	}
 
 	my @ns4 = $self->force_v6 ? () : @{$self->{nameserver4}};
-	my @ns6 = IPv6 && !$self->force_v4 ? @{$self->{nameserver6}} : ();
+	my @ns6 = $self->force_v4 ? () : @{$self->{nameserver6}};
 	my @returnval = $self->prefer_v6 ? ( @ns6, @ns4 ) : ( @ns4, @ns6 );
 
 	return @returnval if scalar @returnval;
@@ -370,18 +372,19 @@ sub _cname_addr {
 	# TODO 20081217
 	# This code does not follow CNAME chains, it only looks inside the packet.
 	# Out of bailiwick will fail.
-	my $names  = shift;
-	my $packet = shift;
 	my @addr;
-	my @names = @{$names};
+	my $packet = shift || return @addr;
+	my $names = shift;
+
+	map $names->{$_->qname}++, $packet->question;
 
 	foreach my $rr ( $packet->answer ) {
-		next unless grep $rr->name, @names;
+		next unless $names->{$rr->name};
 
 		my $type = $rr->type;
-		push( @addr,  $rr->address ) if $type eq 'A';
-		push( @addr,  $rr->address ) if $type eq 'AAAA';
-		push( @names, $rr->cname )   if $type eq 'CNAME';
+		push( @addr, $rr->address ) if $type eq 'A';
+		push( @addr, $rr->address ) if $type eq 'AAAA';
+		$names->{$rr->cname}++ if $type eq 'CNAME';
 	}
 
 	return @addr;
@@ -440,13 +443,12 @@ sub search {
 
 		my $packet = $self->send( $fqname, @_ ) || return undef;
 
-		next unless ( $packet->header->rcode eq "NOERROR" );	# something
-								#useful happened
+		next unless ( $packet->header->rcode eq "NOERROR" );
 		return $packet if $packet->header->ancount;	# answer found
-		next unless $packet->header->qdcount;		# question empty?
 
-		last if ( $packet->question )[0]->qtype eq 'PTR';	# abort search if IP
+		last if grep $_->qtype eq 'PTR', $packet->question;    # reverse IP lookup
 	}
+
 	return undef;
 }
 
@@ -519,8 +521,7 @@ sub _send_tcp {
 		$self->_diag( 'sending', $length, 'bytes' );
 
 		unless ( $sock->send($tcp_packet) ) {
-			$self->errorstring($!);
-			$self->_diag( 'tcp send:', $! );
+			$self->_diag( 'tcp send:', $self->errorstring($!) );
 			next;
 		}
 
@@ -533,18 +534,11 @@ sub _send_tcp {
 			next unless $len;			# Cannot determine size
 
 			unless ( $sel->can_read($timeout) ) {
-				$self->errorstring('timeout');
-				$self->_diag('TIMEOUT');
+				$self->_diag( $self->errorstring('timeout') );
 				next;
 			}
 
 			$buf = _read_tcp( $sock, $len );
-
-			# Cannot use $sock->peerhost, because on some systems it
-			# returns garbage after reading from TCP. I have observed
-			# this myself on cygwin.
-			# -- Willem
-			#
 			$self->answerfrom($ns);
 
 			my $received = length $buf;
@@ -581,7 +575,6 @@ sub _send_tcp {
 	if ($lastanswer) {
 		$self->errorstring( $lastanswer->header->rcode );
 		return $lastanswer;
-
 	}
 
 	return;
@@ -600,12 +593,8 @@ sub _send_udp {
 	my @ns;
 
 	foreach my $ns ( $self->nameservers ) {
-		my $socket = $self->_create_udp_socket($ns);
-		next unless defined $socket;
-
-		my $dst_sockaddr = $self->_create_dst_sockaddr( $ns, $port );
-		next unless defined $dst_sockaddr;
-
+		my $socket = $self->_create_udp_socket($ns) || next;
+		my $dst_sockaddr = $self->_create_dst_sockaddr( $ns, $port ) || next;
 		push @ns, [$ns, $socket, $dst_sockaddr];
 	}
 
@@ -623,7 +612,7 @@ sub _send_udp {
 	# Perform each round of retries.
 RETRY: for ( my $i = 0 ; $i < $retry ; ++$i, $retrans *= 2 ) {
 
-		my $timeout = int( $retrans / ( scalar @ns || 1 ) );
+		my $timeout = int( $retrans / scalar(@ns) );
 		$timeout = 1 if $timeout < 1;
 
 		# Try each nameserver.
@@ -873,59 +862,52 @@ sub _make_query_packet {
 }
 
 
-my $null_iter = sub {undef};
-
 sub axfr {				## zone transfer
 	my $self = shift;
 
-	my $whole = wantarray;
-	my @null;
-	my $query = $self->_axfr_start(@_) || return $whole ? @null : $null_iter;
-	my $reply = $self->_axfr_next()	   || return $whole ? @null : $null_iter;
-	my @rr	  = $reply->answer;
-	my $soa	  = $rr[0];
-	my $verfy = $query->sigrr();
-	$verfy = $reply->verify($query) || croak $reply->verifyerr if $verfy;
-	$self->_diag( $verfy ? 'verified' : 'not verified' );
+	my $query = $self->_axfr_start(@_);
+	my $verfy = $query->sigrr;
+	my @rr;
+	my $soa;
 
-	if ($whole) {
-		my @zone = shift @rr;
-
-		until ( scalar(@rr) && $rr[$#rr]->type eq 'SOA' ) {
-			push @zone, @rr;			# unpack non-terminal packet
-			@rr    = @null;
-			$reply = $self->_axfr_next() || last;
-			$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
-			$self->_diag( $verfy ? 'verified' : 'not verified' );
-			@rr = $reply->answer;
-		}
-
-		my $last = pop @rr;				# unpack final packet
-		push @zone, @rr;
-		$self->{axfr_sel} = undef;
-		croak 'improperly terminated AXFR' unless $last && $last->encode eq $soa->encode;
-		return @zone;
-	}
-
-	return sub {			## iterator over RRs
-		my $rr = shift @rr;
-		croak 'improperly terminated AXFR' unless $rr;
+	my $iterator = sub {		## iterate over RRs
+		my $rr = shift(@rr);
 		return $rr if scalar @rr;
 
-		if ( $rr->type eq 'SOA' ) {
-			unless ( $rr eq $soa ) {		# start of zone
-				$self->{axfr_sel} = undef;	# end of zone
-				croak 'improperly terminated AXFR' unless $rr->encode eq $soa->encode;
-				return undef;
-			}
+		if ( ( ref($rr) eq 'Net::DNS::RR::SOA' ) && ( $rr ne $soa ) ) {
+			croak 'improperly terminated AXFR' unless $rr->encode eq $soa->encode;
+			return $self->{axfr_sel} = undef;
 		}
 
-		$reply = $self->_axfr_next() || return undef;	# end of packet
+		my $reply = $self->_axfr_next() || return $rr;	# end of packet
 		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
 		$self->_diag( $verfy ? 'verified' : 'not verified' );
 		@rr = $reply->answer;
 		return $rr;
 	};
+
+	$iterator->();						# read initial packet
+	($soa) = @rr;
+
+	return $iterator unless wantarray;
+
+	my @zone = shift @rr;					# initial SOA
+	my @null;
+
+	until ( scalar(@rr) && $rr[$#rr]->type eq 'SOA' ) {
+		push @zone, @rr;				# unpack non-terminal packet
+		@rr = @null;
+		my $reply = $self->_axfr_next() || last;
+		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
+		$self->_diag( $verfy ? 'verified' : 'not verified' );
+		@rr = $reply->answer;
+	}
+
+	my $last = pop @rr;					# unpack final packet
+	push @zone, @rr;
+	$self->{axfr_sel} = undef;
+	return @zone if $last && $last->encode eq $soa->encode;
+	croak 'improperly terminated AXFR';
 }
 
 
@@ -948,14 +930,9 @@ sub _axfr_start {
 	my $dname = shift || $self->domain;
 	my @class = @_;
 
-	unless ($dname) {
-		$self->_diag( $self->errorstring('no zone specified') );
-		return;
-	}
+	my $packet = $self->_make_query_packet( $dname, 'AXFR', @class );
 
 	$self->_diag("axfr_start( $dname, @class )");
-
-	my $packet = $self->_make_query_packet( $dname, 'AXFR', @class );
 
 	foreach my $ns ( $self->nameservers ) {
 		my $sock = $self->_create_tcp_socket($ns) || next;
@@ -984,18 +961,13 @@ sub _axfr_start {
 sub _axfr_next {
 	my $self = shift;
 
-	my $sel = $self->{axfr_sel};
-	unless ($sel) {
-		$self->_diag( $self->errorstring('no zone transfer in progress') );
-		return;
-	}
-
 	#--------------------------------------------------------------
 	# Read the length of the response packet.
 	#--------------------------------------------------------------
 
+	my $select  = $self->{axfr_sel} || return;
 	my $timeout = $self->{tcp_timeout};
-	my @ready   = $sel->can_read($timeout);
+	my @ready   = $select->can_read($timeout);
 	unless (@ready) {
 		$self->errorstring('timeout');
 		return;
@@ -1017,7 +989,7 @@ sub _axfr_next {
 	# Read the response packet.
 	#--------------------------------------------------------------
 
-	@ready = $sel->can_read($timeout);
+	@ready = $select->can_read($timeout);
 	unless (@ready) {
 		$self->errorstring('timeout');
 		return;
@@ -1099,8 +1071,7 @@ sub _read_tcp {
 			}
 		}
 
-		last unless length($read_buf);
-		$buf .= $read_buf;
+		$buf .= $read_buf if length($read_buf);
 	}
 
 	return $buf;
@@ -1191,9 +1162,7 @@ sub _create_udp_socket {
 
 	if ( IPv6 && _ip_is_ipv6($ns) ) {
 		$sock_key = 'UDP/IPv6';
-		if ( $self->{persistent_udp} ) {
-			return $sock if $sock = $self->{UDPsockets}{$sock_key};
-		}
+		return $sock if $sock = $self->{UDPsockets}{$sock_key};
 
 		$sock = IO::Socket::IP->new(
 			LocalAddr => ( $srcaddr =~ /[:]/ ? $srcaddr : '::' ),
@@ -1212,9 +1181,7 @@ sub _create_udp_socket {
 				if USE_SOCKET_INET6;
 	} else {
 		$sock_key = 'UDP/IPv4';
-		if ( $self->{persistent_udp} ) {
-			return $sock if $sock = $self->{UDPsockets}{$sock_key};
-		}
+		return $sock if $sock = $self->{UDPsockets}{$sock_key};
 
 		$sock = IO::Socket::IP->new(
 			LocalAddr => ( $srcaddr =~ /[.]/ ? $srcaddr : '0.0.0.0' ),
@@ -1233,12 +1200,8 @@ sub _create_udp_socket {
 				unless USE_SOCKET_IP;
 	}
 
-	unless ($sock) {
-		$self->_diag( $self->errorstring( 'could not get', $sock_key, 'socket' ) );
-	} elsif ( $self->{persistent_udp} ) {
-		$self->{UDPsockets}{$sock_key} = $sock;
-	}
-
+	$self->_diag( $self->errorstring( 'could not get', $sock_key, 'socket' ) ) unless $sock;
+	return $self->{UDPsockets}{$sock_key} = $sock if $self->{persistent_udp};
 	return $sock;
 }
 
@@ -1273,19 +1236,17 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 # Lightweight versions of subroutines from Net::IP module, recoded to fix RT#96812
 
 sub _ip_is_ipv4 {
-	return shift =~ /^[0-9.]+\.[0-9]+$/;			# dotted digits
+	for ( shift || return ) {
+		return /^[0-9.]+\.[0-9]+$/;			# dotted digits
+	}
 }
 
-
 sub _ip_is_ipv6 {
-
-	for (shift) {
+	for ( shift || return ) {
 		return 1 if /^[:0-9a-f]+:[0-9a-f]*$/i;		# mixed : and hexdigits
-		return 1 if /^[:0-9a-f]+:[0-9a-f]*[%].+$/i;	# RFC4007 scoped address
 		return 1 if /^[:0-9a-f]+:[0-9.]+$/i;		# prefix + dotted digits
+		return /^[:0-9a-f]+:[0-9a-f]*[%].+$/i;		# RFC4007 scoped address
 	}
-
-	return 0;
 }
 
 
@@ -1353,12 +1314,12 @@ sub AUTOLOAD {				## Default method
 
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
-	confess "'$name()' undefined" unless ref $self;
-	croak "$name: no such method" unless exists $public_attr{$name};
+	croak "$name: no such method" unless $public_attr{$name};
 
 	no strict q/refs/;
 	*{$AUTOLOAD} = sub {
 		my $self = shift;
+		$self = $self->_defaults unless ref($self);
 		$self->{$name} = shift if scalar @_;
 		return $self->{$name};
 	};

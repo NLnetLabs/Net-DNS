@@ -7,7 +7,7 @@ use Test::More tests => 10;
 local $ENV{'RES_NAMESERVERS'} = '10.0.3.128 10.0.4.128';
 local $ENV{'RES_SEARCHLIST'}  = 'net-dns.org lib.net-dns.org';
 local $ENV{'LOCALDOMAIN'}     = 'net-dns.org';
-local $ENV{'RES_OPTIONS'}     = 'retrans:3 retry:2 debug';
+local $ENV{'RES_OPTIONS'}     = 'retrans:3 retry:2 debug bogus';
 
 use Net::DNS;
 

@@ -2,21 +2,27 @@
 
 
 use strict;
-use Test::More tests => 37;
+use Test::More tests => 38;
 
 use File::Spec;
 use Net::DNS;
 
 
-my $object = Net::DNS::Resolver->new();
+# .txt because this test will run under windows, unlike the other file
+# configuration tests.
+my $test_file = File::Spec->catfile( 't', 'custom.txt' );		# redefines default config
+
+my $object = new Net::DNS::Resolver( config_file => $test_file );
 ok( $object->isa('Net::DNS::Resolver'), 'new() created object' );
 
 
-# .txt because this test will run under windows, unlike the other file
-# configuration tests.
-my $test_file = File::Spec->catfile( 't', 'custom.txt' );
+my $no_file = File::Spec->catfile( 't', 'nonexist.txt' );
+eval { new Net::DNS::Resolver( config_file => $no_file ); };		# presumed not to exist
+my $exception = $1 if $@ =~ /^(.+)\n/;
+ok( $exception ||= '', "new(): non-existent file\t[$exception]" );
 
-my $res = Net::DNS::Resolver->new( config_file => $test_file );
+
+my $res = new Net::DNS::Resolver( config_file => $test_file );
 
 my @servers = $res->nameservers;
 is( $servers[0], '10.0.1.42', 'nameserver list correct' );
