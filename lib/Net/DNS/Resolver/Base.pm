@@ -321,7 +321,6 @@ sub nameservers {
 			udp_timeout => $self->udp_timeout,
 			tcp_timeout => $self->tcp_timeout,
 			debug	    => $self->{debug} );
-		$defres->{cache} = $self->{cache};
 
 		my $packet = $defres->search( $ns, 'A' );
 		$self->errorstring( $defres->errorstring );

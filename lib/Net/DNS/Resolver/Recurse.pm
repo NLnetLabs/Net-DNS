@@ -100,10 +100,15 @@ sub send {
 
 		my $defres = new Net::DNS::Resolver();
 		my @config = $defres->nameservers( $res->hints );
-
 		my $packet = $defres->send( '.', 'NS' );
-		$defres->nameservers( $res->_hints );
+
+		# uncoverable branch false			# repeat using authoritative server
+		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority if $packet;
+		$defres->nameservers( map $_->nsdname, @auth );
 		$defres->recurse(0);
+		$packet = $defres->send( '.', 'NS' );
+
+		$defres->nameservers( $res->_hints );		# fall back on internal hints 
 		$packet = $defres->send( '.', 'NS' ) unless $packet;	# uncoverable branch true
 		return $packet;
 	}
@@ -113,9 +118,7 @@ sub send {
 	} else {
 		$domain = lc $question->qname if $question->qtype ne 'NULL';
 		my $packet = $res->send( $domain, 'NULL', 'IN', $original );
-
-		# uncoverable branch true	# depends on external data
-		return unless $packet;
+		return unless $packet;				# uncoverable branch true
 
 		my @answer = $packet->answer;			# return authoritative answer
 		return $packet if $packet->header->aa && grep $_->name eq $original->qname, @answer;
@@ -135,49 +138,30 @@ sub send {
 			@{$res->{cache}->{$zone}} = @list;
 			return $packet if length($zone) > length($domain);
 			$self->_diag("cache nameservers for $zone");
-			push @$nslist, @list;
+			@$nslist = @list;
 		}
 	}
+
 
 	my $query = new Net::DNS::Packet();
 	$query->push( question => $original );
 	$res->recurse(0);
 
-	my @a = grep ref($_), @$nslist;
-	splice @a, 0, 0, splice( @a, int( rand scalar @a ) );	# cut deck
+	splice @$nslist, 0, 0, splice( @$nslist, int( rand scalar @$nslist ) );	   # cut deck
 
-	foreach (@a) {
-		my @ns = $res->nameservers(@$_);
+	foreach my $ns (@$nslist) {
+		unless ( ref $ns ) {
+			$self->_diag("find missing glue for $ns");
+			$ns = [$res->nameservers($ns)];		# substitute IP list in situ
+		}
 
-		# uncoverable branch true	# depends on external data
-		next unless scalar @ns;
-
-		my $reply = $res->send($query);
-
-		# uncoverable branch true	# depends on external data
-		next unless $reply;
-
-		# uncoverable branch true	# depends on external data
-		next unless $reply->header->rcode eq 'NOERROR';
-
-		$self->_callback($reply);
-		return $reply;
-	}
-
-	foreach my $ns ( grep !ref($_), @$nslist ) {
-		$self->_diag("find missing glue for $ns");
-		$ns = [$res->nameservers($ns)];			# substitute IP list in situ
-
-		# uncoverable branch true	# depends on external data
-		next unless scalar @$ns;
+		my @ns = $res->nameservers(@$ns);
+		next unless scalar @ns;				# uncoverable branch true
 
 		my $reply = $res->send($query);
+		next unless $reply;				# uncoverable branch true
 
-		# uncoverable branch true	# depends on external data
-		next unless $reply;
-
-		# uncoverable branch true	# depends on external data
-		next unless $reply->header->rcode eq 'NOERROR';
+		next unless $reply->header->rcode eq 'NOERROR'; # uncoverable branch true
 
 		$self->_callback($reply);
 		return $reply;
