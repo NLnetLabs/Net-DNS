@@ -421,26 +421,23 @@ sub search {
 	my $self = shift;
 	my $name = shift || '.';
 
-	my $defdomain  = $self->{defnames} ? $self->domain	    : undef;
-	my @searchlist = $self->{dnsrch}   ? @{$self->{searchlist}} : ();
-
 	# resolve name by trying as absolute name, then applying searchlist
-	my @list = ( undef, @searchlist );
+	my @defdomain = grep $self->{defnames} && defined, $self->domain;
+	my @searchlist = $self->{dnsrch} ? ( undef, @{$self->{searchlist}} ) : @defdomain;
+
+	my @list;
 	for ($name) {
 
-		# resolve name with no dots or colons by applying searchlist (or domain)
-		@list = @searchlist ? @searchlist : ($defdomain) unless m/[:.]/;
-
-		# resolve name with trailing dot as absolute name
-		@list = (undef) if m/\.$/;
+		# resolve name with no dots or colons by applying searchlist
+		@list = m/[:.]/ ? (undef) : @searchlist;
 	}
 
 	foreach my $suffix (@list) {
-		my $fqname = join '.', $name, ( $suffix || () );
+		my $fqname = join '.', $name, grep defined, $suffix;
 
 		$self->_diag( 'search(', join( ', ', $fqname, @_ ), ')' );
 
-		my $packet = $self->send( $fqname, @_ ) || return undef;
+		my $packet = $self->send( $fqname, @_ ) || next;
 
 		next unless ( $packet->header->rcode eq "NOERROR" );
 		return $packet if $packet->header->ancount;	# answer found
@@ -457,16 +454,16 @@ sub query {
 	my $name = shift || '.';
 
 	# resolve name containing no dots or colons by appending domain
-	my @suffix = ( $name !~ m/[:.]/ && $self->{defnames} ) ? ( $self->domain || () ) : ();
+	my @domain = grep $self->{defnames} && defined, $self->domain;
+	my @suffix = $name =~ m/[:.]/ ? () : @domain;
 
 	my $fqname = join '.', $name, @suffix;
 
 	$self->_diag( 'query(', join( ', ', $fqname, @_ ), ')' );
 
-	my $packet = $self->send( $fqname, @_ ) || return undef;
+	my $packet = $self->send( $fqname, @_ ) || return;
 
-	return $packet if $packet->header->ancount;		# answer found
-	return undef;
+	return $packet->header->ancount ? $packet : undef;
 }
 
 

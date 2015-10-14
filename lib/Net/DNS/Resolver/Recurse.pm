@@ -155,7 +155,7 @@ sub send {
 			$ns = [$res->nameservers($ns)];		# substitute IP list in situ
 		}
 
-		my @ns = $res->nameservers(@$ns);
+		my @ns = $res->nameservers( map @$_, grep ref($_), @$nslist );
 		next unless scalar @ns;				# uncoverable branch true
 
 		my $reply = $res->send($query);
@@ -208,12 +208,6 @@ sub recursion_callback { &callback; }				# uncoverable pod
 
 
 ########################################
-
-sub _diag {				## debug output
-	my $self = shift;
-	print "\n;; @_\n" if $self->{debug};			# uncoverable branch true
-}
-
 
 {
 	require Net::DNS::ZoneFile;

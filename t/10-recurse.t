@@ -52,18 +52,6 @@ NonFatalBegin();
 
 	ok( $res->isa('Net::DNS::Resolver::Recurse'), 'new() created object' );
 
-	my $packet = $res->query_dorecursion( "www.google.com.", "A" );
-	ok( $packet, 'got a packet' );
-	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
-}
-
-
-{
-	# test hints()
-	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
-
-	ok( scalar( $res->hints(@hints) ), "hints() set" );
-
 	my $packet = $res->query_dorecursion( 'www.net-dns.org', 'A' );
 	ok( $packet, 'got a packet' );
 	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
@@ -101,6 +89,18 @@ NonFatalBegin();
 	$res->query_dorecursion( '2a04:b900:0:0:8:0:0:60', 'PTR' );
 
 	ok( $count >= 3, "Reverse lookup took $count queries" );
+}
+
+
+{
+	# test hints()
+	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
+
+	ok( scalar( $res->hints(@hints) ), "hints() set" );
+
+	my $packet = $res->query_dorecursion( "www.google.com.", "A" );
+	ok( $packet, 'got a packet' );
+	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
 }
 
 
