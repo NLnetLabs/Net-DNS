@@ -64,9 +64,7 @@ sub new {
 
 	unless ( defined $zone ) {
 		require Net::DNS::Resolver;
-		my $resolver = new Net::DNS::Resolver();
-
-		$zone = $resolver->domain;			# default from resolver config
+		($zone) = new Net::DNS::Resolver()->domain;	# default from resolver config
 	}
 
 	eval {

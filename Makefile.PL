@@ -207,11 +207,13 @@ if ($online_tests) {
 	}
 
 	$IPv6_tests = 1 unless defined $IPv6_tests;
-	if ( $IPv6_tests && defined $optional{IO::Socket::INET6} ) {
-		my $enable = 't/IPv6.enabled';
-		print "\nActivating IPv6 Tests...\n";
-		open( ENABLED, ">$enable" ) || die "Can't touch $enable $!";
-		close(ENABLED) || die "Can't touch $enable $!";
+	if ( $optional{IO::Socket::IP} || $optional{IO::Socket::INET6} ) {
+		if ($IPv6_tests) {
+			my $enable = 't/IPv6.enabled';
+			print "\nActivating IPv6 Tests...\n";
+			open( ENABLED, ">$enable" ) || die "Can't touch $enable $!";
+			close(ENABLED) || die "Can't touch $enable $!";
+		}
 	}
 
 	print <<EOT;

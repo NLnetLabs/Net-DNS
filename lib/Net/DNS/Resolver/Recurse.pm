@@ -103,12 +103,15 @@ sub send {
 		my $packet = $defres->send( '.', 'NS' );
 
 		# uncoverable branch false			# repeat using authoritative server
-		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority if $packet;
-		$defres->nameservers( map $_->nsdname, @auth );
+		my @auth = $packet->answer, $packet->authority if $packet;
+		$defres->udppacketsize(1024);
 		$defres->recurse(0);
-		$packet = $defres->send( '.', 'NS' );
+		foreach ( grep $_->type eq 'NS', @auth ) {
+			$defres->nameservers( $_->nsdname );
+			last if $packet = $defres->send( '.', 'NS' );	# uncoverable branch false
+		}
 
-		$defres->nameservers( $res->_hints );		# fall back on internal hints 
+		$defres->nameservers( $res->_hints );		# fall back on internal hints
 		$packet = $defres->send( '.', 'NS' ) unless $packet;	# uncoverable branch true
 		return $packet;
 	}
@@ -116,6 +119,7 @@ sub send {
 	if ( scalar @$nslist ) {
 		$self->_diag("using cached nameservers for $domain");
 	} else {
+		$res->udppacketsize(1024);
 		$domain = lc $question->qname if $question->qtype ne 'NULL';
 		my $packet = $res->send( $domain, 'NULL', 'IN', $original );
 		return unless $packet;				# uncoverable branch true
@@ -156,7 +160,6 @@ sub send {
 		}
 
 		my @ns = $res->nameservers( map @$_, grep ref($_), @$nslist );
-		next unless scalar @ns;				# uncoverable branch true
 
 		my $reply = $res->send($query);
 		next unless $reply;				# uncoverable branch true

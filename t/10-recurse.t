@@ -93,14 +93,19 @@ NonFatalBegin();
 
 
 {
-	# test hints()
 	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
-
-	ok( scalar( $res->hints(@hints) ), "hints() set" );
 
 	my $packet = $res->query_dorecursion( "www.google.com.", "A" );
 	ok( $packet, 'got a packet' );
 	ok( scalar $packet->answer, 'answer section has RRs' ) if $packet;
+}
+
+
+{
+	# test hints()
+	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
+	is( scalar( $res->hints() ), 0, "hints() empty" );
+	ok( scalar( $res->hints(@hints) ), "hints() set" );
 }
 
 

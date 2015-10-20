@@ -293,9 +293,10 @@ sub print { print &string; }
 
 
 sub domain {
-	my $self = shift;
-	my @list = ( $self->searchlist(@_), '' );
-	return $list[0];
+	my $self   = shift;
+	my ($head) = $self->searchlist(@_);
+	my @list   = grep defined, $head;
+	wantarray ? @list : "@list";
 }
 
 sub searchlist {
@@ -318,9 +319,8 @@ sub nameservers {
 		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
 		my $defres = ref($self)->new(
-			udp_timeout => $self->udp_timeout,
-			tcp_timeout => $self->tcp_timeout,
 			debug	    => $self->{debug} );
+		$defres->{cache} = $self->{cache};
 
 		my $packet = $defres->search( $ns, 'A' );
 		$self->errorstring( $defres->errorstring );
@@ -435,7 +435,7 @@ sub search {
 	foreach my $suffix (@list) {
 		my $fqname = join '.', $name, grep defined, $suffix;
 
-		$self->_diag( 'search(', join( ', ', $fqname, @_ ), ')' );
+		$self->_diag( 'search(', $fqname, @_, ')' );
 
 		my $packet = $self->send( $fqname, @_ ) || next;
 
@@ -454,14 +454,11 @@ sub query {
 	my $name = shift || '.';
 
 	# resolve name containing no dots or colons by appending domain
-	my @domain = grep $self->{defnames} && defined, $self->domain;
-	my @suffix = $name =~ m/[:.]/ ? () : @domain;
+	my $fqdn = $name !~ /[:.]/ && $self->{defnames} ? join( '.', $name, $self->domain ) : $name;
 
-	my $fqname = join '.', $name, @suffix;
+	$self->_diag( 'query(', $fqdn, @_, ')' );
 
-	$self->_diag( 'query(', join( ', ', $fqname, @_ ), ')' );
-
-	my $packet = $self->send( $fqname, @_ ) || return;
+	my $packet = $self->send( $fqdn, @_ ) || return;
 
 	return $packet->header->ancount ? $packet : undef;
 }
@@ -497,11 +494,6 @@ sub _send_tcp {
 	$self->_reset_errorstring;
 
 	my @ns = $self->nameservers();
-	unless ( scalar(@ns) ) {
-		$self->_diag( $self->errorstring );
-		return;
-	}
-
 	my $lastanswer;
 
 	foreach my $ns (@ns) {
@@ -564,7 +556,6 @@ sub _send_tcp {
 			return $ans;
 		} else {
 			$self->errorstring('timeout');
-			next;
 		}
 	}
 
@@ -573,6 +564,7 @@ sub _send_tcp {
 		return $lastanswer;
 	}
 
+	$self->_diag( $self->errorstring );
 	return;
 }
 
@@ -642,7 +634,7 @@ NAMESERVER: foreach my $ns (@ns) {
 
 				my $peerhost = $ready->peerhost;
 				$self->answerfrom($peerhost);
-				$self->_diag("answer from [$peerhost]");
+				$self->_diag( "answer from [$peerhost]", 'length', length($buf) );
 
 				next unless $peerhost eq $ip;
 
