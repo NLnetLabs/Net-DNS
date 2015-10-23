@@ -318,22 +318,21 @@ sub nameservers {
 		do { push @ipv6, $ns; next } if _ip_is_ipv6($ns);
 		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
-		my $defres = ref($self)->new(
-			debug	    => $self->{debug} );
+		my $defres = ref($self)->new( debug => $self->{debug} );
 		$defres->{cache} = $self->{cache};
 
+		my $names  = {};
 		my $packet = $defres->search( $ns, 'A' );
-		$self->errorstring( $defres->errorstring );
-		my $names = {$ns => 1};
-		my @address = _cname_addr( $packet, $names );
+		my @iplist = _cname_addr( $packet, $names );
 
 		if (IPv6) {
 			$packet = $defres->search( $ns, 'AAAA' );
-			$self->errorstring( $defres->errorstring );
-			push @address, _cname_addr( $packet, $names );
+			push @iplist, _cname_addr( $packet, $names );
 		}
 
-		my %address = map { ( $_ => $_ ) } @address;	# tainted
+		$self->errorstring( $defres->errorstring );
+
+		my %address = map { ( $_ => $_ ) } @iplist;	# tainted
 		my @unique = values %address;
 		carp "unresolvable name: $ns" unless @unique;
 		push @ipv4, grep _ip_is_ipv4($_), @unique;
@@ -379,11 +378,8 @@ sub _cname_addr {
 
 	foreach my $rr ( $packet->answer ) {
 		next unless $names->{$rr->name};
-
-		my $type = $rr->type;
-		push( @addr, $rr->address ) if $type eq 'A';
-		push( @addr, $rr->address ) if $type eq 'AAAA';
-		$names->{$rr->cname}++ if $type eq 'CNAME';
+		push( @addr, $rr->address ) if $rr->can('address');
+		$names->{$rr->cname}++ if $rr->can('cname');
 	}
 
 	return @addr;
@@ -422,27 +418,21 @@ sub search {
 	my $name = shift || '.';
 
 	# resolve name by trying as absolute name, then applying searchlist
-	my @defdomain = grep $self->{defnames} && defined, $self->domain;
+	my @defdomain = ( $self->{defnames} ? $self->domain : (), undef );
 	my @searchlist = $self->{dnsrch} ? ( undef, @{$self->{searchlist}} ) : @defdomain;
 
-	my @list;
-	for ($name) {
-
-		# resolve name with no dots or colons by applying searchlist
-		@list = m/[:.]/ ? (undef) : @searchlist;
-	}
+	# resolve name with no dots or colons by applying searchlist
+	my @list = $name =~ m/[:.]/ ? (undef) : @searchlist;
 
 	foreach my $suffix (@list) {
-		my $fqname = join '.', $name, grep defined, $suffix;
+		my $fqname = $suffix ? join( '.', $name, $suffix ) : $name;
 
 		$self->_diag( 'search(', $fqname, @_, ')' );
 
-		my $packet = $self->send( $fqname, @_ ) || next;
+		my $packet = $self->send( $fqname, @_ );
 
-		next unless ( $packet->header->rcode eq "NOERROR" );
+		next unless $packet && $packet->header->rcode eq "NOERROR";
 		return $packet if $packet->header->ancount;	# answer found
-
-		last if grep $_->qtype eq 'PTR', $packet->question;    # reverse IP lookup
 	}
 
 	return undef;
@@ -458,9 +448,9 @@ sub query {
 
 	$self->_diag( 'query(', $fqdn, @_, ')' );
 
-	my $packet = $self->send( $fqdn, @_ ) || return;
+	my $packet = $self->send( $fqdn, @_ );
 
-	return $packet->header->ancount ? $packet : undef;
+	return $packet && $packet->header->ancount ? $packet : undef;
 }
 
 
@@ -477,8 +467,9 @@ sub send {
 
 	} else {
 		$ans = $self->_send_udp( $packet, $packet_data );
+		return $ans if $self->{igntc};
 
-		if ( $ans && $ans->header->tc && !$self->{igntc} ) {
+		if ( $ans && $ans->header->tc ) {
 			$self->_diag('packet truncated: retrying using TCP');
 			$ans = $self->_send_tcp( $packet, $packet_data );
 		}
@@ -491,24 +482,17 @@ sub send {
 sub _send_tcp {
 	my ( $self, $packet, $packet_data ) = @_;
 
+	my $length = length $packet_data;
 	$self->_reset_errorstring;
-
 	my @ns = $self->nameservers();
 	my $lastanswer;
 
 	foreach my $ns (@ns) {
 		my $sock = $self->_create_tcp_socket($ns) || next;
 
-		# note that we send the length and packet data in a single call
-		# as this produces a single TCP packet rather than two. This
-		# is more efficient and also makes things much nicer for sniffers.
-		# (ethereal does not seem to reassemble DNS over TCP correctly)
+		$self->_diag( 'tcp send:', $length, 'bytes' );
 
-		my $length = length $packet_data;
-		my $tcp_packet = pack 'n a*', $length, $packet_data;
-		$self->_diag( 'sending', $length, 'bytes' );
-
-		unless ( $sock->send($tcp_packet) ) {
+		unless ( $sock->send( pack 'n a*', $length, $packet_data ) ) {
 			$self->_diag( 'tcp send:', $self->errorstring($!) );
 			next;
 		}
@@ -517,9 +501,9 @@ sub _send_tcp {
 		my $timeout = $self->{tcp_timeout};
 		if ( $sel->can_read($timeout) ) {
 			my $buf = _read_tcp( $sock, INT16SZ );
-			next unless length($buf);		# Failure to get anything
+			next unless length($buf);		# failed to get anything
 			my $len = unpack 'n', $buf;
-			next unless $len;			# Cannot determine size
+			next unless $len;			# cannot determine size
 
 			unless ( $sel->can_read($timeout) ) {
 				$self->_diag( $self->errorstring('timeout') );
@@ -575,40 +559,33 @@ sub _send_udp {
 	$self->_reset_errorstring;
 
 	# Constructing an array of arrays that contain 3 elements:
-	# The nameserver IP address, socket and dst_sockaddr
+	# The socket, IP address and dst_sockaddr
 	my $port = $self->{port};
 	my $sel	 = IO::Select->new();
 	my @ns;
 
-	foreach my $ns ( $self->nameservers ) {
-		my $socket = $self->_create_udp_socket($ns) || next;
-		my $dst_sockaddr = $self->_create_dst_sockaddr( $ns, $port ) || next;
-		push @ns, [$ns, $socket, $dst_sockaddr];
+	foreach my $ip ( $self->nameservers ) {
+		my $socket = $self->_create_udp_socket($ip) || next;
+		my $dst_sockaddr = $self->_create_dst_sockaddr( $ip, $port ) || next;
+		push @ns, [$socket, $ip, $dst_sockaddr];
 	}
-
-	unless ( scalar(@ns) ) {
-		$self->_diag( $self->errorstring );
-		return;
-	}
-
 
 	my $retrans = $self->{retrans};
 	my $retry   = $self->{retry};
+	my $servers = scalar(@ns);
+	my $timeout = $servers ? do { no integer; $retrans / $servers } : 0;
 
 	my $lastanswer;
 
 	# Perform each round of retries.
-RETRY: for ( my $i = 0 ; $i < $retry ; ++$i, $retrans *= 2 ) {
-
-		my $timeout = int( $retrans / scalar(@ns) );
-		$timeout = 1 if $timeout < 1;
+RETRY: for ( 0 .. $retry ) {
 
 		# Try each nameserver.
 NAMESERVER: foreach my $ns (@ns) {
-			my ( $ip, $socket, $dst_sockaddr, $failed ) = @$ns;
+			my ( $socket, $ip, $dst_sockaddr, $failed ) = @$ns;
 			next if $failed;
 
-			$self->_diag("udp send [$ip]:$port\n");
+			$self->_diag("udp send [$ip]:$port");
 
 			unless ( $socket->send( $packet_data, 0, $dst_sockaddr ) ) {
 				$self->_diag( $ns->[3] = "Send error: $!" );
@@ -619,20 +596,20 @@ NAMESERVER: foreach my $ns (@ns) {
 			die 'Insecure dependency while running with -T switch'
 					if _tainted($dst_sockaddr);
 
-			$sel->add($socket);
+			$sel->add($ns);
 
 			my @ready = $sel->can_read($timeout);
 			foreach my $ready (@ready) {
+				my ( $socket, $ip ) = @$ready;
 				$sel->remove($ready);
 
 				my $buf = '';
-				unless ( $ready->recv( $buf, $self->_packetsz ) ) {
-					my $peerhost = $ready->peerhost;
-					$self->_diag( "recv ERROR [$peerhost]", $ns->[3] = $self->errorstring($!) );
+				unless ( $socket->recv( $buf, $self->_packetsz ) ) {
+					$self->_diag( "recv ERROR [$ip]", $ns->[3] = $self->errorstring($!) );
 					next;
 				}
 
-				my $peerhost = $ready->peerhost;
+				my $peerhost = $socket->peerhost;
 				$self->answerfrom($peerhost);
 				$self->_diag( "answer from [$peerhost]", 'length', length($buf) );
 
@@ -663,16 +640,14 @@ NAMESERVER: foreach my $ns (@ns) {
 				return $ans;
 			}					#SELECTOR LOOP
 		}						#NAMESERVER LOOP
+		no integer;
+		$timeout += $timeout;
 	}							#RETRY LOOP
 
-	if ($lastanswer) {
-		$self->errorstring( $lastanswer->header->rcode );
-		return $lastanswer;
-	}
-
-	my $error = scalar( $sel->handles ) ? 'query timed out' : 'all nameservers failed';
-	$self->errorstring($error);
-	return;
+	my $error = scalar( $sel->handles ) ? 'query timed out' : $self->errorstring;
+	$error = $lastanswer->header->rcode if $lastanswer;
+	$self->_diag( $self->errorstring($error) );
+	return $lastanswer;
 }
 
 
@@ -1082,14 +1057,15 @@ sub _create_tcp_socket {
 	}
 
 	my $srcaddr = $self->{srcaddr};
-	my $srcport = $self->{srcport};
+	my $srcport = $self->{srcport} || undef;
 	my $timeout = $self->{tcp_timeout};
 
 	if ( IPv6 && _ip_is_ipv6($ns) ) {
+		my $localaddr = $srcaddr =~ /[:].*[:]/ ? $srcaddr : '::';
 
 		$sock = IO::Socket::IP->new(
-			LocalAddr => ( $srcaddr =~ /[:]/ ? $srcaddr : '::' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			PeerAddr  => $ns,
 			PeerPort  => $dstport,
 			Proto	  => 'tcp',
@@ -1098,8 +1074,8 @@ sub _create_tcp_socket {
 				unless USE_SOCKET_INET6;
 
 		$sock = IO::Socket::INET6->new(
-			LocalAddr => ( $srcaddr =~ /[:]/ ? $srcaddr : '::' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			PeerAddr  => $ns,
 			PeerPort  => $dstport,
 			Proto	  => 'tcp',
@@ -1107,10 +1083,11 @@ sub _create_tcp_socket {
 			)
 				if USE_SOCKET_INET6;
 	} else {
+		my $localaddr = $srcaddr =~ /[.].*[.]/ ? $srcaddr : '0.0.0.0';
 
 		$sock = IO::Socket::IP->new(
-			LocalAddr => ( $srcaddr =~ /[.]/ ? $srcaddr : '0.0.0.0' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			PeerAddr  => $ns,
 			PeerPort  => $dstport,
 			Proto	  => 'tcp',
@@ -1119,8 +1096,8 @@ sub _create_tcp_socket {
 				if USE_SOCKET_IP;
 
 		$sock = IO::Socket::INET->new(
-			LocalAddr => ( $srcaddr =~ /[.]/ ? $srcaddr : '0.0.0.0' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			PeerAddr  => $ns,
 			PeerPort  => $dstport,
 			Proto	  => 'tcp',
@@ -1144,7 +1121,7 @@ sub _create_udp_socket {
 	my $ns	 = shift;
 
 	my $srcaddr = $self->{srcaddr};
-	my $srcport = $self->{srcport};
+	my $srcport = $self->{srcport} || undef;
 	my $sock_key;
 	my $sock;
 
@@ -1152,17 +1129,19 @@ sub _create_udp_socket {
 		$sock_key = 'UDP/IPv6';
 		return $sock if $sock = $self->{UDPsockets}{$sock_key};
 
+		my $localaddr = $srcaddr =~ /[:].*[:]/ ? $srcaddr : '::';
+
 		$sock = IO::Socket::IP->new(
-			LocalAddr => ( $srcaddr =~ /[:]/ ? $srcaddr : '::' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM,
 			)
 				unless USE_SOCKET_INET6;
 
 		$sock = IO::Socket::INET6->new(
-			LocalAddr => ( $srcaddr =~ /[:]/ ? $srcaddr : '::' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM,
 			)
@@ -1171,17 +1150,19 @@ sub _create_udp_socket {
 		$sock_key = 'UDP/IPv4';
 		return $sock if $sock = $self->{UDPsockets}{$sock_key};
 
+		my $localaddr = $srcaddr =~ /[.].*[.]/ ? $srcaddr : '0.0.0.0';
+
 		$sock = IO::Socket::IP->new(
-			LocalAddr => ( $srcaddr =~ /[.]/ ? $srcaddr : '0.0.0.0' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM,
 			)
 				if USE_SOCKET_IP;
 
 		$sock = IO::Socket::INET->new(
-			LocalAddr => ( $srcaddr =~ /[.]/ ? $srcaddr : '0.0.0.0' ),
-			LocalPort => ( $srcport || undef ),
+			LocalAddr => $localaddr,
+			LocalPort => $srcport,
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM,
 			)

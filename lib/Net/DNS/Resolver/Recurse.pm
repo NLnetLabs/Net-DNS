@@ -74,8 +74,8 @@ as their counterparts in Net::DNS::Resolver.
 
     $packet = $resolver->send( 'www.example.com.', 'A' );
 
-Server-side recursion is suppressed by clearing the recurse flag
-in the packet and recursive name resolution is performed explicitly.
+Server-side recursion is suppressed by clearing the recurse flag in
+query packets and recursive name resolution is performed explicitly.
 
 The query() and search() methods are inherited from Net::DNS::Resolver
 and invoke send() indirectly.
@@ -108,18 +108,17 @@ sub send {
 		$defres->recurse(0);
 		foreach ( grep $_->type eq 'NS', @auth ) {
 			$defres->nameservers( $_->nsdname );
-			last if $packet = $defres->send( '.', 'NS' );	# uncoverable branch false
+			last if $packet = $defres->send( '.', 'NS' );	 # uncoverable branch false
 		}
 
 		$defres->nameservers( $res->_hints );		# fall back on internal hints
-		$packet = $defres->send( '.', 'NS' ) unless $packet;	# uncoverable branch true
+		$packet = $defres->send( '.', 'NS' ) unless $packet;	 # uncoverable branch true
 		return $packet;
 	}
 
 	if ( scalar @$nslist ) {
 		$self->_diag("using cached nameservers for $domain");
 	} else {
-		$res->udppacketsize(1024);
 		$domain = lc $question->qname if $question->qtype ne 'NULL';
 		my $packet = $res->send( $domain, 'NULL', 'IN', $original );
 		return unless $packet;				# uncoverable branch true
@@ -149,6 +148,7 @@ sub send {
 
 	my $query = new Net::DNS::Packet();
 	$query->push( question => $original );
+	$res->udppacketsize(1024);
 	$res->recurse(0);
 
 	splice @$nslist, 0, 0, splice( @$nslist, int( rand scalar @$nslist ) );	   # cut deck
@@ -279,11 +279,11 @@ L<Net::DNS::Resolver>
 
 __DATA__	## DEFAULT HINTS
 
-; <<>> DiG 9.9.4-P2-RedHat-9.9.4-15.P2.fc20 <<>> @a.root-servers.net . -t NS
+; <<>> DiG 9.9.4-P2-RedHat-9.9.4-18.P2.fc20 <<>> @b.root-servers.net . -t NS
 ; (2 servers found)
 ;; global options: +cmd
 ;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 4589
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20118
 ;; flags: qr aa rd; QUERY: 1, ANSWER: 13, AUTHORITY: 0, ADDITIONAL: 25
 ;; WARNING: recursion requested but not available
 
@@ -308,33 +308,28 @@ __DATA__	## DEFAULT HINTS
 .			518400	IN	NS	e.root-servers.net.
 
 ;; ADDITIONAL SECTION:
-c.root-servers.net.	3600000	IN	A	192.33.4.12
-c.root-servers.net.	3600000	IN	AAAA	2001:500:2::c
-k.root-servers.net.	3600000	IN	A	193.0.14.129
-k.root-servers.net.	3600000	IN	AAAA	2001:7fd::1
-l.root-servers.net.	3600000	IN	A	199.7.83.42
-l.root-servers.net.	3600000	IN	AAAA	2001:500:3::42
-j.root-servers.net.	3600000	IN	A	192.58.128.30
-j.root-servers.net.	3600000	IN	AAAA	2001:503:c27::2:30
-b.root-servers.net.	3600000	IN	A	192.228.79.201
-b.root-servers.net.	3600000	IN	AAAA	2001:500:84::b
-g.root-servers.net.	3600000	IN	A	192.112.36.4
-h.root-servers.net.	3600000	IN	A	128.63.2.53
-h.root-servers.net.	3600000	IN	AAAA	2001:500:1::803f:235
-d.root-servers.net.	3600000	IN	A	199.7.91.13
-d.root-servers.net.	3600000	IN	AAAA	2001:500:2d::d
 a.root-servers.net.	3600000	IN	A	198.41.0.4
-a.root-servers.net.	3600000	IN	AAAA	2001:503:ba3e::2:30
-f.root-servers.net.	3600000	IN	A	192.5.5.241
-f.root-servers.net.	3600000	IN	AAAA	2001:500:2f::f
-i.root-servers.net.	3600000	IN	A	192.36.148.17
-i.root-servers.net.	3600000	IN	AAAA	2001:7fe::53
-m.root-servers.net.	3600000	IN	A	202.12.27.33
-m.root-servers.net.	3600000	IN	AAAA	2001:dc3::35
+b.root-servers.net.	3600000	IN	A	192.228.79.201
+c.root-servers.net.	3600000	IN	A	192.33.4.12
+d.root-servers.net.	3600000	IN	A	199.7.91.13
 e.root-servers.net.	3600000	IN	A	192.203.230.10
-
-;; Query time: 29 msec
-;; SERVER: 198.41.0.4#53(198.41.0.4)
-;; WHEN: Mon Aug 11 14:39:19 BST 2014
-;; MSG SIZE  rcvd: 755
+f.root-servers.net.	3600000	IN	A	192.5.5.241
+g.root-servers.net.	3600000	IN	A	192.112.36.4
+h.root-servers.net.	3600000	IN	A	198.97.190.53
+i.root-servers.net.	3600000	IN	A	192.36.148.17
+j.root-servers.net.	3600000	IN	A	192.58.128.30
+k.root-servers.net.	3600000	IN	A	193.0.14.129
+l.root-servers.net.	3600000	IN	A	199.7.83.42
+m.root-servers.net.	3600000	IN	A	202.12.27.33
+a.root-servers.net.	3600000	IN	AAAA	2001:503:ba3e::2:30
+b.root-servers.net.	3600000	IN	AAAA	2001:500:84::b
+c.root-servers.net.	3600000	IN	AAAA	2001:500:2::c
+d.root-servers.net.	3600000	IN	AAAA	2001:500:2d::d
+f.root-servers.net.	3600000	IN	AAAA	2001:500:2f::f
+h.root-servers.net.	3600000	IN	AAAA	2001:500:1::53
+i.root-servers.net.	3600000	IN	AAAA	2001:7fe::53
+j.root-servers.net.	3600000	IN	AAAA	2001:503:c27::2:30
+k.root-servers.net.	3600000	IN	AAAA	2001:7fd::1
+l.root-servers.net.	3600000	IN	AAAA	2001:500:3::42
+m.root-servers.net.	3600000	IN	AAAA	2001:dc3::35
 

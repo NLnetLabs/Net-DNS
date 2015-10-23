@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.03 [unreleased]
 
+Fix rt.cpan.org #107897
+
+	t/10-recurse.t freezes, never completes
+
 Fix rt.cpan.org #101978
 
 	Update Net::DNS to use IO::Socket::IP

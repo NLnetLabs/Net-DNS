@@ -9,16 +9,16 @@ use Net::DNS;
 my $debug = 0;
 
 my @hints = qw(
+		2001:503:ba3e::2:30
+		2001:500:84::b
 		2001:500:2::c
+		2001:500:2d::d
+		2001:500:2f::f
+		2001:500:1::53
+		2001:7fe::53
+		2001:503:c27::2:30
 		2001:7fd::1
 		2001:500:3::42
-		2001:503:c27::2:30
-		2001:500:84::b
-		2001:500:1::803f:235
-		2001:500:2d::d
-		2001:503:ba3e::2:30
-		2001:500:2f::f
-		2001:7fe::53
 		2001:dc3::35
 		);
 
@@ -53,26 +53,18 @@ eval {
 } || exit( plan skip_all => 'Unable to access global root nameservers' );
 
 
-my $res = Net::DNS::Resolver->new( prefer_v6 => 1 );
-
-my $IP;
-
 # query local nameserver using any available transport
-my $nsanswer = $res->send( 'net-dns.org', 'NS', 'IN' );
+my $res	    = Net::DNS::Resolver->new( prefer_v6 => 1 );
+my $nsreply = $res->send(qw(net-dns.org NS IN));
+my @nsdname = map $_->can('nsdname') ? $_->nsdname : (), $nsreply->answer;
 
-foreach my $ns ( $nsanswer->answer ) {
-	next unless $ns->type eq 'NS';
+# assume any working net-dns.org nameserver will do
+$res->nameservers(@nsdname);
+$res->force_v6(1);
+my $test = $res->send(qw(net-dns.org NS IN));
+my $IP	 = $test->answerfrom;
 
-	# assume any net-dns.org nameserver will do
-	my $qtype = 'AAAA';
-	my $reply = $res->send( $ns->nsdname, $qtype, 'IN' ) || next;
-	next unless $reply->header->ancount;
-	my @answer = $reply->answer;
-	my @rr = grep $_->type eq $qtype, @answer;
-	($IP) = map $_->address, @rr;
-	diag join ' ', "\n\t\twill try", $ns->nsdname, "($IP)" if $debug;
-	last;
-}
+diag join( ' ', "\n\t\twill try", $IP ) if $debug;
 
 exit( plan skip_all => 'Unable to access target nameserver' ) unless $IP;
 
