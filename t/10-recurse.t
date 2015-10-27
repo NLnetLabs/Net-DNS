@@ -12,9 +12,6 @@ exit( plan skip_all => 'Online tests disabled.' ) if -e 't/online.disabled';
 exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
 
 
-my @hints = new Net::DNS::Resolver::Recurse()->_hints;
-
-
 eval {
 	my $res = new Net::DNS::Resolver();
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
@@ -29,14 +26,19 @@ eval {
 
 
 eval {
-	my $res = new Net::DNS::Resolver( nameservers => [@hints] );
+	my $res = new Net::DNS::Resolver::Recurse();
 	exit plan skip_all => "No nameservers" unless $res->nameservers;
 
 	my $reply = $res->send( ".", "NS" ) || return 0;
+	my $from = $reply->answerfrom();
 
-	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
-	my @root = grep $_->nsdname =~ /^[a-m]\.root-servers\.net$/i, @ns;
-	exit plan skip_all => "Unexpected response from root server" unless scalar @root;
+	my @ns = grep $_->type eq 'NS', $reply->answer;
+	exit plan skip_all => "No NS RRs in response from $from" unless scalar @ns;
+
+	my @rr = grep $_->can('address'), $reply->additional;
+	exit plan skip_all => "No address RRs in response from $from" unless scalar @rr;
+
+	exit plan skip_all => "Non authoritative response from $from" unless $reply->header->aa;
 
 	1;
 } || exit( plan skip_all => "Unable to access global root nameservers" );
@@ -92,11 +94,25 @@ NonFatalBegin();
 }
 
 
-{
-	# test hints()
-	my $res = Net::DNS::Resolver::Recurse->new( debug => 0 );
-	is( scalar( $res->hints() ), 0, "hints() empty" );
-	ok( scalar( $res->hints(@hints) ), "hints() set" );
+SKIP: {
+	my @hints = new Net::DNS::Resolver::Recurse()->_hints;
+	my $res	  = Net::DNS::Resolver::Recurse->new();
+	is( scalar( $res->hints() ), 0, "hints() initially empty" );
+	$res->hints(@hints);
+	is( scalar( $res->hints ), scalar(@hints), "hints() set" );
+
+	my $reply = $res->send( ".", "NS" );
+	ok( $reply, 'got response to priming query' );
+	skip( 'no response to priming query', 3 ) unless $reply;
+	my $from = $reply->answerfrom();
+
+	ok( $reply->header->aa, "authoritative response from $from" );
+
+	my @ns = grep $_->type eq 'NS', $reply->answer;
+	ok( scalar(@ns), "NS RRs in response from $from" );
+
+	my @ar = grep $_->can('address'), $reply->additional;
+	ok( scalar(@ar), "address RRs in response from $from" );
 }
 
 

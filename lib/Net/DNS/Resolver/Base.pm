@@ -319,7 +319,7 @@ sub nameservers {
 		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
 		my $defres = ref($self)->new( debug => $self->{debug} );
-		$defres->{cache} = $self->{cache};
+		$defres->{persistent} = $self->{persistent};
 
 		my $names  = {};
 		my $packet = $defres->search( $ns, 'A' );
@@ -1050,7 +1050,7 @@ sub _create_tcp_socket {
 	my $sock;
 
 	if ( $self->{persistent_tcp} ) {
-		$sock = $self->{TCPsockets}{$sock_key};
+		$sock = $self->{persistent}{$sock_key};
 		$self->_diag( 'using persistent socket', $sock_key ) if $sock;
 		return $sock if $sock && $sock->connected;
 		$self->_diag('socket disconnected (trying to reconnect)');
@@ -1109,7 +1109,7 @@ sub _create_tcp_socket {
 	unless ($sock) {
 		$self->_diag( $self->errorstring("connection failed [$ns]") );
 	} elsif ( $self->{persistent_tcp} ) {
-		$self->{TCPsockets}{$sock_key} = $sock;
+		$self->{persistent}{$sock_key} = $sock;
 	}
 
 	return $sock;
@@ -1127,7 +1127,7 @@ sub _create_udp_socket {
 
 	if ( IPv6 && _ip_is_ipv6($ns) ) {
 		$sock_key = 'UDP/IPv6';
-		return $sock if $sock = $self->{UDPsockets}{$sock_key};
+		return $sock if $sock = $self->{persistent}{$sock_key};
 
 		my $localaddr = $srcaddr =~ /[:].*[:]/ ? $srcaddr : '::';
 
@@ -1148,7 +1148,7 @@ sub _create_udp_socket {
 				if USE_SOCKET_INET6;
 	} else {
 		$sock_key = 'UDP/IPv4';
-		return $sock if $sock = $self->{UDPsockets}{$sock_key};
+		return $sock if $sock = $self->{persistent}{$sock_key};
 
 		my $localaddr = $srcaddr =~ /[.].*[.]/ ? $srcaddr : '0.0.0.0';
 
@@ -1170,7 +1170,7 @@ sub _create_udp_socket {
 	}
 
 	$self->_diag( $self->errorstring( 'could not get', $sock_key, 'socket' ) ) unless $sock;
-	return $self->{UDPsockets}{$sock_key} = $sock if $self->{persistent_udp};
+	return $self->{persistent}{$sock_key} = $sock if $self->{persistent_udp};
 	return $sock;
 }
 

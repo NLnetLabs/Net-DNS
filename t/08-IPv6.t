@@ -53,20 +53,19 @@ eval {
 } || exit( plan skip_all => 'Unable to access global root nameservers' );
 
 
-# query local nameserver using any available transport
-my $res	    = Net::DNS::Resolver->new( prefer_v6 => 1 );
-my $nsreply = $res->send(qw(net-dns.org NS IN));
-my @nsdname = map $_->can('nsdname') ? $_->nsdname : (), $nsreply->answer;
+my $IP = eval {
+	my $res	    = Net::DNS::Resolver->new( prefer_v6 => 1 );
+	my $nsreply = $res->send(qw(net-dns.org NS IN)) || return 0;
+	my @nsdname = map $_->nsdname, grep $_->type eq 'NS', $nsreply->answer;
 
-# assume any working net-dns.org nameserver will do
-$res->nameservers(@nsdname);
-$res->force_v6(1);
-my $test = $res->send(qw(net-dns.org NS IN));
-my $IP	 = $test->answerfrom;
+	# assume any working net-dns.org nameserver will do
+	$res->nameservers(@nsdname);
+	$res->force_v6(1);
+	my $test = $res->send(qw(net-dns.org NS IN)) || return 0;
+	$test->answerfrom;
+} || exit( plan skip_all => 'Unable to access target nameserver' );
 
-diag join( ' ', "\n\t\twill try", $IP ) if $debug;
-
-exit( plan skip_all => 'Unable to access target nameserver' ) unless $IP;
+diag join( ' ', "\n\t\twill use nameserver", $IP ) if $debug;
 
 
 plan tests => 19;

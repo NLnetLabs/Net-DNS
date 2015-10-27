@@ -56,13 +56,13 @@ or at all, a built-in list of IP addresses is used.
 =cut
 
 my @hints;
-my $root;
+my $root = [];
 
 sub hints {
 	my $self = shift;
 
 	return @hints unless scalar @_;
-	$root  = undef;
+	$root  = [];
 	@hints = @_;
 }
 
@@ -86,7 +86,7 @@ sub send {
 	return &Net::DNS::Resolver::Base::send if ref $_[1];	# send Net::DNS::Packet
 
 	my $self = shift;
-	my $res = bless {cache => {'.' => $root}, %$self}, ref($self);
+	my $res = bless {persistent => {'.' => $root}, %$self}, ref($self);
 
 	my $question = new Net::DNS::Question(@_);
 	my $original = pop(@_);					# sneaky extra argument needed
@@ -94,26 +94,19 @@ sub send {
 
 	my ( $head, @tail ) = $question->{qname}->label;
 	my $domain = lc join( '.', @tail ) || '.';
-	my $nslist = $res->{cache}->{$domain} ||= [];
+	my $nslist = $res->{persistent}->{$domain} ||= [];
 	unless ( defined $head ) {
-		$root = $nslist;				# root servers cached indefinitely
+		my $defres = bless {%$res}, qw(Net::DNS::Resolver);
+		my @config = $defres->nameserver( $res->hints );
+		my $packet = $defres->send(qw(. NS));
 
-		my $defres = new Net::DNS::Resolver();
-		my @config = $defres->nameservers( $res->hints );
-		my $packet = $defres->send( '.', 'NS' );
-
-		# uncoverable branch false			# repeat using authoritative server
-		my @auth = $packet->answer, $packet->authority if $packet;
+		# uncoverable branch false
+		my @rr = $packet->answer, $packet->authority if $packet;
+		my @ns = map $_->nsdname, grep $_->type eq 'NS', @rr;
 		$defres->udppacketsize(1024);
 		$defres->recurse(0);
-		foreach ( grep $_->type eq 'NS', @auth ) {
-			$defres->nameservers( $_->nsdname );
-			last if $packet = $defres->send( '.', 'NS' );	 # uncoverable branch false
-		}
-
-		$defres->nameservers( $res->_hints );		# fall back on internal hints
-		$packet = $defres->send( '.', 'NS' ) unless $packet;	 # uncoverable branch true
-		return $packet;
+		$defres->nameservers( @ns, $res->_hints );	# repeat using authoritative server
+		return $defres->send(qw(. NS));
 	}
 
 	if ( scalar @$nslist ) {
@@ -138,7 +131,7 @@ sub send {
 		foreach my $zone ( keys %zone ) {
 			my @nsname = grep $auth{$_} eq $zone, keys %auth;
 			my @list = map $glue{$_} ? $glue{$_} : $_, @nsname;
-			@{$res->{cache}->{$zone}} = @list;
+			@{$res->{persistent}->{$zone}} = @list;
 			return $packet if length($zone) > length($domain);
 			$self->_diag("cache nameservers for $zone");
 			@$nslist = @list;
@@ -148,6 +141,7 @@ sub send {
 
 	my $query = new Net::DNS::Packet();
 	$query->push( question => $original );
+	$res = bless {%$res}, qw(Net::DNS::Resolver) if $nslist eq $root;
 	$res->udppacketsize(1024);
 	$res->recurse(0);
 
@@ -159,11 +153,10 @@ sub send {
 			$ns = [$res->nameservers($ns)];		# substitute IP list in situ
 		}
 
-		my @ns = $res->nameservers( map @$_, grep ref($_), @$nslist );
+		$res->nameservers( map @$_, grep ref($_), @$nslist );
 
 		my $reply = $res->send($query);
 		next unless $reply;				# uncoverable branch true
-
 		next unless $reply->header->rcode eq 'NOERROR'; # uncoverable branch true
 
 		$self->_callback($reply);
