@@ -46,8 +46,8 @@ use constant UTIL => defined eval { require Scalar::Util; };
 
 use constant PRIVATE => defined eval { require Net::DNS::SEC::Private; };
 
-use constant DSA => scalar eval { require Net::DNS::SEC::DSA; };
-use constant RSA => scalar eval { require Net::DNS::SEC::RSA; };
+use constant DSA => defined eval { require Net::DNS::SEC::DSA; };
+use constant RSA => defined eval { require Net::DNS::SEC::RSA; };
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA );
 

@@ -37,17 +37,17 @@ use constant PACKETSZ => 512;
 # Olaf Kolkman, RIPE NCC, December 2003.
 
 
-use constant USE_SOCKET => scalar eval {
+use constant USE_SOCKET => defined eval {
 	require IO::Select;
 	require IO::Socket;
 	import IO::Socket;
 };
 
-use constant USE_SOCKET_IP => scalar eval { require IO::Socket::IP; };
+use constant USE_SOCKET_IP => defined eval { require IO::Socket::IP; };
 
-use constant USE_SOCKET_INET => scalar eval { require IO::Socket::INET; };
+use constant USE_SOCKET_INET => defined eval { require IO::Socket::INET; };
 
-use constant USE_SOCKET_INET6 => scalar eval { require IO::Socket::INET6; };
+use constant USE_SOCKET_INET6 => defined eval { require IO::Socket::INET6; };
 
 use constant IPv4 => USE_SOCKET_IP || USE_SOCKET_INET;
 use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
@@ -57,7 +57,7 @@ use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 use constant SOCKS => scalar eval { require Config; $Config::Config{usesocks}; };
 
 
-use constant UTIL => scalar eval { require Scalar::Util; };
+use constant UTIL => defined eval { require Scalar::Util; };
 
 sub _tainted { UTIL ? Scalar::Util::tainted(shift) : undef }
 
@@ -80,7 +80,6 @@ sub _untaint {
 		retrans		=> 5,
 		retry		=> 4,
 		usevc		=> ( SOCKS ? 1 : 0 ),
-		stayopen	=> 0,
 		igntc		=> 0,
 		recurse		=> 1,
 		defnames	=> 1,
@@ -100,13 +99,6 @@ sub _untaint {
 		force_v4	=> 0,	# only relevant if IPv6 is supported
 		force_v6	=> 0,	#
 		prefer_v6	=> 0,	# prefer v6, otherwise prefer v4
-		ignqrid         => 0,   # normally packets with non-matching ID
-					# or with the qr bit on are thrown away,
-					# but with 'ignqrid' these packets
-					# are accepted.
-					# USE WITH CARE, YOU ARE VULNERABLE TO
-					# SPOOFING IF SET.
-					# This may be a temporary feature
 		},
 			__PACKAGE__;
 
@@ -127,7 +119,6 @@ my %public_attr = map { $_ => $_ } qw(
 		retrans
 		retry
 		usevc
-		stayopen
 		igntc
 		recurse
 		defnames
@@ -142,6 +133,9 @@ my %public_attr = map { $_ => $_ } qw(
 		cdflag
 		prefer_v4
 		prefer_v6
+
+		ignqrid
+		stayopen
 		);
 
 
@@ -267,23 +261,24 @@ sub string {
 	my $self = shift;
 	$self = $self->_defaults unless ref($self);
 
-	my $IP6line = "prefer_v6\t= $self->{prefer_v6}\tforce_v6    = $self->{force_v6}";
+	my $IP6line = "prefer_v6\t= $self->{prefer_v6}\tforce_v6\t= $self->{force_v6}";
 	my $IP6conf = IPv6 ? $IP6line : '(no IPv6 transport)';
 	my @nslist  = $self->nameservers();
 	my $domain  = $self->domain;
 	return <<END;
 ;; RESOLVER state:
-;;  domain	= $domain
-;;  searchlist	= @{$self->{searchlist}}
-;;  nameservers = @nslist
-;;  port	= $self->{port}
-;;  srcport	= $self->{srcport}	srcaddr	    = $self->{srcaddr}
-;;  tcp_timeout = $self->{tcp_timeout}	udp_timeout = $self->{udp_timeout}
-;;  retrans	= $self->{retrans}	retry	    = $self->{retry}
-;;  defnames	= $self->{defnames}	dnsrch	    = $self->{dnsrch}
-;;  recurse	= $self->{recurse}	usevc	    = $self->{usevc}
-;;  debug	= $self->{debug}	force_v4    = $self->{force_v4}
-;;  $IP6conf
+;; domain	= $domain
+;; searchlist	= @{$self->{searchlist}}
+;; nameservers	= @nslist
+;; defnames	= $self->{defnames}	dnsrch		= $self->{dnsrch}
+;; retrans	= $self->{retrans}	retry		= $self->{retry}
+;; recurse	= $self->{recurse}	igntc		= $self->{igntc}
+;; usevc	= $self->{usevc}	port		= $self->{port}
+;; srcaddr	= $self->{srcaddr}	srcport		= $self->{srcport}
+;; tcp_timeout	= $self->{tcp_timeout}	persistent_tcp	= $self->{persistent_tcp}
+;; udp_timeout	= $self->{udp_timeout}	persistent_udp	= $self->{persistent_udp}
+;; debug	= $self->{debug}	force_v4	= $self->{force_v4}
+;; $IP6conf
 END
 
 }
@@ -314,7 +309,7 @@ sub nameservers {
 	$self = $self->_defaults unless ref($self);
 
 	my ( @ipv4, @ipv6 );
-	foreach my $ns (@_) {
+	foreach my $ns ( grep defined, @_ ) {
 		do { push @ipv6, $ns; next } if _ip_is_ipv6($ns);
 		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
 
@@ -375,11 +370,10 @@ sub _cname_addr {
 	my $names = shift;
 
 	map $names->{$_->qname}++, $packet->question;
+	map $names->{$_->cname}++, grep $_->can('cname'), $packet->answer;
 
-	foreach my $rr ( $packet->answer ) {
-		next unless $names->{$rr->name};
+	foreach my $rr ( grep $names->{$_->name}, $packet->answer ) {
 		push( @addr, $rr->address ) if $rr->can('address');
-		$names->{$rr->cname}++ if $rr->can('cname');
 	}
 
 	return @addr;
@@ -493,7 +487,7 @@ sub _send_tcp {
 		$self->_diag( 'tcp send:', $length, 'bytes' );
 
 		unless ( $sock->send( pack 'n a*', $length, $packet_data ) ) {
-			$self->_diag( 'tcp send:', $self->errorstring($!) );
+			$self->_diag( $self->errorstring($!) );
 			next;
 		}
 
@@ -588,7 +582,7 @@ NAMESERVER: foreach my $ns (@ns) {
 			$self->_diag("udp send [$ip]:$port");
 
 			unless ( $socket->send( $packet_data, 0, $dst_sockaddr ) ) {
-				$self->_diag( $ns->[3] = "Send error: $!" );
+				$self->_diag( $ns->[3] = $self->errorstring($!) );
 				next;
 			}
 
@@ -723,25 +717,26 @@ sub _bgsend_udp {
 
 sub bgisready {
 	my $self = shift;
-	my $sel = shift || croak 'undefined argument';
+	my $sel = shift || return 1;
 
 	return scalar( $sel->can_read(0.0) ) || do {
 		return 0 unless $self->{udp_timeout};
-		my ($handle) = $sel->handles;
-		my ( $x, $expire ) = @$handle;
-		time() > $expire;
+		my $time = time();
+		my ( $x, $expire ) = map @$_, $sel->handles, [0, $time - 1];
+		$time > $expire;
 	};
 }
 
 
 sub bgread {
 	my $self = shift;
-	my $sel = shift || croak 'undefined argument';
+	my $sel = shift || return undef;
 
 	my ($handle) = $sel->handles;
-	my ( $socket, $expire, $ip, $id ) = @$handle;
+	my $time = time();
+	my ( $socket, $expire, $ip, $id ) = map @$_, $sel->handles, [0, $time];
 
-	my $timeout = $expire - time();
+	my $timeout = $expire - $time;
 	return undef unless $sel->can_read( $timeout > 0 ? $timeout : 0 );
 
 	my $buffer;
@@ -829,7 +824,7 @@ sub axfr {				## zone transfer
 	my $self = shift;
 
 	my $query = $self->_axfr_start(@_);
-	my $verfy = $query->sigrr;
+	my $verfy = $query ? $query->sigrr : undef;
 	my @rr;
 	my $soa;
 
@@ -997,7 +992,8 @@ sub tsig {
 		local $SIG{__DIE__};
 		require Net::DNS::RR::TSIG;
 		Net::DNS::RR::TSIG->create(@_);
-	} || croak "$@\nunable to create TSIG record";
+	} || undef;
+	croak "$@ unable to create TSIG record" if $@;
 }
 
 
@@ -1053,11 +1049,11 @@ sub _create_tcp_socket {
 		$sock = $self->{persistent}{$sock_key};
 		$self->_diag( 'using persistent socket', $sock_key ) if $sock;
 		return $sock if $sock && $sock->connected;
-		$self->_diag('socket disconnected (trying to reconnect)');
+		$self->_diag('socket disconnected (trying to connect)');
 	}
 
 	my $srcaddr = $self->{srcaddr};
-	my $srcport = $self->{srcport} || undef;
+	my $srcport = $self->{srcport};
 	my $timeout = $self->{tcp_timeout};
 
 	if ( IPv6 && _ip_is_ipv6($ns) ) {
@@ -1071,17 +1067,17 @@ sub _create_tcp_socket {
 			Proto	  => 'tcp',
 			Timeout	  => $timeout,
 			)
-				unless USE_SOCKET_INET6;
+				if USE_SOCKET_IP;
 
 		$sock = IO::Socket::INET6->new(
 			LocalAddr => $localaddr,
-			LocalPort => $srcport,
+			LocalPort => ( $srcport || undef ),
 			PeerAddr  => $ns,
 			PeerPort  => $dstport,
 			Proto	  => 'tcp',
 			Timeout	  => $timeout,
 			)
-				if USE_SOCKET_INET6;
+				unless USE_SOCKET_IP;
 	} else {
 		my $localaddr = $srcaddr =~ /[.].*[.]/ ? $srcaddr : '0.0.0.0';
 
@@ -1097,7 +1093,7 @@ sub _create_tcp_socket {
 
 		$sock = IO::Socket::INET->new(
 			LocalAddr => $localaddr,
-			LocalPort => $srcport,
+			LocalPort => ( $srcport || undef ),
 			PeerAddr  => $ns,
 			PeerPort  => $dstport,
 			Proto	  => 'tcp',
@@ -1121,7 +1117,7 @@ sub _create_udp_socket {
 	my $ns	 = shift;
 
 	my $srcaddr = $self->{srcaddr};
-	my $srcport = $self->{srcport} || undef;
+	my $srcport = $self->{srcport};
 	my $sock_key;
 	my $sock;
 
@@ -1137,15 +1133,15 @@ sub _create_udp_socket {
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM,
 			)
-				unless USE_SOCKET_INET6;
+				if USE_SOCKET_IP;
 
 		$sock = IO::Socket::INET6->new(
 			LocalAddr => $localaddr,
-			LocalPort => $srcport,
+			LocalPort => ( $srcport || undef ),
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM,
 			)
-				if USE_SOCKET_INET6;
+				unless USE_SOCKET_IP;
 	} else {
 		$sock_key = 'UDP/IPv4';
 		return $sock if $sock = $self->{persistent}{$sock_key};
@@ -1162,7 +1158,7 @@ sub _create_udp_socket {
 
 		$sock = IO::Socket::INET->new(
 			LocalAddr => $localaddr,
-			LocalPort => $srcport,
+			LocalPort => ( $srcport || undef ),
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM,
 			)
@@ -1205,13 +1201,13 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 # Lightweight versions of subroutines from Net::IP module, recoded to fix RT#96812
 
 sub _ip_is_ipv4 {
-	for ( shift || return ) {
+	for (shift) {
 		return /^[0-9.]+\.[0-9]+$/;			# dotted digits
 	}
 }
 
 sub _ip_is_ipv6 {
-	for ( shift || return ) {
+	for (shift) {
 		return 1 if /^[:0-9a-f]+:[0-9a-f]*$/i;		# mixed : and hexdigits
 		return 1 if /^[:0-9a-f]+:[0-9.]+$/i;		# prefix + dotted digits
 		return /^[:0-9a-f]+:[0-9a-f]*[%].+$/i;		# RFC4007 scoped address

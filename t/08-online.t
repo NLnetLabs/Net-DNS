@@ -30,29 +30,29 @@ exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
-	exit plan skip_all => "No nameservers" unless $res->nameservers;
+	my $resolver = new Net::DNS::Resolver();
+	exit plan skip_all => 'No nameservers' unless $resolver->nameservers;
 
-	my $reply = $res->send( ".", "NS" ) || die;
+	my $reply = $resolver->send(qw(. NS IN)) || die;
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
-	exit plan skip_all => "Local nameserver broken" unless scalar @ns;
+	exit plan skip_all => 'Local nameserver broken' unless scalar @ns;
 
 	1;
-} || exit( plan skip_all => "Non-responding local nameserver" );
+} || exit( plan skip_all => 'Non-responding local nameserver' );
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
-	exit plan skip_all => "No nameservers" unless $res->nameservers(@hints);
+	my $resolver = new Net::DNS::Resolver( nameservers => [@hints] );
+	exit plan skip_all => 'No nameservers' unless $resolver->nameservers;
 
-	my $reply = $res->send( ".", "NS" ) || die;
+	my $reply = $resolver->send(qw(. NS IN)) || die;
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
-	exit plan skip_all => "Unexpected response from root server" unless scalar @ns;
+	exit plan skip_all => 'Unexpected response from root server' unless scalar @ns;
 
 	1;
-} || exit( plan skip_all => "Unable to access global root nameservers" );
+} || exit( plan skip_all => 'Unable to reach global root nameservers' );
 
 
 eval {

@@ -23,15 +23,18 @@ my @hints = qw(
 		);
 
 
-exit( plan skip_all => 'Online tests disabled.' ) if -e 't/IPv6.disabled';
-exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/IPv6.enabled';
+exit( plan skip_all => 'Online tests disabled.' ) if -e 't/online.disabled';
+exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
+
+exit( plan skip_all => 'IPv6 tests disabled.' ) if -e 't/IPv6.disabled';
+exit( plan skip_all => 'IPv6 tests disabled.' ) unless -e 't/IPv6.enabled';
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
-	exit plan skip_all => 'No nameservers' unless $res->nameservers;
+	my $resolver = new Net::DNS::Resolver( prefer_v6 => 1 );
+	exit plan skip_all => 'No nameservers' unless $resolver->nameservers;
 
-	my $reply = $res->send( '.', 'NS' ) || return 0;
+	my $reply = $resolver->send(qw(. NS IN)) || die;
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
 	exit plan skip_all => 'Local nameserver broken' unless scalar @ns;
@@ -41,134 +44,185 @@ eval {
 
 
 eval {
-	my $res = new Net::DNS::Resolver( nameservers => [@hints] );
-	exit plan skip_all => 'No IPv6 transport' unless $res->nameservers;
+	my $resolver = new Net::DNS::Resolver( nameservers => [@hints] );
+	exit plan skip_all => 'No IPv6 transport' unless $resolver->nameservers;
 
-	my $reply = $res->send( '.', 'NS' ) || return 0;
+	my $reply = $resolver->send(qw(. NS IN)) || die;
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
 	exit plan skip_all => 'Unexpected response from root server' unless scalar @ns;
 
 	1;
-} || exit( plan skip_all => 'Unable to access global root nameservers' );
+} || exit( plan skip_all => 'Unable to reach global root nameservers' );
 
 
 my $IP = eval {
-	my $res	    = Net::DNS::Resolver->new( prefer_v6 => 1 );
-	my $nsreply = $res->send(qw(net-dns.org NS IN)) || return 0;
-	my @nsdname = map $_->nsdname, grep $_->type eq 'NS', $nsreply->answer;
+	my $resolver = Net::DNS::Resolver->new();
+	my $nsreply  = $resolver->send(qw(net-dns.org NS IN)) || die;
+	my @nsdname  = map $_->nsdname, grep $_->type eq 'NS', $nsreply->answer;
 
-	# assume any working net-dns.org nameserver will do
-	$res->nameservers(@nsdname);
-	$res->force_v6(1);
-	my $test = $res->send(qw(net-dns.org NS IN)) || return 0;
-	$test->answerfrom;
-} || exit( plan skip_all => 'Unable to access target nameserver' );
+	# assume any IPv6 net-dns.org nameserver will do
+	$resolver->force_v6(1);
+	my @ip = $resolver->nameservers(@nsdname);
+	scalar(@ip) ? [@ip] : undef;
+} || exit( plan skip_all => 'Unable to reach target nameserver' );
 
-diag join( ' ', "\n\t\twill use nameserver", $IP ) if $debug;
+diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 
 
-plan tests => 19;
+plan tests => 31;
 
 NonFatalBegin();
 
 
 {
-	my $res = Net::DNS::Resolver->new( nameserver => $IP );
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
-	my $qtype = 'SOA';
-	my $reply = $res->send( 'net-dns.org', $qtype, 'IN' );
-	ok( $reply, 'UDP/IPv6 reply received' );
-	my ($answer) = $reply->answer if $reply;
-	is( ref($answer), "Net::DNS::RR::$qtype", 'UDP/IPv6 query succeeded' );
+	my $udp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( $udp, '$resolver->send(...)	UDP' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( $tcp, '$resolver->send(...)	TCP' );
 }
 
 
 {
-	my $res = Net::DNS::Resolver->new( nameserver => $IP );
-	$res->force_v4(1);
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->force_v4(1);
 
-	my $qtype = 'SOA';
-	my $reply = $res->send( 'net-dns.org', $qtype, 'IN' );
-	is( $res->errorstring, 'IPv6 transport disabled', 'force_v4(1) gives error' );
-	ok( !$reply, 'no UDP/IPv6 reply received' );
+	my @ns = $resolver->nameservers;
+	is( $resolver->errorstring, 'IPv6 transport disabled', 'force_v4(1) gives error' );
+
+	my $udp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( !$udp, 'fail $resolver->send()	UDP' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( !$tcp, 'fail $resolver->send()	TCP' );
 }
 
 
 {
-	my $res = Net::DNS::Resolver->new( nameserver => $IP );
-	$res->usevc(1);
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
-	my $qtype = 'SOA';
-	my $reply = $res->send( 'net-dns.org', $qtype, 'IN' );
-	ok( $reply, 'TCP/IPv6 reply received' );
-	my ($answer) = $reply->answer if $reply;
-	is( ref($answer), 'Net::DNS::RR::SOA', 'TCP/IPv6 query succeeded' );
-}
-
-
-{
-	my $res = Net::DNS::Resolver->new( nameserver => $IP );
-	$res->force_v4(1);
-	$res->usevc(1);
-
-	my $qtype = 'SOA';
-	my $reply = $res->send( 'net-dns.org', $qtype, 'IN' );
-	is( $res->errorstring, 'IPv6 transport disabled', 'force_v4(1) gives error' );
-	ok( !$reply, 'no TCP/IPv6 reply received' );
-}
-
-
-{
-	my $res = Net::DNS::Resolver->new( nameserver => $IP );
-
-	my $qtype = 'SOA';
-	my $handle = $res->bgsend( 'net-dns.org', $qtype, 'IN' );
-	ok( $handle, 'bgsend UDP/IPv6' );
-	until ( $res->bgisready($handle) ) {
+	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $udp, '$resolver->bgsend(...)	UDP' );
+	until ( $resolver->bgisready($udp) ) {
 		sleep 1;
 	}
-	my $reply = $res->bgread($handle);
-	ok( $reply, 'bgread UDP/IPv6' );
-	my ($answer) = $reply->answer if $reply;
-	is( ref($answer), "Net::DNS::RR::$qtype", 'UDP/IPv6 query succeeded' );
-}
+	ok( $resolver->bgread($udp), '$resolver->bgread()' );
 
+	$resolver->usevc(1);
 
-{
-	my $res = Net::DNS::Resolver->new( nameserver => $IP );
-	$res->usevc(1);
-
-	my $qtype = 'SOA';
-	my $handle = $res->bgsend( 'net-dns.org', $qtype, 'IN' );
-	ok( $handle, 'bgsend TCP/IPv6' );
-	until ( $res->bgisready($handle) ) {
+	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $tcp, '$resolver->bgsend(...)	TCP' );
+	until ( $resolver->bgisready($tcp) ) {
 		sleep 1;
 	}
-	my $reply = $res->bgread($handle);
-	ok( $reply, 'bgread TCP/IPv6' );
-	my ($answer) = $reply->answer if $reply;
-	is( ref($answer), "Net::DNS::RR::$qtype", 'TCP/IPv6 query succeeded' );
+	ok( $resolver->bgread($tcp), '$resolver->bgread()' );
 }
 
 
-#
-#  Now test AXFR functionality.
-#
 {
-	my $res = Net::DNS::Resolver->new( nameserver => $IP );
-	$res->tcp_timeout(10);
-	$res->tsig( 'MD5.example', 'ARDJZgtuTDzAWeSGYPAu9uJUkX0=' );
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->persistent_udp(1);
 
-	my $iter = $res->axfr('example.com');
-	is( ref($iter), 'CODE', 'axfr returns CODE ref' );
-	like( $res->errorstring, '/RCODE/', 'RCODE from server: NOTAUTH' );
+	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $handle,			'$resolver->bgsend(...)	persistent UDP' );
+	ok( $resolver->bgread($handle), '$resolver->bgread()' );
+	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $test, '$resolver->bgsend(...)	persistent UDP' );
+	is( $test->[0], $handle->[0], 'same UDP socket object used' );
+}
 
-	my @zone = eval { $res->axfr('example.com') };
-	ok( $res->errorstring, 'axfr in list context' );
 
-	ok( $res->axfr_start('example.com'), 'axfr_start	(historical)' );
-	is( $res->axfr_next(), undef, 'axfr_next' );
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->persistent_tcp(1);
+	$resolver->usevc(1);
+
+	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $handle,			'$resolver->bgsend(...)	persistent TCP' );
+	ok( $resolver->bgread($handle), '$resolver->bgread()' );
+	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $test, '$resolver->bgsend(...)	persistent TCP' );
+	is( $test->[0], $handle->[0], 'same TCP socket object used' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->srcaddr('::');
+	$resolver->srcport(2345);
+
+	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $udp, '$resolver->bgsend(...)	specify UDP local address & port' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $tcp, '$resolver->bgsend(...)	specify TCP local address & port' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->tcp_timeout(10);
+	eval { $resolver->tsig( 'MD5.example', 'ARDJZgtuTDzAWeSGYPAu9uJUkX0=' ) };
+
+	my $iter = $resolver->axfr('example.com');
+	is( ref($iter), 'CODE', '$resolver->axfr() returns iterator CODE ref' );
+	my $error = $resolver->errorstring;
+	like( $error, '/NOTAUTH/', '$resolver->errorstring() reports RCODE from server' );
+
+	my @zone = eval { $resolver->axfr('example.com') };
+	ok( $resolver->errorstring, '$resolver->axfr() works in list context' );
+
+	ok( $resolver->axfr_start('example.com'), '$resolver->axfr_start()	(historical)' );
+	is( $resolver->axfr_next(), undef, '$resolver->axfr_next()' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	my @mx = mx( $resolver, 'mx2.t.net-dns.org' );
+
+	is( scalar(@mx), 2, 'mx() works with specified resolver' );
+
+	# some people seem to use mx() in scalar context
+	is( scalar mx( $resolver, 'mx2.t.net-dns.org' ), 2, 'mx() works in scalar context' );
+
+	is( scalar mx('mx2.t.net-dns.org'), 2, 'mx() works with default resolver' );
+
+	is( scalar mx('bogus.t.net-dns.org'), 0, "mx() works for bogus name" );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers();
+	ok( !scalar( $resolver->nameservers ), 'no nameservers' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameserver('cname.t.net-dns.org');
+	ok( scalar( $resolver->nameservers ), 'resolve nameserver cname' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	my @warnings;
+	local $SIG{__WARN__} = sub { push( @warnings, "@_" ); };
+	$resolver->nameserver('bogus.example.com');
+	my ($warning) = @warnings;
+	chomp $warning;
+	ok( $warning, "unresolved nameserver warning\t[$warning]" );
 }
 
 

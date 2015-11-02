@@ -161,8 +161,6 @@ Domain name suffix to be appended to queries of unqualified names.
 
 =item usevc
 
-=item stayopen
-
 =item igntc
 
 =item defnames
@@ -577,9 +575,11 @@ in which case the default is true.
     $resolver->persistent_udp(1);
 
 Get or set the persistent UDP setting.
-If true, Net::DNS will keep a single UDP socket open for all queries.
-This is useful if you are using UDP and need to make a lot of queries
-or updates.
+If true, a Net::DNS resolver will use the same UDP socket
+for all queries within each address family.
+
+This avoids the cost of creating and tearing down UDP sockets,
+but also defeats source port randomisation.
 
 =head2 igntc
 

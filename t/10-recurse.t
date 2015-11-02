@@ -13,35 +13,32 @@ exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
 
 
 eval {
-	my $res = new Net::DNS::Resolver();
-	exit plan skip_all => "No nameservers" unless $res->nameservers;
+	my $resolver = new Net::DNS::Resolver();
+	exit plan skip_all => 'No nameservers' unless $resolver->nameservers;
 
-	my $reply = $res->send( ".", "NS" ) || return 0;
+	my $reply = $resolver->send(qw(. NS IN)) || die;
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
-	exit plan skip_all => "Local nameserver broken" unless scalar @ns;
+	exit plan skip_all => 'Local nameserver broken' unless scalar @ns;
 
 	1;
-} || exit( plan skip_all => "Non-responding local nameserver" );
+} || exit( plan skip_all => 'Non-responding local nameserver' );
 
 
 eval {
-	my $res = new Net::DNS::Resolver::Recurse();
-	exit plan skip_all => "No nameservers" unless $res->nameservers;
+	my $resolver = new Net::DNS::Resolver::Recurse();
+	exit plan skip_all => "No nameservers" unless $resolver->nameservers;
 
-	my $reply = $res->send( ".", "NS" ) || return 0;
+	my $reply = $resolver->send(qw(. NS IN)) || die;
 	my $from = $reply->answerfrom();
 
 	my @ns = grep $_->type eq 'NS', $reply->answer;
 	exit plan skip_all => "No NS RRs in response from $from" unless scalar @ns;
 
-	my @rr = grep $_->can('address'), $reply->additional;
-	exit plan skip_all => "No address RRs in response from $from" unless scalar @rr;
-
 	exit plan skip_all => "Non authoritative response from $from" unless $reply->header->aa;
 
 	1;
-} || exit( plan skip_all => "Unable to access global root nameservers" );
+} || exit( plan skip_all => 'Unable to reach global root nameservers' );
 
 
 plan 'no_plan';
