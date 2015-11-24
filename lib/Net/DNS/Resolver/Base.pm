@@ -1259,8 +1259,8 @@ sub udppacketsize {
 my $warned;
 
 sub make_query_packet {			## historical
-	&_make_query_packet;					# uncoverable pod
 	carp 'deprecated method; see RT#37104' unless $warned++;
+	&_make_query_packet;					# uncoverable pod
 }
 
 
