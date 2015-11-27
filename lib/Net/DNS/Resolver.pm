@@ -392,13 +392,15 @@ of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (IPv4 or IPv6),
 an appropriate PTR query will be performed.
 
-Returns an L<IO::Select> object which serves as a handle which is passed
-to subsequent invocations of the C<bgisready> and C<bgread> methods.
+Returns an opaque token which is passed to subsequent invocations of
+the C<bgisready> and C<bgread> methods.
 Errors are indicated by returning C<undef> in which case the
 reason for failure can be found by calling the errorstring method.
 
-The program must determine when the underlying socket is ready for
-reading by calling C<bgisready>, then call C<bgread> to get the response. 
+The program may determine when the underlying socket is ready for
+reading by calling C<bgisready>.
+
+The response C<Net::DNS::Packet> object is obtained by calling C<bgread>.
 C<bgread> returns C<undef> if no response is received or timeout occurred. 
 
 B<BEWARE>:

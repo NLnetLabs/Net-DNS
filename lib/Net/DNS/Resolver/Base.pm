@@ -564,15 +564,15 @@ sub _send_udp {
 		push @ns, [$socket, $ip, $dst_sockaddr];
 	}
 
-	my $retrans = $self->{retrans};
-	my $retry   = $self->{retry};
+	my $retrans = $self->{retrans} || 1;
+	my $retry   = $self->{retry}   || 1;
 	my $servers = scalar(@ns);
 	my $timeout = $servers ? do { no integer; $retrans / $servers } : 0;
 
 	my $lastanswer;
 
 	# Perform each round of retries.
-RETRY: for ( 0 .. $retry ) {
+RETRY: for ( 1 .. $retry ) {					# assumed to be a small number
 
 		# Try each nameserver.
 NAMESERVER: foreach my $ns (@ns) {
@@ -606,8 +606,6 @@ NAMESERVER: foreach my $ns (@ns) {
 				my $peerhost = $socket->peerhost;
 				$self->answerfrom($peerhost);
 				$self->_diag( "answer from [$peerhost]", 'length', length($buf) );
-
-				next unless $peerhost eq $ip;
 
 				my $ans = Net::DNS::Packet->new( \$buf, $self->{debug} );
 				my $error = $@;
@@ -762,7 +760,7 @@ sub bgread {
 		}
 
 		my $peerhost = $socket->peerhost;
-		$self->answerfrom( $socket->peerhost );
+		$self->answerfrom($peerhost);
 		$self->_diag("answer from [$peerhost]");
 		return undef unless $peerhost eq $ip;
 	}
@@ -775,8 +773,7 @@ sub bgread {
 	} else {
 		my $error  = $@;
 		my $header = $ans->header;
-		my $rcode  = $header->rcode;
-		$self->errorstring( $error || $rcode );
+		$self->errorstring( $error || $header->rcode );
 
 		return undef unless $header->qr;
 		return undef unless $header->id == $id;
@@ -1259,8 +1256,8 @@ sub udppacketsize {
 my $warned;
 
 sub make_query_packet {			## historical
-	carp 'deprecated method; see RT#37104' unless $warned++;
-	&_make_query_packet;					# uncoverable pod
+	carp 'deprecated method; see RT#37104' unless $warned++;    # uncoverable pod
+	&_make_query_packet;
 }
 
 

@@ -63,7 +63,9 @@ my $IP = eval {
 
 	# assume any IPv6 net-dns.org nameserver will do
 	$resolver->force_v6(1);
-	my @ip = $resolver->nameservers(@nsdname);
+	$resolver->nameservers(@nsdname);
+
+	my @ip = $resolver->nameservers();
 	scalar(@ip) ? [@ip] : undef;
 } || exit( plan skip_all => 'Unable to reach target nameserver' );
 
@@ -170,6 +172,21 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	my @mx = mx( $resolver, 'mx2.t.net-dns.org' );
+
+	is( scalar(@mx), 2, 'mx() works with specified resolver' );
+
+	# some people seem to use mx() in scalar context
+	is( scalar mx( $resolver, 'mx2.t.net-dns.org' ), 2, 'mx() works in scalar context' );
+
+	is( scalar mx('mx2.t.net-dns.org'), 2, 'mx() works with default resolver' );
+
+	is( scalar mx('bogus.t.net-dns.org'), 0, "mx() works for bogus name" );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->tcp_timeout(10);
 	eval { $resolver->tsig( 'MD5.example', 'ARDJZgtuTDzAWeSGYPAu9uJUkX0=' ) };
 
@@ -183,21 +200,6 @@ NonFatalBegin();
 
 	ok( $resolver->axfr_start('example.com'), '$resolver->axfr_start()	(historical)' );
 	is( $resolver->axfr_next(), undef, '$resolver->axfr_next()' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	my @mx = mx( $resolver, 'mx2.t.net-dns.org' );
-
-	is( scalar(@mx), 2, 'mx() works with specified resolver' );
-
-	# some people seem to use mx() in scalar context
-	is( scalar mx( $resolver, 'mx2.t.net-dns.org' ), 2, 'mx() works in scalar context' );
-
-	is( scalar mx('mx2.t.net-dns.org'), 2, 'mx() works with default resolver' );
-
-	is( scalar mx('bogus.t.net-dns.org'), 0, "mx() works for bogus name" );
 }
 
 
@@ -219,10 +221,13 @@ NonFatalBegin();
 	my $resolver = Net::DNS::Resolver->new();
 	my @warnings;
 	local $SIG{__WARN__} = sub { push( @warnings, "@_" ); };
-	$resolver->nameserver('bogus.example.com');
+	my $ns = 'bogus.example.com.';
+	my @ip = $resolver->nameserver($ns);
+
 	my ($warning) = @warnings;
 	chomp $warning;
-	ok( $warning, "unresolved nameserver warning\t[$warning]" );
+	ok( $warning, "unresolved nameserver warning\t[$warning]" )
+			|| diag "\tnon-existent '$ns' resolved: @ip";
 }
 
 

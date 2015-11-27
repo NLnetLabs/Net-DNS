@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2015-07-26)
+##	(last updated 2015-11-05)
 ##
 ################################################
 
@@ -187,6 +187,8 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	'CLIENT-SUBNET' => 8,					# draft-vandergaast-edns-client-subnet
 	EXPIRE		=> 9,					# RFC7314
 	COOKIE		=> 10,					# draft-ietf-dnsop-cookies
+	'TCP-KEEPALIVE' => 11,					# draft-ietf-dnsop-edns-tcp-keepalive
+	PADDING		=> 12,					# draft-mayrhofer-edns0-padding
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
 %ednsoptionbyname = ( %ednsoptionbyname, map /\D/ ? lc($_) : $_, %ednsoptionbyname );

@@ -1,6 +1,25 @@
 $Id$                       -*-text-*-
 
 
+**** 1.04 [unreleased]
+
+Fix rt.cpan.org #109183
+
+	Semantics of "retry" and "retrans" options has changed with 1.03
+
+Fix rt.cpan.org #109152
+
+	Deprecated method make_query_packet breaks calling code
+
+Fix rt.cpan.org #109135
+
+	Resolver behaves differently with long and short IPv6 address format
+
+Fix rt.cpan.org #108745
+
+	Net::DNS::Resolver bgsend
+
+
 **** 1.03 November 6, 2015
 
 Fix rt.cpan.org #107897
