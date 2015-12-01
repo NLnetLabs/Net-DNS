@@ -453,23 +453,16 @@ sub send {
 	my $packet	= $self->_make_query_packet(@_);
 	my $packet_data = $packet->data;
 
-	my $ans;
+	return $self->_send_tcp( $packet, $packet_data )
+			if $self->{usevc} || length $packet_data > $self->_packetsz;
 
-	if ( $self->{usevc} || length $packet_data > $self->_packetsz ) {
+	my $ans = $self->_send_udp( $packet, $packet_data );
 
-		$ans = $self->_send_tcp( $packet, $packet_data );
+	return $ans if $self->{igntc};
+	return $ans unless $ans && $ans->header->tc;
 
-	} else {
-		$ans = $self->_send_udp( $packet, $packet_data );
-		return $ans if $self->{igntc};
-
-		if ( $ans && $ans->header->tc ) {
-			$self->_diag('packet truncated: retrying using TCP');
-			$ans = $self->_send_tcp( $packet, $packet_data );
-		}
-	}
-
-	return $ans;
+	$self->_diag('packet truncated: retrying using TCP');
+	$self->_send_tcp( $packet, $packet_data );
 }
 
 
@@ -674,7 +667,8 @@ sub _bgsend_tcp {
 		}
 
 		my $expire = time() + $self->{tcp_timeout} || 0;
-		return IO::Select->new( [$socket, $expire, $ns, $packet->header->id] );
+		${*$socket}{net_dns_bg} = [$expire, $ns, $packet->header->id];
+		return $socket;
 	}
 
 	$self->_diag( $self->errorstring );
@@ -705,7 +699,8 @@ sub _bgsend_udp {
 		die 'Insecure dependency while running with -T switch' if _tainted($dst_sockaddr);
 
 		my $expire = time() + $self->{udp_timeout} || 0;
-		return IO::Select->new( [$socket, $expire, $ns, $packet->header->id] );
+		${*$socket}{net_dns_bg} = [$expire, $ns, $packet->header->id];
+		return $socket;
 	}
 
 	$self->_diag( $self->errorstring );
@@ -715,54 +710,54 @@ sub _bgsend_udp {
 
 sub bgisready {
 	my $self = shift;
-	my $sel = shift || return 1;
+	my $sock = shift || 1;
 
-	return scalar( $sel->can_read(0.0) ) || do {
+	return scalar( IO::Select->new($sock)->can_read(0.0) ) || do {
 		return 0 unless $self->{udp_timeout};
-		my $time = time();
-		my ( $x, $expire ) = map @$_, $sel->handles, [0, $time - 1];
-		$time > $expire;
+		my $appendix = ${*$sock}{net_dns_bg} || [];
+		my ($expire) = @$appendix;
+		time() > ( $expire || return 1 );
 	};
 }
 
 
 sub bgread {
 	my $self = shift;
-	my $sel = shift || return undef;
+	my $sock = shift || undef;
 
-	my ($handle) = $sel->handles;
 	my $time = time();
-	my ( $socket, $expire, $ip, $id ) = map @$_, $sel->handles, [0, $time];
+	my $appendix = ${*$sock}{net_dns_bg} || [$time];
+	my ( $expire, $ip, $id ) = @$appendix;
 
+	my $select  = IO::Select->new($sock);
 	my $timeout = $expire - $time;
-	return undef unless $sel->can_read( $timeout > 0 ? $timeout : 0 );
+	return undef unless $select->can_read( $timeout > 0 ? $timeout : 0 );
 
 	my $buffer;
 	if ( $self->{usevc} ) {
-		$buffer = _read_tcp( $socket, INT16SZ );
+		$buffer = _read_tcp( $sock, INT16SZ );
 		return undef unless length($buffer);		# failed to get length
 		my $len = unpack 'n', $buffer;
 		return undef unless $len;			# can not determine size
 
-		unless ( $sel->can_read( $self->{tcp_timeout} ) ) {
+		unless ( $select->can_read( $timeout > 0 ? $timeout : 0 ) ) {
 			$self->_diag( $self->errorstring('timeout') );
 			return undef;
 		}
 
-		$buffer = _read_tcp( $socket, $len );
-		$self->answerfrom($ip);				# $socket->peerhost unreliable
+		$buffer = _read_tcp( $sock, $len );
+		$self->answerfrom($ip);				# $sock->peerhost unreliable
 		$self->_diag("answer from [$ip]");
 
 	} else {
-		unless ( $socket->recv( $buffer, $self->_packetsz ) ) {
+		unless ( $sock->recv( $buffer, $self->_packetsz ) ) {
 			$self->errorstring($!);
 			return undef;
 		}
 
-		my $peerhost = $socket->peerhost;
+		my $peerhost = $sock->peerhost;
 		$self->answerfrom($peerhost);
 		$self->_diag("answer from [$peerhost]");
-		return undef unless $peerhost eq $ip;
 	}
 
 

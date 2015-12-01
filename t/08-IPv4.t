@@ -136,7 +136,7 @@ NonFatalBegin();
 	ok( $resolver->bgread($handle), '$resolver->bgread()' );
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent UDP' );
-	is( $test->[0], $handle->[0], 'same UDP socket object used' );
+	is( $test, $handle, 'same UDP socket object used' );
 }
 
 
@@ -150,7 +150,7 @@ NonFatalBegin();
 	ok( $resolver->bgread($handle), '$resolver->bgread()' );
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent TCP' );
-	is( $test->[0], $handle->[0], 'same TCP socket object used' );
+	is( $test, $handle, 'same TCP socket object used' );
 }
 
 
