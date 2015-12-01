@@ -407,15 +407,32 @@ sub _reset_errorstring {
 }
 
 
-sub search {
+sub query {
 	my $self = shift;
 	my $name = shift || '.';
 
-	# resolve name by trying as absolute name, then applying searchlist
-	my @defdomain = ( $self->{defnames} ? $self->domain : (), undef );
-	my @searchlist = $self->{dnsrch} ? ( undef, @{$self->{searchlist}} ) : @defdomain;
+	# resolve name containing no dots or colons by appending domain
+	my $fqdn = $self->{defnames} && ( $name !~ /[:.]/ ) ? join( '.', $name, $self->domain ) : $name;
 
-	# resolve name with no dots or colons by applying searchlist
+	$self->_diag( 'query(', $fqdn, @_, ')' );
+
+	my $packet = $self->send( $fqdn, @_ ) || return;
+
+	return $packet->header->ancount ? $packet : undef;
+}
+
+
+sub search {
+	my $self = shift;
+
+	return $self->query(@_) unless $self->{dnsrch};
+
+	my $name = shift || '.';
+
+	# resolve name by trying as absolute name, then applying searchlist
+	my @searchlist = ( undef, @{$self->{searchlist}} );
+
+	# attempt to resolve name with no dots or colons by applying suffix
 	my @list = $name =~ m/[:.]/ ? (undef) : @searchlist;
 
 	foreach my $suffix (@list) {
@@ -423,28 +440,13 @@ sub search {
 
 		$self->_diag( 'search(', $fqname, @_, ')' );
 
-		my $packet = $self->send( $fqname, @_ );
+		my $packet = $self->send( $fqname, @_ ) || next;
 
-		next unless $packet && $packet->header->rcode eq "NOERROR";
+		next unless $packet->header->rcode eq "NOERROR";
 		return $packet if $packet->header->ancount;	# answer found
 	}
 
 	return undef;
-}
-
-
-sub query {
-	my $self = shift;
-	my $name = shift || '.';
-
-	# resolve name containing no dots or colons by appending domain
-	my $fqdn = $name !~ /[:.]/ && $self->{defnames} ? join( '.', $name, $self->domain ) : $name;
-
-	$self->_diag( 'query(', $fqdn, @_, ')' );
-
-	my $packet = $self->send( $fqdn, @_ );
-
-	return $packet && $packet->header->ancount ? $packet : undef;
 }
 
 
@@ -580,6 +582,7 @@ NAMESERVER: foreach my $ns (@ns) {
 			}
 
 			# handle failure to detect taint inside socket->send()
+			# uncoverable branch true
 			die 'Insecure dependency while running with -T switch'
 					if _tainted($dst_sockaddr);
 
@@ -696,6 +699,7 @@ sub _bgsend_udp {
 		}
 
 		# handle failure to detect taint inside $socket->send()
+		# uncoverable branch true
 		die 'Insecure dependency while running with -T switch' if _tainted($dst_sockaddr);
 
 		my $expire = time() + $self->{udp_timeout} || 0;
@@ -710,7 +714,7 @@ sub _bgsend_udp {
 
 sub bgisready {
 	my $self = shift;
-	my $sock = shift || 1;
+	my $sock = shift || return 1;
 
 	return scalar( IO::Select->new($sock)->can_read(0.0) ) || do {
 		return 0 unless $self->{udp_timeout};
@@ -723,7 +727,7 @@ sub bgisready {
 
 sub bgread {
 	my $self = shift;
-	my $sock = shift || undef;
+	my $sock = shift || return undef;
 
 	my $time = time();
 	my $appendix = ${*$sock}{net_dns_bg} || [$time];
@@ -740,10 +744,7 @@ sub bgread {
 		my $len = unpack 'n', $buffer;
 		return undef unless $len;			# can not determine size
 
-		unless ( $select->can_read( $timeout > 0 ? $timeout : 0 ) ) {
-			$self->_diag( $self->errorstring('timeout') );
-			return undef;
-		}
+		return undef unless $select->can_read( $timeout > 0 ? $timeout : 0 );
 
 		$buffer = _read_tcp( $sock, $len );
 		$self->answerfrom($ip);				# $sock->peerhost unreliable
@@ -952,27 +953,17 @@ sub _axfr_next {
 
 	unless ( $received == $len ) {
 		$self->_diag( $self->errorstring("expected $len bytes, received $received") );
-		return;
-	}
 
-	my $ans = Net::DNS::Packet->new( \$buf, $self->{debug} );
-
-	if ($ans) {
-		$ans->answerfrom( $self->{axfr_ns} );
-
+	} elsif ( my $ans = Net::DNS::Packet->new( \$buf, $self->{debug} ) ) {
 		my $rcode = $ans->header->rcode;
-		unless ( $rcode eq 'NOERROR' ) {
-			$self->_diag( $self->errorstring("RCODE from server: $rcode") );
-			return;
-		}
+		$ans->answerfrom( $self->{axfr_ns} );
+		$self->_diag( $self->errorstring("RCODE from server: $rcode") );
+		return $ans if $rcode eq 'NOERROR';
 
 	} else {
-		my $err = $@ || 'unknown error during packet parsing';
-		$self->_diag( $self->errorstring($err) );
-		return;
+		$self->_diag( $self->errorstring("no packet: $@") );
 	}
-
-	return $ans;
+	return;
 }
 
 
@@ -984,7 +975,7 @@ sub tsig {
 		local $SIG{__DIE__};
 		require Net::DNS::RR::TSIG;
 		Net::DNS::RR::TSIG->create(@_);
-	} || undef;
+	};
 	croak "$@ unable to create TSIG record" if $@;
 }
 
@@ -1015,14 +1006,14 @@ sub _read_tcp {
 		# of data read appears to work around that problem.
 
 		my $read_buf = '';
-		unless ( $sock->recv( $read_buf, $unread ) ) {
-			if ( length($read_buf) < 1 ) {
-				warn "ERROR: tcp recv failed: $!\n" if $!;
+		$sock->recv( $read_buf, $unread ) || do {
+			unless ( length($read_buf) ) {
+				warn "ERROR: tcp recv failed: $!\n";
 				last;
 			}
-		}
+		};
 
-		$buf .= $read_buf if length($read_buf);
+		$buf .= $read_buf;
 	}
 
 	return $buf;
