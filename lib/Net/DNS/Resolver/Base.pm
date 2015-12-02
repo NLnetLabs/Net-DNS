@@ -716,10 +716,10 @@ sub bgisready {
 	my $sock = shift || return 1;
 
 	return scalar( IO::Select->new($sock)->can_read(0.0) ) || do {
-		return 0 unless $self->{udp_timeout};
 		my $appendix = ${*$sock}{net_dns_bg} || [];
-		my ($expire) = @$appendix;
-		time() > ( $expire || return 1 );
+		my $time = time();
+		my ($expire) = $self->{udp_timeout} ? ( @$appendix, $time ) : $time;
+		$time > $expire;
 	};
 }
 
@@ -728,9 +728,9 @@ sub bgread {
 	my $self = shift;
 	my $sock = shift || return undef;
 
+	my $appendix = ${*$sock}{net_dns_bg} || [];
 	my $time = time();
-	my $appendix = ${*$sock}{net_dns_bg} || [$time];
-	my ( $expire, $ip, $id ) = @$appendix;
+	my ( $expire, $ip, $id ) = ( @$appendix, $time );
 
 	my $select  = IO::Select->new($sock);
 	my $timeout = $expire - $time;
