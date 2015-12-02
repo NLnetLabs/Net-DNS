@@ -516,7 +516,7 @@ sub _send_tcp {
 				$self->errorstring($@);
 			} else {
 				my $rcode = $ans->header->rcode;
-				$self->errorstring( $@ || $rcode );
+				$self->errorstring( $@ . $rcode );
 
 				$ans->answerfrom($ns);
 
@@ -604,19 +604,18 @@ NAMESERVER: foreach my $ns (@ns) {
 				$self->_diag( "answer from [$peerhost]", 'length', length($buf) );
 
 				my $ans = Net::DNS::Packet->new( \$buf, $self->{debug} );
-				my $error = $@;
 
 				unless ( defined $ans ) {
-					$self->errorstring($error);
+					$self->errorstring($@);
 				} else {
 					my $header = $ans->header;
 					my $rcode  = $header->rcode;
+					$self->errorstring( $@ . $rcode );
+
 					$ans->answerfrom($peerhost);
 
 					next unless $header->qr;
 					next unless $header->id == $packet->header->id;
-
-					$self->errorstring( $error || $rcode );
 
 					if ( $rcode ne "NOERROR" && $rcode ne "NXDOMAIN" ) {
 						my $msg = $ns->[3] = "RCODE: $rcode";
@@ -767,12 +766,11 @@ sub bgread {
 	unless ( defined $ans ) {
 		$self->errorstring($@);
 	} else {
-		my $error  = $@;
 		my $header = $ans->header;
-		$self->errorstring( $error || $header->rcode );
+		$self->errorstring( $@ . $header->rcode );
 
 		return undef unless $header->qr;
-		return undef unless $header->id == $id;
+		return undef unless not defined($id) or $header->id == $id;
 
 		$ans->answerfrom( $self->answerfrom );
 	}
