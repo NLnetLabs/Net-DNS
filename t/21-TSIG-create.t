@@ -32,14 +32,14 @@ my $class = ref($tsig);
 }
 
 
-my $privatekey = 'Khmac-sha1.example.+161+39562.private';
+my $privatekey = 'Khmac-md5.example.+157+53335.private';
 END { unlink($privatekey) if defined $privatekey; }
 
 open( KEY, ">$privatekey" ) or die "$privatekey $!";
 print KEY <<'END';
 Private-key-format: v1.2
-Algorithm: 161 (HMAC_SHA1)
-Key: xdX9m8UtQNbJUzUgQ4xDtUNZAmU=
+Algorithm: 157 (HMAC_MD5)
+Key: ARDJZgtuTDzAWeSGYPAu9uJUkX0=
 END
 close KEY;
 

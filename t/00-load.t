@@ -5,17 +5,34 @@ use Test::More tests => 31;
 
 
 my @module = qw(
+	Net::DNS
+	Net::DNS::SEC
+	Data::Dumper
+	Digest::BubbleBabble
+	Digest::GOST
+	Digest::HMAC
+	Digest::MD5
+	Digest::SHA
+	File::Spec
+	FileHandle
+	IO::File
+	IO::Select
 	IO::Socket
 	IO::Socket::INET
 	IO::Socket::INET6
 	IO::Socket::IP
+	MIME::Base64
 	Net::LibIDN
+	PerlIO
+	Scalar::Util
+	Time::Local
 	);
 
 diag("\n\nThese tests were run using:\n");
 foreach my $module (@module) {
-	eval("require $module") || next;
-	diag sprintf "\t%-20s  %s", $module, $module->VERSION;
+	my $loaded = eval("require $module") || next;
+	my $revnum = $loaded ? $module->VERSION : "\t\tn/a";
+	diag sprintf "\t%-25s  %s", $module, $revnum || '?';
 }
 
 diag("set environment variable NET_DNS_DEBUG to get all versions\n\n");

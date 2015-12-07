@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2015-11-16)
+##	(last updated 2015-12-01)
 ##
 ################################################
 
@@ -98,6 +98,7 @@ use vars qw( %typebyname %typebyval );
 	NSEC3	   => 50,					# RFC5155
 	NSEC3PARAM => 51,					# RFC5155
 	TLSA	   => 52,					# RFC6698
+	SMIMEA	   => 53,					# draft-ietf-dane-smime
 	HIP	   => 55,					# RFC5205
 	NINFO	   => 56,					#
 	RKEY	   => 57,					#

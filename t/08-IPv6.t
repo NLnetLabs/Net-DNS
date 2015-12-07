@@ -72,7 +72,7 @@ my $IP = eval {
 diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 
 
-plan tests => 31;
+plan tests => 33;
 
 NonFatalBegin();
 
@@ -167,6 +167,19 @@ NonFatalBegin();
 
 	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $tcp, '$resolver->bgsend(...)	specify TCP local address & port' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->retrans(0);
+	$resolver->retry(0);
+
+	my $query = $resolver->query( undef, qw(SOA IN) );
+	ok( $query, '$resolver->query( undef, ... ) defaults to "." ' );
+
+	my $search = $resolver->search( undef, qw(SOA IN) );
+	ok( $search, '$resolver->search( undef, ... ) defaults to "." ' );
 }
 
 
