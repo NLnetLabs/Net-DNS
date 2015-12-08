@@ -51,15 +51,15 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 }
 
 
-my $pad = pack 'x16';
-
 sub address_long {
-	sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack 'n8', shift->{address} . $pad;
+	my $addr = pack 'a*@16', grep defined, shift->{address};
+	sprintf '%x:%x:%x:%x:%x:%x:%x:%x', unpack 'n8', $addr;
 }
 
 
 sub address_short {
-	for ( sprintf ':%x:%x:%x:%x:%x:%x:%x:%x:', unpack 'n8', shift->{address} . $pad ) {
+	my $addr = pack 'a*@16', grep defined, shift->{address};
+	for ( sprintf ':%x:%x:%x:%x:%x:%x:%x:%x:', unpack 'n8', $addr ) {
 		s/(:0[:0]+:)(?!.+:0\1)/::/;			# squash longest zero sequence
 		s/^:// unless /^::/;				# prune LH :
 		s/:$// unless /::$/;				# prune RH :
