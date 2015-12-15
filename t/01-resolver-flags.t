@@ -1,7 +1,7 @@
 # $Id$  -*-perl-*-
 
 use strict;
-use Test::More tests => 11;
+use Test::More tests => 23;
 
 use Net::DNS;
 
@@ -22,18 +22,22 @@ $res->dnssec(0);
 ok( !$res->dnssec(), "dnssec flag toggles off" );
 
 
-ok( !$res->adflag(), "default adflag  off" );
-$res->adflag(1);
-ok( $res->adflag(), "toggle adflag  on" );
-$res->adflag(0);
-ok( !$res->adflag(), "toggle adflag  off" );
+my @flag = qw(adflag cdflag force_v4 force_v6 prefer_v6);
+foreach my $flag (@flag) {
+	ok( !$res->$flag(), "default $flag off" );
+	$res->$flag(1);
+	ok( $res->$flag(), "toggle $flag on" );
+	$res->$flag(0);
+	ok( !$res->$flag(), "toggle $flag off" );
+}
 
-
-ok( !$res->cdflag(), "default cdflag  off" );
-$res->cdflag(1);
-ok( $res->cdflag(), "toggle cdflag  on" );
-$res->cdflag(0);
-ok( !$res->cdflag(), "toggle cdflag  off" );
+foreach my $flag (qw(prefer_v4)) {
+	ok( $res->$flag(), "default $flag on" );
+	$res->$flag(0);
+	ok( !$res->$flag(), "toggle $flag off" );
+	$res->$flag(1);
+	ok( $res->$flag(), "toggle $flag on" );
+}
 
 
 exit;

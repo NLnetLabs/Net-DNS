@@ -71,7 +71,7 @@ my $IP = eval {
 diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 
 
-plan tests => 33;
+plan tests => 58;
 
 NonFatalBegin();
 
@@ -108,6 +108,21 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->dnssec(1);
+	$resolver->udppacketsize(513);
+
+	my $udp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( !$udp->header->tc, '$resolver->send(...)	truncated UDP reply, TCP retry' );
+
+	$resolver->igntc(1);
+
+	my $trunc = $resolver->send(qw(net-dns.org SOA IN));
+	ok( $trunc->header->tc, '$resolver->send(...)	ignore UDP truncation' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
 	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $udp, '$resolver->bgsend(...)	UDP' );
@@ -124,6 +139,16 @@ NonFatalBegin();
 		sleep 1;
 	}
 	ok( $resolver->bgread($tcp), '$resolver->bgread()' );
+
+	ok( $resolver->bgisready(undef),	     '$resolver->bgisready(undef)' );
+	ok( !$resolver->bgisready( ref($udp)->new ), '$resolver->bgisready(Socket->new)' );
+	ok( !$resolver->bgread(undef),		     '$resolver->bgread(undef)' );
+	ok( !$resolver->bgread( ref($udp)->new ),    '$resolver->read(Socket->new)' );
+
+	my $sock     = $resolver->bgsend(qw(net-dns.org SOA IN));
+	my $appendix = ${*$sock}{net_dns_bg};
+	$appendix->[1]++;
+	ok( !$resolver->bgread($sock), '$resolver->bgread() id mismatch' );
 }
 
 
@@ -151,6 +176,8 @@ NonFatalBegin();
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent TCP' );
 	is( $test, $handle, 'same TCP socket object used' );
+	close($handle);
+	ok( $resolver->bgsend(qw(net-dns.org SOA IN)), 'connection recovered after close' );
 }
 
 
@@ -170,15 +197,76 @@ NonFatalBegin();
 
 
 {
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->srcport(53);
+
+	my $udp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( !$udp, '$resolver->send(...)	specify bad UDP source port' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( !$tcp, '$resolver->send(...)	specify bad TCP source port' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->srcport(53);
+
+	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( !$udp, '$resolver->bgsend(...)	specify bad UDP source port' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( !$tcp, '$resolver->bgsend(...)	specify bad TCP source port' );
+}
+
+
+{
 	my $resolver = Net::DNS::Resolver->new();
 	$resolver->retrans(0);
 	$resolver->retry(0);
 
-	my $query = $resolver->query( undef, qw(SOA IN) );
-	ok( $query, '$resolver->query( undef, ... ) defaults to "." ' );
+	my @query = ( undef, qw(SOA IN) );
+	ok( $resolver->query(@query),  '$resolver->query( undef, ... ) defaults to "." ' );
+	ok( $resolver->search(@query), '$resolver->search( undef, ... ) defaults to "." ' );
 
-	my $search = $resolver->search( undef, qw(SOA IN) );
-	ok( $search, '$resolver->search( undef, ... ) defaults to "." ' );
+	$resolver->defnames(0);
+	$resolver->dnsrch(0);
+	ok( $resolver->search(@query), '$resolver->search() without dnsrch & defnames' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->searchlist('net');
+
+	my @query = (qw(us SOA IN));
+	ok( $resolver->query(@query),  '$resolver->query( name, ... )' );
+	ok( $resolver->search(@query), '$resolver->search( name, ... )' );
+
+	$resolver->defnames(0);
+	$resolver->dnsrch(0);
+	ok( $resolver->query(@query),  '$resolver->query() without defnames' );
+	ok( $resolver->search(@query), '$resolver->search() without dnsrch' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => '192.0.2.1' );
+	$resolver->tcp_timeout(1);
+
+	my @query = (qw(. SOA IN));
+	my $query = new Net::DNS::Packet(@query);
+	$query->edns->option( 1, pack 'x500' );			# pad to force TCP
+	ok( !$resolver->send($query),	'$resolver->send() failure' );
+	ok( !$resolver->bgsend($query), '$resolver->bgsend() failure' );
+
+	$resolver->usevc(1);
+	ok( !$resolver->query(@query),	'$resolver->query() failure' );
+	ok( !$resolver->search(@query), '$resolver->search() failure' );
 }
 
 
@@ -199,19 +287,42 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->domain('net-dns.org');
 	$resolver->tcp_timeout(10);
-	eval { $resolver->tsig( 'MD5.example', 'ARDJZgtuTDzAWeSGYPAu9uJUkX0=' ) };
 
-	my $iter = $resolver->axfr('example.com');
+	my @zone = eval { $resolver->axfr() };
+	ok( scalar(@zone), '$resolver->axfr() works in list context' );
+
+	my $iter = eval { $resolver->axfr() };
 	is( ref($iter), 'CODE', '$resolver->axfr() returns iterator CODE ref' );
-	my $error = $resolver->errorstring;
-	like( $error, '/NOTAUTH/', '$resolver->errorstring() reports RCODE from server' );
+	my $i;
+	while ( $iter->() ) { $i++ }
+	ok( $i, '$resolver->axfr() works using iterator' );
 
-	my @zone = eval { $resolver->axfr('example.com') };
-	ok( $resolver->errorstring, '$resolver->axfr() works in list context' );
+	ok( !$iter->(), '$iter->() returns undef after last RR' );
 
-	ok( $resolver->axfr_start('example.com'), '$resolver->axfr_start()	(historical)' );
-	is( $resolver->axfr_next(), undef, '$resolver->axfr_next()' );
+	my $axfr_start = eval { $resolver->axfr_start() };
+	ok( $axfr_start, '$resolver->axfr_start()	(historical)' );
+	my $n;
+	while ( $resolver->axfr_next() ) { $n++ }
+	ok( $n, '$resolver->axfr_next() works' );
+
+	ok( !$resolver->axfr_next(), '$resolver->axfr_next() returns undef after last RR' );
+
+	$resolver->srcport(53);
+	my @bad = eval { $resolver->axfr() };
+	ok( !scalar(@bad), '$resolver->axfr() bad source port' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->domain('net-dns.org');
+	$resolver->tcp_timeout(10);
+
+	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
+	my @bad = eval { $resolver->axfr() };
+	ok( !scalar(@bad), '$resolver->axfr() unverifiable' );
 }
 
 

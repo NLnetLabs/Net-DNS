@@ -445,7 +445,6 @@ The argument is the handle returned by C<bgsend>.
 
 =head2 tsig
 
-    $tsig = $resolver->tsig;
     $resolver->tsig( $tsig );
 
     $resolver->tsig( 'Khmac-sha1.example.+161+24053.private' );
@@ -460,9 +459,9 @@ The argument is the handle returned by C<bgsend>.
 
     $resolver->tsig( undef );
 
-Get or set the TSIG record used to automatically sign outgoing
-queries and updates.  Call with an undefined argument, 0 or ''
-to turn off automatic signing.
+Set the TSIG record used to automatically sign outgoing queries, zone
+transfers and updates.  Call with an undefined argument, 0 or '' to
+turn off automatic signing.
 
 The default resolver behavior is not to sign any packets.  You must
 call this method to set the key if you would like the resolver to
