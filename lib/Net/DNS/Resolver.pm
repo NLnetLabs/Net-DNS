@@ -357,21 +357,17 @@ The default is port 53.
 
 =head2 srcport
 
-    print 'sending queries from port ', $resolver->srcport, "\n";
     $resolver->srcport(5353);
 
-Gets or sets the port from which queries are sent.
+Sets the port from which queries are sent.
 The default is 0, meaning any port.
 
 =head2 srcaddr
-
-    print 'sending queries from address ', $resolver->srcaddr, "\n";
     $resolver->srcaddr('192.0.2.1');
 
-Gets or sets the source address from which queries are sent.
+Sets the source address from which queries are sent.
 Convenient for forcing queries from a specific interface on a
-multi-homed host.
-The default is 0, meaning any local address.
+multi-homed host.  The default is to use any local address.
 
 
 =head2 bgsend
@@ -727,8 +723,8 @@ The Net::DNS::Resolver library will enable IPv6 transport if the
 appropriate libraries (IO::Socket::INET6 or IO::Socket::IP) are
 available and the destination nameserver has an IPv6 address.
 
-The force_v4(), force_v6() and prefer_v6() methods with a non-zero
-argument may be used to configure transport selection.
+The force_v4(), force_v6(),prefer_v4 and prefer_v6() methods with a
+non-zero argument may be used to configure transport selection.
 
 The behaviour of the nameserver() method illustrates the transport
 selection mechanism.  If, for example, IPv6 is not available or IPv4

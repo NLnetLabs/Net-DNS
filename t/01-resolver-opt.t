@@ -2,7 +2,7 @@
 
 
 use strict;
-use Test::More tests => 38;
+use Test::More tests => 37;
 
 use File::Spec;
 use Net::DNS;
@@ -54,7 +54,6 @@ my %test_config = (
 	udp_timeout    => 60,
 	usevc	       => 1,
 	port	       => 54,
-	srcaddr	       => '10.1.0.1',
 	srcport	       => 53,
 	adflag	       => 1,
 	cdflag	       => 0,

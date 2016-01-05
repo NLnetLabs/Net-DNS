@@ -71,11 +71,12 @@ my $IP = eval {
 
 diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 
+Net::DNS::Resolver->debug($debug);
 
-plan tests => 58;
+
+plan tests => 60;
 
 NonFatalBegin();
-
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
@@ -87,23 +88,6 @@ NonFatalBegin();
 
 	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
 	ok( $tcp, '$resolver->send(...)	TCP' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->force_v4(1);
-
-	my @ns = $resolver->nameservers;
-	is( $resolver->errorstring, 'IPv6 transport disabled', 'force_v4(1) gives error' );
-
-	my $udp = $resolver->send(qw(net-dns.org SOA IN));
-	ok( !$udp, 'fail $resolver->send()	UDP' );
-
-	$resolver->usevc(1);
-
-	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
-	ok( !$tcp, 'fail $resolver->send()	TCP' );
 }
 
 
@@ -256,6 +240,19 @@ NonFatalBegin();
 
 
 {
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+
+	my $udp = $resolver->query(qw(bogus.net-dns.org A IN));
+	ok( !$udp, '$resolver->query() nonexistent name	UDP' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->query(qw(bogus.net-dns.org A IN));
+	ok( !$tcp, '$resolver->query() nonexistent name	TCP' );
+}
+
+
+{
 	my $resolver = Net::DNS::Resolver->new( nameservers => '::' );
 	$resolver->tcp_timeout(1);
 
@@ -268,6 +265,9 @@ NonFatalBegin();
 	$resolver->usevc(1);
 	ok( !$resolver->query(@query),	'$resolver->query() failure' );
 	ok( !$resolver->search(@query), '$resolver->search() failure' );
+
+	my $update = new Net::DNS::Update('bogus.example.com');
+	ok( !$resolver->send($update), '$resolver->send() update' );
 }
 
 
@@ -318,12 +318,21 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->domain('net-dns.org');
 	$resolver->tcp_timeout(10);
 
 	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
-	my @bad = eval { $resolver->axfr() };
+	my @bad = eval { $resolver->axfr('net-dns.org') };
 	ok( !scalar(@bad), '$resolver->axfr() unverifiable' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => '192.0.2.1' );
+	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
+
+	my $query = new Net::DNS::Packet(qw(. SOA IN));
+	ok( $resolver->bgsend($query), '$resolver->bgsend() + with TSIG' );
+	ok( $resolver->bgsend($query), '$resolver->bgsend() + existing TSIG' );
 }
 
 

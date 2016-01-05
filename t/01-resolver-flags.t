@@ -22,21 +22,15 @@ $res->dnssec(0);
 ok( !$res->dnssec(), "dnssec flag toggles off" );
 
 
-my @flag = qw(adflag cdflag force_v4 force_v6 prefer_v6);
+my @flag = qw(adflag cdflag force_v4 force_v6 prefer_v4 prefer_v6);
 foreach my $flag (@flag) {
-	ok( !$res->$flag(), "default $flag off" );
-	$res->$flag(1);
-	ok( $res->$flag(), "toggle $flag on" );
-	$res->$flag(0);
-	ok( !$res->$flag(), "toggle $flag off" );
-}
-
-foreach my $flag (qw(prefer_v4)) {
-	ok( $res->$flag(), "default $flag on" );
-	$res->$flag(0);
-	ok( !$res->$flag(), "toggle $flag off" );
-	$res->$flag(1);
-	ok( $res->$flag(), "toggle $flag on" );
+	my $default = $res->$flag();
+	my $changed = $default ? 0 : 1;
+	ok( defined $default, "default $flag $default" );
+	$res->$flag($changed);
+	is( $res->$flag(), $changed, "toggle $flag $changed" );
+	$res->$flag($default);
+	is( $res->$flag(), $default, "toggle $flag $default" );
 }
 
 
