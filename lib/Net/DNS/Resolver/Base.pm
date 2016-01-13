@@ -362,18 +362,15 @@ sub _cname_addr {
 	# TODO 20081217
 	# This code does not follow CNAME chains, it only looks inside the packet.
 	# Out of bailiwick will fail.
-	my @addr;
-	my $packet = shift || return @addr;
+	my @null;
+	my $packet = shift || return @null;
 	my $names = shift;
 
 	map $names->{$_->qname}++, $packet->question;
 	map $names->{$_->cname}++, grep $_->can('cname'), $packet->answer;
 
-	foreach my $rr ( grep $names->{$_->name}, $packet->answer ) {
-		push( @addr, $rr->address ) if $rr->can('address');
-	}
-
-	return @addr;
+	my @addr = grep $_->can('address'), $packet->answer;
+	map $_->address, grep $names->{$_->name}, @addr;
 }
 
 
@@ -476,12 +473,10 @@ sub _send_tcp {
 			$self->_diag( "answer from [$ns]", length($buffer), 'bytes' );
 
 			my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
+			$self->errorstring($@);
 
-			unless ($ans) {
-				$self->errorstring($@);
-			} else {
+			if ($ans) {
 				my $rcode = $ans->header->rcode;
-				$self->errorstring( $@ . $rcode );
 
 				$ans->answerfrom($ns);
 
@@ -561,19 +556,16 @@ NAMESERVER: foreach my $ns (@ns) {
 				$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
 				my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
+				$self->errorstring($@);
 
-				unless ($ans) {
-					$self->errorstring($@);
-				} else {
+				if ($ans) {
 					my $header = $ans->header;
-					my $rcode  = $header->rcode;
-					$self->errorstring( $@ . $rcode );
-
-					$ans->answerfrom($peer);
-
 					next unless $header->qr;
 					next unless $header->id == $packet->header->id;
 
+					$ans->answerfrom($peer);
+
+					my $rcode  = $header->rcode;
 					return $ans if $rcode eq "NOERROR";
 					return $ans if $rcode eq "NXDOMAIN";
 
@@ -709,15 +701,13 @@ sub bgread {
 	}
 
 	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
+	$self->errorstring($@);
 
-	unless ($ans) {
-		$self->errorstring($@);
-	} else {
+	if ($ans) {
 		my $header = $ans->header;
-		$self->errorstring( $@ . $header->rcode );
-		$ans->answerfrom( $self->answerfrom );
-
 		return undef unless $header->qr;
+
+		$ans->answerfrom( $self->answerfrom );
 		return $ans if $header->id == $qid;
 	}
 }
@@ -763,16 +753,18 @@ sub axfr {				## zone transfer
 		my $rr = shift(@rr);
 
 		if ( ref($rr) eq 'Net::DNS::RR::SOA' ) {
-			return $self->{axfr_sel} = undef unless $rr eq $soa;
+			return $rr if $rr eq $soa;
+			croak 'improperly terminated AXFR' if $rr->encode ne $soa->encode;
+			return $self->{axfr_sel} = undef;
 		}
 
 		return $rr if scalar @rr;
 
-		my $reply = $self->_axfr_next() || return;
-		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
-		$self->_diag( $verfy ? 'verified' : 'not verified' );
+		my $reply = $self->_axfr_next() || return $self->{axfr_sel} = undef;
 		@rr = $reply->answer;
-		return $rr;
+		return $rr unless $verfy;
+		return $rr if $verfy = $reply->verify($verfy);
+		croak $reply->verifyerr;
 	};
 
 	$iterator->();						# read initial packet
@@ -780,22 +772,11 @@ sub axfr {				## zone transfer
 
 	return $iterator unless wantarray;
 
-	my @zone = shift @rr;					# initial SOA
-	my @null;
-
-	until ( scalar(@rr) && $rr[$#rr]->type eq 'SOA' ) {
-		push @zone, @rr;				# unpack non-terminal packet
-		@rr = @null;
-		my $reply = $self->_axfr_next();
-		last unless $reply;
-		$verfy = $reply->verify($verfy) || croak $reply->verifyerr if $verfy;
-		$self->_diag( $verfy ? 'verified' : 'not verified' );
-		@rr = $reply->answer;
+	my @zone;						# assemble whole zone
+	while ( my $rr = $iterator->() ) {
+		push @zone, $rr, @rr;
+		@rr = scalar(@rr) ? pop @zone : ();
 	}
-
-	$self->{axfr_sel} = undef;				# unpack final packet
-	push @zone, @rr;
-	croak 'improperly terminated AXFR' if pop(@zone)->encode ne $soa->encode;
 	return @zone;
 }
 
@@ -803,14 +784,12 @@ sub axfr {				## zone transfer
 sub axfr_start {			## historical
 	my $self = shift;					# uncoverable pod
 	my $iter = $self->{axfr_iter} = $self->axfr(@_);
-	return defined($iter);
+	defined($iter);
 }
 
 
 sub axfr_next {				## historical
-	my $self = shift;					# uncoverable pod
-	my $iter = $self->{axfr_iter} || return undef;
-	$iter->() || return $self->{axfr_iter} = undef;
+	shift->{axfr_iter}->();					# uncoverable pod
 }
 
 
@@ -858,12 +837,10 @@ sub _axfr_next {
 
 	my ($size) = unpack 'n*', _read_tcp( $sock, INT16SZ );
 	my $buffer = _read_tcp( $sock, $size );
-
-	my $received = length $buffer;
-	$self->_diag( 'received', $received, 'bytes' );
+	$self->_diag( 'received', length($buffer), 'bytes' );
 
 	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
-	croak 'improperly terminated AXFR' unless $ans;
+	return unless $ans;
 	my $rcode = $ans->header->rcode;
 	$self->_diag( $self->errorstring("RCODE from server: $rcode") );
 	$ans->answerfrom( $self->{axfr_ns} );
@@ -876,10 +853,10 @@ sub _axfr_next {
 #
 sub _read_tcp {
 	my $socket = shift;
-	my $length = shift || 0;
+	my $unread = shift;
 	my $buffer = '';
 
-	while ( ( my $unread = $length - length $buffer ) > 0 ) {
+	while ($unread) {
 
 		# During some of my tests recv() returned undef even
 		# though there wasn't an error.	 Checking for the amount
@@ -887,12 +864,15 @@ sub _read_tcp {
 
 		my $read_buf = '';
 		$socket->recv( $read_buf, $unread );
-		unless ( length $read_buf ) {
+
+		my $read = length $read_buf;
+		unless ($read) {
 			warn "ERROR: tcp recv failed: $!\n";
 			last;
 		}
 
 		$buffer .= $read_buf;
+		last unless ( $unread -= $read ) > 0;
 	}
 
 	return $buffer;
