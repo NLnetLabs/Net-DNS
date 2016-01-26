@@ -98,6 +98,10 @@ A space-separated list of domains to put in the search list.
 
 A space-separated list of nameservers to query.
 
+=item options
+
+A space-separated list of key:value items.
+
 =back
 
 Except for F</etc/resolv.conf>, files will only be read if owned by the
@@ -388,55 +392,57 @@ of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (IPv4 or IPv6),
 an appropriate PTR query will be performed.
 
-Returns an opaque token which is passed to subsequent invocations of
-the C<bgisready> and C<bgread> methods.
+Returns an opaque handle which is passed to subsequent invocations of
+the C<bgbusy> and C<bgread> methods.
 Errors are indicated by returning C<undef> in which case the
 reason for failure can be found by calling the errorstring method.
 
-The program may determine when the underlying socket is ready for
-reading by calling C<bgisready>.
+The program may determine when the handle is ready for reading by
+calling C<bgbusy>.
 
 The response C<Net::DNS::Packet> object is obtained by calling C<bgread>.
-C<bgread> returns C<undef> if no response is received or timeout occurred. 
 
 B<BEWARE>:
-Answers may not fit in an UDP packet and might be truncated. Truncated 
-packets will B<not> be retried over TCP automatically and should be handled
-by the caller.
+Programs should make no assumptions about the nature of the handles
+returned by B<bgsend> which should be used strictly as described here.
 
 
 =head2 bgread
 
     $packet = $resolver->bgread($handle);
 
-    if ($packet->header->tc) { 
-	# Retry over TCP (blocking).
-    }
-
-Reads the answer from a background query (see L</bgsend>).
+Reads the answer from a background query.
 The argument is the handle returned by C<bgsend>.
 
-Returns a C<Net::DNS::Packet> object or C<undef> if an error
-was encountered or the transaction timed out.
+Returns a C<Net::DNS::Packet> object or C<undef> if no response was
+received or timeout occurred. 
 
 
-=head2 bgisready
+=head2 bgbusy
 
     $handle = $resolver->bgsend( 'foo.example.com' );
 
-    until ($resolver->bgisready($handle)) {
-	# do some other processing
+    while ($resolver->bgbusy($handle)) {
+	...
     }
 
     $packet = $resolver->bgread($handle);
 
-    if ($packet->header->tc) { 
-	# Retry over TCP (blocking).
+Returns true while awaiting the response or for the transaction to time out.
+The argument is the handle returned by C<bgsend>.
+
+Truncated UDP packets will be retried over TCP transparently while
+continuing to assert busy to the caller.
+
+
+=head2 bgisready
+
+    until ($resolver->bgisready($handle)) {
+	...
     }
 
-Returns true when the response is available for reading
-or the transaction timed out.
-The argument is the handle returned by C<bgsend>.
+C<bgisready> is the logical complement of C<bgbusy> which is retained
+for backward compatibility.
 
 
 =head2 tsig
@@ -707,11 +713,11 @@ The default domain.
 =head2 RES_OPTIONS
 
     # Bourne Shell
-    RES_OPTIONS="retrans:3 retry:2 debug"
+    RES_OPTIONS="retrans:3 retry:2 inet6"
     export RES_OPTIONS
 
     # C Shell
-    setenv RES_OPTIONS "retrans:3 retry:2 debug"
+    setenv RES_OPTIONS "retrans:3 retry:2 inet6"
 
 A space-separated list of resolver options to set.  Options that
 take values are specified as C<option:value>.

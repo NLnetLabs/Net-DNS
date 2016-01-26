@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 31;
+use Test::More tests => 32;
 
 
 my @module = qw(

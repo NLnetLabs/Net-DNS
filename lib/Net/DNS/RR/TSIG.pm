@@ -350,19 +350,33 @@ sub create {
 	croak 'argument missing or undefined' unless defined $karg;
 
 	if ( ref($karg) ) {
-		return $karg->_chain if ref($karg) eq __PACKAGE__;
-		croak "Usage:	create $class( keyfile )\n\tcreate $class( keyname, key )"
-				unless $karg->isa('Net::DNS::Packet');
+		if ( $karg->isa('Net::DNS::Packet') ) {
+			my $sigrr = $karg->sigrr;
+			croak 'no TSIG in request packet' unless defined $sigrr;
+			return new Net::DNS::RR(		# ( request, options )
+				name	       => $sigrr->name,
+				type	       => 'TSIG',
+				algorithm      => $sigrr->algorithm,
+				request_macbin => $sigrr->macbin,
+				@_
+				);
 
-		my $sigrr = $karg->sigrr;
-		croak 'no TSIG in request packet' unless defined $sigrr;
-		return new Net::DNS::RR(			# ( request, options )
-			name	       => $sigrr->name,
-			type	       => 'TSIG',
-			algorithm      => $sigrr->algorithm,
-			request_macbin => $sigrr->macbin,
-			@_
-			);
+		} elsif ( ref($karg) eq __PACKAGE__ ) {
+			my $tsig = $karg->_chain;
+			$tsig->{macbin} = undef;
+			return $tsig;
+
+		} elsif ( ref($karg) eq 'Net::DNS::RR::KEY' ) {
+			return new Net::DNS::RR(
+				name	  => $karg->name,
+				type	  => 'TSIG',
+				algorithm => $karg->algorithm,
+				key	  => $karg->key,
+				@_
+				);
+		}
+
+		croak "Usage:	create $class(keyfile)\n\tcreate $class(keyname, key)"
 
 	} elsif ( scalar(@_) == 1 ) {
 		my $key = shift;				# ( keyname, key )
@@ -427,10 +441,10 @@ sub verify {
 			return;
 		}
 
-		my $signerkey = join '+', $self->name, $self->algorithm;
+		my $signerkey = lc( join '+', $self->name, $self->algorithm );
 		if ( $arg->isa('Net::DNS::Packet') ) {
 			my $request = $arg->sigrr;		# request TSIG
-			my $rqstkey = join '+', $request->name, $request->algorithm;
+			my $rqstkey = lc( join '+', $request->name, $request->algorithm );
 			unless ( $signerkey eq $rqstkey ) {
 				$self->error(17);
 				return;
@@ -438,7 +452,7 @@ sub verify {
 			$self->request_macbin( $request->macbin );
 
 		} elsif ( $arg->isa(__PACKAGE__) ) {
-			my $priorkey = join '+', $arg->name, $arg->algorithm;
+			my $priorkey = lc( join '+', $arg->name, $arg->algorithm );
 			unless ( $signerkey eq $priorkey ) {
 				$self->error(17);
 				return;
@@ -453,7 +467,6 @@ sub verify {
 	my $sigdata = $self->sig_data($data);			# form data to be verified
 	my $tsigmac = $self->_mac_function($sigdata);
 	my $tsig    = $self->_chain;
-	$tsig->macbin($tsigmac);
 
 	my $macbin = $self->macbin;
 	my $maclen = length $macbin;
@@ -503,8 +516,8 @@ sub vrfyerrstr {
 
 				my ( $hash, @param ) = @{$digest{$digtype}};
 				my ( undef, @block ) = @param;
+				my $digest = new $hash(@param);
 				my $function = sub {
-					my $digest = new $hash(@param);
 					my $hmac = new Digest::HMAC( shift, $digest, @block );
 					$hmac->add(shift);
 					return $hmac->digest;
@@ -552,7 +565,7 @@ sub vrfyerrstr {
 
 sub _chain {
 	my $self = shift;
-	bless {%$self, macbin => undef, link => $self}, ref($self);
+	bless {%$self, link => $self}, ref($self);
 }
 
 

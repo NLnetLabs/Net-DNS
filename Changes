@@ -1,6 +1,19 @@
 $Id$                       -*-text-*-
 
 
+**** 1.05 [unreleased]
+
+Fix rt.cpan.org #108908
+
+	Installing recent version gets shadowed by old version.
+	Warning added to Makefile.PL
+
+Fix rt.cpan.org #66900
+
+	Net::DNS::Async unable to retry truncated UDP using TCP because
+	of limitations in Net::DNS.
+
+
 **** 1.04 December 8, 2015
 
 Fix rt.cpan.org #109183

@@ -413,11 +413,11 @@ sub search {
 
 	return $self->query(@_) unless $self->{dnsrch};
 
-	# attempt to resolve hostname with no dots or colons by applying suffix
 	my $name = shift || '.';
-	my @sfix = $name =~ m/[:.]/ ? () : @{$self->{searchlist}};
+	my @sfix = @{$self->{searchlist}};
+	my @list = $name =~ m/[.]/ ? ( undef, @sfix ) : ( @sfix, undef );
 
-	foreach my $suffix ( @sfix, undef ) {
+	foreach my $suffix ( $name =~ m/:|\.\d*$/ ? undef : @list ) {
 		my $fqname = $suffix ? join( '.', $name, $suffix ) : $name;
 
 		$self->_diag( 'search(', $fqname, @_, ')' );
@@ -476,10 +476,11 @@ sub _send_tcp {
 			$self->errorstring($@);
 
 			if ($ans) {
-				my $rcode = $ans->header->rcode;
+				next unless $ans->verify($packet);
 
 				$ans->answerfrom($ns);
 
+				my $rcode = $ans->header->rcode;
 				return $ans if $rcode eq "NOERROR";
 				return $ans if $rcode eq "NXDOMAIN";
 
@@ -562,10 +563,11 @@ NAMESERVER: foreach my $ns (@ns) {
 					my $header = $ans->header;
 					next unless $header->qr;
 					next unless $header->id == $packet->header->id;
+					next unless $ans->verify($packet);
 
 					$ans->answerfrom($peer);
 
-					my $rcode  = $header->rcode;
+					my $rcode = $header->rcode;
 					return $ans if $rcode eq "NOERROR";
 					return $ans if $rcode eq "NXDOMAIN";
 
@@ -605,10 +607,10 @@ sub _bgsend_tcp {
 
 	my $port = $self->{port};
 
-	foreach my $ns ( $self->nameservers ) {
-		my $socket = $self->_create_tcp_socket($ns) || next;
+	foreach my $ip ( $self->nameservers ) {
+		my $socket = $self->_create_tcp_socket($ip) || next;
 
-		$self->_diag( 'bgsend', "[$ns]:$port" );
+		$self->_diag( 'bgsend', "[$ip]:$port" );
 
 		my $length = length $packet_data;
 		my $tcp_packet = pack 'n a*', $length, $packet_data;
@@ -617,7 +619,7 @@ sub _bgsend_tcp {
 		$self->errorstring($!);
 
 		my $expire = time() + $self->{tcp_timeout};
-		${*$socket}{net_dns_bg} = [$expire, $packet->header->id, $ns, 1];
+		${*$socket}{net_dns_bg} = [$expire, 0, $packet->header->id, $ip];
 		return $socket;
 	}
 
@@ -633,14 +635,14 @@ sub _bgsend_udp {
 
 	my $port = $self->{port};
 
-	foreach my $ns ( $self->nameservers ) {
-		my $socket = $self->_create_udp_socket($ns) || next;
-		my $dst_sockaddr = $self->_create_dst_sockaddr( $ns, $port );
+	foreach my $ip ( $self->nameservers ) {
+		my $socket = $self->_create_udp_socket($ip) || next;
+		my $dst_sockaddr = $self->_create_dst_sockaddr( $ip, $port );
 
-		$self->_diag( 'bgsend', "[$ns]:$port" );
+		$self->_diag( 'bgsend', "[$ip]:$port" );
 
 		unless ( $socket->send( $packet_data, 0, $dst_sockaddr ) ) {
-			$self->errorstring("send: [$ns]:$port  $!");
+			$self->errorstring("send: [$ip]:$port  $!");
 			next;
 		}
 
@@ -649,7 +651,7 @@ sub _bgsend_udp {
 		die 'Insecure dependency while running with -T switch' if _tainted($dst_sockaddr);
 
 		my $expire = time() + $self->{udp_timeout};
-		${*$socket}{net_dns_bg} = [$expire, $packet->header->id, $ns, 0];
+		${*$socket}{net_dns_bg} = [$expire, 1, $packet->header->id, $ip];
 		return $socket;
 	}
 
@@ -658,33 +660,62 @@ sub _bgsend_udp {
 }
 
 
-sub bgisready {
+sub bgbusy {
 	my $self = shift;
-	my $sock = shift || return 1;
-
-	return 1 if IO::Select->new($sock)->can_read(0);
+	my ($sock) = @_;
+	return unless $sock;
 
 	my $appendix = ${*$sock}{net_dns_bg} || [];
-	my $time = time();
-	my ($expire) = ( @$appendix, $time );
-	$time > $expire;
+	my ( $expire, $udp ) = ( @$appendix, 0, 1 );
+	return if ref($udp);
+
+	unless ( IO::Select->new($sock)->can_read(0) ) {
+		my $time = time();
+		my ($expire) = ( @$appendix, $time );
+		return $time <= $expire;
+	}
+
+	return unless $udp;
+
+	my $ans = $self->bgread($sock);
+	return unless $ans;
+
+	$$appendix[1] = $ans;
+	return unless $ans->header->tc;
+	return if $self->{igntc};
+
+	$self->_diag('packet truncated: retrying using TCP');
+	my $packet = new Net::DNS::Packet();
+	$packet->{question} = $ans->{question};
+	my $tcp = $self->_bgsend_tcp( $packet, $packet->data );
+	$_[0] = $tcp if $tcp;
+	return defined $tcp;
+}
+
+
+sub bgisready {				## historical
+	!&bgbusy;						# uncoverable pod
 }
 
 
 sub bgread {
 	my $self = shift;
-	my $sock = shift || return undef;
+	my $sock = shift || return;
 
 	my $appendix = ${*$sock}{net_dns_bg} || [];
+	my ( $x, $udp ) = ( @$appendix, 0, 1 );
+
+	return $udp if ref($udp);
+
 	my $time = time();
-	my ( $expire, $qid, $ip, $tcp ) = ( @$appendix, $time, 0, 0 );
+	my ( $expire, $u, $qid, $ip ) = ( @$appendix, $time, 1, 0, '' );
 
 	my $select  = IO::Select->new($sock);
 	my $timeout = $expire - $time;
 	return undef unless $select->can_read( $timeout > 0 ? $timeout : 0 );
 
 	my $buffer;
-	if ($tcp) {
+	unless ($udp) {
 		my ($size) = unpack 'n*', _read_tcp( $sock, INT16SZ );
 		$buffer = _read_tcp( $sock, $size );
 		$self->answerfrom($ip);				# $sock->peerhost unreliable
@@ -706,76 +737,45 @@ sub bgread {
 	if ($ans) {
 		my $header = $ans->header;
 		return undef unless $header->qr;
+		return undef unless $header->id == $qid;
 
 		$ans->answerfrom( $self->answerfrom );
-		return $ans if $header->id == $qid;
 	}
-}
-
-
-sub _make_query_packet {
-	my $self = shift;
-
-	my ($packet) = @_;
-	if ( ref($packet) ) {
-		my $header = $packet->header;
-		$header->rd( $self->{recurse} ) if $header->opcode eq 'QUERY';
-
-	} else {
-		$packet = Net::DNS::Packet->new(@_);
-
-		my $header = $packet->header;
-		$header->ad( $self->{adflag} );			# RFC6840, 5.7
-		$header->cd( $self->{cdflag} );			# RFC6840, 5.9
-		$header->do(1) if $self->dnssec;
-		$header->rd( $self->{recurse} );
-	}
-
-	$packet->edns->size( $self->{udppacketsize} );		# advertise UDPsize for local stack
-
-	if ( $self->{tsig_rr} ) {
-		$packet->sign_tsig( $self->{tsig_rr} ) unless $packet->sigrr;
-	}
-
-	return $packet;
+	return $ans;
 }
 
 
 sub axfr {				## zone transfer
 	my $self = shift;
 
-	my $query = $self->_axfr_start(@_);
-	my $verfy = $query ? $query->sigrr : undef;
-	my @rr;
-	my $soa;
+	my ( $verify, @rr, $soa ) = $self->_axfr_start(@_);	# iterator state
 
 	my $iterator = sub {		## iterate over RRs
 		my $rr = shift(@rr);
 
 		if ( ref($rr) eq 'Net::DNS::RR::SOA' ) {
-			return $rr if $rr eq $soa;
+			return $soa = $rr unless $soa;
 			croak 'improperly terminated AXFR' if $rr->encode ne $soa->encode;
 			return $self->{axfr_sel} = undef;
 		}
 
 		return $rr if scalar @rr;
 
-		my $reply = $self->_axfr_next() || return $self->{axfr_sel} = undef;
+		my $reply;
+		( $reply, $verify ) = $self->_axfr_next($verify);
+		return $self->{axfr_sel} = undef unless $reply;
 		@rr = $reply->answer;
-		return $rr unless $verfy;
-		return $rr if $verfy = $reply->verify($verfy);
-		croak $reply->verifyerr;
+		return $rr;
 	};
 
 	$iterator->();						# read initial packet
-	($soa) = @rr;
 
 	return $iterator unless wantarray;
 
 	my @zone;						# assemble whole zone
 	while ( my $rr = $iterator->() ) {
-		push @zone, $rr, @rr;
-		@rr = scalar(@rr) ? pop @zone : ();
+		push @zone, $rr, @rr;				# copy RRs en bloc
+		@rr = pop(@zone);				# leave last one in @rr
 	}
 	return @zone;
 }
@@ -798,7 +798,7 @@ sub _axfr_start {
 	my $dname = scalar(@_) ? shift : $self->domain;
 	my @class = @_;
 
-	my $packet = $self->_make_query_packet( $dname, 'AXFR', @class );
+	my $request = $self->_make_query_packet( $dname, 'AXFR', @class );
 
 	$self->_diag("axfr_start( $dname, @class )");
 
@@ -807,7 +807,7 @@ sub _axfr_start {
 
 		$self->_diag("axfr_start nameserver [$ns]");
 
-		my $packet_data = $packet->data;
+		my $packet_data = $request->data;
 		my $TCP_msg = pack 'n a*', length($packet_data), $packet_data;
 
 		$socket->send($TCP_msg);
@@ -816,7 +816,7 @@ sub _axfr_start {
 		$self->{axfr_ns}  = $ns;
 		$self->{axfr_sel} = IO::Select->new($socket);
 
-		return $packet;					# request (for verification)
+		return $request->sigrr ? $request : undef;
 	}
 
 	$self->_diag( $self->errorstring );
@@ -825,7 +825,7 @@ sub _axfr_start {
 
 
 sub _axfr_next {
-	my $self = shift;
+	my ( $self, $verify ) = @_;
 
 	my $select = $self->{axfr_sel} || return;
 	my ($sock) = $select->can_read( $self->{tcp_timeout} );
@@ -839,12 +839,14 @@ sub _axfr_next {
 	my $buffer = _read_tcp( $sock, $size );
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
-	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
-	return unless $ans;
-	my $rcode = $ans->header->rcode;
+	my $packet = Net::DNS::Packet->new(\$buffer);
+	return unless $packet;
+	$packet->answerfrom( $self->{axfr_ns} );
+	my $rcode = $packet->header->rcode;
 	$self->_diag( $self->errorstring("RCODE from server: $rcode") );
-	$ans->answerfrom( $self->{axfr_ns} );
-	return $ans;
+	return $packet unless $verify;
+	return ( $packet, $verify ) if $verify = $packet->verify($verify);
+	croak $packet->verifyerr;
 }
 
 
@@ -872,7 +874,7 @@ sub _read_tcp {
 		}
 
 		$buffer .= $read_buf;
-		last unless ( $unread -= $read ) > 0;
+		$unread -= $read;
 	}
 
 	return $buffer;
@@ -1048,6 +1050,34 @@ sub _ip_is_ipv6 {
 }
 
 
+sub _make_query_packet {
+	my $self = shift;
+
+	my ($packet) = @_;
+	if ( ref($packet) ) {
+		my $header = $packet->header;
+		$header->rd( $self->{recurse} ) if $header->opcode eq 'QUERY';
+
+	} else {
+		$packet = Net::DNS::Packet->new(@_);
+
+		my $header = $packet->header;
+		$header->ad( $self->{adflag} );			# RFC6840, 5.7
+		$header->cd( $self->{cdflag} );			# RFC6840, 5.9
+		$header->do(1) if $self->dnssec;
+		$header->rd( $self->{recurse} );
+	}
+
+	$packet->edns->size( $self->{udppacketsize} );		# advertise UDPsize for local stack
+
+	if ( $self->{tsig_rr} ) {
+		$packet->sign_tsig( $self->{tsig_rr} ) unless $packet->sigrr;
+	}
+
+	return $packet;
+}
+
+
 sub dnssec {
 	my $self = shift;
 
@@ -1190,7 +1220,7 @@ for all your resolving needs.
 
 =head2 new, domain, searchlist, nameservers, print, string, errorstring,
 
-=head2 search, query, send, bgsend, bgisready, bgread, axfr, answerfrom,
+=head2 search, query, send, bgsend, bgbusy, bgread, axfr, answerfrom,
 
 =head2 force_v4, force_v6, prefer_v4, prefer_v6,
 

@@ -602,6 +602,7 @@ sub sign_tsig {
 	my $self = shift;
 
 	eval {
+		local $SIG{__DIE__};
 		require Net::DNS::RR::TSIG;
 		my $tsig = Net::DNS::RR::TSIG->create(@_);
 		$self->push( 'additional' => $tsig );
@@ -636,7 +637,7 @@ sub verify {
 	my $self = shift;
 
 	my $sig = $self->sigrr;
-	return $sig ? $sig->verify( $self, @_ ) : undef;
+	return $sig ? $sig->verify( $self, @_ ) : shift;
 }
 
 sub verifyerr {
@@ -675,9 +676,10 @@ sub sign_sig0 {
 	my $karg = shift;
 
 	eval {
-		my $sig0;
+		local $SIG{__DIE__};
 		require Net::DNS::RR::SIG;
 
+		my $sig0;
 		if ( ref($karg) eq 'Net::DNS::RR::SIG' ) {
 			$sig0 = $karg;
 

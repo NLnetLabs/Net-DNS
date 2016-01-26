@@ -31,7 +31,7 @@ exit( plan skip_all => 'IPv6 tests disabled.' ) unless -e 't/IPv6.enabled';
 
 
 eval {
-	my $resolver = new Net::DNS::Resolver( prefer_v6 => 1 );
+	my $resolver = new Net::DNS::Resolver( igntc => 1 );
 	exit plan skip_all => 'No nameservers' unless $resolver->nameservers;
 
 	my $reply = $resolver->send(qw(. NS IN)) || die;
@@ -57,9 +57,9 @@ eval {
 
 
 my $IP = eval {
-	my $resolver = Net::DNS::Resolver->new();
-	my $nsreply  = $resolver->send(qw(net-dns.org NS IN)) || die;
-	my @nsdname  = map $_->nsdname, grep $_->type eq 'NS', $nsreply->answer;
+	my $resolver = new Net::DNS::Resolver( igntc => 1 );
+	my $nsreply = $resolver->send(qw(net-dns.org NS IN)) || die;
+	my @nsdname = map $_->nsdname, grep $_->type eq 'NS', $nsreply->answer;
 
 	# assume any IPv6 net-dns.org nameserver will do
 	$resolver->force_v6(1);
@@ -74,12 +74,13 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 60;
+plan tests => 75;
 
 NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->igntc(1);
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
 	ok( $udp, '$resolver->send(...)	UDP' );
@@ -96,44 +97,76 @@ NonFatalBegin();
 	$resolver->dnssec(1);
 	$resolver->udppacketsize(513);
 
-	my $udp = $resolver->send(qw(net-dns.org SOA IN));
-	ok( !$udp->header->tc, '$resolver->send(...)	truncated UDP reply, TCP retry' );
+	my $retry = $resolver->send(qw(net-dns.org DNSKEY IN));
 
 	$resolver->igntc(1);
+	my $udp = $resolver->send(qw(net-dns.org DNSKEY IN));
 
-	my $trunc = $resolver->send(qw(net-dns.org SOA IN));
-	ok( $trunc->header->tc, '$resolver->send(...)	ignore UDP truncation' );
+	ok( $udp->header->tc, '$resolver->send(...)	truncated UDP reply' );
+	ok( !$retry->header->tc, '$resolver->send(...)	automatic TCP retry' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->igntc(1);
+
+	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $udp, '$resolver->bgsend(...)	UDP' );
+	while ( $resolver->bgbusy($udp) ) { sleep 1; }
+	ok( $resolver->bgisready($udp), '$resolver->bgisready($udp)' );
+	ok( $resolver->bgread($udp),	'$resolver->bgread($udp)' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $tcp, '$resolver->bgsend(...)	TCP' );
+	while ( $resolver->bgbusy($tcp) ) { sleep 1; }
+	ok( $resolver->bgisready($tcp), '$resolver->bgisready($tcp)' );
+	ok( $resolver->bgread($tcp),	'$resolver->bgread($tcp)' );
+
+	ok( !$resolver->bgbusy(undef), '!$resolver->bgbusy(undef)' );
+	ok( !$resolver->bgread(undef), '!$resolver->bgread(undef)' );
+
+	ok( !$resolver->bgisready( ref($udp)->new ), '!$resolver->bgisready(Socket->new)' );
+	ok( !$resolver->bgread( ref($udp)->new ),    '!$resolver->bgread(Socket->new)' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->dnssec(1);
+	$resolver->udppacketsize(513);
+	$resolver->igntc(1);
+
+	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
+	ok( $handle, '$resolver->bgsend(...)	truncated UDP' );
+	while ( $resolver->bgbusy($handle) ) { sleep 1; }
+	my $packet = $resolver->bgread($handle);
+	ok( $packet && $packet->header->tc, '$resolver->bgread(...)	ignore UDP truncation' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->dnssec(1);
+	$resolver->udppacketsize(513);
+
+	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
+	ok( $handle, '$resolver->bgsend(...)	truncated UDP' );
+	while ( $resolver->bgbusy($handle) ) { sleep 1; }
+	my $packet = $resolver->bgread($handle);
+	ok( $packet && !$packet->header->tc, '$resolver->bgread(...)	background TCP retry' );
 }
 
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
-	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $udp, '$resolver->bgsend(...)	UDP' );
-	until ( $resolver->bgisready($udp) ) {
-		sleep 1;
-	}
-	ok( $resolver->bgread($udp), '$resolver->bgread()' );
-
-	$resolver->usevc(1);
-
-	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $tcp, '$resolver->bgsend(...)	TCP' );
-	until ( $resolver->bgisready($tcp) ) {
-		sleep 1;
-	}
-	ok( $resolver->bgread($tcp), '$resolver->bgread()' );
-
-	ok( $resolver->bgisready(undef),	     '$resolver->bgisready(undef)' );
-	ok( !$resolver->bgisready( ref($udp)->new ), '$resolver->bgisready(Socket->new)' );
-	ok( !$resolver->bgread(undef),		     '$resolver->bgread(undef)' );
-	ok( !$resolver->bgread( ref($udp)->new ),    '$resolver->read(Socket->new)' );
-
-	my $sock     = $resolver->bgsend(qw(net-dns.org SOA IN));
-	my $appendix = ${*$sock}{net_dns_bg};
-	$appendix->[1]++;
-	ok( !$resolver->bgread($sock), '$resolver->bgread() id mismatch' );
+	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
+	my $appendix = ${*$handle}{net_dns_bg};
+	$appendix->[2]++;
+	ok( !$resolver->bgread($handle), '$resolver->bgread() id mismatch' );
 }
 
 
@@ -211,6 +244,44 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers(qw( ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	$resolver->domain('net-dns.org');
+	$resolver->igntc(1);
+
+	eval {
+		my ($keyrr) = $resolver->query(qw(tsig-md5 KEY))->answer;
+		$resolver->tsig($keyrr);
+	};
+
+	my $udp = $resolver->send(qw(net-dns.org SOA IN));
+	is( $udp->verifyerr, 'NOERROR', '$resolver->send(...)	UDP + automatic TSIG' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
+	is( $tcp->verifyerr, 'NOERROR', '$resolver->send(...)	TCP + automatic TSIG' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers(qw( ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	$resolver->igntc(1);
+
+	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
+
+	my $udp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( !$udp, '$resolver->send(...)	UDP + failed TSIG' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
+	ok( !$tcp, '$resolver->send(...)	TCP + failed TSIG' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
 	$resolver->retrans(0);
 	$resolver->retry(0);
 
@@ -253,6 +324,15 @@ NonFatalBegin();
 
 
 {
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	my $update = new Net::DNS::Update(qw(example.com));
+	ok( $resolver->send($update), '$resolver->send() NOTAUTH UDP' );
+	$resolver->usevc(1);
+	ok( $resolver->send($update), '$resolver->send() NOTAUTH TCP' );
+}
+
+
+{
 	my $resolver = Net::DNS::Resolver->new( nameservers => '::' );
 	$resolver->tcp_timeout(1);
 
@@ -273,65 +353,93 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	my @mx = mx( $resolver, 'mx2.t.net-dns.org' );
 
-	is( scalar(@mx), 2, 'mx() works with specified resolver' );
+	my $mx = 'mx2.t.net-dns.org';
+	my @rr = query( $resolver, $mx, 'MX' );
+
+	is( scalar(@rr), 2, 'Net::DNS::query() works with specified resolver' );
+	is( scalar query( $resolver, $mx, 'MX' ), 2, 'Net::DNS::query() works in scalar context' );
+	is( scalar query( $mx, 'MX' ), 2, 'Net::DNS::query() works with default resolver' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+
+	my $mx = 'mx2.t.net-dns.org';
+	my @mx = mx( $resolver, $mx );
+
+	is( scalar(@mx), 2, 'Net::DNS::mx() works with specified resolver' );
 
 	# some people seem to use mx() in scalar context
-	is( scalar mx( $resolver, 'mx2.t.net-dns.org' ), 2, 'mx() works in scalar context' );
+	is( scalar mx( $resolver, $mx ), 2, 'Net::DNS::mx() works in scalar context' );
 
-	is( scalar mx('mx2.t.net-dns.org'), 2, 'mx() works with default resolver' );
+	is( scalar mx($mx), 2, 'Net::DNS::mx() works with default resolver' );
 
-	is( scalar mx('bogus.t.net-dns.org'), 0, "mx() works for bogus name" );
+	is( scalar mx('bogus.t.net-dns.org'), 0, "Net::DNS::mx() works for bogus name" );
 }
 
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
-	$resolver->tcp_timeout(10);
+	$resolver->tcp_timeout(30);
 
 	my @zone = eval { $resolver->axfr() };
-	ok( scalar(@zone), '$resolver->axfr() works in list context' );
+	ok( scalar(@zone), '$resolver->axfr() returns entire zone in list context' );
 
-	my $iter = eval { $resolver->axfr() };
-	is( ref($iter), 'CODE', '$resolver->axfr() returns iterator CODE ref' );
+	my $iterator = eval { $resolver->axfr() };
+	is( ref($iterator), 'CODE', '$resolver->axfr() returns iterator CODE ref' );
 	my $i;
-	while ( $iter->() ) { $i++ }
+	while ( eval { $iterator->() } ) {
+		$i++;
+	}
 	ok( $i, '$resolver->axfr() works using iterator' );
 
-	ok( !$iter->(), '$iter->() returns undef after last RR' );
+	ok( !eval { $iterator->() }, '$iterator->() returns undef after last RR' );
 
 	my $axfr_start = eval { $resolver->axfr_start() };
 	ok( $axfr_start, '$resolver->axfr_start()	(historical)' );
-	my $n;
-	while ( $resolver->axfr_next() ) { $n++ }
-	ok( $n, '$resolver->axfr_next() works' );
-
-	ok( !$resolver->axfr_next(), '$resolver->axfr_next() returns undef after last RR' );
-
-	$resolver->srcport(53);
-	my @bad = eval { $resolver->axfr() };
-	ok( !scalar(@bad), '$resolver->axfr() bad source port' );
+	ok( eval { $resolver->axfr_next() }, '$resolver->axfr_next() works' );
 }
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->tcp_timeout(10);
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers(qw( ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	$resolver->domain('net-dns.org');
+	$resolver->tcp_timeout(30);
+
+	eval {
+		my ($keyrr) = $resolver->query(qw(tsig-md5 KEY))->answer;
+		$resolver->tsig($keyrr);
+	};
+
+	my $iterator = eval { $resolver->axfr() };
+	diag $@ if $@;
+	ok( eval { $iterator->() }, '$resolver->axfr() with TSIG verify' );
 
 	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
-	my @bad = eval { $resolver->axfr('net-dns.org') };
-	ok( !scalar(@bad), '$resolver->axfr() unverifiable' );
+	my @unverifiable = eval { $resolver->axfr() };
+	ok( !scalar(@unverifiable), '$resolver->axfr() TSIG fails with incorrect key' );
 }
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => '192.0.2.1' );
+	my $resolver = Net::DNS::Resolver->new( nameservers => '::' );
+	$resolver->tcp_timeout(1);
+
+	my $iterator = eval { $resolver->axfr('net-dns.org') };
+	ok( !$iterator->(), '$resolver->axfr() server unreachable' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => '::' );
 	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
 
 	my $query = new Net::DNS::Packet(qw(. SOA IN));
-	ok( $resolver->bgsend($query), '$resolver->bgsend() + with TSIG' );
+	ok( $resolver->bgsend($query), '$resolver->bgsend() + automatic TSIG' );
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + existing TSIG' );
 }
 

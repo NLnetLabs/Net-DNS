@@ -37,7 +37,7 @@ use base qw(Exporter);
 use vars qw(@EXPORT);
 @EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
 		yxrrset nxrrset yxdomain nxdomain rr_add rr_del
-		mx rrsort);
+		mx query rrsort);
 
 
 use Net::DNS::RR;
@@ -50,6 +50,23 @@ sub version { $VERSION; }
 
 
 #
+# query()
+#
+# Usage:
+#	@rr = query('example.com');
+#	@rr = query('example.com', 'A', 'IN');
+#	@rr = query($res, 'example.com' ... );
+#
+sub query {
+	my ($arg1) = @_;
+	my $res = ref($arg1) ? shift : new Net::DNS::Resolver();
+
+	my $ans = $res->query(@_);
+	my @list = $ans ? $ans->answer : ();
+}
+
+
+#
 # mx()
 #
 # Usage:
@@ -59,10 +76,7 @@ sub version { $VERSION; }
 sub mx {
 	my ($arg1) = @_;
 	my $res = ref($arg1) ? shift : new Net::DNS::Resolver();
-
 	my ( $name, @class ) = @_;
-
-	my $ans = $res->query( $name, 'MX', @class );
 
 	# This construct is best read backwards.
 	#
@@ -73,8 +87,7 @@ sub mx {
 	# Then we return the list.
 
 	my @list = sort { $a->preference <=> $b->preference }
-			grep $_->type eq 'MX', $ans->answer
-			if $ans;
+			grep $_->type eq 'MX', &query( $res, $name, 'MX', @class );
 	return @list;
 }
 
@@ -246,6 +259,30 @@ See the manual pages listed above for other class-specific methods.
 
 Returns the version of Net::DNS.
 
+
+=head2 query
+
+    # Use a default resolver -- can not get an error string this way.
+    use Net::DNS;
+    my @rr = query("example.com");
+    my @rr = query("example.com", "A");
+    my @rr = query("example.com", "A", "IN");
+
+    # Use your own resolver object.
+    my $res = Net::DNS::Resolver->new;
+    my @rr  = query($res, "example.com" ... );
+
+    my ($ptr) = query("192.0.2.1");
+
+The query() method provides simple RR lookup for scenarios where
+the full flexibility of Net::DNS is not required.
+
+Returns a list of L<Net::DNS::RR> objects for the specified name
+or an empty list if the query failed or no record was found.
+
+See L</EXAMPLES> for more complete examples.
+
+
 =head2 mx
 
     # Use a default resolver -- can not get an error string this way.
@@ -253,9 +290,8 @@ Returns the version of Net::DNS.
     my @mx = mx("example.com");
 
     # Use your own resolver object.
-    use Net::DNS;
     my $res = Net::DNS::Resolver->new;
-    my @mx = mx($res, "example.com");
+    my @mx  = mx($res, "example.com");
 
 Returns a list of L<Net::DNS::RR::MX> objects representing the MX
 records for the specified name.
@@ -263,9 +299,6 @@ The list will be sorted by preference.
 Returns an empty list if the query failed or no MX record was found.
 
 This method does not look up A records; it only performs MX queries.
-
-See L</EXAMPLES> for a more complete example.
-
 
 
 =head1 Dynamic DNS Update Support
