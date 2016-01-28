@@ -467,8 +467,7 @@ sub _send_tcp {
 
 		my $sel = IO::Select->new($socket);
 		if ( $sel->can_read( $self->{tcp_timeout} ) ) {
-			my ($size) = unpack 'n*', _read_tcp( $socket, INT16SZ );
-			my $buffer = _read_tcp( $socket, $size );
+			my $buffer = _read_tcp($socket);
 			$self->answerfrom($ns);
 			$self->_diag( "answer from [$ns]", length($buffer), 'bytes' );
 
@@ -546,14 +545,11 @@ NAMESERVER: foreach my $ns (@ns) {
 				my ( $socket, $ip ) = @$ready;
 				$sel->remove($ready);
 
-				my $buffer = '';
-				unless ( $socket->recv( $buffer, $self->_packetsz ) ) {
-					$self->_diag( "recv ERROR [$ip]", $ns->[3] = $self->errorstring($!) );
-					next;
-				}
-
 				my $peer = $socket->peerhost;
 				$self->answerfrom($peer);
+
+				my $buffer = _read_udp( $socket, $self->_packetsz );
+				$self->errorstring( $ns->[3] = $! ) unless $buffer;
 				$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
 				my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
@@ -563,7 +559,11 @@ NAMESERVER: foreach my $ns (@ns) {
 					my $header = $ans->header;
 					next unless $header->qr;
 					next unless $header->id == $packet->header->id;
-					next unless $ans->verify($packet);
+
+					unless ( $ans->verify($packet) ) {
+						$self->errorstring( $ns->[3] = $ans->verifyerr );
+						next;
+					}
 
 					$ans->answerfrom($peer);
 
@@ -641,10 +641,9 @@ sub _bgsend_udp {
 
 		$self->_diag( 'bgsend', "[$ip]:$port" );
 
-		unless ( $socket->send( $packet_data, 0, $dst_sockaddr ) ) {
-			$self->errorstring("send: [$ip]:$port  $!");
-			next;
-		}
+		my $ok = $socket->send( $packet_data, 0, $dst_sockaddr );
+		$self->errorstring($!);
+		next unless $ok;
 
 		# handle failure to detect taint inside $socket->send()
 		# uncoverable branch true
@@ -715,20 +714,16 @@ sub bgread {
 	return undef unless $select->can_read( $timeout > 0 ? $timeout : 0 );
 
 	my $buffer;
-	unless ($udp) {
-		my ($size) = unpack 'n*', _read_tcp( $sock, INT16SZ );
-		$buffer = _read_tcp( $sock, $size );
-		$self->answerfrom($ip);				# $sock->peerhost unreliable
-		$self->_diag( "answer from [$ip]", length($buffer), 'bytes' );
-
-	} elsif ( $sock->recv( $buffer, $self->_packetsz ) ) {
+	if ($udp) {
 		my $peerhost = $sock->peerhost;
 		$self->answerfrom($peerhost);
+		$buffer = _read_udp( $sock, $self->_packetsz );
 		$self->_diag( "answer from [$peerhost]", length($buffer), 'bytes' );
 
 	} else {
-		$self->errorstring($!);
-		return undef;
+		$self->answerfrom($ip);				# $sock->peerhost unreliable
+		$buffer = _read_tcp($sock);
+		$self->_diag( "answer from [$ip]", length($buffer), 'bytes' );
 	}
 
 	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
@@ -835,11 +830,10 @@ sub _axfr_next {
 	# Read the response packet.
 	#--------------------------------------------------------------
 
-	my ($size) = unpack 'n*', _read_tcp( $sock, INT16SZ );
-	my $buffer = _read_tcp( $sock, $size );
+	my $buffer = _read_tcp($sock);
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
-	my $packet = Net::DNS::Packet->new(\$buffer);
+	my $packet = Net::DNS::Packet->new( \$buffer );
 	return unless $packet;
 	$packet->answerfrom( $self->{axfr_ns} );
 	my $rcode = $packet->header->rcode;
@@ -851,13 +845,18 @@ sub _axfr_next {
 
 
 #
-# Usage:  $data = _read_tcp($socket, $length);
+# Usage:  $data = _read_tcp($socket);
 #
 sub _read_tcp {
 	my $socket = shift;
-	my $unread = shift;
-	my $buffer = '';
 
+	my $size_buf = '';
+	$socket->recv( $size_buf, INT16SZ );
+
+	my ($unread) = unpack 'n*', $size_buf;
+	warn "ERROR: tcp recv failed: $!\n" unless $unread;
+
+	my $buffer = '';
 	while ($unread) {
 
 		# During some of my tests recv() returned undef even
@@ -868,15 +867,26 @@ sub _read_tcp {
 		$socket->recv( $read_buf, $unread );
 
 		my $read = length $read_buf;
-		unless ($read) {
-			warn "ERROR: tcp recv failed: $!\n";
-			last;
-		}
+		last unless $read;
 
 		$buffer .= $read_buf;
 		$unread -= $read;
 	}
 
+	warn "ERROR: tcp recv failed: $!\n" if $unread;
+	return $buffer;
+}
+
+
+#
+# Usage:  $data = _read_udp($socket, $length);
+#
+sub _read_udp {
+	my $socket = shift;
+	my $length = shift;
+
+	my $buffer = '';
+	warn "ERROR: udp recv failed: $!\n" unless $socket->recv( $buffer, $length );
 	return $buffer;
 }
 

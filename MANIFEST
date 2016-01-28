@@ -82,6 +82,7 @@ lib/Net/DNS/RR/RP.pm
 lib/Net/DNS/RR/RRSIG.pm
 lib/Net/DNS/RR/RT.pm
 lib/Net/DNS/RR/SIG.pm
+lib/Net/DNS/RR/SMIMEA.pm
 lib/Net/DNS/RR/SOA.pm
 lib/Net/DNS/RR/SPF.pm
 lib/Net/DNS/RR/SRV.pm
@@ -160,6 +161,7 @@ t/05-RP.t
 t/05-RRSIG.t
 t/05-RT.t
 t/05-SIG.t
+t/05-SMIMEA.t
 t/05-SOA.t
 t/05-SPF.t
 t/05-SRV.t
@@ -176,7 +178,7 @@ t/07-rrsort.t
 t/07-zonefile.t
 t/08-IPv4.t
 t/08-IPv6.t
-t/10-recurse.t
+t/08-recurse.t
 t/21-TSIG-create.t
 t/22-TSIG-verify.t
 t/31-NSEC-typelist.t

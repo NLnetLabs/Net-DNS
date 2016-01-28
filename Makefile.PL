@@ -20,7 +20,7 @@ properly with older perls such as yours, but bugs may lurk.
 
 AMEN
 
-	warn <<AMEN unless eval "use Net::DNS 1.00";
+	warn <<AMEN if eval "use Net::DNS; &Net::DNS::version < 1.00";
 
 ##
 ##	The installation path for this version of Net::DNS differs

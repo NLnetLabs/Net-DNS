@@ -102,7 +102,7 @@ NonFatalBegin();
 	$resolver->igntc(1);
 	my $udp = $resolver->send(qw(net-dns.org DNSKEY IN));
 
-	ok( $udp->header->tc, '$resolver->send(...)	truncated UDP reply' );
+	ok( $udp->header->tc,	 '$resolver->send(...)	truncated UDP reply' );
 	ok( !$retry->header->tc, '$resolver->send(...)	automatic TCP retry' );
 }
 
@@ -244,7 +244,7 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw( ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	$resolver->nameservers(qw( ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl ));
 	$resolver->domain('net-dns.org');
 	$resolver->igntc(1);
 
@@ -265,7 +265,7 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw( ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	$resolver->nameservers(qw( ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl ));
 	$resolver->igntc(1);
 
 	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
@@ -338,7 +338,7 @@ NonFatalBegin();
 
 	my @query = (qw(. SOA IN));
 	my $query = new Net::DNS::Packet(@query);
-	$query->edns->option( 1, pack 'x500' );			# pad to force TCP
+	$query->edns->option( 65001, pack 'x500' );		# pad to force TCP
 	ok( !$resolver->send($query),	'$resolver->send() failure' );
 	ok( !$resolver->bgsend($query), '$resolver->bgsend() failure' );
 
@@ -406,7 +406,7 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw( ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	$resolver->nameservers(qw( ns.net-dns.org ));
 	$resolver->domain('net-dns.org');
 	$resolver->tcp_timeout(30);
 
@@ -415,9 +415,9 @@ NonFatalBegin();
 		$resolver->tsig($keyrr);
 	};
 
-	my $iterator = eval { $resolver->axfr() };
+	my @zone = eval { $resolver->axfr() };
 	diag $@ if $@;
-	ok( eval { $iterator->() }, '$resolver->axfr() with TSIG verify' );
+	ok( scalar(@zone), '$resolver->axfr() with TSIG verify' );
 
 	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
 	my @unverifiable = eval { $resolver->axfr() };
