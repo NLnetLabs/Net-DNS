@@ -3,10 +3,14 @@ $Id$                       -*-text-*-
 
 **** 1.05 [unreleased]
 
+Fix rt.cpan.org #111559
+
+	1.04: TSIG not working anymore (TSIG.pm)
+
 Fix rt.cpan.org #108908
 
 	Installing recent version gets shadowed by old version.
-	Warning added to Makefile.PL
+	Warning added to Makefile.PL and upgrade compatibilty test.
 
 Fix rt.cpan.org #66900
 

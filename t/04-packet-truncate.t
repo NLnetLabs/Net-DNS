@@ -49,16 +49,13 @@ my @rr = $source->read;
 
 
 {
-	my $tsig = Net::DNS::RR->new(
-                    name            => 'tsig.example',
-                    type            => 'TSIG',
-                    macbin    => 'dummy-signature'
-                    );
-
 	my $packet = new Net::DNS::Packet('query.example.');
 	$packet->push( answer	  => @rr );
 	$packet->push( authority  => @rr );
-	$packet->push( additional => @rr, $tsig );
+	$packet->push( additional => @rr );
+
+	my $tsig = eval { $packet->sign_tsig( 'tsig.example', 'ARDJZgtuTDzAWeSGYPAu9uJUkX0=' ) };
+
 	my $unlimited = length $packet->data;
 	my %before    = map { ( $_, scalar $packet->$_ ) } qw(answer authority additional);
 	my $truncated = length $packet->data(512);		# explicit minimum size
@@ -69,7 +66,8 @@ my @rr = $source->read;
 		my $after  = scalar( $packet->$section );
 		ok( $after < $before, "$section section was $before RRs, now $after" );
 	}
-	ok( $packet->sigrr,	 'TSIG still in additional section' );
+	my $sigrr = $packet->sigrr;
+	is( $sigrr, $tsig, 'TSIG still in additional section' );
 	ok( $packet->header->tc, 'header->tc flag set' );
 }
 

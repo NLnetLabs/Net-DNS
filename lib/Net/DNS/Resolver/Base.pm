@@ -852,9 +852,7 @@ sub _read_tcp {
 
 	my $size_buf = '';
 	$socket->recv( $size_buf, INT16SZ );
-
 	my ($unread) = unpack 'n*', $size_buf;
-	warn "ERROR: tcp recv failed: $!\n" unless $unread;
 
 	my $buffer = '';
 	while ($unread) {

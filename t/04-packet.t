@@ -3,7 +3,7 @@
 use strict;
 
 BEGIN {
-	use Test::More tests => 101;
+	use Test::More tests => 99;
 
 	use_ok('Net::DNS');
 }
@@ -204,16 +204,12 @@ is( $rr->size, '4096', 'EDNS0 packet size correct' );
 }
 
 
-{					## go through the motions of TSIG
+{					## check exception raised for bad TSIG
 	my $packet = new Net::DNS::Packet('example.com');
 	my $bogus = new Net::DNS::RR( type => 'NULL' );
 	eval { $packet->sign_tsig($bogus); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "sign_tsig([])\t[$exception]" );
-
-	my $tsig = new Net::DNS::RR( type => 'TSIG' );
-	ok( $packet->sign_tsig($tsig), 'sign_tsig() returns TSIG record' );
-	is( ref( $packet->sigrr() ), ref($tsig), 'sigrr() returns TSIG RR' );
 }
 
 

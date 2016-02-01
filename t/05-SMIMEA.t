@@ -11,10 +11,10 @@ my $name = 'c93f1e400f26708f98cb19d936620da35eec8f72e57f9eec01c1afd6._smimecert.
 my $type = 'SMIMEA';
 my $code = 53;
 my @attr = qw( usage selector matchingtype certificate );
-my @data = qw( 0 0 1 d2abde240d7cd3ee6b4b28c54df034b97983a1d16e8a410e4561cb106618e971 );
+my @data = qw( 1 1 1 d2abde240d7cd3ee6b4b28c54df034b97983a1d16e8a410e4561cb106618e971 );
 my @also = qw( certbin babble );
 
-my $wire = qw( 000001d2abde240d7cd3ee6b4b28c54df034b97983a1d16e8a410e4561cb106618e971 );
+my $wire = qw( 010101d2abde240d7cd3ee6b4b28c54df034b97983a1d16e8a410e4561cb106618e971 );
 
 
 {

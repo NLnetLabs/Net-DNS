@@ -29,8 +29,6 @@ AMEN
 ##
 
 AMEN
-
-	sleep(5);
 }
 
 
@@ -167,6 +165,8 @@ WriteMakefile(				## version check & end-user metadata
 	PREREQ_PM => {%prerequisite, %optional, %$platform},
 	%metadata
 	);
+
+sleep(10);
 
 
 local $SIG{__WARN__} = sub { };		## suppress repeated warnings
