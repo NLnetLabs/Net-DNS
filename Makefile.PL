@@ -20,12 +20,21 @@ properly with older perls such as yours, but bugs may lurk.
 
 AMEN
 
-	warn <<AMEN if eval "use Net::DNS; &Net::DNS::version < 1.00";
+
+my $version = eval "use Net::DNS; &Net::DNS::version";
+my @package = grep $_ =~ m/DNS.pm/i, values %INC;
+
+	warn <<AMEN if $version && ( $version < 1.00 );
 
 ##
-##	The installation path for this version of Net::DNS differs
-##	from the existing version found in your perl library.
-##	Please remove the old version.
+##	The installation path for this version of Net::DNS may differ
+##	from the existing version $version found in your perl library.
+##
+##	Please be aware that this upgrade may appear to fail because
+##	version $version will usually occur earlier in the search path.
+##	In most cases, deleting the old version resolves the problem.
+##
+##	@package
 ##
 
 AMEN
