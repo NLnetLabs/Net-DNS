@@ -5,6 +5,7 @@ package Net::DNS;
 #
 use vars qw($VERSION $SVNVERSION);
 $VERSION    = '1.04_02';
+$VERSION    = eval $VERSION;
 $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
@@ -382,19 +383,19 @@ be created.
 =head2 rr_del
 
 Use this method to delete RRs from a zone.  There are three forms:
-delete an RRset, delete all RRsets, and delete an RR.
-
-    # Delete an RRset.
-    $packet->push(update => rr_del("host.example.com A"));
-
-Meaning:  Delete all RRs having the specified name and type.
+delete all RRsets, delete an RRset, and delete a specific RR.
 
     # Delete all RRsets.
     $packet->push(update => rr_del("host.example.com"));
 
 Meaning:  Delete all RRs having the specified name.
 
-    # Delete an RR.
+    # Delete an RRset.
+    $packet->push(update => rr_del("host.example.com A"));
+
+Meaning:  Delete all RRs having the specified name and type.
+
+    # Delete a specific RR.
     $packet->push(update => rr_del("host.example.com A 10.1.2.3"));
 
 Meaning:  Delete all RRs having the specified name, type, and data.

@@ -43,7 +43,7 @@ use constant USE_SOCKET => defined eval {
 	import IO::Socket;
 };
 
-use constant USE_SOCKET_IP => defined eval { require IO::Socket::IP; };
+use constant USE_SOCKET_IP => scalar eval { require IO::Socket::IP; Socket->VERSION > 1.98 };
 
 use constant USE_SOCKET_INET => defined eval { require IO::Socket::INET; };
 
@@ -99,7 +99,7 @@ sub _untaint {
 		udppacketsize	=> 0,	# value bounded below by PACKETSZ
 		force_v4	=> ( IPv6 ? 0 : 1 ),
 		force_v6	=> 0,	# only relevant if IPv6 is supported
-		prefer_v4	=> 1,	# prefer v6 by default
+		prefer_v4	=> ( IPv6 ? 1 : 0 ),
 		},
 			__PACKAGE__;
 

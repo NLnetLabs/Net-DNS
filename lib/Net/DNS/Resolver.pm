@@ -367,6 +367,7 @@ Sets the port from which queries are sent.
 The default is 0, meaning any port.
 
 =head2 srcaddr
+
     $resolver->srcaddr('192.0.2.1');
 
 Sets the source address from which queries are sent.
@@ -404,7 +405,7 @@ The response C<Net::DNS::Packet> object is obtained by calling C<bgread>.
 
 B<BEWARE>:
 Programs should make no assumptions about the nature of the handles
-returned by B<bgsend> which should be used strictly as described here.
+returned by C<bgsend> which should be used strictly as described here.
 
 
 =head2 bgread

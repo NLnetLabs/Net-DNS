@@ -25,6 +25,7 @@ my @module = qw(
 	Net::LibIDN
 	PerlIO
 	Scalar::Util
+	Socket
 	Time::Local
 	);
 

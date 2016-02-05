@@ -338,14 +338,14 @@ NonFatalBegin();
 
 	my @query = (qw(. SOA IN));
 	my $query = new Net::DNS::Packet(@query);
+	ok( !$resolver->query(@query),	'$resolver->query() failure' );
+	ok( !$resolver->search(@query), '$resolver->search() failure' );
+
 	$query->edns->option( 65001, pack 'x500' );		# pad to force TCP
 	ok( !$resolver->send($query),	'$resolver->send() failure' );
 	ok( !$resolver->bgsend($query), '$resolver->bgsend() failure' );
 
 	$resolver->usevc(1);
-	ok( !$resolver->query(@query),	'$resolver->query() failure' );
-	ok( !$resolver->search(@query), '$resolver->search() failure' );
-
 	my $update = new Net::DNS::Update('bogus.example.com');
 	ok( !$resolver->send($update), '$resolver->send() update' );
 }
