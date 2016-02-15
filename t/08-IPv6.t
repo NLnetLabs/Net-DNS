@@ -69,12 +69,14 @@ my $IP = eval {
 	scalar(@ip) ? [@ip] : undef;
 } || exit( plan skip_all => 'Unable to reach target nameserver' );
 
+my $NOIP = '::';
+
 diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 75;
+plan tests => 76;
 
 NonFatalBegin();
 
@@ -201,7 +203,7 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->srcaddr('::');
+	$resolver->srcaddr($NOIP);
 	$resolver->srcport(2345);
 
 	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
@@ -268,7 +270,7 @@ NonFatalBegin();
 	$resolver->nameservers(qw( ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl ));
 	$resolver->igntc(1);
 
-	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
+	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
 	ok( !$udp, '$resolver->send(...)	UDP + failed TSIG' );
@@ -333,7 +335,9 @@ NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => '::' );
+	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
+	$resolver->retrans(0);
+	$resolver->retry(0);
 	$resolver->tcp_timeout(1);
 
 	my @query = (qw(. SOA IN));
@@ -419,14 +423,14 @@ NonFatalBegin();
 	diag $@ if $@;
 	ok( scalar(@zone), '$resolver->axfr() with TSIG verify' );
 
-	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
+	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
 	my @unverifiable = eval { $resolver->axfr() };
 	ok( !scalar(@unverifiable), '$resolver->axfr() TSIG fails with incorrect key' );
 }
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => '::' );
+	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
 	$resolver->tcp_timeout(1);
 
 	my $iterator = eval { $resolver->axfr('net-dns.org') };
@@ -435,12 +439,16 @@ NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => '::' );
-	eval { $resolver->tsig( 'MD5.example', 'BadMD5KeyBadkeyBadKeyBadKey=' ) };
+	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
+	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
 
 	my $query = new Net::DNS::Packet(qw(. SOA IN));
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + automatic TSIG' );
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + existing TSIG' );
+
+	eval { $resolver->tsig(undef) };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "undefined TSIG\t[$exception]" );
 }
 
 

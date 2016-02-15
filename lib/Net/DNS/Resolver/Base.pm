@@ -43,11 +43,11 @@ use constant USE_SOCKET => defined eval {
 	import IO::Socket;
 };
 
-use constant USE_SOCKET_IP => scalar eval { require IO::Socket::IP; Socket->VERSION > 1.98 };
+use constant USE_SOCKET_IP => defined eval "use Socket 1.98; require IO::Socket::IP";
 
-use constant USE_SOCKET_INET => defined eval { require IO::Socket::INET; };
+use constant USE_SOCKET_INET => defined eval "require IO::Socket::INET";
 
-use constant USE_SOCKET_INET6 => defined eval { require IO::Socket::INET6; };
+use constant USE_SOCKET_INET6 => defined eval "require IO::Socket::INET6";
 
 use constant IPv4 => USE_SOCKET_IP || USE_SOCKET_INET;
 use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
@@ -57,7 +57,7 @@ use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 use constant SOCKS => scalar eval { require Config; $Config::Config{usesocks}; };
 
 
-use constant UTIL => defined eval { require Scalar::Util; };
+use constant UTIL => defined eval "require Scalar::Util";
 
 sub _tainted { UTIL ? Scalar::Util::tainted(shift) : undef }
 
@@ -307,8 +307,8 @@ sub nameservers {
 
 	my ( @ipv4, @ipv6 );
 	foreach my $ns ( grep defined, @_ ) {
-		do { push @ipv6, $ns; next } if _ip_is_ipv6($ns);
-		do { push @ipv4, $ns; next } if _ip_is_ipv4($ns);
+		do { push @ipv6, $ns; next } if _ipv6($ns);
+		do { push @ipv4, $ns; next } if _ipv4($ns);
 
 		my $defres = ref($self)->new( debug => $self->{debug} );
 		$defres->{persistent} = $self->{persistent};
@@ -327,8 +327,8 @@ sub nameservers {
 		my %address = map { ( $_ => $_ ) } @iplist;	# tainted
 		my @unique = values %address;
 		carp "unresolvable name: $ns" unless @unique;
-		push @ipv4, grep _ip_is_ipv4($_), @unique;
-		push @ipv6, grep _ip_is_ipv6($_), @unique;
+		push @ipv4, grep _ipv4($_), @unique;
+		push @ipv6, grep _ipv6($_), @unique;
 	}
 
 	unless ( defined wantarray ) {
@@ -891,10 +891,9 @@ sub _read_udp {
 
 sub _create_tcp_socket {
 	my $self = shift;
-	my $ns	 = shift;
+	my $ip	 = shift;
 
-	my $dstport  = $self->{port};
-	my $sock_key = "[$ns]:$dstport";
+	my $sock_key = "TCP[$ip]";
 	my $socket;
 
 	if ( $socket = $self->{persistent}{$sock_key} ) {
@@ -903,53 +902,40 @@ sub _create_tcp_socket {
 		$self->_diag('socket disconnected (trying to connect)');
 	}
 
+	my $dstport = $self->{port};
 	my $srcport = $self->{srcport};
 	my $timeout = $self->{tcp_timeout};
 
-	if ( IPv6 && _ip_is_ipv6($ns) ) {
-		my $localaddr = $self->{srcaddr6};
-
+	if (USE_SOCKET_IP) {
+		my $srcaddr = _ipv6($ip) ? $self->{srcaddr6} : $self->{srcaddr4};
 		$socket = IO::Socket::IP->new(
-			LocalAddr => $self->{srcaddr6},
+			LocalAddr => $srcaddr,
 			LocalPort => $srcport,
-			PeerAddr  => $ns,
-			PeerPort  => $dstport,
-			Proto	  => 'tcp',
-			Timeout	  => $timeout,
-			)
-				if USE_SOCKET_IP;
-
-		$socket = IO::Socket::INET6->new(
-			LocalAddr => $localaddr,
-			LocalPort => ( $srcport || undef ),
-			PeerAddr  => $ns,
-			PeerPort  => $dstport,
-			Proto	  => 'tcp',
-			Timeout	  => $timeout,
-			)
-				unless USE_SOCKET_IP;
-	} else {
-		my $localaddr = $self->{srcaddr4};
-
-		$socket = IO::Socket::IP->new(
-			LocalAddr => $localaddr,
-			LocalPort => $srcport,
-			PeerAddr  => $ns,
-			PeerPort  => $dstport,
-			Proto	  => 'tcp',
-			Timeout	  => $timeout,
-			)
-				if USE_SOCKET_IP;
-
-		$socket = IO::Socket::INET->new(
-			LocalAddr => $localaddr,
-			LocalPort => ( $srcport || undef ),
-			PeerAddr  => $ns,
+			PeerAddr  => $ip,
 			PeerPort  => $dstport,
 			Proto	  => 'tcp',
 			Timeout	  => $timeout
 			)
-				unless USE_SOCKET_IP;
+
+	} elsif ( not _ipv6($ip) ) {
+		$socket = IO::Socket::INET->new(
+			LocalAddr => $self->{srcaddr4},
+			LocalPort => ( $srcport || undef ),
+			PeerAddr  => $ip,
+			PeerPort  => $dstport,
+			Proto	  => 'tcp',
+			Timeout	  => $timeout
+			)
+
+	} elsif (USE_SOCKET_INET6) {
+		$socket = IO::Socket::INET6->new(
+			LocalAddr => $self->{srcaddr6},
+			LocalPort => ( $srcport || undef ),
+			PeerAddr  => $ip,
+			PeerPort  => $dstport,
+			Proto	  => 'tcp',
+			Timeout	  => $timeout
+			);
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_tcp} ? $socket : undef;
@@ -960,54 +946,39 @@ sub _create_tcp_socket {
 
 sub _create_udp_socket {
 	my $self = shift;
-	my $ns	 = shift;
+	my $ip	 = shift;
+
+	my $ip6_addr = IPv6 && _ipv6($ip);
+	my $sock_key = IPv6 && $ip6_addr ? 'UDP/IPv6' : 'UDP/IPv4';
+	my $socket;
+	return $socket if $socket = $self->{persistent}{$sock_key};
 
 	my $srcport = $self->{srcport};
-	my $sock_key;
-	my $socket;
 
-	if ( IPv6 && _ip_is_ipv6($ns) ) {
-		$sock_key = 'UDP/IPv6';
-		return $socket if $socket = $self->{persistent}{$sock_key};
-
-		my $localaddr = $self->{srcaddr6};
-
+	if (USE_SOCKET_IP) {
+		my $srcaddr = $ip6_addr ? $self->{srcaddr6} : $self->{srcaddr4};
 		$socket = IO::Socket::IP->new(
-			LocalAddr => $localaddr,
+			LocalAddr => $srcaddr,
 			LocalPort => $srcport,
 			Proto	  => 'udp',
-			Type	  => SOCK_DGRAM,
+			Type	  => SOCK_DGRAM
 			)
-				if USE_SOCKET_IP;
 
-		$socket = IO::Socket::INET6->new(
-			LocalAddr => $localaddr,
-			LocalPort => ( $srcport || undef ),
-			Proto	  => 'udp',
-			Type	  => SOCK_DGRAM,
-			)
-				unless USE_SOCKET_IP;
-	} else {
-		$sock_key = 'UDP/IPv4';
-		return $socket if $socket = $self->{persistent}{$sock_key};
-
-		my $localaddr = $self->{srcaddr4};
-
-		$socket = IO::Socket::IP->new(
-			LocalAddr => $localaddr,
-			LocalPort => $srcport,
-			Proto	  => 'udp',
-			Type	  => SOCK_DGRAM,
-			)
-				if USE_SOCKET_IP;
-
+	} elsif ( not $ip6_addr ) {
 		$socket = IO::Socket::INET->new(
-			LocalAddr => $localaddr,
+			LocalAddr => $self->{srcaddr4},
 			LocalPort => ( $srcport || undef ),
 			Proto	  => 'udp',
-			Type	  => SOCK_DGRAM,
+			Type	  => SOCK_DGRAM
 			)
-				unless USE_SOCKET_IP;
+
+	} elsif (USE_SOCKET_INET6) {
+		$socket = IO::Socket::INET6->new(
+			LocalAddr => $self->{srcaddr6},
+			LocalPort => ( $srcport || undef ),
+			Proto	  => 'udp',
+			Type	  => SOCK_DGRAM
+			);
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_udp} ? $socket : undef;
@@ -1019,11 +990,15 @@ sub _create_udp_socket {
 sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 	my ( $self, $ip, $port ) = @_;
 
-	unless ( IPv6 && _ip_is_ipv6($ip) ) {
-		return sockaddr_in( $port, inet_aton($ip) );
+	no strict;
+	unless ( IPv6 && _ipv6($ip) ) {
+		return sockaddr_in( $port, inet_aton($ip) )
+
+	} elsif (USE_SOCKET_IP) {
+		my $addr = Socket::inet_pton( AF_INET6, $ip );
+		return sockaddr_in6( $port, $addr )
 
 	} elsif (USE_SOCKET_INET6) {
-		no strict;
 		local $^W = 0;					# circumvent perl -w warnings
 
 		my @res = Socket6::getaddrinfo( $ip, $port, AF_INET6, SOCK_DGRAM, 0, AI_NUMERICHOST );
@@ -1032,24 +1007,19 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 		my ($error) = @res;
 		$self->errorstring("send: $ip\t$error");
 		return;
-
-	} elsif (USE_SOCKET_IP) {
-		no strict;
-		my $addr = Socket::inet_pton( AF_INET6, $ip );
-		return sockaddr_in6( $port, $addr );
 	}
 }
 
 
 # Lightweight versions of subroutines from Net::IP module, recoded to fix RT#96812
 
-sub _ip_is_ipv4 {
+sub _ipv4 {
 	for (shift) {
 		return /^[0-9.]+\.[0-9]+$/;			# dotted digits
 	}
 }
 
-sub _ip_is_ipv6 {
+sub _ipv6 {
 	for (shift) {
 		return 1 if /^[:0-9a-f]+:[0-9a-f]*$/i;		# mixed : and hexdigits
 		return 1 if /^[:0-9a-f]+:[0-9.]+$/i;		# prefix + dotted digits
@@ -1123,16 +1093,17 @@ sub prefer_v4 {
 sub prefer_v6 {
 	my $self = shift;
 	$self->{prefer_v4} = shift() ? 0 : 1 if scalar @_;
-	return $self->{prefer_v4} ? 0 : 1;
+	$self->{prefer_v4} ? 0 : 1;
 }
 
 
 sub srcaddr {
 	my $self = shift;
 	for (@_) {
-		return $self->{srcaddr4} = $_ if _ip_is_ipv4($_);
-		return $self->{srcaddr6} = $_ if _ip_is_ipv6($_);
+		my $hashkey = _ipv6($_) ? 'srcaddr6' : 'srcaddr4';
+		$self->{$hashkey} = $_;
 	}
+	return shift;
 }
 
 
@@ -1143,7 +1114,7 @@ sub tsig {
 		require Net::DNS::RR::TSIG;
 		Net::DNS::RR::TSIG->create(@_);
 	};
-	croak "$@ unable to create TSIG record" if $@;
+	croak "${@}unable to create TSIG record" if $@;
 }
 
 

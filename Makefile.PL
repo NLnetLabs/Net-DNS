@@ -21,24 +21,26 @@ properly with older perls such as yours, but bugs may lurk.
 AMEN
 
 
-my $version = eval "use Net::DNS; &Net::DNS::version";
-my @package = grep $_ =~ m/DNS.pm/i, values %INC;
+	my $installed = eval "use Net::DNS; &Net::DNS::version";
+	my @installed = grep $_ =~ m/DNS.pm/i, values %INC;
 
-	warn <<AMEN if $version && ( $version < 1.00 );
+	warn <<AMEN if $installed && ( $installed < 1.00 );
 
 ##
 ##	The installation path for this version of Net::DNS may differ
-##	from the existing version $version found in your perl library.
+##	from the existing version $installed in your perl library.
 ##
 ##	Please be aware that this upgrade may appear to fail because
-##	version $version will usually occur earlier in the search path.
+##	version $installed will usually occur earlier in the search path.
 ##	In most cases, deleting the old version resolves the problem.
 ##
-##	@package
+##	@installed
 ##
 
 AMEN
 }
+
+END { sleep(10) }
 
 
 use ExtUtils::MakeMaker;
@@ -77,7 +79,7 @@ my %optional = (
 	Digest::GOST	     => 0.06,
 	IO::Socket::INET     => 1.25,
 	IO::Socket::INET6    => 2.01,
-	IO::Socket::IP	     => 0.29,
+	IO::Socket::IP	     => 0.32,
 	Net::LibIDN	     => 0.12,
 	);
 
@@ -174,8 +176,6 @@ WriteMakefile(				## version check & end-user metadata
 	PREREQ_PM => {%prerequisite, %optional, %$platform},
 	%metadata
 	);
-
-sleep(10);
 
 
 local $SIG{__WARN__} = sub { };		## suppress repeated warnings

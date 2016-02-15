@@ -3,7 +3,7 @@ package Net::DNS::Update;
 #
 # $Id$
 #
-use vars qw($VERSION @ISA);
+use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
 

@@ -1,10 +1,10 @@
 # $Id$ -*-perl-*-
 
+use strict;
 use Test::More;
 use File::Spec;
 use File::Find;
 use ExtUtils::MakeMaker;
-use strict;
 
 my @files;
 my $blib = File::Spec->catfile(qw(blib lib));
@@ -33,4 +33,27 @@ foreach my $file ( sort @files ) {
 	my ( $volume, $directory, $name ) = File::Spec->splitpath($file);
 	diag("File not in MANIFEST: $file") unless $manifest{lc $name};
 }
+
+
+END {
+	local @INC = grep $_ !~ m/blib/i, @INC;
+	my $installed = eval "use Net::DNS; &Net::DNS::version";
+	my @installed = grep $_ =~ m/DNS.pm/i, values %INC;
+
+	diag <<"AMEN" if $installed && ( $installed < 1.00 );
+
+##
+##	The installation path for this version of Net::DNS may differ
+##	from the existing version $installed in your perl library.
+##
+##	Please be aware that this upgrade may appear to fail because
+##	version $installed will usually occur earlier in the search path.
+##	In most cases, deleting the old version resolves the problem.
+##
+##	@installed
+##
+AMEN
+}
+
+__END__
 

@@ -3,10 +3,12 @@ package Net::DNS;
 #
 # $Id$
 #
-use vars qw($VERSION $SVNVERSION);
-$VERSION    = '1.04_03';
-$VERSION    = eval $VERSION;
-$SVNVERSION = (qw$LastChangedRevision$)[1];
+BEGIN {
+	use vars qw($VERSION $SVNVERSION);
+	$VERSION    = '1.04_03';
+	$VERSION    = eval $VERSION;
+	$SVNVERSION = (qw$LastChangedRevision$)[1];
+}
 
 
 =head1 NAME
