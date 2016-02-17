@@ -21,7 +21,7 @@ use integer;
 
 use Carp;
 
-eval { require MIME::Base64 };
+eval 'require MIME::Base64';
 
 #
 # source: http://www.iana.org/assignments/dns-sec-alg-numbers

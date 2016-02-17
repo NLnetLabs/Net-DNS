@@ -19,7 +19,7 @@ Net::DNS::RR::TLSA - DNS TLSA resource record
 
 use integer;
 
-use constant BABBLE => defined eval { require Digest::BubbleBabble; };
+use constant BABBLE => defined eval 'require Digest::BubbleBabble';
 
 
 sub _decode_rdata {			## decode rdata from wire-format octet string

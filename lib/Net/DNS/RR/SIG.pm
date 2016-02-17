@@ -36,18 +36,18 @@ use integer;
 use Carp;
 use Time::Local;
 
-eval { require MIME::Base64 };
+eval 'require MIME::Base64';
 
 use Net::DNS::Parameters;
 
 use constant DEBUG => 0;
 
-use constant UTIL => defined eval { require Scalar::Util; };
+use constant UTIL => defined eval 'require Scalar::Util';
 
-use constant PRIVATE => defined eval { require Net::DNS::SEC::Private; };
+use constant PRIVATE => defined eval 'require Net::DNS::SEC::Private';
 
-use constant DSA => defined eval { require Net::DNS::SEC::DSA; };
-use constant RSA => defined eval { require Net::DNS::SEC::RSA; };
+use constant DSA => defined eval 'require Net::DNS::SEC::DSA';
+use constant RSA => defined eval 'require Net::DNS::SEC::RSA';
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA );
 
@@ -708,8 +708,8 @@ that comes with the ISC BIND distribution.
 The optional remaining arguments consist of ( name => value ) pairs
 as follows:
 
-	sigin  => 20151201010101,	# signature inception
-	sigex  => 20151201011101,	# signature expiration
+	sigin  => 20161201010101,	# signature inception
+	sigex  => 20161201011101,	# signature expiration
 	sigval => 10,			# validity window (minutes)
 
 The sigin and sigex values may be specified as Perl time values or as

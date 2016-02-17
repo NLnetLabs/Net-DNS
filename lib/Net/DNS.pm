@@ -4,7 +4,9 @@ package Net::DNS;
 # $Id$
 #
 BEGIN {
-	use vars qw($VERSION $SVNVERSION);
+	require 5.004_04;
+	require vars;
+	'vars'->import(qw($VERSION $SVNVERSION));
 	$VERSION    = '1.04_03';
 	$VERSION    = eval $VERSION;
 	$SVNVERSION = (qw$LastChangedRevision$)[1];
@@ -32,7 +34,6 @@ details.
 =cut
 
 
-use 5.004_04;
 use strict;
 use integer;
 

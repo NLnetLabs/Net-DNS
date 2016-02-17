@@ -27,7 +27,7 @@ use vars qw(@EXPORT_OK);
 
 require Net::DNS::DomainName;
 
-eval { require Digest::SHA };		## optional for simple Net::DNS RR
+eval 'require Digest::SHA';		## optional for simple Net::DNS RR
 
 my %digest = (
 	'1' => ['Digest::SHA', 1],				# RFC3658

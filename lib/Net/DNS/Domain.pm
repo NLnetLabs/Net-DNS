@@ -54,7 +54,7 @@ use constant UTF8 => ref eval {
 	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
 };
 
-use constant LIBIDN => UTF8 && defined eval { require Net::LibIDN; };
+use constant LIBIDN => UTF8 && defined eval 'require Net::LibIDN';
 
 
 # perlcc: address of encoding objects must be determined at runtime

@@ -125,6 +125,6 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC2672
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC6672
 
 =cut

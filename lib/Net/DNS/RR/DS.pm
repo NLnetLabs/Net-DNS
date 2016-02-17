@@ -21,11 +21,11 @@ use integer;
 
 use Carp;
 
-use constant BABBLE => defined eval { require Digest::BubbleBabble; };
+use constant BABBLE => defined eval 'require Digest::BubbleBabble';
 
-eval { require Digest::SHA };		## optional for simple Net::DNS RR
-eval { require Digest::GOST };
-eval { require Digest::GOST::CryptoPro };
+eval 'require Digest::SHA';		## optional for simple Net::DNS RR
+eval 'require Digest::GOST';
+eval 'require Digest::GOST::CryptoPro';
 
 my %digest = (
 	'1' => ['Digest::SHA', 1],

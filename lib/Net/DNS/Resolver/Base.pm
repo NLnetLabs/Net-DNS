@@ -10,7 +10,8 @@ $VERSION = (qw$LastChangedRevision$)[1];
 use strict;
 use integer;
 use Carp;
-use Socket;
+use IO::Select;
+use IO::Socket;
 
 use Net::DNS::RR;
 use Net::DNS::Packet;
@@ -37,27 +38,21 @@ use constant PACKETSZ => 512;
 # Olaf Kolkman, RIPE NCC, December 2003.
 
 
-use constant USE_SOCKET => defined eval {
-	require IO::Select;
-	require IO::Socket;
-	import IO::Socket;
-};
+use constant USE_SOCKET_IP => defined eval 'use Socket 1.98; require IO::Socket::IP';
 
-use constant USE_SOCKET_IP => defined eval "use Socket 1.98; require IO::Socket::IP";
+use constant USE_SOCKET_INET => defined eval 'require IO::Socket::INET';
 
-use constant USE_SOCKET_INET => defined eval "require IO::Socket::INET";
-
-use constant USE_SOCKET_INET6 => defined eval "require IO::Socket::INET6";
+use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
 
 use constant IPv4 => USE_SOCKET_IP || USE_SOCKET_INET;
 use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 
 
 # If SOCKSified Perl, use TCP instead of UDP and keep the socket open.
-use constant SOCKS => scalar eval { require Config; $Config::Config{usesocks}; };
+use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
 
 
-use constant UTIL => defined eval "require Scalar::Util";
+use constant UTIL => defined eval 'require Scalar::Util';
 
 sub _tainted { UTIL ? Scalar::Util::tainted(shift) : undef }
 

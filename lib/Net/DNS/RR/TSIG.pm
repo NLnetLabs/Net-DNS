@@ -21,10 +21,10 @@ use integer;
 
 use Carp;
 
-eval { require Digest::HMAC };
-eval { require Digest::MD5 };
-eval { require Digest::SHA };
-eval { require MIME::Base64 };
+eval 'require Digest::HMAC';
+eval 'require Digest::MD5';
+eval 'require Digest::SHA';
+eval 'require MIME::Base64';
 
 use Net::DNS::DomainName;
 use Net::DNS::Parameters;
@@ -516,7 +516,7 @@ sub vrfyerrstr {
 
 				my ( $hash, @param ) = @{$digest{$digtype}};
 				my ( undef, @block ) = @param;
-				my $digest = new $hash(@param);
+				my $digest   = new $hash(@param);
 				my $function = sub {
 					my $hmac = new Digest::HMAC( shift, $digest, @block );
 					$hmac->add(shift);

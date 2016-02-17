@@ -22,11 +22,11 @@ use Carp;
 BEGIN {
 	use vars qw($Registry);
 
-	use constant WINHLP => defined eval { require Win32::IPHelper; };
+	use constant WINHLP => defined eval 'require Win32::IPHelper';
 
 	Win32::IPHelper->import if WINHLP;
 
-	use constant WINREG => defined eval { require Win32::TieRegistry; };
+	use constant WINREG => defined eval 'require Win32::TieRegistry';
 
 	Win32::TieRegistry->import(qw(KEY_READ REG_DWORD)) if WINREG;
 }

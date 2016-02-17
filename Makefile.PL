@@ -21,17 +21,17 @@ properly with older perls such as yours, but bugs may lurk.
 AMEN
 
 
-	my $installed = eval "use Net::DNS; &Net::DNS::version";
-	my @installed = grep $_ =~ m/DNS.pm/i, values %INC;
+	eval 'require Net::DNS';
+	my @installed = grep $_ =~ m/DNS.pm$/i, values %INC;
 
-	warn <<AMEN if $installed && ( $installed < 1.00 );
+	warn <<AMEN if scalar(@installed) && ( $Net::DNS::VERSION < 1.00 );
 
 ##
 ##	The installation path for this version of Net::DNS may differ
-##	from the existing version $installed in your perl library.
+##	from the existing version $Net::DNS::VERSION in your perl library.
 ##
 ##	Please be aware that this upgrade may appear to fail because
-##	version $installed will usually occur earlier in the search path.
+##	version $Net::DNS::VERSION will usually occur earlier in the search path.
 ##	In most cases, deleting the old version resolves the problem.
 ##
 ##	@installed

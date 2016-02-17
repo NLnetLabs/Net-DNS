@@ -45,7 +45,7 @@ use base qw(Net::DNS::Domain);
 use integer;
 use Carp;
 
-use constant FIXlc => eval { no integer; $] < 5.010; };
+use constant FIXlc => scalar eval 'no integer; $] < 5.010';
 
 
 =head1 METHODS

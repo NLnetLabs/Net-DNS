@@ -15,12 +15,11 @@ Net::DNS::Resolver - DNS resolver class
 
 use strict;
 
-use constant OS_CONF => "Net::DNS::Resolver::$^O";
-use constant DEFAULT => "Net::DNS::Resolver::UNIX";
+use constant CONFIG => defined eval "require Net::DNS::Resolver::$^O";
 
-use constant CONFIG => scalar eval join ' ', 'require', OS_CONF;
+use constant OS_CONF => join '::', __PACKAGE__, CONFIG ? $^O : 'UNIX';
 
-use base ( CONFIG ? OS_CONF : DEFAULT );
+use base OS_CONF;
 
 
 1;
