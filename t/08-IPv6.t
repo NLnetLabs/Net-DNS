@@ -76,7 +76,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 76;
+plan tests => 77;
 
 NonFatalBegin();
 
@@ -169,6 +169,16 @@ NonFatalBegin();
 	my $appendix = ${*$handle}{net_dns_bg};
 	$appendix->[2]++;
 	ok( !$resolver->bgread($handle), '$resolver->bgread() id mismatch' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+
+	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
+	my $appendix = ${*$handle}{net_dns_bg};
+	$appendix->[2] = undef;
+	ok( $resolver->bgread($handle), '$resolver->bgread() workaround for SpamAssassin' );
 }
 
 

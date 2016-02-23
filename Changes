@@ -10,7 +10,7 @@ Fix rt.cpan.org #111559
 Fix rt.cpan.org #108908
 
 	Installing recent version gets shadowed by old version.
-	Warning added to Makefile.PL.
+	Warnings added to Makefile.PL and t/00-version.t.
 
 Fix rt.cpan.org #66900
 

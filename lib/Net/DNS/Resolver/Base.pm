@@ -702,7 +702,7 @@ sub bgread {
 	return $udp if ref($udp);
 
 	my $time = time();
-	my ( $expire, $u, $qid, $ip ) = ( @$appendix, $time, 1, 0, '' );
+	my ( $expire, $u, $qid, $ip ) = ( @$appendix, $time, 1 );
 
 	my $select  = IO::Select->new($sock);
 	my $timeout = $expire - $time;
@@ -727,7 +727,7 @@ sub bgread {
 	if ($ans) {
 		my $header = $ans->header;
 		return undef unless $header->qr;
-		return undef unless $header->id == $qid;
+		return undef if defined $qid && ( $header->id != $qid );
 
 		$ans->answerfrom( $self->answerfrom );
 	}
