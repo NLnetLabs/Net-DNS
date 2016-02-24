@@ -38,10 +38,11 @@ use strict;
 use integer;
 
 use base qw(Exporter);
-use vars qw(@EXPORT);
+use vars qw(@EXPORT @EXPORT_OK);
 @EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
 		yxrrset nxrrset yxdomain nxdomain rr_add rr_del
-		mx query rrsort);
+		rrsort);
+@EXPORT_OK = qw(mx query);
 
 
 use Net::DNS::RR;
@@ -267,7 +268,7 @@ Returns the version of Net::DNS.
 =head2 query
 
     # Use a default resolver -- can not get an error string this way.
-    use Net::DNS;
+    use Net::DNS qw(query);
     my @rr = query("example.com");
     my @rr = query("example.com", "A");
     my @rr = query("example.com", "A", "IN");
@@ -290,7 +291,7 @@ See L</EXAMPLES> for more complete examples.
 =head2 mx
 
     # Use a default resolver -- can not get an error string this way.
-    use Net::DNS;
+    use Net::DNS qw(mx);
     my @mx = mx("example.com");
 
     # Use your own resolver object.

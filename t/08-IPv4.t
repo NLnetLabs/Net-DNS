@@ -4,7 +4,7 @@ use strict;
 use Test::More;
 use t::NonFatal;
 
-use Net::DNS;
+use Net::DNS qw(query mx);
 
 my $debug = 0;
 
