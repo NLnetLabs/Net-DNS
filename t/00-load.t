@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 30;
+use Test::More;
 
 
 my @module = qw(
@@ -37,6 +37,9 @@ foreach my $module (@module) {
 }
 
 diag("set environment variable NET_DNS_DEBUG to get all versions\n\n");
+
+
+plan tests => 20 + scalar(@Net::DNS::EXPORT);
 
 
 use_ok('Net::DNS');

@@ -41,8 +41,8 @@ use base qw(Exporter);
 use vars qw(@EXPORT @EXPORT_OK);
 @EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
 		yxrrset nxrrset yxdomain nxdomain rr_add rr_del
-		rrsort);
-@EXPORT_OK = qw(mx query);
+		mx rrsort);
+@EXPORT_OK = qw(query);
 
 
 use Net::DNS::RR;
