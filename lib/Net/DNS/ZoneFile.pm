@@ -46,12 +46,12 @@ automatically to all subsequent records.
 use strict;
 use integer;
 use Carp;
-
-require FileHandle;
-
-use Net::DNS;
+use FileHandle;
 
 use constant PERLIO => defined eval 'require PerlIO';
+
+require Net::DNS::Domain;
+require Net::DNS::RR;
 
 
 =head1 METHODS
@@ -487,7 +487,7 @@ sub _getline {				## get line from current source
 		} elsif (/^\$TTL/) {				# directive
 			my ( $keyword, $ttl, @etc ) = split;
 			die '$TTL incomplete' unless defined $ttl;
-			$self->{TTL} = new Net::DNS::RR(". $ttl IN A")->ttl;
+			$self->{TTL} = Net::DNS::RR::ttl( {}, $ttl );
 
 		} else {					# unrecognised
 			my ($keyword) = split;

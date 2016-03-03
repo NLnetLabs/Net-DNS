@@ -38,11 +38,10 @@ use strict;
 use integer;
 
 use base qw(Exporter);
-use vars qw(@EXPORT @EXPORT_OK);
+use vars qw(@EXPORT);
 @EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
 		yxrrset nxrrset yxdomain nxdomain rr_add rr_del
-		mx rrsort);
-@EXPORT_OK = qw(query);
+		mx rr rrsort);
 
 
 use Net::DNS::RR;
@@ -55,14 +54,14 @@ sub version { $VERSION; }
 
 
 #
-# query()
+# rr()
 #
 # Usage:
-#	@rr = query('example.com');
-#	@rr = query('example.com', 'A', 'IN');
-#	@rr = query($res, 'example.com' ... );
+#	@rr = rr('example.com');
+#	@rr = rr('example.com', 'A', 'IN');
+#	@rr = rr($res, 'example.com' ... );
 #
-sub query {
+sub rr {
 	my ($arg1) = @_;
 	my $res = ref($arg1) ? shift : new Net::DNS::Resolver();
 
@@ -80,7 +79,7 @@ sub query {
 #
 sub mx {
 	my ($arg1) = @_;
-	my $res = ref($arg1) ? shift : new Net::DNS::Resolver();
+	my @res = ( ref($arg1) ? shift : () );
 	my ( $name, @class ) = @_;
 
 	# This construct is best read backwards.
@@ -92,7 +91,7 @@ sub mx {
 	# Then we return the list.
 
 	my @list = sort { $a->preference <=> $b->preference }
-			grep $_->type eq 'MX', &query( $res, $name, 'MX', @class );
+			grep $_->type eq 'MX', &rr( @res, $name, 'MX', @class );
 	return @list;
 }
 
@@ -265,21 +264,21 @@ See the manual pages listed above for other class-specific methods.
 Returns the version of Net::DNS.
 
 
-=head2 query
+=head2 rr
 
     # Use a default resolver -- can not get an error string this way.
-    use Net::DNS qw(query);
-    my @rr = query("example.com");
-    my @rr = query("example.com", "A");
-    my @rr = query("example.com", "A", "IN");
+    use Net::DNS;
+    my @rr = rr("example.com");
+    my @rr = rr("example.com", "A");
+    my @rr = rr("example.com", "A", "IN");
 
     # Use your own resolver object.
     my $res = Net::DNS::Resolver->new;
-    my @rr  = query($res, "example.com" ... );
+    my @rr  = rr($res, "example.com" ... );
 
-    my ($ptr) = query("192.0.2.1");
+    my ($ptr) = rr("192.0.2.1");
 
-The query() method provides simple RR lookup for scenarios where
+The rr() method provides simple RR lookup for scenarios where
 the full flexibility of Net::DNS is not required.
 
 Returns a list of L<Net::DNS::RR> objects for the specified name
@@ -291,7 +290,7 @@ See L</EXAMPLES> for more complete examples.
 =head2 mx
 
     # Use a default resolver -- can not get an error string this way.
-    use Net::DNS qw(mx);
+    use Net::DNS;
     my @mx = mx("example.com");
 
     # Use your own resolver object.
@@ -450,7 +449,7 @@ method. See Net::DNS::RR for details.
 
 =head2 rrsort()
 
-    use Net::DNS 0.55;
+    use Net::DNS;
 
     my @sorted = rrsort( $rrtype, $attribute, @rr_array );
 

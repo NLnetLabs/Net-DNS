@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2015-12-01)
+##	(last updated 2016-02-29)
 ##
 ################################################
 
@@ -127,6 +127,7 @@ use vars qw( %typebyname %typebyval );
 	ANY	   => 255,					# RFC1035 RFC6895
 	URI	   => 256,					# RFC7553
 	CAA	   => 257,					# RFC6844
+	AVC	   => 258,					#
 	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
 	);
@@ -188,9 +189,9 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	'CLIENT-SUBNET' => 8,					# draft-vandergaast-edns-client-subnet
 	EXPIRE		=> 9,					# RFC7314
 	COOKIE		=> 10,					# draft-ietf-dnsop-cookies
-	'TCP-KEEPALIVE' => 11,					# draft-ietf-dnsop-edns-tcp-keepalive
+	'TCP-KEEPALIVE' => 11,					# RFC-ietf-dnsop-edns-tcp-keepalive-06
 	PADDING		=> 12,					# draft-mayrhofer-edns0-padding
-	CHAIN		=> 13,					# draft-ietf-dnsop-edns-chain-query
+	CHAIN		=> 13,					# RFC-ietf-dnsop-edns-chain-query-07
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
 %ednsoptionbyname = ( %ednsoptionbyname, map /\D/ ? lc($_) : $_, %ednsoptionbyname );

@@ -4,7 +4,7 @@ use strict;
 use Test::More;
 use t::NonFatal;
 
-use Net::DNS qw(query mx);
+use Net::DNS;
 
 my $debug = 0;
 
@@ -103,8 +103,8 @@ NonFatalBegin();
 	$resolver->igntc(1);
 	my $udp = $resolver->send(qw(net-dns.org DNSKEY IN));
 
-	ok( $udp->header->tc,	 '$resolver->send(...)	truncated UDP reply' );
-	ok( !$retry->header->tc, '$resolver->send(...)	automatic TCP retry' );
+	ok( $udp   && $udp->header->tc,	   '$resolver->send(...)	truncated UDP reply' );
+	ok( $retry && !$retry->header->tc, '$resolver->send(...)	automatic TCP retry' );
 }
 
 
@@ -265,12 +265,12 @@ NonFatalBegin();
 	};
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
-	is( $udp->verifyerr, 'NOERROR', '$resolver->send(...)	UDP + automatic TSIG' );
+	ok( $udp && ( $udp->verifyerr eq 'NOERROR' ), '$resolver->send(...)	UDP + automatic TSIG' );
 
 	$resolver->usevc(1);
 
 	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
-	is( $tcp->verifyerr, 'NOERROR', '$resolver->send(...)	TCP + automatic TSIG' );
+	ok( $tcp && ( $tcp->verifyerr eq 'NOERROR' ), '$resolver->send(...)	TCP + automatic TSIG' );
 }
 
 
@@ -368,11 +368,11 @@ NonFatalBegin();
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
 	my $mx = 'mx2.t.net-dns.org';
-	my @rr = query( $resolver, $mx, 'MX' );
+	my @rr = rr( $resolver, $mx, 'MX' );
 
-	is( scalar(@rr), 2, 'Net::DNS::query() works with specified resolver' );
-	is( scalar query( $resolver, $mx, 'MX' ), 2, 'Net::DNS::query() works in scalar context' );
-	is( scalar query( $mx, 'MX' ), 2, 'Net::DNS::query() works with default resolver' );
+	is( scalar(@rr), 2, 'Net::DNS::rr() works with specified resolver' );
+	is( scalar rr( $resolver, $mx, 'MX' ), 2, 'Net::DNS::rr() works in scalar context' );
+	is( scalar rr( $mx, 'MX' ), 2, 'Net::DNS::rr() works with default resolver' );
 }
 
 

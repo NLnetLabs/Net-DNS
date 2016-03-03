@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 94;
+use Test::More tests => 96;
 
 
 BEGIN {
@@ -10,7 +10,7 @@ BEGIN {
 
 
 {				## check exception raised for unparsable argument
-	foreach my $testcase ( undef, '', ' ', '. NULL x', '. ATMA x', '. 0 OPT' ) {
+	foreach my $testcase ( undef, '', ' ', '. NULL x', '. OPT x', '. ATMA x', [], {} ) {
 		eval { new Net::DNS::RR($testcase) };
 		my $exception = $1 if $@ =~ /^(.+)\n/;
 		my $test = defined $testcase ? "'$testcase'" : 'undef';
@@ -187,7 +187,7 @@ BEGIN {
 	my $rr = new Net::DNS::RR( type => 'A' );
 	eval { $rr->ttl('1year'); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "bad time unit:\t[$exception]" );
+	ok( $exception ||= '', "unknown time unit:\t[$exception]" );
 }
 
 

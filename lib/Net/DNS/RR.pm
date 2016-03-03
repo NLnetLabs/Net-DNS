@@ -44,7 +44,7 @@ use Net::DNS::DomainName;
 =head1 METHODS
 
 B<WARNING!!!>  Do not assume the RR objects you receive from a query
-are of a particular type -- you must always check the object type
+are of a particular type.  You must always check the object type
 before calling any of its methods.  If you call an unknown method,
 you will get an error message and execution will be terminated.
 
@@ -53,12 +53,12 @@ you will get an error message and execution will be terminated.
 sub new {
 	return eval {
 		local $SIG{__DIE__};
-		local $SIG{__WARN__} = sub { die @_ };
 		scalar @_ > 2 ? &_new_hash : &_new_string;
 	} || do {
 		my $class = shift || __PACKAGE__;
-		my @param = map { !defined($_) ? 'undef' : split; } @_;
-		croak join ' ', "$@in new $class(", substr( "@param", 0, 50 ), '... )';
+		my @param = map defined($_) ? split : 'undef', @_;
+		my $stmnt = substr "new $class( @param )", 0, 80;
+		croak "${@}in $stmnt\n";
 	};
 }
 
@@ -94,6 +94,7 @@ sub _new_string {
 	local $_;
 	( $base, $_ ) = @_;
 	croak 'argument absent or undefined' unless defined $_;
+	croak 'non-scalar argument' if ref $_;
 
 	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
 	s/\\\\/\\092/g;						# disguise escaped escape
@@ -143,6 +144,8 @@ sub _new_string {
 
 
 =head2 new (from hash)
+
+    $rr = new Net::DNS::RR(%hash);
 
     $rr = new Net::DNS::RR(
 	    name    => 'host.example.com',
@@ -658,8 +661,9 @@ sub _subclass {
 		my $mnemon = typebyval($number);
 
 		unless ( $_LOADED{$mnemon} ) {			# load once only
-			my $module = join '::', $class, $mnemon;
-			$module =~ s/[^A-Za-z0-9:]//g;		# expect the unexpected
+			$mnemon =~ s/[^A-Za-z0-9]//g;		# expect the unexpected
+
+			my $module = join '::', __PACKAGE__, $mnemon;
 			my $subclass = eval("require $module") ? $module : __PACKAGE__;
 
 			# cache pre-built minimal and populated default object images

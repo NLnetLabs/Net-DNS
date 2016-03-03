@@ -35,7 +35,7 @@ eval {
 	my @ns = grep $_->type eq 'NS', $reply->answer;
 	exit plan skip_all => "No NS RRs in response from $from" unless scalar @ns;
 
-	exit plan skip_all => "Non authoritative response from $from" unless $reply->header->aa;
+	exit plan skip_all => "Non-authoritative response from $from" unless $reply->header->aa;
 
 	1;
 } || exit( plan skip_all => 'Unable to reach global root nameservers' );
