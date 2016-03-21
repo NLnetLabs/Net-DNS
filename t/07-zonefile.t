@@ -3,7 +3,7 @@
 use strict;
 use FileHandle;
 
-use Test::More tests => 88;
+use Test::More tests => 89;
 
 
 use constant LIBUTF8 => scalar eval {
@@ -246,6 +246,9 @@ EOF
 	$zonefile = source <<"EOF";
 $outer 
 outer	NULL
+
+$ORIGIN $origin
+	NULL
 EOF
 
 	my $ns = $zonefile->read;
@@ -261,6 +264,7 @@ EOF
 	is( $zonefile->read->name, "relative.$origin", '$ORIGIN can be relative to current $ORIGIN' );
 
 	is( $zonefile->read->name, 'outer', 'scope of $ORIGIN curtailed by end of file' );
+	is( $zonefile->read->name, $origin, 'implicit owner following $ORIGIN directive' );
 }
 
 

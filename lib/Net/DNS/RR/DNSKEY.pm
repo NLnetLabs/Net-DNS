@@ -21,7 +21,7 @@ use integer;
 
 use Carp;
 
-eval 'require MIME::Base64';
+use constant BASE64 => defined eval 'require MIME::Base64';
 
 #
 # source: http://www.iana.org/assignments/dns-sec-alg-numbers
@@ -88,6 +88,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	return '' unless defined $self->{keybin};
+	return &Net::DNS::RR::_format_rdata($self) unless BASE64;
 	pack 'n C2 a*', $self->flags, $self->protocol, $self->algorithm, $self->{keybin};
 }
 

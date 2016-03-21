@@ -1,6 +1,17 @@
 $Id$                       -*-text-*-
 
 
+**** 1.06 [unreleased]
+
+Fix rt.cpan.org #113020
+
+	Resolve::Recurse Hangs
+
+Fix rt.cpan.org #112860
+
+	improperly terminated AXFR at t/08-IPv4.t line 446.
+
+
 **** 1.05 March 7, 2016
 
 Fix rt.cpan.org #111559

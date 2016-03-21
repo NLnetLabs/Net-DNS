@@ -47,11 +47,8 @@ be used to discover the addresses of the root nameservers.
 
     $resolver->hints(@ip);
 
-If no hints are passed, the default nameserver is used to discover
-the addresses of the root nameservers.
-
-If the default nameserver not been configured correctly,
-or at all, a built-in list of IP addresses is used.
+If no hints are passed, the priming query is directed to nameservers
+drawn from a built-in list of IP addresses.
 
 =cut
 
@@ -97,15 +94,10 @@ sub send {
 	my $nslist = $res->{persistent}->{$domain} ||= [];
 	unless ( defined $head ) {
 		my $defres = bless {%$res}, qw(Net::DNS::Resolver);
-		my @config = $defres->nameserver( $res->hints );
-		my $packet = $defres->send(qw(. NS));
-
-		# uncoverable branch false
-		my @rr = $packet->answer, $packet->authority if $packet;
-		my @ns = map $_->nsdname, grep $_->type eq 'NS', @rr;
-		$defres->udppacketsize(1024);
+		$defres->nameservers( $res->_hints );		# fall back to inbuilt list
 		$defres->recurse(0);
-		$defres->nameservers( @ns, $res->_hints );	# repeat using authoritative server
+		$defres->udppacketsize(1024);
+		my @config = $defres->nameserver( $res->hints );
 		return $defres->send(qw(. NS));
 	}
 

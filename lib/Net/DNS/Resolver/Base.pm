@@ -708,18 +708,11 @@ sub bgread {
 	my $timeout = $expire - $time;
 	return undef unless $select->can_read( $timeout > 0 ? $timeout : 0 );
 
-	my $buffer;
-	if ($udp) {
-		my $peerhost = $sock->peerhost;
-		$self->answerfrom($peerhost);
-		$buffer = _read_udp( $sock, $self->_packetsz );
-		$self->_diag( "answer from [$peerhost]", length($buffer), 'bytes' );
+	my $buffer = $udp ? _read_udp( $sock, $self->_packetsz ) : _read_tcp($sock);
 
-	} else {
-		$self->answerfrom($ip);				# $sock->peerhost unreliable
-		$buffer = _read_tcp($sock);
-		$self->_diag( "answer from [$ip]", length($buffer), 'bytes' );
-	}
+	my $peer = $sock->peerhost;
+	$self->answerfrom($peer);
+	$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
 	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
 	$self->errorstring($@);
@@ -729,7 +722,7 @@ sub bgread {
 		return undef unless $header->qr;
 		return undef if defined $qid && ( $header->id != $qid );
 
-		$ans->answerfrom( $self->answerfrom );
+		$ans->answerfrom($peer);
 	}
 	return $ans;
 }
@@ -754,8 +747,6 @@ sub axfr {				## zone transfer
 		my $reply;
 		( $reply, $verify ) = $self->_axfr_next($verify);
 		return $self->{axfr_sel} = undef unless $reply;
-		my $rcode = $reply->header->rcode;
-		croak "AXFR terminated: $rcode" unless $rcode eq 'NOERROR';
 		@rr = $reply->answer;
 		return $rr;
 	};
@@ -802,7 +793,6 @@ sub _axfr_start {
 		my $packet_data = $request->data;
 		my $TCP_msg = pack 'n a*', length($packet_data), $packet_data;
 
-		$self->{axfr_ns}  = $ns;
 		$self->{axfr_sel} = IO::Select->new($socket) if $socket->send($TCP_msg);
 		$self->errorstring($!);
 
@@ -820,21 +810,20 @@ sub _axfr_next {
 	my ($sock) = $select->can_read( $self->{tcp_timeout} );
 	croak 'AXFR timed out' unless $sock;
 
-	#--------------------------------------------------------------
-	# Read the response packet.
-	#--------------------------------------------------------------
-
 	my $buffer = _read_tcp($sock);
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
 	my $packet = Net::DNS::Packet->new( \$buffer );
-	croak 'corrupt AXFR packet' if $@;
-	return unless $packet;
-	$packet->answerfrom( $self->{axfr_ns} );
+	croak "corrupt AXFR packet\n$@" if $@;
+
+	my $rcode = $packet->header->rcode;
+	croak "AXFR terminated: $rcode" unless $rcode eq 'NOERROR';
+
+	$packet->answerfrom( $sock->peerhost );
 	return $packet unless $verify;
 	$verify = $packet->verify($verify);
-	return ( $packet, $verify ) if $verify;
-	croak $packet->verifyerr;
+	croak $packet->verifyerr unless $verify;
+	return ( $packet, $verify );
 }
 
 

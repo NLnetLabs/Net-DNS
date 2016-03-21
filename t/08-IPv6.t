@@ -48,9 +48,12 @@ eval {
 	exit plan skip_all => 'No IPv6 transport' unless $resolver->nameservers;
 
 	my $reply = $resolver->send(qw(. NS IN)) || die;
+	my $from = $reply->answerfrom();
 
 	my @ns = grep $_->type eq 'NS', $reply->answer, $reply->authority;
-	exit plan skip_all => 'Unexpected response from root server' unless scalar @ns;
+	exit plan skip_all => "Unexpected response from $from" unless scalar @ns;
+
+	exit plan skip_all => "Non-authoritative response from $from" unless $reply->header->aa;
 
 	1;
 } || exit( plan skip_all => 'Unable to reach global root nameservers' );
