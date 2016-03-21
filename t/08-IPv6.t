@@ -441,15 +441,6 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
-	$resolver->tcp_timeout(1);
-
-	my $iterator = eval { $resolver->axfr('net-dns.org') };
-	ok( !$iterator->(), '$resolver->axfr() server unreachable' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
 	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
 
 	my $query = new Net::DNS::Packet(qw(. SOA IN));
@@ -457,8 +448,18 @@ NonFatalBegin();
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + existing TSIG' );
 
 	eval { $resolver->tsig(undef) };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "undefined TSIG\t[$exception]" );
+	my ($exception) = split /\n/, $@;
+	ok( $exception, "undefined TSIG\t[$exception]" );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
+	$resolver->tcp_timeout(2);
+
+	my $iterator = eval { $resolver->axfr('net-dns.org') };
+	my ($exception) = split /\n/, $@;
+	ok( $exception, "rejected AXFR\t[$exception]" );
 }
 
 

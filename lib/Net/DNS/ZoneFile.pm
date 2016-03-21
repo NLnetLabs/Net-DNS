@@ -515,7 +515,8 @@ sub _getRR {				## get RR from current source
 	my $context = $self->{context};
 	my $rr = &$context( sub { Net::DNS::RR->_new_string($_) } );
 
-	$rr->{owner} = $self->{latest}->{owner} if $noname;	# overwrite placeholder
+	my $latest = $self->{latest};				# overwrite placeholder
+	$rr->{owner} = $latest->{owner} if $noname && $latest;
 
 	$self->{class} = $rr->class unless $self->{class};	# propagate RR class
 	$rr->class( $self->{class} );

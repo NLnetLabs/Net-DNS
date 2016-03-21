@@ -140,7 +140,7 @@ sub send {
 
 
 	my $query = new Net::DNS::Packet();
-	$query->push( question => $original );
+	$query->{question} = [$original];
 	$res = bless {%$res}, qw(Net::DNS::Resolver) if $nslist eq $root;
 	$res->udppacketsize(1024);
 	$res->recurse(0);

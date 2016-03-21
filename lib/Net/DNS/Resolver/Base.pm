@@ -754,6 +754,8 @@ sub axfr {				## zone transfer
 		my $reply;
 		( $reply, $verify ) = $self->_axfr_next($verify);
 		return $self->{axfr_sel} = undef unless $reply;
+		my $rcode = $reply->header->rcode;
+		croak "AXFR terminated: $rcode" unless $rcode eq 'NOERROR';
 		@rr = $reply->answer;
 		return $rr;
 	};
@@ -800,17 +802,14 @@ sub _axfr_start {
 		my $packet_data = $request->data;
 		my $TCP_msg = pack 'n a*', length($packet_data), $packet_data;
 
-		$socket->send($TCP_msg);
-		$self->errorstring($!);
-
 		$self->{axfr_ns}  = $ns;
-		$self->{axfr_sel} = IO::Select->new($socket);
+		$self->{axfr_sel} = IO::Select->new($socket) if $socket->send($TCP_msg);
+		$self->errorstring($!);
 
 		return $request->sigrr ? $request : undef;
 	}
 
-	$self->_diag( $self->errorstring );
-	return;
+	croak $self->errorstring;
 }
 
 
@@ -819,7 +818,7 @@ sub _axfr_next {
 
 	my $select = $self->{axfr_sel} || return;
 	my ($sock) = $select->can_read( $self->{tcp_timeout} );
-	croak 'improperly terminated AXFR' unless $sock;
+	croak 'AXFR timed out' unless $sock;
 
 	#--------------------------------------------------------------
 	# Read the response packet.
@@ -829,12 +828,12 @@ sub _axfr_next {
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
 	my $packet = Net::DNS::Packet->new( \$buffer );
+	croak 'corrupt AXFR packet' if $@;
 	return unless $packet;
 	$packet->answerfrom( $self->{axfr_ns} );
-	my $rcode = $packet->header->rcode;
-	$self->_diag( $self->errorstring("RCODE from server: $rcode") );
 	return $packet unless $verify;
-	return ( $packet, $verify ) if $verify = $packet->verify($verify);
+	$verify = $packet->verify($verify);
+	return ( $packet, $verify ) if $verify;
 	croak $packet->verifyerr;
 }
 
@@ -934,7 +933,7 @@ sub _create_tcp_socket {
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_tcp} ? $socket : undef;
-	$self->_diag( $self->errorstring("connection failed $sock_key") ) unless $socket;
+	$self->errorstring("$!\n$sock_key") unless $socket;
 	return $socket;
 }
 
