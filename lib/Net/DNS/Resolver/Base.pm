@@ -23,22 +23,22 @@ use constant PACKETSZ => 512;
 #  Implementation notes wrt IPv6 support when using perl before 5.20.0.
 #
 #  In general we try to be gracious to those stacks that do not have IPv6 support.
-#  We test that by means of the availability of IO::Socket::INET6
+#  We test that by means of the availability of IO::Socket::INET6 or IO::Socket::IP
 #
-#  We have chosen not to use mapped IPv4 addresses, there seem to be
-#  issues with this; as a result we use separate sockets for each
-#  family type.
+#  We have chosen not to use mapped IPv4 addresses, there seem to be issues
+#  with this; as a result we use separate sockets for each family type.
 #
 #  inet_pton is not available on WIN32, so we only use the getaddrinfo
-#  call to translate IP addresses to socketaddress
+#  call to translate IP addresses to socketaddress.
 #
 #  The configuration options force_v4, force_v6, prefer_v4 and prefer_v6
 #  are provided to control IPv6 behaviour for test purposes.
 #
 # Olaf Kolkman, RIPE NCC, December 2003.
+# [Revised March 2016]
 
 
-use constant USE_SOCKET_IP => defined eval 'use Socket 1.98; require IO::Socket::IP';
+use constant USE_SOCKET_IP => defined eval 'use Socket 1.98; use IO::Socket::IP 0.32; 1;';
 
 use constant USE_SOCKET_INET => defined eval 'require IO::Socket::INET';
 
@@ -52,9 +52,8 @@ use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
 
 
-use constant UTIL => defined eval 'require Scalar::Util';
-
-sub _tainted { UTIL ? Scalar::Util::tainted(shift) : undef }
+use constant UTIL  => defined eval 'require Scalar::Util';
+use constant TAINT => UTIL && scalar eval 'Scalar::Util::tainted( $ENV{PATH} )';
 
 sub _untaint {
 	map { m/^(.*)$/; $1 } grep defined, @_;
@@ -83,7 +82,6 @@ sub _untaint {
 		debug		=> 0,
 		errorstring	=> 'unknown error or no error',
 		tsig_rr		=> undef,
-		answerfrom	=> '',
 		tcp_timeout	=> 120,
 		udp_timeout	=> 30,
 		persistent_tcp	=> ( SOCKS ? 1 : 0 ),
@@ -530,8 +528,8 @@ NAMESERVER: foreach my $ns (@ns) {
 			}
 
 			# handle failure to detect taint inside socket->send()
-			# uncoverable branch true
-			die 'Insecure dependency while running with -T switch' if _tainted($dst_sockaddr);
+			die 'Insecure dependency while running with -T switch'
+					if TAINT && Scalar::Util::tainted($dst_sockaddr);
 
 			$sel->add($ns);
 
@@ -641,8 +639,8 @@ sub _bgsend_udp {
 		next unless $ok;
 
 		# handle failure to detect taint inside $socket->send()
-		# uncoverable branch true
-		die 'Insecure dependency while running with -T switch' if _tainted($dst_sockaddr);
+		die 'Insecure dependency while running with -T switch'
+				if TAINT && Scalar::Util::tainted($dst_sockaddr);
 
 		my $expire = time() + $self->{udp_timeout};
 		${*$socket}{net_dns_bg} = [$expire, 1, $packet->header->id, $ip];
@@ -738,8 +736,9 @@ sub axfr {				## zone transfer
 
 		if ( ref($rr) eq 'Net::DNS::RR::SOA' ) {
 			return $soa = $rr unless $soa;
-			croak 'improperly terminated AXFR' if $rr->encode ne $soa->encode;
-			return $self->{axfr_sel} = undef;
+			$self->{axfr_sel} = undef;
+			return if $rr->encode eq $soa->encode;
+			croak 'improperly terminated AXFR';
 		}
 
 		return $rr if scalar @rr;
@@ -766,8 +765,7 @@ sub axfr {				## zone transfer
 
 sub axfr_start {			## historical
 	my $self = shift;					# uncoverable pod
-	my $iter = $self->{axfr_iter} = $self->axfr(@_);
-	defined($iter);
+	defined( $self->{axfr_iter} = $self->axfr(@_) );
 }
 
 
@@ -782,6 +780,8 @@ sub _axfr_start {
 	my @class = @_;
 
 	my $request = $self->_make_query_packet( $dname, 'AXFR', @class );
+	my $content = $request->data;
+	my $TCP_msg = pack 'n a*', length($content), $content;
 
 	$self->_diag("axfr_start( $dname, @class )");
 
@@ -789,9 +789,6 @@ sub _axfr_start {
 		my $socket = $self->_create_tcp_socket($ns) || next;
 
 		$self->_diag("axfr_start nameserver [$ns]");
-
-		my $packet_data = $request->data;
-		my $TCP_msg = pack 'n a*', length($packet_data), $packet_data;
 
 		$self->{axfr_sel} = IO::Select->new($socket) if $socket->send($TCP_msg);
 		$self->errorstring($!);
@@ -810,6 +807,9 @@ sub _axfr_next {
 	my ($sock) = $select->can_read( $self->{tcp_timeout} );
 	croak 'AXFR timed out' unless $sock;
 
+	my $peerhost = $sock->peerhost;
+	$self->answerfrom($peerhost);
+
 	my $buffer = _read_tcp($sock);
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
@@ -819,10 +819,12 @@ sub _axfr_next {
 	my $rcode = $packet->header->rcode;
 	croak "AXFR terminated: $rcode" unless $rcode eq 'NOERROR';
 
-	$packet->answerfrom( $sock->peerhost );
-	return $packet unless $verify;
-	$verify = $packet->verify($verify);
-	croak $packet->verifyerr unless $verify;
+	if ($verify) {
+		$verify = $packet->verify($verify);
+		croak $packet->verifyerr unless $verify;
+	}
+
+	$packet->answerfrom($peerhost);
 	return ( $packet, $verify );
 }
 

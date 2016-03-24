@@ -78,7 +78,7 @@ my %optional = (
 	Digest::BubbleBabble => 0.01,
 	Digest::GOST	     => 0.06,
 	IO::Socket::INET     => 1.25,
-	IO::Socket::INET6    => 2.01,
+	IO::Socket::INET6    => 2.51,
 	IO::Socket::IP	     => 0.32,
 	Net::LibIDN	     => 0.12,
 	);

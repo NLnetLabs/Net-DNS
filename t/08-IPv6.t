@@ -79,7 +79,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 77;
+plan tests => 80;
 
 NonFatalBegin();
 
@@ -231,7 +231,7 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->srcport(53);
+	$resolver->srcport(-1);
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
 	ok( !$udp, '$resolver->send(...)	specify bad UDP source port' );
@@ -245,7 +245,7 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->srcport(53);
+	$resolver->srcport(-1);
 
 	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( !$udp, '$resolver->bgsend(...)	specify bad UDP source port' );
@@ -403,21 +403,31 @@ NonFatalBegin();
 	$resolver->tcp_timeout(30);
 
 	my @zone = eval { $resolver->axfr() };
-	ok( scalar(@zone), '$resolver->axfr() returns entire zone in list context' );
+	my $z = scalar(@zone);
+	ok( $z, '$resolver->axfr() returns entire zone in list context' );
 
 	my $iterator = eval { $resolver->axfr() };
-	is( ref($iterator), 'CODE', '$resolver->axfr() returns iterator CODE ref' );
-	my $i;
-	while ( eval { $iterator->() } ) {
-		$i++;
-	}
-	ok( $i, '$resolver->axfr() works using iterator' );
+	ok( ref($iterator), '$resolver->axfr() returns iterator in scalar context' );
 
+	my $soa = eval { $iterator->() };
+	is( ref($soa), 'Net::DNS::RR::SOA', '$iterator->() returns initial SOA RR' );
+
+	my $i;
+	eval {
+		$soa->serial(undef);				# force SOA mismatch
+		$i++;
+		while ( $iterator->() ) { $i++; }
+	};
+	my ($exception) = split /\n/, "$@\n";
+	( $i, $z ) = ( $z, $i ) if $z < $i;
+	is( $i, $z, '$iterator->() iterates through remaining RRs' );
 	ok( !eval { $iterator->() }, '$iterator->() returns undef after last RR' );
+	ok( $exception, "AXFR exception\t[$exception]" );
 
 	my $axfr_start = eval { $resolver->axfr_start() };
 	ok( $axfr_start, '$resolver->axfr_start()	(historical)' );
 	ok( eval { $resolver->axfr_next() }, '$resolver->axfr_next() works' );
+	ok( $resolver->answerfrom(), '$resolver->answerfrom() works' );
 }
 
 
@@ -433,12 +443,20 @@ NonFatalBegin();
 	};
 
 	my @zone = eval { $resolver->axfr() };
-	diag $@ if $@;
 	ok( scalar(@zone), '$resolver->axfr() with TSIG verify' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers(qw( ns.net-dns.org ));
+	$resolver->domain('net-dns.org');
+	$resolver->tcp_timeout(30);
 
 	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
 	my @unverifiable = eval { $resolver->axfr() };
-	ok( !scalar(@unverifiable), '$resolver->axfr() TSIG fails with incorrect key' );
+	my ($exception) = split /\n/, "$@\n";
+	ok( !scalar(@unverifiable), "wrong TSIG key\t[$exception]" );
 }
 
 
@@ -451,7 +469,7 @@ NonFatalBegin();
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + existing TSIG' );
 
 	eval { $resolver->tsig(undef) };
-	my ($exception) = split /\n/, $@;
+	my ($exception) = split /\n/, "$@\n";
 	ok( $exception, "undefined TSIG\t[$exception]" );
 }
 
@@ -461,7 +479,7 @@ NonFatalBegin();
 	$resolver->tcp_timeout(2);
 
 	my $iterator = eval { $resolver->axfr('net-dns.org') };
-	my ($exception) = split /\n/, $@;
+	my ($exception) = split /\n/, "$@\n";
 	ok( $exception, "rejected AXFR\t[$exception]" );
 }
 
@@ -487,8 +505,7 @@ NonFatalBegin();
 	my $ns = 'bogus.example.com.';
 	my @ip = $resolver->nameserver($ns);
 
-	my ($warning) = @warnings;
-	chomp $warning;
+	my ($warning) = split /\n/, "@warnings\n";
 	ok( $warning, "unresolved nameserver warning\t[$warning]" )
 			|| diag "\tnon-existent '$ns' resolved: @ip";
 }

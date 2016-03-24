@@ -143,13 +143,12 @@ sub send {
 		unless ( ref $ns ) {
 			$self->_diag("find missing glue for $ns");
 			$ns = [$res->nameservers($ns)];		# substitute IP list in situ
+		} else {
+			$res->nameservers(@$ns);		# cached IP list
 		}
-
-		$res->nameservers( map @$_, grep ref($_), @$nslist );
 
 		my $reply = $res->send($query);
 		next unless $reply;				# uncoverable branch true
-		next unless $reply->header->rcode eq 'NOERROR'; # uncoverable branch true
 
 		$self->_callback($reply);
 		return $reply;
