@@ -33,6 +33,7 @@ use constant ANY  => classbyname qw(ANY);
 use constant TSIG => typebyname qw(TSIG);
 
 {
+	# source: http://www.iana.org/assignments/tsig-algorithm-names
 	my @algbyname = (
 		'HMAC-MD5.SIG-ALG.REG.INT' => 157,
 		'HMAC-SHA1'		   => 161,
@@ -347,7 +348,7 @@ sub sig_data {
 sub create {
 	my $class = shift;
 	my $karg  = shift;
-	croak 'argument missing or undefined' unless defined $karg;
+	croak 'argument undefined' unless defined $karg;
 
 	if ( ref($karg) ) {
 		if ( $karg->isa('Net::DNS::Packet') ) {
@@ -849,5 +850,7 @@ DEALINGS IN THE SOFTWARE.
 =head1 SEE ALSO
 
 L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC2845, RFC4635
+
+<TSIG Algorithm Names|http://www.iana.org/assignments/tsig-algorithm-names>
 
 =cut

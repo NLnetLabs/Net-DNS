@@ -78,9 +78,10 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 80;
+plan tests => 79;
 
 NonFatalBegin();
+
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
@@ -132,8 +133,8 @@ NonFatalBegin();
 	ok( !$resolver->bgbusy(undef), '!$resolver->bgbusy(undef)' );
 	ok( !$resolver->bgread(undef), '!$resolver->bgread(undef)' );
 
-	ok( !$resolver->bgisready( ref($udp)->new ), '!$resolver->bgisready(Socket->new)' );
-	ok( !$resolver->bgread( ref($udp)->new ),    '!$resolver->bgread(Socket->new)' );
+	$resolver->udp_timeout(0);
+	ok( !$resolver->bgread( ref($udp)->new ), '!$resolver->bgread(Socket->new)' );
 }
 
 
@@ -169,7 +170,7 @@ NonFatalBegin();
 
 	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
 	my $appendix = ${*$handle}{net_dns_bg};
-	$appendix->[2]++;
+	$$appendix[1]++;
 	ok( !$resolver->bgread($handle), '$resolver->bgread() id mismatch' );
 }
 
@@ -177,9 +178,8 @@ NonFatalBegin();
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
-	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
-	my $appendix = ${*$handle}{net_dns_bg};
-	$appendix->[2] = undef;
+	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
+	delete ${*$handle}{net_dns_bg};
 	ok( $resolver->bgread($handle), '$resolver->bgread() workaround for SpamAssassin' );
 }
 
@@ -350,7 +350,7 @@ NonFatalBegin();
 	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
 	$resolver->retrans(0);
 	$resolver->retry(0);
-	$resolver->tcp_timeout(1);
+	$resolver->tcp_timeout(0);
 
 	my @query = (qw(. SOA IN));
 	my $query = new Net::DNS::Packet(@query);

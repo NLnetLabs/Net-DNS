@@ -113,6 +113,25 @@ SKIP: {
 }
 
 
+{
+	my $res = Net::DNS::Resolver::Recurse->new();
+	$res->retrans(0);
+	$res->retry(0);
+	$res->srcport(-1);
+
+	ok( !$res->send( "www.net-dns.org", "A" ), 'fail if no reachable server' );
+}
+
+
+{
+	Net::DNS::Resolver->retry(0);
+	my $res = Net::DNS::Resolver::Recurse->new();
+	$res->hints( '0.0.0.0', '::' );
+
+	ok( !$res->send( "www.net-dns.org", "A" ), 'fail if no usable hint' );
+}
+
+
 NonFatalEnd();
 
 exit;

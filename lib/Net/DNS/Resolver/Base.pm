@@ -452,34 +452,33 @@ sub _send_tcp {
 
 	foreach my $ns (@ns) {
 		my $socket = $self->_create_tcp_socket($ns) || next;
+		my $select = IO::Select->new($socket);
 
 		$self->_diag( 'tcp send:', $length, 'bytes' );
 
 		$socket->send( pack 'n a*', $length, $packet_data );
 		$self->errorstring($!);
 
-		my $sel = IO::Select->new($socket);
-		if ( $sel->can_read( $self->{tcp_timeout} ) ) {
-			my $buffer = _read_tcp($socket);
-			$self->answerfrom($ns);
-			$self->_diag( "answer from [$ns]", length($buffer), 'bytes' );
+		next unless $select->can_read( $self->{tcp_timeout} );
 
-			my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
-			$self->errorstring($@);
+		my $buffer = _read_tcp($socket);
+		$self->answerfrom($ns);
+		$self->_diag( "answer from [$ns]", length($buffer), 'bytes' );
 
-			if ($ans) {
-				next unless $ans->verify($packet);
+		my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
+		$self->errorstring($@);
 
-				$ans->answerfrom($ns);
+		next unless $ans;
+		next unless $ans->verify($packet);
 
-				my $rcode = $ans->header->rcode;
-				return $ans if $rcode eq "NOERROR";
-				return $ans if $rcode eq "NXDOMAIN";
+		$ans->answerfrom($ns);
 
-				$self->_diag("RCODE: $rcode; try next nameserver");
-				$lastanswer = $ans;
-			}
-		}
+		my $rcode = $ans->header->rcode;
+		return $ans if $rcode eq "NOERROR";
+		return $ans if $rcode eq "NXDOMAIN";
+
+		$self->_diag("RCODE: $rcode; try next nameserver");
+		$lastanswer = $ans;
 	}
 
 	$self->errorstring( $lastanswer->header->rcode ) if $lastanswer;
@@ -496,7 +495,6 @@ sub _send_udp {
 	# Constructing an array of arrays that contain 3 elements:
 	# The socket, IP address and dst_sockaddr
 	my $port = $self->{port};
-	my $sel	 = IO::Select->new();
 	my @ns;
 
 	foreach my $ip ( $self->nameservers ) {
@@ -510,6 +508,7 @@ sub _send_udp {
 	my $servers = scalar(@ns);
 	my $timeout = $servers ? do { no integer; $retrans / $servers } : 0;
 
+	my $select = IO::Select->new();
 	my $lastanswer;
 
 	# Perform each round of retries.
@@ -531,12 +530,10 @@ NAMESERVER: foreach my $ns (@ns) {
 			die 'Insecure dependency while running with -T switch'
 					if TAINT && Scalar::Util::tainted($dst_sockaddr);
 
-			$sel->add($ns);
+			$select->add($socket);
 
-			my @ready = $sel->can_read($timeout);
-			foreach my $ready (@ready) {
-				my ( $socket, $ip ) = @$ready;
-				$sel->remove($ready);
+			while ( my ($socket) = $select->can_read($timeout) ) {
+				$select->remove($socket);
 
 				my $peer = $socket->peerhost;
 				$self->answerfrom($peer);
@@ -574,7 +571,7 @@ NAMESERVER: foreach my $ns (@ns) {
 		$timeout += $timeout;
 	}							#RETRY LOOP
 
-	my $error = scalar( $sel->handles ) ? 'query timed out' : $self->errorstring;
+	my $error = scalar( $select->handles ) ? 'query timed out' : $self->errorstring;
 	$error = $lastanswer->header->rcode if $lastanswer;
 	$self->_diag( $self->errorstring($error) );
 	return $lastanswer;
@@ -612,7 +609,7 @@ sub _bgsend_tcp {
 		$self->errorstring($!);
 
 		my $expire = time() + $self->{tcp_timeout};
-		${*$socket}{net_dns_bg} = [$expire, 0, $packet->header->id, $ip];
+		${*$socket}{net_dns_bg} = [$expire, $packet->header->id];
 		return $socket;
 	}
 
@@ -643,7 +640,7 @@ sub _bgsend_udp {
 				if TAINT && Scalar::Util::tainted($dst_sockaddr);
 
 		my $expire = time() + $self->{udp_timeout};
-		${*$socket}{net_dns_bg} = [$expire, 1, $packet->header->id, $ip];
+		${*$socket}{net_dns_bg} = [$expire, $packet->header->id];
 		return $socket;
 	}
 
@@ -653,35 +650,30 @@ sub _bgsend_udp {
 
 
 sub bgbusy {
-	my $self = shift;
-	my ($sock) = @_;
-	return unless $sock;
+	my ( $self, $handle ) = @_;
+	return unless $handle;
 
-	my $appendix = ${*$sock}{net_dns_bg} || [];
-	my ( $expire, $udp ) = ( @$appendix, 0, 1 );
-	return if ref($udp);
+	my $appendix = ${*$handle}{net_dns_bg} ||= [time() + $self->{udp_timeout}];
+	my ( $expire, $qid, $read ) = @$appendix;
+	return if ref($read);
 
-	unless ( IO::Select->new($sock)->can_read(0) ) {
-		my $time = time();
-		my ($expire) = ( @$appendix, $time );
-		return $time <= $expire;
+	unless ( IO::Select->new($handle)->can_read(0.2) ) {
+		return time() <= $expire;
 	}
 
-	return unless $udp;
-
-	my $ans = $self->bgread($sock);
-	return unless $ans;
-
-	$$appendix[1] = $ans;
-	return unless $ans->header->tc;
 	return if $self->{igntc};
+	return unless $handle->socktype() == SOCK_DGRAM;
+
+	my $ans = $self->_bgread($handle);
+	$$appendix[2] = [$ans];
+	return unless $ans;
+	return unless $ans->header->tc;
 
 	$self->_diag('packet truncated: retrying using TCP');
 	my $packet = new Net::DNS::Packet();
 	$packet->{question} = $ans->{question};
 	my $tcp = $self->_bgsend_tcp( $packet, $packet->data );
-	$_[0] = $tcp if $tcp;
-	return defined $tcp;
+	return defined( $_[1] = $tcp ) if $tcp;
 }
 
 
@@ -691,38 +683,37 @@ sub bgisready {				## historical
 
 
 sub bgread {
-	my $self = shift;
-	my $sock = shift || return;
+	while (&bgbusy) { next; }				# side effect: TCP retry
+	&_bgread;
+}
 
-	my $appendix = ${*$sock}{net_dns_bg} || [];
-	my ( $x, $udp ) = ( @$appendix, 0, 1 );
 
-	return $udp if ref($udp);
+sub _bgread {
+	my ( $self, $handle ) = @_;
+	return unless $handle;
 
-	my $time = time();
-	my ( $expire, $u, $qid, $ip ) = ( @$appendix, $time, 1 );
+	my $appendix = ${*$handle}{net_dns_bg};
+	my ( $expire, $qid, $read ) = @$appendix;
+	return shift(@$read) if ref($read);
 
-	my $select  = IO::Select->new($sock);
-	my $timeout = $expire - $time;
-	return undef unless $select->can_read( $timeout > 0 ? $timeout : 0 );
+	return unless IO::Select->new($handle)->can_read(0.5);
 
-	my $buffer = $udp ? _read_udp( $sock, $self->_packetsz ) : _read_tcp($sock);
+	my $dgram = $handle->socktype() == SOCK_DGRAM;
+	my $buffer = $dgram ? _read_udp( $handle, $self->_packetsz ) : _read_tcp($handle);
 
-	my $peer = $sock->peerhost;
+	my $peer = $handle->peerhost;
 	$self->answerfrom($peer);
 	$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
 	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
 	$self->errorstring($@);
+	return unless $ans;
 
-	if ($ans) {
-		my $header = $ans->header;
-		return undef unless $header->qr;
-		return undef if defined $qid && ( $header->id != $qid );
+	my $header = $ans->header;
+	return unless $header->qr;
 
-		$ans->answerfrom($peer);
-	}
-	return $ans;
+	$ans->answerfrom($peer);
+	return ( defined($qid) && ( $header->id != $qid ) ) ? undef : $ans;
 }
 
 
@@ -866,10 +857,8 @@ sub _read_tcp {
 #
 sub _read_udp {
 	my $socket = shift;
-	my $length = shift;
-
 	my $buffer = '';
-	warn "ERROR: udp recv failed: $!\n" unless $socket->recv( $buffer, $length );
+	$socket->recv( $buffer, shift );
 	return $buffer;
 }
 
@@ -889,7 +878,7 @@ sub _create_tcp_socket {
 
 	my $dstport = $self->{port};
 	my $srcport = $self->{srcport};
-	my $timeout = $self->{tcp_timeout};
+	my $timeout = $self->{tcp_timeout} || 1;
 
 	if (USE_SOCKET_IP) {
 		my $srcaddr = _ipv6($ip) ? $self->{srcaddr6} : $self->{srcaddr4};

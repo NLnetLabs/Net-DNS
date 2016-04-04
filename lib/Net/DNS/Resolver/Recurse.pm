@@ -93,7 +93,7 @@ sub send {
 	my $domain = lc join( '.', @tail ) || '.';
 	my $nslist = $res->{persistent}->{$domain} ||= [];
 	unless ( defined $head ) {
-		my $defres = bless {%$res}, qw(Net::DNS::Resolver);
+		my $defres = new Net::DNS::Resolver();
 		$defres->nameservers( $res->_hints );		# fall back to inbuilt list
 		$defres->recurse(0);
 		$defres->udppacketsize(1024);
@@ -106,7 +106,7 @@ sub send {
 	} else {
 		$domain = lc $question->qname if $question->qtype ne 'NULL';
 		my $packet = $res->send( $domain, 'NULL', 'IN', $original );
-		return unless $packet;				# uncoverable branch true
+		return unless $packet;
 
 		my @answer = $packet->answer;			# return authoritative answer
 		return $packet if $packet->header->aa && grep $_->name eq $original->qname, @answer;
@@ -114,8 +114,8 @@ sub send {
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
 		my %auth = map { lc $_->nsdname => lc $_->name } @auth;
 		my %glue;
-		my @glue = grep $auth{lc $_->name}, $packet->additional;
-		foreach ( grep $_->can('address'), @glue ) {
+		my @glue = grep $_->can('address'), $packet->additional;
+		foreach ( grep $auth{lc $_->name}, @glue ) {
 			push @{$glue{lc $_->name}}, $_->address;
 		}
 
@@ -130,7 +130,6 @@ sub send {
 		}
 	}
 
-
 	my $query = new Net::DNS::Packet();
 	$query->{question} = [$original];
 	$res = bless {%$res}, qw(Net::DNS::Resolver) if $nslist eq $root;
@@ -140,15 +139,18 @@ sub send {
 	splice @$nslist, 0, 0, splice( @$nslist, int( rand scalar @$nslist ) );	   # cut deck
 
 	foreach my $ns (@$nslist) {
-		unless ( ref $ns ) {
-			$self->_diag("find missing glue for $ns");
-			$ns = [$res->nameservers($ns)];		# substitute IP list in situ
+		if ( ref $ns ) {
+			my @ip = map @$_, grep ref($_), @$nslist;
+			$res->nameservers(@ip);			# cached IP list
 		} else {
-			$res->nameservers(@$ns);		# cached IP list
+			$self->_diag("find missing glue for $ns");
+			my $name = $ns;				# suppress deep recursion by
+			$ns = [];				# inserting placeholder in cache
+			$ns = [$res->nameservers($name)];	# substitute IP list in situ
 		}
 
 		my $reply = $res->send($query);
-		next unless $reply;				# uncoverable branch true
+		next unless $reply;
 
 		$self->_callback($reply);
 		return $reply;
