@@ -411,14 +411,13 @@ NonFatalBegin();
 	my $soa = eval { $iterator->() };
 	is( ref($soa), 'Net::DNS::RR::SOA', '$iterator->() returns initial SOA RR' );
 
-	my $i;
+	my $i = 0;
 	eval {
 		$soa->serial(undef);				# force SOA mismatch
 		$i++;
 		while ( $iterator->() ) { $i++; }
 	};
 	my ($exception) = split /\n/, "$@\n";
-	( $i, $z ) = ( $z, $i ) if $z < $i;
 	is( $i, $z, '$iterator->() iterates through remaining RRs' );
 	ok( !eval { $iterator->() }, '$iterator->() returns undef after last RR' );
 	ok( $exception, "AXFR exception\t[$exception]" );

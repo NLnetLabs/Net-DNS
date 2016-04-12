@@ -114,14 +114,24 @@ close KEY;
 
 
 {
+	my $packet = new Net::DNS::Packet('query.example');
+	$packet->sign_tsig( $privatekey, fudge => 0 );
+	my $encoded = $packet->data;
+	sleep 1;
+
+	my $query = new Net::DNS::Packet( \$encoded );
+	my $verified = $query->verify();
+	is( $query->verifyerr, 'BADTIME', 'unverifiable query packet: BADTIME' );
+}
+
+
+{
 	my $packet = new Net::DNS::Packet();
 	$packet->sign_tsig($privatekey);
 	$packet->sigrr->error('BADTIME');
 	my $encoded = $packet->data;
 	my $decoded = new Net::DNS::Packet( \$encoded );
-	my $result  = $decoded->verify;
-	ok( $result, 'verify BADTIME error response' );
-	is( length( $decoded->sigrr->other ), 6, 'time appended to BADTIME response' );
+	ok( $decoded->sigrr->other, 'time appended to BADTIME response' );
 }
 
 

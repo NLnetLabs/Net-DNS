@@ -446,24 +446,19 @@ sub verify {
 		if ( $arg->isa('Net::DNS::Packet') ) {
 			my $request = $arg->sigrr;		# request TSIG
 			my $rqstkey = lc( join '+', $request->name, $request->algorithm );
-			unless ( $signerkey eq $rqstkey ) {
-				$self->error(17);
-				return;
-			}
+			$self->error(17) unless $signerkey eq $rqstkey;
 			$self->request_macbin( $request->macbin );
 
 		} elsif ( $arg->isa(__PACKAGE__) ) {
 			my $priorkey = lc( join '+', $arg->name, $arg->algorithm );
-			unless ( $signerkey eq $priorkey ) {
-				$self->error(17);
-				return;
-			}
+			$self->error(17) unless $signerkey eq $priorkey;
 			$self->prior_macbin( $arg->macbin );
 
 		} else {
 			croak 'Usage: $tsig->verify( $reply, $query )';
 		}
 	}
+	return if $self->{error};
 
 	my $sigdata = $self->sig_data($data);			# form data to be verified
 	my $tsigmac = $self->_mac_function($sigdata);
@@ -851,6 +846,6 @@ DEALINGS IN THE SOFTWARE.
 
 L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC2845, RFC4635
 
-<TSIG Algorithm Names|http://www.iana.org/assignments/tsig-algorithm-names>
+L<TSIG Algorithm Names|http://www.iana.org/assignments/tsig-algorithm-names>
 
 =cut

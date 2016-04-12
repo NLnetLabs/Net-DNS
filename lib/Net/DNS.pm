@@ -44,10 +44,11 @@ use vars qw(@EXPORT);
 		mx rr rrsort);
 
 
-use Net::DNS::RR;
-use Net::DNS::Packet;
-use Net::DNS::Update;
-use Net::DNS::Resolver;
+local $SIG{__DIE__};
+require Net::DNS::RR;
+require Net::DNS::Packet;
+require Net::DNS::Update;
+require Net::DNS::Resolver;
 
 
 sub version { $VERSION; }

@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.06 [unreleased]
 
+Fix rt.cpan.org #113579
+
+	Net::DNS::Resolver dies on scoped IPv6 nameserver address
+
 Fix rt.cpan.org #113020
 
 	Resolve::Recurse Hangs

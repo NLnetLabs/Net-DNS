@@ -146,9 +146,9 @@ sub flags {
 
 
 sub options {
-	my $self = shift;
-	my $options = $self->{option} || {};
-	return keys %$options;
+	my ($self) = @_;
+	&option;
+	return keys %{$self->{option}};
 }
 
 sub option {

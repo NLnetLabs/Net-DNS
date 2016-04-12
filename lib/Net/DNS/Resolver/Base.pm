@@ -469,7 +469,11 @@ sub _send_tcp {
 		$self->errorstring($@);
 
 		next unless $ans;
-		next unless $ans->verify($packet);
+
+		if ( $self->{tsig_rr} && !$ans->verify($packet) ) {
+			$self->errorstring( $ans->verifyerr );
+			return;
+		}
 
 		$ans->answerfrom($ns);
 
@@ -522,7 +526,7 @@ NAMESERVER: foreach my $ns (@ns) {
 			$self->_diag("udp send [$ip]:$port");
 
 			unless ( $socket->send( $packet_data, 0, $dst_sockaddr ) ) {
-				$self->_diag( $ns->[3] = $self->errorstring($!) );
+				$ns->[3] = $self->errorstring($!);
 				next;
 			}
 
@@ -545,26 +549,26 @@ NAMESERVER: foreach my $ns (@ns) {
 				my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
 				$self->errorstring($@);
 
-				if ($ans) {
-					my $header = $ans->header;
-					next unless $header->qr;
-					next unless $header->id == $packet->header->id;
+				next unless $ans;
 
-					unless ( $ans->verify($packet) ) {
-						$self->errorstring( $ns->[3] = $ans->verifyerr );
-						next;
-					}
+				my $header = $ans->header;
+				next unless $header->qr;
+				next unless $header->id == $packet->header->id;
 
-					$ans->answerfrom($peer);
-
-					my $rcode = $header->rcode;
-					return $ans if $rcode eq "NOERROR";
-					return $ans if $rcode eq "NXDOMAIN";
-
-					my $msg = $ns->[3] = "RCODE: $rcode";
-					$self->_diag("$msg; try next nameserver");
-					$lastanswer = $ans;
+				if ( $self->{tsig_rr} && !$ans->verify($packet) ) {
+					$self->errorstring( $ans->verifyerr );
+					return;
 				}
+
+				$ans->answerfrom($peer);
+
+				my $rcode = $header->rcode;
+				return $ans if $rcode eq "NOERROR";
+				return $ans if $rcode eq "NXDOMAIN";
+
+				my $msg = $ns->[3] = "RCODE: $rcode";
+				$self->_diag("$msg; try next nameserver");
+				$lastanswer = $ans;
 			}					#SELECTOR LOOP
 		}						#NAMESERVER LOOP
 		no integer;
@@ -805,15 +809,16 @@ sub _axfr_next {
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
 	my $packet = Net::DNS::Packet->new( \$buffer );
-	croak "corrupt AXFR packet\n$@" if $@;
+	croak "${@}corrupt AXFR packet" if $@;
+
+	if ( $verify && not( $verify = $packet->verify($verify) ) ) {
+		my $error = $packet->verifyerr;
+		$self->errorstring($error);
+		croak "AXFR terminated: $error";
+	}
 
 	my $rcode = $packet->header->rcode;
 	croak "AXFR terminated: $rcode" unless $rcode eq 'NOERROR';
-
-	if ($verify) {
-		$verify = $packet->verify($verify);
-		croak $packet->verifyerr unless $verify;
-	}
 
 	$packet->answerfrom($peerhost);
 	return ( $packet, $verify );
@@ -913,7 +918,7 @@ sub _create_tcp_socket {
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_tcp} ? $socket : undef;
-	$self->errorstring("$!\n$sock_key") unless $socket;
+	$self->errorstring("no $sock_key socket: $!") unless $socket;
 	return $socket;
 }
 
@@ -956,7 +961,7 @@ sub _create_udp_socket {
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_udp} ? $socket : undef;
-	$self->_diag( $self->errorstring("could not get $sock_key socket") ) unless $socket;
+	$self->errorstring("no $sock_key socket: $!") unless $socket;
 	return $socket;
 }
 
@@ -969,18 +974,21 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 		return sockaddr_in( $port, inet_aton($ip) )
 
 	} elsif (USE_SOCKET_IP) {
-		my $addr = Socket::inet_pton( AF_INET6, $ip );
-		return sockaddr_in6( $port, $addr )
+		my ( $error, $result ) = Socket::getaddrinfo(
+			$ip, $port,
+			{	family	 => AF_INET6,
+				flags	 => Socket::AI_NUMERICHOST,
+				protocol => Socket::IPPROTO_UDP,
+				socktype => SOCK_DGRAM
+				} );
+		return $result->{addr};				# NB: error flagged by socket->send
 
 	} elsif (USE_SOCKET_INET6) {
 		local $^W = 0;					# circumvent perl -w warnings
 
 		my @res = Socket6::getaddrinfo( $ip, $port, AF_INET6, SOCK_DGRAM, 0, AI_NUMERICHOST );
-		return $res[3] unless scalar(@res) < 5;
-
-		my ($error) = @res;
-		$self->errorstring("send: $ip\t$error");
-		return;
+		return if scalar(@res) < 5;			# NB: error flagged by socket->send
+		return $res[3];
 	}
 }
 
