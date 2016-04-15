@@ -78,14 +78,13 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 79;
+plan tests => 80;
 
 NonFatalBegin();
 
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->igntc(1);
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
 	ok( $udp, '$resolver->send(...)	UDP' );
@@ -102,19 +101,19 @@ NonFatalBegin();
 	$resolver->dnssec(1);
 	$resolver->udppacketsize(513);
 
-	my $retry = $resolver->send(qw(net-dns.org DNSKEY IN));
-
 	$resolver->igntc(1);
 	my $udp = $resolver->send(qw(net-dns.org DNSKEY IN));
+	ok( $udp && $udp->header->tc, '$resolver->send(...)	truncated UDP reply' );
 
-	ok( $udp   && $udp->header->tc,	   '$resolver->send(...)	truncated UDP reply' );
+	$resolver->igntc(0);
+	my $retry = $resolver->send(qw(net-dns.org DNSKEY IN));
 	ok( $retry && !$retry->header->tc, '$resolver->send(...)	automatic TCP retry' );
 }
 
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->igntc(1);
+	$resolver->igntc(0);
 
 	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $udp, '$resolver->bgsend(...)	UDP' );
@@ -125,10 +124,8 @@ NonFatalBegin();
 	$resolver->usevc(1);
 
 	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $tcp, '$resolver->bgsend(...)	TCP' );
-	while ( $resolver->bgbusy($tcp) ) { sleep 1; }
-	ok( $resolver->bgisready($tcp), '$resolver->bgisready($tcp)' );
-	ok( $resolver->bgread($tcp),	'$resolver->bgread($tcp)' );
+	ok( $tcp,		     '$resolver->bgsend(...)	TCP' );
+	ok( $resolver->bgread($tcp), '$resolver->bgread($tcp)' );
 
 	ok( !$resolver->bgbusy(undef), '!$resolver->bgbusy(undef)' );
 	ok( !$resolver->bgread(undef), '!$resolver->bgread(undef)' );
@@ -146,7 +143,6 @@ NonFatalBegin();
 
 	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
 	ok( $handle, '$resolver->bgsend(...)	truncated UDP' );
-	while ( $resolver->bgbusy($handle) ) { sleep 1; }
 	my $packet = $resolver->bgread($handle);
 	ok( $packet && $packet->header->tc, '$resolver->bgread(...)	ignore UDP truncation' );
 }
@@ -156,10 +152,10 @@ NonFatalBegin();
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->dnssec(1);
 	$resolver->udppacketsize(513);
+	$resolver->igntc(0);
 
 	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
 	ok( $handle, '$resolver->bgsend(...)	truncated UDP' );
-	while ( $resolver->bgbusy($handle) ) { sleep 1; }
 	my $packet = $resolver->bgread($handle);
 	ok( $packet && !$packet->header->tc, '$resolver->bgread(...)	background TCP retry' );
 }
@@ -170,7 +166,7 @@ NonFatalBegin();
 
 	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
 	my $appendix = ${*$handle}{net_dns_bg};
-	$$appendix[1]++;
+	$$appendix[1]->header->id(undef);			# random id
 	ok( !$resolver->bgread($handle), '$resolver->bgread() id mismatch' );
 }
 
@@ -274,6 +270,9 @@ NonFatalBegin();
 
 	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
 	ok( $tcp && ( $tcp->verifyerr eq 'NOERROR' ), '$resolver->send(...)	TCP + automatic TSIG' );
+
+	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $resolver->bgread($handle), '$resolver->bgsend/read	TCP + automatic TSIG' );
 }
 
 
@@ -291,6 +290,9 @@ NonFatalBegin();
 
 	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
 	ok( !$tcp, '$resolver->send(...)	TCP + failed TSIG' );
+
+	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( !$resolver->bgread($handle), '$resolver->bgsend/read	TCP + failed TSIG' );
 }
 
 
@@ -485,7 +487,7 @@ NonFatalBegin();
 {
 	my $resolver = Net::DNS::Resolver->new();
 	$resolver->nameservers();
-	ok( !scalar( $resolver->nameservers ), 'no nameservers' );
+	ok( !$resolver->send(qw(. NS)), 'no nameservers' );
 }
 
 

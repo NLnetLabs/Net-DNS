@@ -467,14 +467,10 @@ sub verify {
 	my $macbin = $self->macbin;
 	my $maclen = length $macbin;
 	my $minlen = length($tsigmac) >> 1;			# per RFC4635, 3.1
-	if ( $maclen < $minlen or $maclen < 10 or $maclen > length $tsigmac ) {
-		$self->error(1);
-		return;
-	}
+	$self->error(16) unless $macbin eq substr $tsigmac, 0, $maclen;
+	$self->error(1) if $maclen < $minlen or $maclen < 10 or $maclen > length $tsigmac;
 
-	return $tsig if $macbin eq substr $tsigmac, 0, $maclen;
-	$self->error(16);
-	return;
+	return $self->{error} ? undef : $tsig;
 }
 
 sub vrfyerrstr {

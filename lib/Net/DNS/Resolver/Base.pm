@@ -52,7 +52,7 @@ use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
 
 
-use constant UTIL  => defined eval 'require Scalar::Util';
+use constant UTIL => defined eval 'require Scalar::Util';
 use constant TAINT => UTIL && scalar eval 'Scalar::Util::tainted( $ENV{PATH} )';
 
 sub _untaint {
@@ -80,7 +80,6 @@ sub _untaint {
 		defnames	=> 1,
 		dnsrch		=> 1,
 		debug		=> 0,
-		errorstring	=> 'unknown error or no error',
 		tsig_rr		=> undef,
 		tcp_timeout	=> 120,
 		udp_timeout	=> 30,
@@ -380,8 +379,7 @@ sub errorstring {
 }
 
 sub _reset_errorstring {
-	my $self = shift;
-	$self->errorstring( $self->_defaults->{errorstring} );
+	shift->{errorstring} = '';
 }
 
 
@@ -478,6 +476,7 @@ sub _send_tcp {
 		$ans->answerfrom($ns);
 
 		my $rcode = $ans->header->rcode;
+		$self->errorstring($rcode);			# historical quirk
 		return $ans if $rcode eq "NOERROR";
 		return $ans if $rcode eq "NXDOMAIN";
 
@@ -496,23 +495,13 @@ sub _send_udp {
 
 	$self->_reset_errorstring;
 
-	# Constructing an array of arrays that contain 3 elements:
-	# The socket, IP address and dst_sockaddr
-	my $port = $self->{port};
-	my @ns;
-
-	foreach my $ip ( $self->nameservers ) {
-		my $socket = $self->_create_udp_socket($ip) || next;
-		my $dst_sockaddr = $self->_create_dst_sockaddr( $ip, $port );
-		push @ns, [$socket, $ip, $dst_sockaddr];
-	}
-
+	my @ns	    = $self->nameservers;
+	my $port    = $self->{port};
 	my $retrans = $self->{retrans} || 1;
-	my $retry   = $self->{retry}   || 1;
+	my $retry   = $self->{retry} || 1;
+	my $select  = IO::Select->new();
 	my $servers = scalar(@ns);
 	my $timeout = $servers ? do { no integer; $retrans / $servers } : 0;
-
-	my $select = IO::Select->new();
 	my $lastanswer;
 
 	# Perform each round of retries.
@@ -520,15 +509,21 @@ RETRY: for ( 1 .. $retry ) {					# assumed to be a small number
 
 		# Try each nameserver.
 NAMESERVER: foreach my $ns (@ns) {
+
+			# Construct an array of 3 element arrays
+			unless ( ref $ns ) {
+				my $socket = $self->_create_udp_socket($ns) || next;
+				my $dst_sockaddr = $self->_create_dst_sockaddr( $ns, $port );
+				$ns = [$socket, $ns, $dst_sockaddr];
+			}
+
 			my ( $socket, $ip, $dst_sockaddr, $failed ) = @$ns;
 			next if $failed;
 
 			$self->_diag("udp send [$ip]:$port");
 
-			unless ( $socket->send( $packet_data, 0, $dst_sockaddr ) ) {
-				$ns->[3] = $self->errorstring($!);
-				next;
-			}
+			$socket->send( $packet_data, 0, $dst_sockaddr );
+			$self->errorstring( $$ns[3] = $! );
 
 			# handle failure to detect taint inside socket->send()
 			die 'Insecure dependency while running with -T switch'
@@ -543,7 +538,6 @@ NAMESERVER: foreach my $ns (@ns) {
 				$self->answerfrom($peer);
 
 				my $buffer = _read_udp( $socket, $self->_packetsz );
-				$self->errorstring( $ns->[3] = $! ) unless $buffer;
 				$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
 				my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
@@ -563,10 +557,11 @@ NAMESERVER: foreach my $ns (@ns) {
 				$ans->answerfrom($peer);
 
 				my $rcode = $header->rcode;
+				$self->errorstring($rcode);	# historical quirk
 				return $ans if $rcode eq "NOERROR";
 				return $ans if $rcode eq "NXDOMAIN";
 
-				my $msg = $ns->[3] = "RCODE: $rcode";
+				my $msg = $$ns[3] = "RCODE: $rcode";
 				$self->_diag("$msg; try next nameserver");
 				$lastanswer = $ans;
 			}					#SELECTOR LOOP
@@ -613,7 +608,7 @@ sub _bgsend_tcp {
 		$self->errorstring($!);
 
 		my $expire = time() + $self->{tcp_timeout};
-		${*$socket}{net_dns_bg} = [$expire, $packet->header->id];
+		${*$socket}{net_dns_bg} = [$expire, $packet];
 		return $socket;
 	}
 
@@ -635,16 +630,15 @@ sub _bgsend_udp {
 
 		$self->_diag( 'bgsend', "[$ip]:$port" );
 
-		my $ok = $socket->send( $packet_data, 0, $dst_sockaddr );
+		$socket->send( $packet_data, 0, $dst_sockaddr );
 		$self->errorstring($!);
-		next unless $ok;
 
 		# handle failure to detect taint inside $socket->send()
 		die 'Insecure dependency while running with -T switch'
 				if TAINT && Scalar::Util::tainted($dst_sockaddr);
 
 		my $expire = time() + $self->{udp_timeout};
-		${*$socket}{net_dns_bg} = [$expire, $packet->header->id];
+		${*$socket}{net_dns_bg} = [$expire, $packet];
 		return $socket;
 	}
 
@@ -658,7 +652,7 @@ sub bgbusy {
 	return unless $handle;
 
 	my $appendix = ${*$handle}{net_dns_bg} ||= [time() + $self->{udp_timeout}];
-	my ( $expire, $qid, $read ) = @$appendix;
+	my ( $expire, $query, $read ) = @$appendix;
 	return if ref($read);
 
 	unless ( IO::Select->new($handle)->can_read(0.2) ) {
@@ -697,16 +691,16 @@ sub _bgread {
 	return unless $handle;
 
 	my $appendix = ${*$handle}{net_dns_bg};
-	my ( $expire, $qid, $read ) = @$appendix;
+	my ( $expire, $query, $read ) = @$appendix;
 	return shift(@$read) if ref($read);
 
 	return unless IO::Select->new($handle)->can_read(0.5);
 
-	my $dgram = $handle->socktype() == SOCK_DGRAM;
-	my $buffer = $dgram ? _read_udp( $handle, $self->_packetsz ) : _read_tcp($handle);
-
 	my $peer = $handle->peerhost;
 	$self->answerfrom($peer);
+
+	my $dgram = $handle->socktype() == SOCK_DGRAM;
+	my $buffer = $dgram ? _read_udp( $handle, $self->_packetsz ) : _read_tcp($handle);
 	$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
 	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
@@ -716,8 +710,13 @@ sub _bgread {
 	my $header = $ans->header;
 	return unless $header->qr;
 
+	if ( $self->{tsig_rr} && !$ans->verify($query) ) {
+		$self->errorstring( $ans->verifyerr );
+		return;
+	}
+
 	$ans->answerfrom($peer);
-	return ( defined($qid) && ( $header->id != $qid ) ) ? undef : $ans;
+	return ( ref($query) && ( $header->id != $query->header->id ) ) ? undef : $ans;
 }
 
 
@@ -778,7 +777,7 @@ sub _axfr_start {
 	my $content = $request->data;
 	my $TCP_msg = pack 'n a*', length($content), $content;
 
-	$self->_diag("axfr_start( $dname, @class )");
+	$self->_diag("axfr_start( $dname @class )");
 
 	foreach my $ns ( $self->nameservers ) {
 		my $socket = $self->_create_tcp_socket($ns) || next;
@@ -970,13 +969,11 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 	my ( $self, $ip, $port ) = @_;
 
 	no strict;
-	unless ( IPv6 && _ipv6($ip) ) {
-		return sockaddr_in( $port, inet_aton($ip) )
-
-	} elsif (USE_SOCKET_IP) {
+	if (USE_SOCKET_IP) {
+		my $family = _ipv6($ip) ? AF_INET6 : AF_INET;
 		my ( $error, $result ) = Socket::getaddrinfo(
 			$ip, $port,
-			{	family	 => AF_INET6,
+			{	family	 => $family,
 				flags	 => Socket::AI_NUMERICHOST,
 				protocol => Socket::IPPROTO_UDP,
 				socktype => SOCK_DGRAM
@@ -984,11 +981,14 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 		return $result->{addr};				# NB: error flagged by socket->send
 
 	} elsif (USE_SOCKET_INET6) {
-		local $^W = 0;					# circumvent perl -w warnings
+		return sockaddr_in( $port, inet_aton($ip) ) unless _ipv6($ip);
 
+		local $^W = 0;					# circumvent perl -w warnings
 		my @res = Socket6::getaddrinfo( $ip, $port, AF_INET6, SOCK_DGRAM, 0, AI_NUMERICHOST );
-		return if scalar(@res) < 5;			# NB: error flagged by socket->send
-		return $res[3];
+		return $res[3];					# NB: error flagged by socket->send
+
+	} else {
+		return sockaddr_in( $port, inet_aton($ip) ) unless _ipv6($ip);
 	}
 }
 

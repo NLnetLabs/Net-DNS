@@ -40,7 +40,7 @@ __END__
     $reply = $resolver->query( 'example.com', 'MX' );
 
     # Perform a lookup, without pre or post-processing
-    $reply = $resolver->send( 'example.com', 'MX', 'CH' );
+    $reply = $resolver->send( 'example.com', 'MX', 'IN' );
 
     # Send a prebuilt query packet
     $query = new Net::DNS::Packet( ... );
@@ -136,19 +136,35 @@ variables.  The following arguments are supported:
 
 A reference to an array of nameservers to query.
 
-=item searchlist
-
-A reference to an array of domains to search for unqualified names.
-
 =item domain
 
 Domain name suffix to be appended to queries of unqualified names.
 
-=item recurse
+=item searchlist
+
+A reference to an array of domains to search for unqualified names.
 
 =item debug
 
+=item defnames
+
+=item dnsrch
+
+=item dnssec
+
+=item igntc
+
+=item persistent_tcp
+
+=item persistent_udp
+
 =item port
+
+=item recurse
+
+=item retrans
+
+=item retry
 
 =item srcaddr
 
@@ -158,28 +174,40 @@ Domain name suffix to be appended to queries of unqualified names.
 
 =item udp_timeout
 
-=item retrans
-
-=item retry
-
 =item usevc
-
-=item igntc
-
-=item defnames
-
-=item dnsrch
-
-=item persistent_tcp
-
-=item persistent_udp
-
-=item dnssec
 
 =back
 
 For more information on any of these options, please consult the method
 of the same name.
+
+
+=head2 print
+
+    $resolver->print;
+
+Prints the resolver state on the standard output.
+
+
+=head2 query
+
+    $packet = $resolver->query( 'mailhost' );
+    $packet = $resolver->query( 'mailhost.example.com' );
+    $packet = $resolver->query( '192.0.2.1' );
+    $packet = $resolver->query( 'example.com', 'MX' );
+    $packet = $resolver->query( 'annotation.example.com', 'TXT', 'IN' );
+
+Performs a DNS query for the given name; the search list is not
+applied.  If the name does not contain any dots and C<defnames>
+is true, the default domain will be appended.
+
+The record type and class can be omitted; they default to A and IN.
+If the name looks like an IP address (IPv4 or IPv6),
+then a query within in-addr.arpa or ip6.arpa will be performed.
+
+Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
+If you need to examine the response packet, whether it contains
+any answers or not, use the send() method instead.
 
 
 =head2 search
@@ -188,7 +216,7 @@ of the same name.
     $packet = $resolver->search( 'mailhost.example.com' );
     $packet = $resolver->search( '192.0.2.1' );
     $packet = $resolver->search( 'example.com', 'MX' );
-    $packet = $resolver->search( 'annotation.example.com', 'TXT', 'HS' );
+    $packet = $resolver->search( 'annotation.example.com', 'TXT', 'IN' );
 
 Performs a DNS query for the given name, applying the searchlist if
 appropriate.  The search algorithm is as follows:
@@ -212,28 +240,7 @@ If the name does not contain any dots, try it as is.
 
 The record type and class can be omitted; they default to A and IN.
 If the name looks like an IP address (IPv4 or IPv6),
-then an appropriate PTR query will be performed.
-
-Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
-If you need to examine the response packet, whether it contains
-any answers or not, use the send() method instead.
-
-
-=head2 query
-
-    $packet = $resolver->query( 'mailhost' );
-    $packet = $resolver->query( 'mailhost.example.com' );
-    $packet = $resolver->query( '192.0.2.1' );
-    $packet = $resolver->query( 'example.com', 'MX' );
-    $packet = $resolver->query( 'annotation.example.com', 'TXT', 'HS' );
-
-Performs a DNS query for the given name; the search list is not
-applied.  If the name does not contain any dots and C<defnames>
-is true, the default domain will be appended.
-
-The record type and class can be omitted; they default to A and IN.
-If the name looks like an IP address (IPv4 or IPv6),
-an appropriate PTR query will be performed.
+then a query within in-addr.arpa or ip6.arpa will be performed.
 
 Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
 If you need to examine the response packet, whether it contains
@@ -247,7 +254,7 @@ any answers or not, use the send() method instead.
     $packet = $resolver->send( 'mailhost.example.com' );
     $packet = $resolver->query( '192.0.2.1' );
     $packet = $resolver->send( 'example.com', 'MX' );
-    $packet = $resolver->send( 'annotation.example.com', 'TXT', 'HS' );
+    $packet = $resolver->send( 'annotation.example.com', 'TXT', 'IN' );
 
 Performs a DNS query for the given name.  Neither the searchlist
 nor the default domain will be appended.
@@ -255,7 +262,7 @@ nor the default domain will be appended.
 The argument list can be either a C<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (IPv4 or IPv6),
-an appropriate PTR query will be performed.
+then a query within in-addr.arpa or ip6.arpa will be performed.
 
 Returns a C<Net::DNS::Packet> object whether there were any answers or not.
 Use C<< $packet->header->ancount >> or C<< $packet->answer >> to find out
@@ -267,11 +274,11 @@ Returns C<undef> if no response was received.
 
     @zone = $resolver->axfr();
     @zone = $resolver->axfr( 'example.com' );
-    @zone = $resolver->axfr( 'example.com', 'HS' );
+    @zone = $resolver->axfr( 'example.com', 'IN' );
 
     $iterator = $resolver->axfr();
     $iterator = $resolver->axfr( 'example.com' );
-    $iterator = $resolver->axfr( 'example.com', 'HS' );
+    $iterator = $resolver->axfr( 'example.com', 'IN' );
 
     $rr = $iterator->();
 
@@ -285,9 +292,8 @@ If the class is omitted, it defaults to IN.
 
 
 When called in list context, axfr() returns a list of C<Net::DNS::RR>
-objects or an empty list if the zone transfer failed.
-The redundant SOA record that terminates the zone transfer is not
-returned to the caller.
+objects.  The redundant SOA record that terminates the zone transfer
+is not returned to the caller.
 
 Here is an example that uses a timeout and TSIG verification:
 
@@ -295,11 +301,13 @@ Here is an example that uses a timeout and TSIG verification:
     $resolver->tsig( 'Khmac-sha1.example.+161+24053.private' );
     @zone = $resolver->axfr( 'example.com' );
 
-    die 'Zone transfer failed: ', $resolver->errorstring unless @zone;
-
     foreach $rr (@zone) {
 	$rr->print;
     }
+
+In deferrence to RFC1035(6.3), a complete zone transfer is expected
+to return all records in the zone or nothing at all.
+An exception is raised if the zone transfer can not be completed.
 
 
 When called in scalar context, axfr() returns an iterator object.
@@ -314,64 +322,9 @@ Here is the example above, implemented using an iterator:
     $resolver->tsig( 'Khmac-sha1.example.+161+24053.private' );
     $iterator = $resolver->axfr( 'example.com' );
 
-    die 'Zone transfer failed: ', $resolver->errorstring unless $iterator;
-
     while ( $rr = $iterator->() ) {
 	$rr->print;
     }
-
-
-=head2 nameservers
-
-    @nameservers = $resolver->nameservers();
-    $resolver->nameservers( '192.0.2.1', '192.0.2.2', '2001:DB8::3' );
-
-Gets or sets the nameservers to be queried.
-
-Also see the IPv6 transport notes below
-
-=head2 print
-
-    $resolver->print;
-
-Prints the resolver state on the standard output.
-
-=head2 string
-
-    print $resolver->string;
-
-Returns a string representation of the resolver state.
-
-=head2 searchlist
-
-    @searchlist = $resolver->searchlist;
-    $resolver->searchlist( 'a.example', 'b.example', 'c.example' );
-
-Gets or sets the resolver search list.
-
-=head2 port
-
-    print 'sending queries to port ', $resolver->port, "\n";
-    $resolver->port(9732);
-
-Gets or sets the port to which queries are sent.
-Convenient for nameserver testing using a non-standard port.
-The default is port 53.
-
-=head2 srcport
-
-    $resolver->srcport(5353);
-
-Sets the port from which queries are sent.
-The default is 0, meaning any port.
-
-=head2 srcaddr
-
-    $resolver->srcaddr('192.0.2.1');
-
-Sets the source address from which queries are sent.
-Convenient for forcing queries from a specific interface on a
-multi-homed host.  The default is to use any local address.
 
 
 =head2 bgsend
@@ -381,16 +334,16 @@ multi-homed host.  The default is to use any local address.
     $handle = $resolver->bgsend( 'mailhost.example.com' );
     $handle = $resolver->bgsend( '192.0.2.1' );
     $handle = $resolver->bgsend( 'example.com', 'MX' );
-    $handle = $resolver->bgsend( 'annotation.example.com', 'TXT', 'HS' );
+    $handle = $resolver->bgsend( 'annotation.example.com', 'TXT', 'IN' );
 
-Performs a background DNS query for the given name, returns immediately
-without waiting for a response.  The program can then perform other
-tasks while awaiting the response from the nameserver.
+Performs a background DNS query for the given name and returns immediately
+without waiting for the response. The program can then perform other tasks
+while awaiting the response from the nameserver.
 
 The argument list can be either a C<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (IPv4 or IPv6),
-an appropriate PTR query will be performed.
+then a query within in-addr.arpa or ip6.arpa will be performed.
 
 Returns an opaque handle which is passed to subsequent invocations of
 the C<bgbusy> and C<bgread> methods.
@@ -445,60 +398,16 @@ C<bgisready> is the logical complement of C<bgbusy> which is retained
 for backward compatibility.
 
 
-=head2 tsig
+=head2 debug
 
-    $resolver->tsig( $tsig );
+    print 'debug flag: ', $resolver->debug, "\n";
+    $resolver->debug(1);
 
-    $resolver->tsig( 'Khmac-sha1.example.+161+24053.private' );
+Get or set the debug flag.
+If set, calls to C<search>, C<query>, and C<send> will print
+debugging information on the standard output.
+The default is false.
 
-    $resolver->tsig( 'Khmac-sha1.example.+161+24053.key' );
-
-    $resolver->tsig( 'Khmac-sha1.example.+161+24053.key',
-		fudge => 60
-		);
-
-    $resolver->tsig( $key_name, $key );
-
-    $resolver->tsig( undef );
-
-Set the TSIG record used to automatically sign outgoing queries, zone
-transfers and updates.  Call with an undefined argument, 0 or '' to
-turn off automatic signing.
-
-The default resolver behavior is not to sign any packets.  You must
-call this method to set the key if you would like the resolver to
-sign packets automatically.
-
-Packets can also be signed manually; see the L<Net::DNS::Packet>
-and L<Net::DNS::Update> manual pages for examples.  TSIG records
-in manually-signed packets take precedence over those that the
-resolver would add automatically.
-
-
-=head2 retrans
-
-    print 'retrans interval: ', $resolver->retrans, "\n";
-    $resolver->retrans(3);
-
-Get or set the retransmission interval
-The default is 5 seconds.
-
-=head2 retry
-
-    print 'number of tries: ', $resolver->retry, "\n";
-    $resolver->retry(2);
-
-Get or set the number of times to try the query.
-The default is 4.
-
-=head2 recurse
-
-    print 'recursion flag: ', $resolver->recurse, "\n";
-    $resolver->recurse(0);
-
-Get or set the recursion flag.
-If true, this will direct nameservers to perform a recursive query.
-The default is true.
 
 =head2 defnames
 
@@ -510,6 +419,7 @@ If true, calls to C<query> will append the default domain to names
 that contain no dots.
 The default is true.
 
+
 =head2 dnsrch
 
     print 'dnsrch flag: ', $resolver->dnsrch, "\n";
@@ -520,43 +430,27 @@ If true, calls to C<search> will apply the search list to resolve
 names that are not fully qualified.
 The default is true.
 
-=head2 debug
 
-    print 'debug flag: ', $resolver->debug, "\n";
-    $resolver->debug(1);
+=head2 igntc
 
-Get or set the debug flag.
-If set, calls to C<search>, C<query>, and C<send> will print
-debugging information on the standard output.
+    print 'igntc flag: ', $resolver->igntc, "\n";
+    $resolver->igntc(1);
+
+Get or set the igntc flag.
+If true, truncated packets will be ignored.
+If false, the query will be retried using TCP.
 The default is false.
 
-=head2 usevc
 
-    print 'usevc flag: ', $resolver->usevc, "\n";
-    $resolver->usevc(1);
+=head2 nameservers
 
-Get or set the usevc flag.
-If true, queries will be performed using virtual circuits (TCP)
-instead of datagrams (UDP).
-The default is false.
+    @nameservers = $resolver->nameservers();
+    $resolver->nameservers( '192.0.2.1', '192.0.2.2', '2001:DB8::3' );
 
-=head2 tcp_timeout
+Gets or sets the nameservers to be queried.
 
-    print 'TCP timeout: ', $resolver->tcp_timeout, "\n";
-    $resolver->tcp_timeout(10);
+Also see the IPv6 transport notes below
 
-Get or set the TCP timeout in seconds.
-The default is 120 seconds (2 minutes).
-A timeout of C<undef> means indefinite.
-
-=head2 udp_timeout
-
-    print 'UDP timeout: ', $resolver->udp_timeout, "\n";
-    $resolver->udp_timeout(10);
-
-Get or set the UDP timeout in seconds.
-The default is C<undef>, which means that the retry and retrans
-settings will be used to perform the retries until they exhausted.
 
 =head2 persistent_tcp
 
@@ -572,6 +466,7 @@ or updates to the same nameserver.
 The default is false unless you are running a SOCKSified Perl,
 in which case the default is true.
 
+
 =head2 persistent_udp
 
     print 'Persistent UDP flag: ', $resolver->persistent_udp, "\n";
@@ -584,21 +479,110 @@ for all queries within each address family.
 This avoids the cost of creating and tearing down UDP sockets,
 but also defeats source port randomisation.
 
-=head2 igntc
 
-    print 'igntc flag: ', $resolver->igntc, "\n";
-    $resolver->igntc(1);
+=head2 port
 
-Get or set the igntc flag.
-If true, truncated packets will be ignored.
-If false, the query will be retried using TCP.
+    print 'sending queries to port ', $resolver->port, "\n";
+    $resolver->port(9732);
+
+Gets or sets the port to which queries are sent.
+Convenient for nameserver testing using a non-standard port.
+The default is port 53.
+
+
+=head2 recurse
+
+    print 'recursion flag: ', $resolver->recurse, "\n";
+    $resolver->recurse(0);
+
+Get or set the recursion flag.
+If true, this will direct nameservers to perform a recursive query.
+The default is true.
+
+
+=head2 retrans
+
+    print 'retrans interval: ', $resolver->retrans, "\n";
+    $resolver->retrans(3);
+
+Get or set the retransmission interval
+The default is 5 seconds.
+
+
+=head2 retry
+
+    print 'number of tries: ', $resolver->retry, "\n";
+    $resolver->retry(2);
+
+Get or set the number of times to try the query.
+The default is 4.
+
+
+=head2 searchlist
+
+    @searchlist = $resolver->searchlist;
+    $resolver->searchlist( 'a.example', 'b.example', 'c.example' );
+
+Gets or sets the resolver search list.
+
+
+=head2 srcaddr
+
+    $resolver->srcaddr('192.0.2.1');
+
+Sets the source address from which queries are sent.
+Convenient for forcing queries from a specific interface on a
+multi-homed host.  The default is to use any local address.
+
+
+=head2 srcport
+
+    $resolver->srcport(5353);
+
+Sets the port from which queries are sent.
+The default is 0, meaning any port.
+
+
+=head2 tcp_timeout
+
+    print 'TCP timeout: ', $resolver->tcp_timeout, "\n";
+    $resolver->tcp_timeout(10);
+
+Get or set the TCP timeout in seconds.
+The default is 120 seconds (2 minutes).
+A timeout of C<undef> means indefinite.
+
+
+=head2 udp_timeout
+
+    print 'UDP timeout: ', $resolver->udp_timeout, "\n";
+    $resolver->udp_timeout(10);
+
+Get or set the UDP timeout in seconds.
+The default is C<undef>, which means that the retry and retrans
+settings will be used to perform the retries until they exhausted.
+
+
+=head2 udppacketsize
+
+    print "udppacketsize: ", $resolver->udppacketsize, "\n";
+    $resolver->udppacketsize(2048);
+
+udppacketsize will set or get the packet size. If set to a value
+greater than the default DNS packet size, an EDNS extension will be
+added indicating support for UDP fragment reassembly.
+
+
+=head2 usevc
+
+    print 'usevc flag: ', $resolver->usevc, "\n";
+    $resolver->usevc(1);
+
+Get or set the usevc flag.
+If true, queries will be performed using virtual circuits (TCP)
+instead of datagrams (UDP).
 The default is false.
 
-=head2 errorstring
-
-    print 'query status: ', $resolver->errorstring, "\n";
-
-Returns a string containing the status of the most recent query.
 
 =head2 answerfrom
 
@@ -607,12 +591,20 @@ Returns a string containing the status of the most recent query.
 Returns the IP address from which the most recent packet was
 received in response to a query.
 
+
 =head2 answersize
 
     print 'size of last answer: ', $resolver->answersize, "\n";
 
 Returns the size in bytes of the most recent packet received in
 response to a query.
+
+
+=head2 errorstring
+
+    print 'query status: ', $resolver->errorstring, "\n";
+
+Returns a string containing the status of the most recent query.
 
 
 =head2 dnssec
@@ -662,14 +654,34 @@ should be included in the response.
 The default value is 0.
 
 
-=head2 udppacketsize
+=head2 tsig
 
-    print "udppacketsize: ", $resolver->udppacketsize, "\n";
-    $resolver->udppacketsize(2048);
+    $resolver->tsig( $tsig );
 
-udppacketsize will set or get the packet size. If set to a value
-greater than the default DNS packet size, an EDNS extension will be
-added indicating support for UDP fragment reassembly.
+    $resolver->tsig( 'Khmac-sha1.example.+161+24053.private' );
+
+    $resolver->tsig( 'Khmac-sha1.example.+161+24053.key' );
+
+    $resolver->tsig( 'Khmac-sha1.example.+161+24053.key',
+		fudge => 60
+		);
+
+    $resolver->tsig( $key_name, $key );
+
+    $resolver->tsig( undef );
+
+Set the TSIG record used to automatically sign outgoing queries, zone
+transfers and updates. Automatic signing is disabled if called with
+undefined arguments.
+
+The default resolver behaviour is not to sign any packets.  You must
+call this method to set the key if you would like the resolver to
+sign and verify packets automatically.
+
+Packets can also be signed manually; see the L<Net::DNS::Packet>
+and L<Net::DNS::Update> manual pages for examples.  TSIG records
+in manually-signed packets take precedence over those that the
+resolver would add automatically.
 
 
 =head1 ENVIRONMENT

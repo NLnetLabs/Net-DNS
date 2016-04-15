@@ -304,8 +304,8 @@ sub canonical {
 
     $rr->print;
 
-Prints the record to the standard output.  Calls the B<string>
-method to get the RR string representation.
+Prints the record to the standard output.  Calls the string method
+to get the formatted RR representation.
 
 =cut
 
