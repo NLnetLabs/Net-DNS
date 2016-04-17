@@ -660,6 +660,7 @@ sub bgbusy {
 	}
 
 	return if $self->{igntc};
+	return unless $query;
 	return unless $handle->socktype() == SOCK_DGRAM;
 
 	my $ans = $self->_bgread($handle);
@@ -668,9 +669,7 @@ sub bgbusy {
 	return unless $ans->header->tc;
 
 	$self->_diag('packet truncated: retrying using TCP');
-	my $packet = new Net::DNS::Packet();
-	$packet->{question} = $ans->{question};
-	my $tcp = $self->_bgsend_tcp( $packet, $packet->data );
+	my $tcp = $self->_bgsend_tcp( $query, $query->data );
 	return defined( $_[1] = $tcp ) if $tcp;
 }
 

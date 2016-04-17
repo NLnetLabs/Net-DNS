@@ -44,7 +44,7 @@ eval {
 
 
 eval {
-	my $resolver = new Net::DNS::Resolver( nameservers => [@hints] );
+	my $resolver = new Net::DNS::Resolver( usevc => 1, nameservers => [@hints] );
 	exit plan skip_all => 'No IPv6 transport' unless $resolver->nameservers;
 
 	my $reply = $resolver->send(qw(. NS IN)) || die;
