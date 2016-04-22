@@ -79,7 +79,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 80;
+plan tests => 82;
 
 NonFatalBegin();
 
@@ -145,7 +145,7 @@ NonFatalBegin();
 	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
 	ok( $handle, '$resolver->bgsend(...)	truncated UDP' );
 	my $packet = $resolver->bgread($handle);
-	ok( $packet && $packet->header->tc, '$resolver->bgread(...)	ignore UDP truncation' );
+	ok( $packet && $packet->header->tc, '$resolver->bgread($udp)	ignore UDP truncation' );
 }
 
 
@@ -158,7 +158,20 @@ NonFatalBegin();
 	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
 	ok( $handle, '$resolver->bgsend(...)	truncated UDP' );
 	my $packet = $resolver->bgread($handle);
-	ok( $packet && !$packet->header->tc, '$resolver->bgread(...)	background TCP retry' );
+	ok( $packet && !$packet->header->tc, '$resolver->bgread($tcp)	background TCP retry' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->dnssec(1);
+	$resolver->udppacketsize(513);
+	$resolver->igntc(0);
+
+	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
+	$resolver->nameserver($NOIP);
+	my $packet = $resolver->bgread($handle);
+	ok( $packet && $packet->header->tc, '$resolver->bgread($udp)	background TCP fail' );
 }
 
 
@@ -168,7 +181,7 @@ NonFatalBegin();
 	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
 	my $appendix = ${*$handle}{net_dns_bg};
 	$$appendix[1]->header->id(undef);			# random id
-	ok( !$resolver->bgread($handle), '$resolver->bgread() id mismatch' );
+	ok( !$resolver->bgread($handle), '$resolver->bgread($udp)	id mismatch' );
 }
 
 
@@ -177,7 +190,7 @@ NonFatalBegin();
 
 	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
 	delete ${*$handle}{net_dns_bg};
-	ok( $resolver->bgread($handle), '$resolver->bgread() workaround for SpamAssassin' );
+	ok( $resolver->bgread($handle), '$resolver->bgread($udp)	workaround for SpamAssassin' );
 }
 
 
@@ -187,7 +200,7 @@ NonFatalBegin();
 
 	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $handle,			'$resolver->bgsend(...)	persistent UDP' );
-	ok( $resolver->bgread($handle), '$resolver->bgread()' );
+	ok( $resolver->bgread($handle), '$resolver->bgread($udp)' );
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent UDP' );
 	is( $test, $handle, 'same UDP socket object used' );
@@ -201,7 +214,7 @@ NonFatalBegin();
 
 	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $handle,			'$resolver->bgsend(...)	persistent TCP' );
-	ok( $resolver->bgread($handle), '$resolver->bgread()' );
+	ok( $resolver->bgread($handle), '$resolver->bgread($tcp)' );
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent TCP' );
 	is( $test, $handle, 'same TCP socket object used' );
@@ -401,31 +414,29 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->domain('net-dns.org');
-	$resolver->tcp_timeout(30);
+	$resolver->tcp_timeout(10);
 
-	my @zone = eval { $resolver->axfr() };
-	my $z = scalar(@zone);
-	ok( $z, '$resolver->axfr() returns entire zone in list context' );
+	my @zone = $resolver->axfr('net-dns.org');
+	ok( scalar(@zone), '$resolver->axfr() returns entire zone in list context' );
 
-	my $iterator = eval { $resolver->axfr() };
+	my $iterator = $resolver->axfr('net-dns.org');
 	ok( ref($iterator), '$resolver->axfr() returns iterator in scalar context' );
 
 	my $soa = eval { $iterator->() };
 	is( ref($soa), 'Net::DNS::RR::SOA', '$iterator->() returns initial SOA RR' );
 
-	my $i = 0;
+	my $i;
 	eval {
+		return unless $soa;
 		$soa->serial(undef);				# force SOA mismatch
-		$i++;
 		while ( $iterator->() ) { $i++; }
 	};
 	my ($exception) = split /\n/, "$@\n";
-	is( $i, $z, '$iterator->() iterates through remaining RRs' );
+	ok( $i, '$iterator->() iterates through remaining RRs' );
 	ok( !eval { $iterator->() }, '$iterator->() returns undef after last RR' );
-	ok( $exception, "AXFR exception\t[$exception]" );
+	ok( $exception, "iterator exception\t[$exception]" );
 
-	my $axfr_start = eval { $resolver->axfr_start() };
+	my $axfr_start = $resolver->axfr_start('net-dns.org');
 	ok( $axfr_start, '$resolver->axfr_start()	(historical)' );
 	ok( eval { $resolver->axfr_next() }, '$resolver->axfr_next() works' );
 	ok( $resolver->answerfrom(), '$resolver->answerfrom() works' );
@@ -436,28 +447,33 @@ NonFatalBegin();
 	my $resolver = Net::DNS::Resolver->new();
 	$resolver->nameservers(qw( ns.net-dns.org ));
 	$resolver->domain('net-dns.org');
-	$resolver->tcp_timeout(30);
+	$resolver->tcp_timeout(10);
 
 	eval {
 		my ($keyrr) = $resolver->query(qw(tsig-md5 KEY))->answer;
 		$resolver->tsig($keyrr);
 	};
 
-	my @zone = eval { $resolver->axfr() };
+	my @zone = $resolver->axfr();
 	ok( scalar(@zone), '$resolver->axfr() with TSIG verify' );
-}
 
-
-{
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw( ns.net-dns.org ));
-	$resolver->domain('net-dns.org');
-	$resolver->tcp_timeout(30);
+	my @refusal = $resolver->axfr('bogus.net-dns.org');
+	my $refusal = $resolver->errorstring;
+	ok( !scalar(@refusal), "refused axfr\t[$refusal]" );
 
 	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
-	my @unverifiable = eval { $resolver->axfr() };
+	my @unverifiable = $resolver->axfr();
+	my $errorstring	 = $resolver->errorstring;
+	ok( !scalar(@unverifiable), "mismatched key\t[$errorstring]" );
+
+	$resolver->srcport(-1);
+	my @badsocket = $resolver->axfr();
+	my $badsocket = $resolver->errorstring;
+	ok( !scalar(@badsocket), "bad AXFR socket\t[$badsocket]" );
+
+	eval { $resolver->tsig(undef) };
 	my ($exception) = split /\n/, "$@\n";
-	ok( !scalar(@unverifiable), "wrong TSIG key\t[$exception]" );
+	ok( $exception, "undefined TSIG\t[$exception]" );
 }
 
 
@@ -468,20 +484,6 @@ NonFatalBegin();
 	my $query = new Net::DNS::Packet(qw(. SOA IN));
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + automatic TSIG' );
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + existing TSIG' );
-
-	eval { $resolver->tsig(undef) };
-	my ($exception) = split /\n/, "$@\n";
-	ok( $exception, "undefined TSIG\t[$exception]" );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
-	$resolver->tcp_timeout(2);
-
-	my $iterator = eval { $resolver->axfr('net-dns.org') };
-	my ($exception) = split /\n/, "$@\n";
-	ok( $exception, "rejected AXFR\t[$exception]" );
 }
 
 

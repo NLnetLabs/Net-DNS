@@ -693,7 +693,7 @@ sub _bgread {
 	my ( $expire, $query, $read ) = @$appendix;
 	return shift(@$read) if ref($read);
 
-	return unless IO::Select->new($handle)->can_read(0.5);
+	return unless IO::Select->new($handle)->can_read(0);
 
 	my $peer = $handle->peerhost;
 	$self->answerfrom($peer);
@@ -720,39 +720,41 @@ sub _bgread {
 
 
 sub axfr {				## zone transfer
-	my $self = shift;
+	eval {
+		my $self = shift;
 
-	my ( $verify, @rr, $soa ) = $self->_axfr_start(@_);	# iterator state
+		my ( $verify, @rr, $soa ) = $self->_axfr_start(@_);    # iterator state
 
-	my $iterator = sub {		## iterate over RRs
-		my $rr = shift(@rr);
+		my $iterator = sub {	## iterate over RRs
+			my $rr = shift(@rr);
 
-		if ( ref($rr) eq 'Net::DNS::RR::SOA' ) {
-			return $soa = $rr unless $soa;
-			$self->{axfr_sel} = undef;
-			return if $rr->encode eq $soa->encode;
-			croak 'improperly terminated AXFR';
+			if ( ref($rr) eq 'Net::DNS::RR::SOA' ) {
+				return $soa = $rr unless $soa;
+				$self->{axfr_sel} = undef;
+				return if $rr->encode eq $soa->encode;
+				croak $self->errorstring('mismatched final SOA');
+			}
+
+			return $rr if scalar @rr;
+
+			my $reply;
+			( $reply, $verify ) = $self->_axfr_next($verify);
+			return $self->{axfr_sel} = undef unless $reply;
+			@rr = $reply->answer;
+			return $rr;
+		};
+
+		$iterator->();					# read initial packet
+
+		return $iterator unless wantarray;
+
+		my @zone;					# assemble whole zone
+		while ( my $rr = $iterator->() ) {
+			push @zone, $rr, @rr;			# copy RRs en bloc
+			@rr = pop(@zone);			# leave last one in @rr
 		}
-
-		return $rr if scalar @rr;
-
-		my $reply;
-		( $reply, $verify ) = $self->_axfr_next($verify);
-		return $self->{axfr_sel} = undef unless $reply;
-		@rr = $reply->answer;
-		return $rr;
+		return @zone;
 	};
-
-	$iterator->();						# read initial packet
-
-	return $iterator unless wantarray;
-
-	my @zone;						# assemble whole zone
-	while ( my $rr = $iterator->() ) {
-		push @zone, $rr, @rr;				# copy RRs en bloc
-		@rr = pop(@zone);				# leave last one in @rr
-	}
-	return @zone;
 }
 
 
@@ -783,7 +785,8 @@ sub _axfr_start {
 
 		$self->_diag("axfr_start nameserver [$ns]");
 
-		$self->{axfr_sel} = IO::Select->new($socket) if $socket->send($TCP_msg);
+		$self->{axfr_sel} = IO::Select->new($socket);
+		$socket->send($TCP_msg);
 		$self->errorstring($!);
 
 		return $request->sigrr ? $request : undef;
@@ -798,7 +801,7 @@ sub _axfr_next {
 
 	my $select = $self->{axfr_sel} || return;
 	my ($sock) = $select->can_read( $self->{tcp_timeout} );
-	croak 'AXFR timed out' unless $sock;
+	croak $self->errorstring('timed out') unless $sock;
 
 	my $peerhost = $sock->peerhost;
 	$self->answerfrom($peerhost);
@@ -807,16 +810,14 @@ sub _axfr_next {
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
 	my $packet = Net::DNS::Packet->new( \$buffer );
-	croak "${@}corrupt AXFR packet" if $@;
+	croak $@, $self->errorstring('corrupt packet') if $@;
 
 	if ( $verify && not( $verify = $packet->verify($verify) ) ) {
-		my $error = $packet->verifyerr;
-		$self->errorstring($error);
-		croak "AXFR terminated: $error";
+		croak $self->errorstring( $packet->verifyerr );
 	}
 
 	my $rcode = $packet->header->rcode;
-	croak "AXFR terminated: $rcode" unless $rcode eq 'NOERROR';
+	croak $self->errorstring($rcode) unless $rcode eq 'NOERROR';
 
 	$packet->answerfrom($peerhost);
 	return ( $packet, $verify );
@@ -916,7 +917,7 @@ sub _create_tcp_socket {
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_tcp} ? $socket : undef;
-	$self->errorstring("no $sock_key socket: $!") unless $socket;
+	$self->errorstring("no socket $sock_key $!") unless $socket;
 	return $socket;
 }
 
@@ -959,7 +960,7 @@ sub _create_udp_socket {
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_udp} ? $socket : undef;
-	$self->errorstring("no $sock_key socket: $!") unless $socket;
+	$self->errorstring("no socket $sock_key $!") unless $socket;
 	return $socket;
 }
 
