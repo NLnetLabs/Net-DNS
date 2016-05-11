@@ -206,6 +206,8 @@ If the name looks like an IP address (IPv4 or IPv6),
 then a query within in-addr.arpa or ip6.arpa will be performed.
 
 Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
+The reason for failure may be determined using errorstring().
+
 If you need to examine the response packet, whether it contains
 any answers or not, use the send() method instead.
 
@@ -243,6 +245,8 @@ If the name looks like an IP address (IPv4 or IPv6),
 then a query within in-addr.arpa or ip6.arpa will be performed.
 
 Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
+The reason for failure may be determined using errorstring().
+
 If you need to examine the response packet, whether it contains
 any answers or not, use the send() method instead.
 
@@ -295,6 +299,11 @@ When called in list context, axfr() returns a list of C<Net::DNS::RR>
 objects.  The redundant SOA record that terminates the zone transfer
 is not returned to the caller.
 
+In deferrence to RFC1035(6.3), a complete zone transfer is expected
+to return all records in the zone or nothing at all.
+When no resource records are returned by axfr(),
+the reason for failure may be determined using errorstring().
+
 Here is an example that uses a timeout and TSIG verification:
 
     $resolver->tcp_timeout( 10 );
@@ -305,14 +314,13 @@ Here is an example that uses a timeout and TSIG verification:
 	$rr->print;
     }
 
-In deferrence to RFC1035(6.3), a complete zone transfer is expected
-to return all records in the zone or nothing at all.
-An exception is raised if the zone transfer can not be completed.
-
 
 When called in scalar context, axfr() returns an iterator object.
 Each invocation of the iterator returns a single C<Net::DNS::RR>
 or C<undef> when the zone is exhausted.
+
+An exception is raised if the zone transfer can not be completed.
+
 The redundant SOA record that terminates the zone transfer is not
 returned to the caller.
 
@@ -347,8 +355,8 @@ then a query within in-addr.arpa or ip6.arpa will be performed.
 
 Returns an opaque handle which is passed to subsequent invocations of
 the C<bgbusy> and C<bgread> methods.
-Errors are indicated by returning C<undef> in which case the
-reason for failure can be found by calling the errorstring method.
+Errors are indicated by returning C<undef> in which case
+the reason for failure may be determined using errorstring().
 
 The program may determine when the handle is ready for reading by
 calling C<bgbusy>.
@@ -604,7 +612,8 @@ response to a query.
 
     print 'query status: ', $resolver->errorstring, "\n";
 
-Returns a string containing the status of the most recent query.
+Returns a string containing error information from the most recent method call.
+errorstring() is meaningful only when interrogated immediately after an error.
 
 
 =head2 dnssec

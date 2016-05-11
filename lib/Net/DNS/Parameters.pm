@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2016-02-29)
+##	(last updated 2016-05-09)
 ##
 ################################################
 
@@ -105,7 +105,7 @@ use vars qw( %typebyname %typebyval );
 	TALINK	   => 58,					#
 	CDS	   => 59,					# RFC7344
 	CDNSKEY	   => 60,					# RFC7344
-	OPENPGPKEY => 61,					# draft-ietf-dane-openpgpkey
+	OPENPGPKEY => 61,					# RFC-ietf-dane-openpgpkey-12
 	CSYNC	   => 62,					# RFC7477
 	SPF	   => 99,					# RFC7208
 	UINFO	   => 100,					# IANA-Reserved
@@ -171,7 +171,7 @@ use vars qw( %rcodebyname %rcodebyval );
 	BADNAME	  => 20,					# RFC2930
 	BADALG	  => 21,					# RFC2930
 	BADTRUNC  => 22,					# RFC4635
-	BADCOOKIE => 23,					# draft-ietf-dnsop-cookies
+	BADCOOKIE => 23,					# RFC-ietf-dnsop-cookies-10
 	);
 %rcodebyval = reverse( BADSIG => 16, %rcodebyname );
 %rcodebyname = ( %rcodebyname, map /\D/ ? lc($_) : $_, %rcodebyname );
@@ -186,11 +186,11 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	DAU		=> 5,					# RFC6975
 	DHU		=> 6,					# RFC6975
 	N3U		=> 7,					# RFC6975
-	'CLIENT-SUBNET' => 8,					# draft-vandergaast-edns-client-subnet
+	'CLIENT-SUBNET' => 8,					# RFC-ietf-dnsop-edns-client-subnet-08
 	EXPIRE		=> 9,					# RFC7314
-	COOKIE		=> 10,					# draft-ietf-dnsop-cookies
-	'TCP-KEEPALIVE' => 11,					# RFC-ietf-dnsop-edns-tcp-keepalive-06
-	PADDING		=> 12,					# draft-mayrhofer-edns0-padding
+	COOKIE		=> 10,					# RFC-ietf-dnsop-cookies-10
+	'TCP-KEEPALIVE' => 11,					# RFC7828
+	PADDING		=> 12,					# RFC-ietf-dprive-edns0-padding-03
 	CHAIN		=> 13,					# RFC-ietf-dnsop-edns-chain-query-07
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
