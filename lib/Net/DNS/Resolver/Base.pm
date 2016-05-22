@@ -358,11 +358,11 @@ sub _cname_addr {
 	my $packet = shift || return @null;
 	my $names = shift;
 
-	map $names->{$_->qname}++, $packet->question;
-	map $names->{$_->cname}++, grep $_->can('cname'), $packet->answer;
+	map $names->{lc( $_->qname )}++, $packet->question;
+	map $names->{lc( $_->cname )}++, grep $_->can('cname'), $packet->answer;
 
 	my @addr = grep $_->can('address'), $packet->answer;
-	map $_->address, grep $names->{$_->name}, @addr;
+	map $_->address, grep $names->{lc( $_->name )}, @addr;
 }
 
 
@@ -443,25 +443,26 @@ sub send {
 sub _send_tcp {
 	my ( $self, $packet, $packet_data ) = @_;
 
-	my $length = length $packet_data;
 	$self->_reset_errorstring;
+
+	my $tcp_packet = pack 'n a*', length($packet_data), $packet_data;
 	my @ns = $self->nameservers();
 	my $lastanswer;
 
-	foreach my $ns (@ns) {
-		my $socket = $self->_create_tcp_socket($ns) || next;
+	foreach my $ip (@ns) {
+		my $socket = $self->_create_tcp_socket($ip) || next;
 		my $select = IO::Select->new($socket);
 
-		$self->_diag( 'tcp send:', $length, 'bytes' );
+		$self->_diag( 'tcp send', "[$ip]" );
 
-		$socket->send( pack 'n a*', $length, $packet_data );
+		$socket->send($tcp_packet);
 		$self->errorstring($!);
 
 		next unless $select->can_read( $self->{tcp_timeout} );
 
 		my $buffer = _read_tcp($socket);
-		$self->answerfrom($ns);
-		$self->_diag( "answer from [$ns]", length($buffer), 'bytes' );
+		$self->answerfrom($ip);
+		$self->_diag( 'answer from', "[$ip]", length($buffer), 'bytes' );
 
 		my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
 		$self->errorstring($@);
@@ -473,7 +474,7 @@ sub _send_tcp {
 			return;
 		}
 
-		$ans->answerfrom($ns);
+		$ans->answerfrom($ip);
 
 		my $rcode = $ans->header->rcode;
 		$self->errorstring($rcode);			# historical quirk
@@ -520,7 +521,7 @@ NAMESERVER: foreach my $ns (@ns) {
 			my ( $socket, $ip, $dst_sockaddr, $failed ) = @$ns;
 			next if $failed;
 
-			$self->_diag("udp send [$ip]:$port");
+			$self->_diag( 'udp send', "[$ip]:$port" );
 
 			$socket->send( $packet_data, 0, $dst_sockaddr );
 			$self->errorstring( $$ns[3] = $! );
@@ -594,15 +595,12 @@ sub _bgsend_tcp {
 
 	$self->_reset_errorstring;
 
-	my $port = $self->{port};
+	my $tcp_packet = pack 'n a*', length($packet_data), $packet_data;
 
 	foreach my $ip ( $self->nameservers ) {
 		my $socket = $self->_create_tcp_socket($ip) || next;
 
-		$self->_diag( 'bgsend', "[$ip]:$port" );
-
-		my $length = length $packet_data;
-		my $tcp_packet = pack 'n a*', $length, $packet_data;
+		$self->_diag( 'bgsend', "[$ip]" );
 
 		$socket->send($tcp_packet);
 		$self->errorstring($!);
