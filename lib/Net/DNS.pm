@@ -7,7 +7,7 @@ BEGIN {
 	require 5.004_04;
 	require vars;
 	'vars'->import(qw($VERSION $SVNVERSION));
-	$VERSION    = '1.05_06';
+	$VERSION    = '1.05_07';
 	$VERSION    = eval $VERSION;
 	$SVNVERSION = (qw$LastChangedRevision$)[1];
 }
