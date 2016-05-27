@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 96;
+use Test::More tests => 97;
 
 
 BEGIN {
@@ -196,6 +196,18 @@ BEGIN {
 	eval { $rr->rdata( pack 'H* H*', '00c000', '00000001' x 5 ); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "compressed rdata:\t[$exception]" );
+}
+
+
+{				## check propagation of exception in string()
+				## (relies on bug that nobody cares enough to fix)
+	my $rr = new Net::DNS::RR( type => 'MINFO', emailbx => '.' );
+	eval {
+		local $SIG{__WARN__} = sub { die @_ };
+		$rr->string();
+	};
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "exception in string:\t[$exception]" );
 }
 
 

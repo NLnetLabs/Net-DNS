@@ -44,7 +44,7 @@ eval {
 
 
 eval {
-	my $resolver = new Net::DNS::Resolver( usevc => 1, nameservers => [@hints] );
+	my $resolver = new Net::DNS::Resolver( nameservers => [@hints] );
 	exit plan skip_all => 'No IPv6 transport' unless $resolver->nameservers;
 
 	my $reply = $resolver->send(qw(. NS IN)) || die;
@@ -413,7 +413,9 @@ NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers(qw(ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl));
+	$resolver->force_v6(1);
 	$resolver->tcp_timeout(10);
 
 	my @zone = $resolver->axfr('net-dns.org');
@@ -445,7 +447,8 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw( ns.net-dns.org ));
+	$resolver->nameservers(qw(ns.net-dns.org));
+	$resolver->force_v6(1);
 	$resolver->domain('net-dns.org');
 	$resolver->tcp_timeout(10);
 

@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2016-05-09)
+##	(last updated 2016-05-23)
 ##
 ################################################
 
@@ -186,11 +186,11 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	DAU		=> 5,					# RFC6975
 	DHU		=> 6,					# RFC6975
 	N3U		=> 7,					# RFC6975
-	'CLIENT-SUBNET' => 8,					# RFC-ietf-dnsop-edns-client-subnet-08
+	'CLIENT-SUBNET' => 8,					# RFC7871
 	EXPIRE		=> 9,					# RFC7314
 	COOKIE		=> 10,					# RFC-ietf-dnsop-cookies-10
 	'TCP-KEEPALIVE' => 11,					# RFC7828
-	PADDING		=> 12,					# RFC-ietf-dprive-edns0-padding-03
+	PADDING		=> 12,					# RFC7830
 	CHAIN		=> 13,					# RFC-ietf-dnsop-edns-chain-query-07
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
