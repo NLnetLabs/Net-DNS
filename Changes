@@ -1,6 +1,21 @@
 $Id$                       -*-text-*-
 
 
+**** 1.07 [unreleased]
+
+Fix rt.cpan.org #114917
+
+	Net::DNS::ZoneFile fails to parse mixed case mnemonics
+
+Fix rt.cpan.org #114876
+
+	Use of uninitialized value in lc at MSWin32.pm line 77
+
+Fix rt.cpan.org #114819
+
+	Net::DNS fails to compile with taint checks enabled
+
+
 **** 1.06 May 27, 2016
 
 Fix rt.cpan.org #114351

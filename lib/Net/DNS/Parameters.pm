@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2016-05-23)
+##	(last updated 2016-06-01)
 ##
 ################################################
 
@@ -171,7 +171,7 @@ use vars qw( %rcodebyname %rcodebyval );
 	BADNAME	  => 20,					# RFC2930
 	BADALG	  => 21,					# RFC2930
 	BADTRUNC  => 22,					# RFC4635
-	BADCOOKIE => 23,					# RFC-ietf-dnsop-cookies-10
+	BADCOOKIE => 23,					# RFC7873
 	);
 %rcodebyval = reverse( BADSIG => 16, %rcodebyname );
 %rcodebyname = ( %rcodebyname, map /\D/ ? lc($_) : $_, %rcodebyname );
@@ -188,7 +188,7 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	N3U		=> 7,					# RFC6975
 	'CLIENT-SUBNET' => 8,					# RFC7871
 	EXPIRE		=> 9,					# RFC7314
-	COOKIE		=> 10,					# RFC-ietf-dnsop-cookies-10
+	COOKIE		=> 10,					# RFC7873
 	'TCP-KEEPALIVE' => 11,					# RFC7828
 	PADDING		=> 12,					# RFC7830
 	CHAIN		=> 13,					# RFC-ietf-dnsop-edns-chain-query-07
@@ -223,7 +223,7 @@ use vars qw( %ednsflagbyname );
 sub classbyname {
 	my $name = shift;
 
-	$classbyname{$name} || do {
+	$classbyname{$name} || $classbyname{uc $name} || do {
 		croak "unknown class $name" unless $name =~ m/CLASS(\d+)/i;
 		my $val = 0 + $1;
 		croak "classbyname( $name ) out of range" if $val > 0xffff;
@@ -245,7 +245,7 @@ sub classbyval {
 sub typebyname {
 	my $name = shift;
 
-	$typebyname{$name} || do {
+	$typebyname{$name} || $typebyname{uc $name} || do {
 		croak "unknown type $name" unless $name =~ m/TYPE(\d+)/i;
 		my $val = 0 + $1;
 		croak "typebyname( $name ) out of range" if $val > 0xffff;

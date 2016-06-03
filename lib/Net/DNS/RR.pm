@@ -104,8 +104,9 @@ sub _new_string {
 	s/\\;/\\059/g;						# disguise escaped semicolon
 	my ( $name, @token ) = grep defined && length, split /$PARSE_REGEX/o;
 
-	my ( $t1, $t2, $t3 ) = @token;
-	croak 'unable to parse RR string' unless defined $t1;
+	croak 'unable to parse RR string' unless scalar @token;
+	my $t1 = uc $token[0];
+	my $t2 = uc $token[1] if $#token;
 
 	my ( $ttl, $class );
 	unless ( defined $t2 ) {				# <name> <type>
@@ -328,7 +329,7 @@ the trailing dot.
 sub string {
 	my $self = shift;
 
-	my @ttl = grep defined, ( $self->{ttl} );
+	my @ttl = grep defined, $self->{ttl};
 	my $core = join "\t", $self->{owner}->string, @ttl, $self->class, $self->type;
 
 	my $rdata = $self->rdstring( 14 + length $core );
@@ -396,7 +397,7 @@ Resource record time to live in seconds.
 # published API.  These are required for parsing BIND zone files but
 # should not be used in other contexts.
 my %unit = ( W => 604800, D => 86400, H => 3600, M => 60, S => 1 );
-%unit = ( %unit, map { /\D/ ? lc($_) : $_ } %unit );
+%unit = ( %unit, map /\D/ ? lc($_) : $_, %unit );
 
 sub ttl {
 	my ( $self, $time ) = @_;
@@ -456,7 +457,7 @@ sub dump {				## print internal data structure
 	print Data::Dumper::Dumper(@_);
 }
 
-sub rdatastr {				## obsolete RR subtype method
+sub rdatastr {				## historical RR subtype method
 	&rdstring;						# uncoverable pod
 }
 
@@ -554,15 +555,19 @@ Returns a token list representation of the RR zone file string.
 =cut
 
 sub token {
-	local $_ = shift->string;
+	my $self = shift;
+
+	my @ttl = grep defined, $self->{ttl};
+	my @core = ( $self->{owner}->string, @ttl, $self->class, $self->type );
 
 	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
+	local $_ = join ' ', eval { $self->_format_rdata; };
 	s/\\\\/\\092/g;						# disguise escaped escape
 	s/\\"/\\034/g;						# disguise escaped quote
 	s/\\\(/\\040/g;						# disguise escaped bracket
 	s/\\\)/\\041/g;						# disguise escaped bracket
 	s/\\;/\\059/g;						# disguise escaped semicolon
-	my @token = grep defined && length, split /$PARSE_REGEX/o;
+	my @token = @core, grep defined && length, split /$PARSE_REGEX/o;
 }
 
 

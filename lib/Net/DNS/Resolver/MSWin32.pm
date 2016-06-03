@@ -56,7 +56,8 @@ sub _init {
 	$defaults->nameservers( _untaint @nameservers );
 
 	my $devolution = 0;
-	my @searchlist = lc $FIXED_INFO->{DomainName};
+	my $domainname = $FIXED_INFO->{DomainName} || '';
+	my @searchlist = map length, lc $domainname;
 
 	if (WINREG) {
 
@@ -74,8 +75,8 @@ sub _init {
 		}
 
 		if ( defined $reg_tcpip ) {
-			my $searchlist = lc $reg_tcpip->GetValue('SearchList') || '';
-			push @searchlist, split m/[\s,]+/, $searchlist;
+			my $searchlist = $reg_tcpip->GetValue('SearchList') || '';
+			push @searchlist, split m/[\s,]+/, lc $searchlist;
 
 			my ( $value, $type ) = $reg_tcpip->GetValue('UseDomainNameDevolution');
 			$devolution = defined $value && $type == REG_DWORD ? hex $value : 0;

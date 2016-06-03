@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 97;
+use Test::More tests => 98;
 
 
 BEGIN {
@@ -27,6 +27,7 @@ BEGIN {
 		'example.com	IN 123 A',
 		'example.com	123 A',
 		'example.com	123 IN A',
+		'example.com	123 In Aaaa',
 		'example.com	A \\# 0',
 		) {
 		my $rr = new Net::DNS::RR("$testcase");

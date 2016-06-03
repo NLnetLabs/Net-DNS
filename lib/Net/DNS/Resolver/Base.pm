@@ -52,8 +52,7 @@ use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
 
 
-use constant UTIL => defined eval 'require Scalar::Util';
-use constant TAINT => UTIL && scalar eval 'Scalar::Util::tainted( $ENV{PATH} )';
+use constant TAINT => defined eval 'require Scalar::Util; ${^TAINT} || undef';
 
 sub _untaint {
 	map { m/^(.*)$/; $1 } grep defined, @_;
@@ -836,7 +835,7 @@ sub _read_tcp {
 	while ($unread) {
 
 		# During some of my tests recv() returned undef even
-		# though there wasn't an error.	 Checking for the amount
+		# though there was no error.  Checking for the amount
 		# of data read appears to work around that problem.
 
 		my $read_buf = '';
