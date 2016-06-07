@@ -7,6 +7,12 @@ use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
 
+# Allow taint tests to be optimised away when appropriate.
+use constant UTIL  => defined eval 'require Scalar::Util';
+use constant UNCND => $] < 5.028;	## eval '${^TAINT}' breaks old compilers
+use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
+
+
 use strict;
 use integer;
 use Carp;
@@ -50,13 +56,6 @@ use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 
 # If SOCKSified Perl, use TCP instead of UDP and keep the socket open.
 use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
-
-
-use constant TAINT => defined eval 'require Scalar::Util; ${^TAINT} || undef';
-
-sub _untaint {
-	map { m/^(.*)$/; $1 } grep defined, @_;
-}
 
 
 #
@@ -142,8 +141,8 @@ sub new {
 	if ( my $file = $args{config_file} ) {
 		$self = bless {%$initial}, $class;
 		$self->_read_config_file($file);		# user specified config
-		$self->nameservers( _untaint $self->nameservers );
-		$self->searchlist( _untaint $self->searchlist );
+		$self->nameserver( map { m/^(.*)$/; $1 } $self->nameserver );
+		$self->searchlist( map { m/^(.*)$/; $1 } $self->searchlist );
 		%$base = %$self unless $init;			# define default configuration
 
 	} elsif ($init) {
@@ -371,14 +370,14 @@ sub answerfrom {
 	return $self->{answerfrom};
 }
 
+sub _reset_errorstring {
+	shift->{errorstring} = '';
+}
+
 sub errorstring {
 	my $self = shift;
 	$self->{errorstring} = shift if scalar @_;
 	return $self->{errorstring};
-}
-
-sub _reset_errorstring {
-	shift->{errorstring} = '';
 }
 
 
@@ -404,7 +403,7 @@ sub search {
 	return $self->query(@_) unless $self->{dnsrch};
 
 	my $name = shift || '.';
-	my @sfix = @{$self->{searchlist}};
+	my @sfix = $self->searchlist;
 	my @list = $name =~ m/[.]/ ? ( undef, @sfix ) : ( @sfix, undef );
 
 	foreach my $suffix ( $name =~ m/:|\.\d*$/ ? undef : @list ) {
@@ -1047,14 +1046,6 @@ sub dnssec {
 }
 
 
-sub force_v4 {
-	my $self = shift;
-	return $self->{force_v4} unless scalar @_;
-	my $value = shift;
-	$self->force_v6(0) if $value;
-	$self->{force_v4} = $value ? 1 : 0;
-}
-
 sub force_v6 {
 	my $self = shift;
 	return $self->{force_v6} unless scalar @_;
@@ -1063,16 +1054,24 @@ sub force_v6 {
 	$self->{force_v6} = $value ? 1 : 0;
 }
 
-sub prefer_v4 {
+sub force_v4 {
 	my $self = shift;
-	return $self->{prefer_v4} unless scalar @_;
-	$self->{prefer_v4} = shift() ? 1 : 0;
+	return $self->{force_v4} unless scalar @_;
+	my $value = shift;
+	$self->force_v6(0) if $value;
+	$self->{force_v4} = $value ? 1 : 0;
 }
 
 sub prefer_v6 {
 	my $self = shift;
 	$self->{prefer_v4} = shift() ? 0 : 1 if scalar @_;
 	$self->{prefer_v4} ? 0 : 1;
+}
+
+sub prefer_v4 {
+	my $self = shift;
+	return $self->{prefer_v4} unless scalar @_;
+	$self->{prefer_v4} = shift() ? 1 : 0;
 }
 
 
@@ -1097,18 +1096,18 @@ sub tsig {
 }
 
 
-sub udppacketsize {
-	my $self = shift;
-	$self->{udppacketsize} = shift if scalar @_;
-	return $self->_packetsz;
-}
-
 # if ($self->{udppacketsize} > PACKETSZ
 # then we use EDNS and $self->{udppacketsize}
 # should be taken as the maximum packet_data length
 sub _packetsz {
 	my $udpsize = shift->{udppacketsize} || 0;
 	return $udpsize > PACKETSZ ? $udpsize : PACKETSZ;
+}
+
+sub udppacketsize {
+	my $self = shift;
+	$self->{udppacketsize} = shift if scalar @_;
+	return $self->_packetsz;
 }
 
 
