@@ -778,7 +778,7 @@ sub truncate {
 
 	my %rrset;
 	my @order;
-	foreach my $item ( grep ref($_) ne ref($sigrr), @{$self->{additional}} ) {
+	foreach my $item ( grep ref($_) ne ref($sigrr), $self->additional ) {
 		my $name  = $item->{owner}->canonical;
 		my $class = $item->{class} || 0;
 		my $key	  = pack 'nna*', $class, $item->{type}, $name;
@@ -802,7 +802,7 @@ sub truncate {
 		$data .= $sigrr->encode( length $data, $hash, $self );
 		CORE::push @list, $sigrr;
 	}
-	$self->{additional} = \@list;
+	$self->{'additional'} = \@list;
 
 	my @part = qw(question answer authority additional);
 	my @size = map scalar( @{$self->{$_}} ), @part;

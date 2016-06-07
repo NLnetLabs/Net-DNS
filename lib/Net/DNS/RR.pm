@@ -330,10 +330,62 @@ sub string {
 	my $self = shift;
 
 	my @ttl = grep defined, $self->{ttl};
-	my $core = join "\t", $self->{owner}->string, @ttl, $self->class, $self->type;
+	my @core = ( $self->{owner}->string, @ttl, $self->class, $self->type );
 
-	my $rdata = $self->rdstring( 14 + length $core );
-	return join "\t", $core, length $rdata ? $rdata : '; no data';
+	my @rdata = eval { $self->_format_rdata; };
+	carp $@ if $@;
+
+	return join "\t", @core, '; no data' unless scalar @rdata;
+
+	my @line = _wrap( join( "\t", @core, '(' ), @rdata, ')' );
+	my @text = map "; $_", $self->_annotation;
+	return join "\n\t", @line, @text if scalar(@line) > 1;
+
+	for (@line) {
+		s/\t[(]\s*/\t/;					# strip redundant ( )
+		s/\s+[)]$//;
+		return join "\n\t", $_, @text;
+	}
+}
+
+
+=head2 plain
+
+    $plain = $rr->plain;
+
+Returns a simplified single line representation of the RR using the
+zone file format defined in RFC1035.  This facilitates interaction
+with programs like nsupdate which have rudimentary RR parsers.
+
+=cut
+
+sub plain {
+	join ' ', shift->token;
+}
+
+
+=head2 token
+
+    @token = $rr->token;
+
+Returns a token list representation of the RR zone file string.
+
+=cut
+
+sub token {
+	my $self = shift;
+
+	my @ttl = grep defined, $self->{ttl};
+	my @core = ( $self->{owner}->string, @ttl, $self->class, $self->type );
+
+	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
+	local $_ = join ' ', eval { $self->_format_rdata; };
+	s/\\\\/\\092/g;						# disguise escaped escape
+	s/\\"/\\034/g;						# disguise escaped quote
+	s/\\\(/\\040/g;						# disguise escaped bracket
+	s/\\\)/\\041/g;						# disguise escaped bracket
+	s/\\;/\\059/g;						# disguise escaped semicolon
+	my @token = @core, grep defined && length, split /$PARSE_REGEX/o;
 }
 
 
@@ -493,28 +545,11 @@ Returns a string representation of the RR-specific data.
 
 sub rdstring {
 	my $self = shift;
-	my $coln = shift || 0;
-	my $cols = 80;
 
 	my @rdata = eval { $self->_format_rdata; };
-
 	carp $@ if $@;
 
-	my ( @line, @fill );
-	foreach (@rdata) {
-		if ( ( $coln += 1 + length ) > $cols ) {
-			push @line, join ' ', @fill;		# multi-line format
-			$coln = length;
-			@fill = ();
-		}
-		$coln = $cols if chomp;				# line terminator
-		push( @fill, $_ );
-	}
-	return join ' ', @fill unless scalar @line;		# simple RR
-
-	$line[0] = '( ' . $line[0];				# multi-line RR
-	return join "\n\t", @line, join ' ', @fill, ')' if $coln < $cols;
-	return join "\n\t", @line, join( ' ', @fill ), ')';
+	join "\n\t", _wrap(@rdata);
 }
 
 
@@ -528,46 +563,6 @@ Returns the length of the encoded RR-specific data.
 
 sub rdlength {
 	length shift->_encode_rdata;
-}
-
-
-=head2 plain
-
-    $plain = $rr->plain;
-
-Returns a simplified single line representation of the RR using the
-zone file format defined in RFC1035.  This facilitates interaction
-with programs like nsupdate which have simplified RR parsers.
-
-=cut
-
-sub plain {
-	join ' ', shift->token;
-}
-
-
-=head2 token
-
-    @token = $rr->token;
-
-Returns a token list representation of the RR zone file string.
-
-=cut
-
-sub token {
-	my $self = shift;
-
-	my @ttl = grep defined, $self->{ttl};
-	my @core = ( $self->{owner}->string, @ttl, $self->class, $self->type );
-
-	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
-	local $_ = join ' ', eval { $self->_format_rdata; };
-	s/\\\\/\\092/g;						# disguise escaped escape
-	s/\\"/\\034/g;						# disguise escaped quote
-	s/\\\(/\\040/g;						# disguise escaped bracket
-	s/\\\)/\\041/g;						# disguise escaped bracket
-	s/\\;/\\059/g;						# disguise escaped semicolon
-	my @token = @core, grep defined && length, split /$PARSE_REGEX/o;
 }
 
 
@@ -653,7 +648,7 @@ sub get_rrsort_func {
 
 use vars qw(%_LOADED %_MINIMAL);
 
-$_MINIMAL{ANY} = bless [type => 255], __PACKAGE__;
+$_MINIMAL{ANY} = bless ['type' => 255], __PACKAGE__;
 %_LOADED = %_MINIMAL;
 
 sub _subclass {
@@ -687,6 +682,33 @@ sub _subclass {
 
 	my $prebuilt = $default ? $_LOADED{$rrtype} : $_MINIMAL{$rrtype};
 	bless {@$prebuilt}, ref($prebuilt);			# create object
+}
+
+
+sub _annotation {
+	my $self = shift;
+	return @{$self->{annotation} || []} if wantarray;
+	$self->{annotation} = [@_];
+}
+
+
+sub _wrap {
+	my @text = @_;
+	my $cols = 80;
+	my $coln = 0;
+
+	my ( @line, @fill );
+	foreach (@text) {
+		if ( ( $coln += 1 + length ) > $cols ) {	# start new line
+			push @line, join ' ', @fill if scalar @fill;
+			$coln = length;
+			@fill = ();
+		}
+		$coln = $cols if chomp;				# force line break
+		push( @fill, $_ );
+	}
+	push @line, join ' ', @fill;
+	return @line;
 }
 
 

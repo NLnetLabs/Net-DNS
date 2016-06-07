@@ -43,9 +43,9 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{fpbin};
-	my @babble = BABBLE ? ( join '', ';', $self->babble, "\n" ) : ();
+	$self->_annotation( $self->babble ) if BABBLE;
 	my @fprint = split /(\S{64})/, $self->fp;
-	my @rdata = ( $self->algorithm, $self->fptype, @fprint, @babble );
+	my @rdata = ( $self->algorithm, $self->fptype, @fprint );
 }
 
 
@@ -170,8 +170,8 @@ Bubble babble fingerprinting is used by the SSH2 suite (and
 consequently by Net::SSH::Perl, the Perl SSH implementation)
 to display easy-to-remember key fingerprints.
 
-The 'BubbleBabble' string is appended as a comment to the RDATA
-when the string method is called.
+The 'BubbleBabble' string is appended as a comment when the
+string method is called.
 
 
 =head1 COPYRIGHT

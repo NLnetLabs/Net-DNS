@@ -57,7 +57,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 			"$self->{refresh}\t\t;refresh",
 			"$self->{retry}\t\t;retry",
 			"$self->{expire}\t\t;expire",
-			"$self->{minimum}\t\t;minimum";
+			"$self->{minimum}\t\t;minimum\n";
 }
 
 

@@ -147,9 +147,9 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{digestbin};
-	my @babble = BABBLE ? ( join '', ';', $self->babble, "\n" ) : ();
+	$self->_annotation( $self->babble ) if BABBLE;
 	my @digest = split /(\S{64})/, $self->digest;
-	my @rdata = ( @{$self}{qw(keytag algorithm digtype)}, @digest, @babble );
+	my @rdata = ( @{$self}{qw(keytag algorithm digtype)}, @digest );
 }
 
 
@@ -345,8 +345,8 @@ words, to make the digest easier to verify.  The "words" are not
 necessarily real words, but they look more like words than a string
 of hex characters.
 
-The 'BubbleBabble' string is appended as a comment to the RDATA when
-the string method is called.
+The 'BubbleBabble' string is appended as a comment when the string
+method is called.
 
 =head2 create
 
