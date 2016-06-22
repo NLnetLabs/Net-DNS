@@ -137,12 +137,12 @@ sub gateway {
 		};
 		/:.*:/ && do {
 			$self->{gatetype} = 2;
-			$self->{gateway} = bless( {}, 'Net::DNS::RR::AAAA' )->address($_);
+			$self->{gateway} = Net::DNS::RR::AAAA::address( {}, $_ );
 			last;
 		};
 		/\.\d+$/ && do {
 			$self->{gatetype} = 1;
-			$self->{gateway} = bless( {}, 'Net::DNS::RR::A' )->address($_);
+			$self->{gateway} = Net::DNS::RR::A::address( {}, $_ );
 			last;
 		};
 		/\..+/ && do {
@@ -156,11 +156,13 @@ sub gateway {
 	if ( defined wantarray ) {
 		my $gatetype = $self->{gatetype};
 		return wantarray ? '.' : undef unless $gatetype;
-		return $self->{gateway}->name if $gatetype == 3;
-		my $gateway = {address => $self->{gateway}};
-		return bless( $gateway, 'Net::DNS::RR::A' )->address	if $gatetype == 1;
-		return bless( $gateway, 'Net::DNS::RR::AAAA' )->address if $gatetype == 2;
-		die "unknown gateway type ($gatetype)";
+		my $gateway = $self->{gateway};
+		for ($gatetype) {
+			/^1$/ && return Net::DNS::RR::A::address( {address => $gateway} );
+			/^2$/ && return Net::DNS::RR::AAAA::address( {address => $gateway} );
+			/^3$/ && return wantarray ? $gateway->string : $gateway->name;
+			die "unknown gateway type ($gatetype)";
+		}
 	}
 }
 

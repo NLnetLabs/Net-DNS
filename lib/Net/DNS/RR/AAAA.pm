@@ -70,10 +70,10 @@ sub address_short {
 
 sub address {
 	my $self = shift;
+
+	return address_long($self) unless scalar @_;
+
 	my $addr = shift;
-
-	return $self->address_long unless defined $addr;
-
 	my @parse = split /:/, "0$addr";
 
 	if ( (@parse)[$#parse] =~ /\./ ) {			# embedded IPv4
