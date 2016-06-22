@@ -329,22 +329,24 @@ the trailing dot.
 sub string {
 	my $self = shift;
 
-	my @ttl = grep defined, $self->{ttl};
-	my @core = ( $self->{owner}->string, @ttl, $self->class, $self->type );
+	my $name = $self->{owner}->string;
+	my @ttl	 = grep defined, $self->{ttl};
+	my @core = ( $name, @ttl, $self->class, $self->type );
 
 	my @rdata = eval { $self->_format_rdata; };
 	carp $@ if $@;
 
-	return join "\t", @core, '; no data' unless scalar @rdata;
+	my $tab = length($name) < 72 ? "\t" : ' ';
+	return join $tab, @core, '; no data' unless scalar @rdata;
 
-	my @line = _wrap( join( "\t", @core, '(' ), @rdata, ')' );
-	my @text = map "; $_", $self->_annotation;
-	return join "\n\t", @line, @text if scalar(@line) > 1;
+	my @note = map "; $_", $self->_annotation;
+	my @line = _wrap( join( $tab, @core, '(' ), @rdata, ')' );
+	return join "\n\t", @line, @note if scalar(@line) > 1;	# multi-line RR
 
-	for (@line) {
-		s/\t[(]\s*/\t/;					# strip redundant ( )
+	for (@line) {						# single line RR
+		s/\s+[(]\s*/\t/;				# strip redundant ( )
 		s/\s+[)]$//;
-		return join "\n\t", $_, @text;
+		return join "\n\t", $_, @note;
 	}
 }
 
@@ -687,8 +689,8 @@ sub _subclass {
 
 sub _annotation {
 	my $self = shift;
+	$self->{annotation} = ["@_"] if scalar @_;
 	return @{$self->{annotation} || []} if wantarray;
-	$self->{annotation} = [@_];
 }
 
 

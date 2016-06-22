@@ -97,10 +97,10 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{keybin};
+	$self->_annotation( 'Key ID =', $self->keytag );
 	my @base64 = split /\s+/, MIME::Base64::encode( $self->{keybin} );
-	my $keytag = $self->keytag;
 	my @params = map $self->$_, qw(flags protocol algorithm);
-	my @rdata  = ( @params, @base64, "; Key ID = $keytag\n" );
+	my @rdata = ( @params, @base64 );
 }
 
 
