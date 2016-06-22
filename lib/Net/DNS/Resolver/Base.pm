@@ -9,7 +9,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 # Allow taint tests to be optimised away when appropriate.
 use constant UTIL  => defined eval 'require Scalar::Util';
-use constant UNCND => $] < 5.028;	## eval '${^TAINT}' breaks old compilers
+use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
 use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
 
 
