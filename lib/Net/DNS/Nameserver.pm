@@ -242,7 +242,6 @@ sub make_reply {
 			print "remaining silent\n" if $self->{Verbose};
 			return undef;
 		}
-		print "$rcode\n" if $self->{Verbose};
 
 		$header->rcode($rcode);
 
@@ -251,15 +250,8 @@ sub make_reply {
 		$reply->{additional} = [@$add]	if $add;
 	}
 
-	if ( !defined($headermask) ) {
-		$header->ra(1);
-		$header->ad(0);
-	} else {
-		$header->opcode( $headermask->{opcode} ) if $headermask->{opcode};
-
-		$header->aa(1) if $headermask->{aa};
-		$header->ra(1) if $headermask->{ra};
-		$header->ad(1) if $headermask->{ad};
+	while ( my ( $key, $value ) = each %{$headermask || {}} ) {
+		$header->$key($value);
 	}
 
 	$header->print if $self->{Verbose} && defined $headermask;
@@ -629,11 +621,10 @@ Unix-like systems, the program will probably have to run as root
 to listen on the default port, 53.	A non-privileged user should
 be able to listen on ports 1024 and higher.
 
-Packet Truncation is new functionality available in VERSION > 830.
-Only UDP replies are truncated.  The size limit is determined by
-the advertised EDNS0 size in the query, otherwise 512 is used.
-
-If you want to do packet truncation yourself you should set Truncate
+UDP reply truncation functionality was introduced in VERSION 830.
+The size limit is determined by the EDNS0 size advertised in the query,
+otherwise 512 is used.
+If you want to do packet truncation yourself you should set C<Truncate>
 to 0 and truncate the reply packet in the code of the ReplyHandler.
 
 See L</EXAMPLE> for an example.
@@ -649,25 +640,23 @@ Start accepting queries. Calling main_loop never returns.
 
     $ns->loop_once( [TIMEOUT_IN_SECONDS] );
 
-Start accepting queries, but returns. If called without a parameter,
-the call will not return until a request has been received (and
-replied to). If called with a number, that number specifies how many
-seconds (even fractional) to maximum wait before returning. If called
-with 0 it will return immediately unless there's something to do.
+Start accepting queries, but returns. If called without a parameter, the
+call will not return until a request has been received (and replied to).
+Otherwise, the parameter specifies the maximum time to wait for a request.
+A zero timeout forces an immediate return if there is nothing to do.
 
 Handling a request and replying obviously depends on the speed of
-ReplyHandler. Assuming ReplyHandler is super fast, loop_once should spend
-just a fraction of a second, if called with a timeout value of 0 seconds.
-One exception is when an AXFR has requested a huge amount of data that
-the OS is not ready to receive in full. In that case, it will keep
-running through a loop (while servicing new requests) until the reply
-has been sent.
+ReplyHandler. Assuming a fast ReplyHandler, loop_once should spend just a
+fraction of a second, if called with a timeout value of 0.0 seconds. One
+exception is when an AXFR has requested a huge amount of data that the OS
+is not ready to receive in full. In that case, it will remain in a loop
+(while servicing new requests) until the reply has been sent.
 
-In case loop_once accepted a TCP connection it will immediatly check
-if there is data to be read from the socket. If not it will return and
-you will have to call loop_once() again to check if there is any data
-waiting on the socket to be processed. In most cases you will have to
-count on calling "loop_once" twice.
+In case loop_once accepted a TCP connection it will immediately check if
+there is data to be read from the socket. If not it will return and you
+will have to call loop_once() again to check if there is any data waiting
+on the socket to be processed. In most cases you will have to count on
+calling "loop_once" twice.
 
 A code fragment like:
 
@@ -720,7 +709,7 @@ additional filtering on its basis may be applied.
 		$rcode = "NXDOMAIN";
 	}
 
-	# mark the answer as authoritive (by setting the 'aa' flag
+	# mark the answer as authoritative (by setting the 'aa' flag
 	return ($rcode, \@ans, \@auth, \@add, { aa => 1 });
     }
 
