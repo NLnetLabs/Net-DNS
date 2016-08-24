@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2016-06-24)
+##	(last updated 2016-08-11)
 ##
 ################################################
 
@@ -99,13 +99,13 @@ use vars qw( %typebyname %typebyval );
 	NSEC3PARAM => 51,					# RFC5155
 	TLSA	   => 52,					# RFC6698
 	SMIMEA	   => 53,					# draft-ietf-dane-smime
-	HIP	   => 55,					# RFC5205
+	HIP	   => 55,					# RFC-ietf-hip-rfc5205-bis-10
 	NINFO	   => 56,					#
 	RKEY	   => 57,					#
 	TALINK	   => 58,					#
 	CDS	   => 59,					# RFC7344
 	CDNSKEY	   => 60,					# RFC7344
-	OPENPGPKEY => 61,					# RFC-ietf-dane-openpgpkey-12
+	OPENPGPKEY => 61,					# RFC7929
 	CSYNC	   => 62,					# RFC7477
 	SPF	   => 99,					# RFC7208
 	UINFO	   => 100,					# IANA-Reserved

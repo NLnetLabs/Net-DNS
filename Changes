@@ -15,7 +15,7 @@ Fix rt.cpan.org #114876
 
 	Use of uninitialized value in lc at MSWin32.pm line 77
 
-Fix rt.cpan.org #114819 & #115482
+Fix rt.cpan.org #114819
 
 	Net::DNS fails to compile with taint checks enabled
 

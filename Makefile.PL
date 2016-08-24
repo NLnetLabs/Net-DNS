@@ -55,10 +55,20 @@ my %metadata = (
 	NAME		 => 'Net::DNS',
 	VERSION_FROM	 => 'lib/Net/DNS.pm',
 	ABSTRACT_FROM	 => 'lib/Net/DNS.pm',
-	AUTHOR		 => 'Olaf Kolkman <olaf@net-dns.org>',
+	AUTHOR		 => 'Olaf Kolkman et al',
 	LICENSE		 => 'mit',
 	MIN_PERL_VERSION => 5.004_04,
 	);
+
+
+my %platform = (			## platform-specific dependencies
+	MSWin32 => {
+		Win32::IPHelper	   => 0.07,
+		Win32::API	   => 0.55,
+		Win32::TieRegistry => 0.24,
+		} );
+
+my $platform = $platform{$^O} || {};
 
 
 my %prerequisite = (
@@ -70,11 +80,11 @@ my %prerequisite = (
 	MIME::Base64 => 2.11,
 	Time::Local  => 1.19,
 	Test::More   => 0.52,
+	%$platform
 	);
 
 
 my %optional = (
-	Net::DNS::SEC	     => 1.01,
 	Digest::BubbleBabble => 0.01,
 	Digest::GOST	     => 0.06,
 	IO::Socket::INET     => 1.25,
@@ -82,14 +92,6 @@ my %optional = (
 	IO::Socket::IP	     => 0.32,
 	Net::LibIDN	     => 0.12,
 	);
-
-
-my %platform = (
-	MSWin32 => {
-		Win32::IPHelper	   => 0.07,
-		Win32::API	   => 0.55,
-		Win32::TieRegistry => 0.24,
-		} );
 
 
 my @debris = qw(
@@ -104,6 +106,19 @@ sub DEBUG { 0; }
 
 # clean up existing makefile
 unlink('Makefile');
+
+WriteMakefile(				## Makefile & distribution metadata
+	%metadata,
+	PREREQ_PM  => {%prerequisite},
+	META_MERGE => {recommends => {%optional}},
+	clean	   => {FILES => "@debris"},
+	);
+
+
+for my $module ( keys %optional ) {	## check optional module availability
+	delete $optional{$module} unless eval "require $module";
+}
+
 
 # clean up the online testing flag file.
 unlink("t/online.enabled");
@@ -164,35 +179,13 @@ EOT
 }
 
 
-for my $module ( keys %optional ) {	## check optional module availability
-	delete $optional{$module} unless eval "require $module";
-}
-
-my $platform = $platform{$^O} || {};	## platform-specific dependencies
-
-
-WriteMakefile(				## version check & end-user metadata
-	NO_META	  => 1,
-	PREREQ_PM => {%prerequisite, %optional, %$platform},
-	%metadata
-	);
-
-
-local $SIG{__WARN__} = sub { };		## suppress repeated warnings
-
-WriteMakefile(				## Makefile & distribution metadata
-	NO_MYMETA => 1,
-	PREREQ_PM => {%prerequisite},
-	clean	  => {FILES => "@debris"},
-	%metadata
-	);
-
-
 #
 # Check if we have internet connection	(code lifted from LWP)
 #
 if ($online_tests) {
-	my $socket = IO::Socket::INET->new(
+	my ($class) = grep $optional{$_}, qw(IO::Socket::IP IO::Socket::INET);
+
+	my $socket = $class->new(
 		PeerAddr => "www.google.com:80",
 		Timeout	 => 10
 		);
