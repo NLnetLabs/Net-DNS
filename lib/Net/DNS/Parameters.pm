@@ -40,7 +40,7 @@ use vars qw( %classbyname %classbyval );
 	ANY  => 255,						# RFC1035
 	);
 %classbyval = reverse %classbyname;
-%classbyname = ( '*' => 255, %classbyname, map /\D/ ? lc($_) : $_, %classbyname );
+%classbyname = ( '*' => 255, %classbyname, map lc($_), %classbyname );
 
 
 # Registry: Resource Record (RR) TYPEs
@@ -132,7 +132,7 @@ use vars qw( %typebyname %typebyval );
 	DLV	   => 32769,					# RFC4431
 	);
 %typebyval = reverse %typebyname;
-%typebyname = ( '*' => 255, %typebyname, map /\D/ ? lc($_) : $_, %typebyname );
+%typebyname = ( '*' => 255, %typebyname, map lc($_), %typebyname );
 
 
 # Registry: DNS OpCodes
@@ -145,7 +145,7 @@ use vars qw( %opcodebyname %opcodebyval );
 	UPDATE => 5,						# RFC2136
 	);
 %opcodebyval = reverse %opcodebyname;
-%opcodebyname = ( NS_NOTIFY_OP => 4, %opcodebyname, map /\D/ ? lc($_) : $_, %opcodebyname );
+%opcodebyname = ( NS_NOTIFY_OP => 4, %opcodebyname, map lc($_), %opcodebyname );
 
 
 # Registry: DNS RCODEs
@@ -174,7 +174,7 @@ use vars qw( %rcodebyname %rcodebyval );
 	BADCOOKIE => 23,					# RFC7873
 	);
 %rcodebyval = reverse( BADSIG => 16, %rcodebyname );
-%rcodebyname = ( %rcodebyname, map /\D/ ? lc($_) : $_, %rcodebyname );
+%rcodebyname = ( %rcodebyname, map lc($_), %rcodebyname );
 
 
 # Registry: DNS EDNS0 Option Codes (OPT)
@@ -194,7 +194,7 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	CHAIN		=> 13,					# RFC7901
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
-%ednsoptionbyname = ( %ednsoptionbyname, map /\D/ ? lc($_) : $_, %ednsoptionbyname );
+%ednsoptionbyname = ( %ednsoptionbyname, map lc($_), %ednsoptionbyname );
 
 
 # Registry: DNS Header Flags
@@ -224,8 +224,8 @@ sub classbyname {
 	my $name = shift;
 
 	$classbyname{$name} || $classbyname{uc $name} || do {
-		croak "unknown class $name" unless $name =~ m/CLASS(\d+)/i;
-		my $val = 0 + $1;
+		croak "unknown class $name" unless $name =~ m/(CLASS)?(\d+)/i;
+		my $val = 0 + $2;
 		croak "classbyname( $name ) out of range" if $val > 0xffff;
 		return $val;
 			}
@@ -246,8 +246,8 @@ sub typebyname {
 	my $name = shift;
 
 	$typebyname{$name} || $typebyname{uc $name} || do {
-		croak "unknown type $name" unless $name =~ m/TYPE(\d+)/i;
-		my $val = 0 + $1;
+		croak "unknown type $name" unless $name =~ m/(TYPE)?(\d+)/i;
+		my $val = 0 + $2;
 		croak "typebyname( $name ) out of range" if $val > 0xffff;
 		return $val;
 			}

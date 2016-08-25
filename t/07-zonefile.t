@@ -15,7 +15,14 @@ use constant UTF8 => ref eval {
 	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
 };
 
+
 use constant LIBIDN => UTF8 && defined eval { require Net::LibIDN; };
+
+use constant LIBIDNOK => scalar eval {
+	my $cn = pack( 'U*', 20013, 22269 );
+	my $xn = 'xn--fiqs8s';
+	LIBIDN && ( Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq $xn );
+};
 
 
 BEGIN {
@@ -461,6 +468,7 @@ SKIP: {					## Non-ASCII zone content
 	is( scalar(@rdata), 1,	'Unicode/UTF-8 TXT contiguous' );
 
 	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
+	skip( 'Non-ASCII domain - Net::LibIDN not working',   1 ) unless LIBIDNOK;
 
 	my $kanji = <DATA>;
 	my $zone3 = source($kanji);

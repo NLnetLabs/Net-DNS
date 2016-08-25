@@ -170,7 +170,7 @@ sub _defaults {				## specify RR attribute default values
 
 
 my $DSA = DSA ? 'Net::DNS::SEC::DSA' : 0;
-my $RSA = DSA ? 'Net::DNS::SEC::RSA' : 0;
+my $RSA = RSA ? 'Net::DNS::SEC::RSA' : 0;
 
 my %SEC = (
 	1 => $RSA,
