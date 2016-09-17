@@ -68,26 +68,27 @@ Please note that the SVN version at any given moment may be broken.
 The availability of prerequisites for Net::DNS is tested at installation
 time. These are the core packages that need to be available:
 
-	Test::More       
-	IO::Socket      
 	Digest::HMAC
 	Digest::MD5  
 	Digest::SHA  
-	MIME::Base32     
+	File::Spec      
+	IO::Socket      
 	MIME::Base64     
 	Time::Local
+	Test::More       
 
 The availability of these optional packages is tested at runtime:
 
 	Digest::BubbleBabble
 	Digest::GOST
 	IO::Socket::INET6
+	IO::Socket::IP
 	Net::DNS::SEC
 	Net::LibIDN
 
 You can obtain the latest version of Perl from:
 
-	http://www.cpan.org/src/
+	http://www.cpan.org
 
 Some of the demonstration and contributed scripts may require additional
 modules -- see demo/README and contrib/README for details.

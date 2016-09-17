@@ -311,6 +311,7 @@ a.root-servers.net.	3600000	IN	AAAA	2001:503:ba3e::2:30
 b.root-servers.net.	3600000	IN	AAAA	2001:500:84::b
 c.root-servers.net.	3600000	IN	AAAA	2001:500:2::c
 d.root-servers.net.	3600000	IN	AAAA	2001:500:2d::d
+e.root-servers.net.	3600000	IN	AAAA	2001:500:a8::e
 f.root-servers.net.	3600000	IN	AAAA	2001:500:2f::f
 h.root-servers.net.	3600000	IN	AAAA	2001:500:1::53
 i.root-servers.net.	3600000	IN	AAAA	2001:7fe::53

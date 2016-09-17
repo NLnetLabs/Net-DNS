@@ -142,9 +142,9 @@ sub read {
 
     $filename = $zonefile->name;
 
-Returns the name of the zone file from which RRs will be read.
-$INCLUDE directives will cause this to differ from the filename
-argument supplied when the object was created.
+Returns the name of the current zone file.
+Embedded $INCLUDE directives will cause this to differ from the
+filename argument supplied when the object was created.
 
 =cut
 
@@ -204,10 +204,12 @@ the compatibility interface described below.
 
     use Net::DNS::ZoneFile;
 
+    $listref = Net::DNS::ZoneFile->read( $filename );
     $listref = Net::DNS::ZoneFile->read( $filename, $include_dir );
 
     $listref = Net::DNS::ZoneFile->readfh( $handle, $include_dir );
 
+    $listref = Net::DNS::ZoneFile->parse(  $string );
     $listref = Net::DNS::ZoneFile->parse(  $string, $include_dir );
     $listref = Net::DNS::ZoneFile->parse( \$string, $include_dir );
 
@@ -427,7 +429,7 @@ sub _generate {				## expand $GENERATE into input stream
 
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
 
-	delete $self->{latest};					# forbid empty owner field
+	delete $self->{latest};					# forget previous owner
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
 	$self->{handle} = $handle;
 }
@@ -536,7 +538,7 @@ sub _include {				## open $INCLUDE file
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
 	my $handle = new FileHandle( $file, @discipline ) or croak qq($! "$file");
 
-	delete $self->{latest};					# forbid empty owner field
+	delete $self->{latest};					# forget previous owner
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
 	$self->{context} = origin Net::DNS::Domain($root) if $root;
 	$self->{filename} = $file;
@@ -547,7 +549,7 @@ sub _include {				## open $INCLUDE file
 sub _origin {				## change $ORIGIN (scope: current file)
 	my $self = shift;
 	$self->{context} = origin Net::DNS::Domain(shift);
-	delete $self->{latest};					# forbid empty owner field
+	delete $self->{latest};					# forget previous owner
 }
 
 

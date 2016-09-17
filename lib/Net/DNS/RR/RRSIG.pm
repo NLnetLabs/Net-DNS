@@ -27,7 +27,7 @@ use Net::DNS::Parameters;
 
 use constant DEBUG => 0;
 
-use constant UTIL => defined eval 'require Scalar::Util';
+use constant UTIL => defined eval 'use Scalar::Util 1.24; 1;';
 
 use constant PRIVATE => defined eval 'require Net::DNS::SEC::Private';
 

@@ -85,12 +85,13 @@ my %prerequisite = (
 
 
 my %optional = (
+	Net::DNS::SEC	     => 1.01,	## For information only
 	Digest::BubbleBabble => 0.01,
 	Digest::GOST	     => 0.06,
-	IO::Socket::INET     => 1.25,
 	IO::Socket::INET6    => 2.51,
 	IO::Socket::IP	     => 0.32,
 	Net::LibIDN	     => 0.12,
+	Scalar::Util	     => 1.24,
 	);
 
 
@@ -101,8 +102,7 @@ my @debris = qw(
 		);
 
 
-sub DEBUG { 0; }
-
+delete $optional{Net::DNS::SEC};	## Note: MUST NOT be installed automatically
 
 # clean up existing makefile
 unlink('Makefile');
