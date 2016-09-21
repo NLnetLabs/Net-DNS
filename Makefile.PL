@@ -91,7 +91,7 @@ my %optional = (
 	IO::Socket::INET6    => 2.51,
 	IO::Socket::IP	     => 0.32,
 	Net::LibIDN	     => 0.12,
-	Scalar::Util	     => 1.24,
+	Scalar::Util	     => 1.25,
 	);
 
 
@@ -183,16 +183,15 @@ EOT
 # Check if we have internet connection	(code lifted from LWP)
 #
 if ($online_tests) {
-	my ($class) = grep $optional{$_}, qw(IO::Socket::IP IO::Socket::INET);
+	my @option = grep $optional{$_}, qw(IO::Socket::IP);
+	my ($class) = ( @option, qw(IO::Socket::INET) );
 
 	my $socket = $class->new(
 		PeerAddr => "www.google.com:80",
 		Timeout	 => 10
 		);
 
-	if ($socket) {
-		close($socket);
-	} else {
+	unless ($socket) {
 		$online_tests = 0;
 		print <<EOT;
 

@@ -467,24 +467,25 @@ sub _send_tcp {
 
 		next unless $ans;
 
-		if ( $self->{tsig_rr} && !$ans->verify($packet) ) {
-			$self->errorstring( $ans->verifyerr );
-			return;
-		}
-
 		$ans->answerfrom($ip);
+		$lastanswer = $ans;
 
 		my $rcode = $ans->header->rcode;
 		$self->errorstring($rcode);			# historical quirk
-		return $ans if $rcode eq "NOERROR";
-		return $ans if $rcode eq "NXDOMAIN";
-
-		$self->_diag("RCODE: $rcode; try next nameserver");
-		$lastanswer = $ans;
+		last if $rcode eq "NOERROR";
+		last if $rcode eq "NXDOMAIN";
 	}
 
-	$self->errorstring( $lastanswer->header->rcode ) if $lastanswer;
-	$self->_diag( $self->errorstring );
+	unless ($lastanswer) {
+		$self->_diag( $self->errorstring );
+		return;
+	}
+
+	if ( $self->{tsig_rr} && !$lastanswer->verify($packet) ) {
+		$self->_diag( $self->errorstring( $lastanswer->verifyerr ) );
+		return;
+	}
+
 	return $lastanswer;
 }
 
@@ -548,31 +549,33 @@ NAMESERVER: foreach my $ns (@ns) {
 				next unless $header->qr;
 				next unless $header->id == $packet->header->id;
 
-				if ( $self->{tsig_rr} && !$ans->verify($packet) ) {
-					$self->errorstring( $ans->verifyerr );
-					return;
-				}
-
 				$ans->answerfrom($peer);
+				$lastanswer = $ans;
 
 				my $rcode = $header->rcode;
 				$self->errorstring($rcode);	# historical quirk
-				return $ans if $rcode eq "NOERROR";
-				return $ans if $rcode eq "NXDOMAIN";
+				last if $rcode eq "NOERROR";
+				last if $rcode eq "NXDOMAIN";
 
-				my $msg = $$ns[3] = "RCODE: $rcode";
-				$self->_diag("$msg; try next nameserver");
-				$lastanswer = $ans;
+				$$ns[3] = $rcode;
 			}					#SELECTOR LOOP
+
+			next unless $lastanswer;
+
+			if ( $self->{tsig_rr} && !$lastanswer->verify($packet) ) {
+				my $error = $$ns[3] = $lastanswer->verifyerr;
+				$self->_diag( $self->errorstring($error) );
+				next;
+			}
+
+			return $lastanswer;
 		}						#NAMESERVER LOOP
 		no integer;
 		$timeout += $timeout;
 	}							#RETRY LOOP
 
-	my $error = scalar( $select->handles ) ? 'query timed out' : $self->errorstring;
-	$error = $lastanswer->header->rcode if $lastanswer;
-	$self->_diag( $self->errorstring($error) );
-	return $lastanswer;
+	$self->_diag( $self->errorstring('query timed out') ) unless $lastanswer;
+	return;
 }
 
 
@@ -705,9 +708,11 @@ sub _bgread {
 	my $header = $ans->header;
 	return unless $header->qr;
 
-	if ( $self->{tsig_rr} && !$ans->verify($query) ) {
-		$self->errorstring( $ans->verifyerr );
-		return;
+	if ( $self->{tsig_rr} ) {
+		unless ( $ans->verify($query) ) {
+			$self->errorstring( $ans->verifyerr );
+			return;
+		}
 	}
 
 	$ans->answerfrom($peer);
@@ -739,8 +744,6 @@ sub axfr {				## zone transfer
 			@rr = $reply->answer;
 			return $rr;
 		};
-
-		$iterator->();					# read initial packet
 
 		return $iterator unless wantarray;
 
@@ -776,6 +779,7 @@ sub _axfr_start {
 
 	$self->_diag("axfr_start( $dname @class )");
 
+	my $reply;
 	foreach my $ns ( $self->nameservers ) {
 		my $socket = $self->_create_tcp_socket($ns) || next;
 
@@ -785,10 +789,22 @@ sub _axfr_start {
 		$socket->send($TCP_msg);
 		$self->errorstring($!);
 
-		return $request->sigrr ? $request : undef;
+		my ($ans) = $self->_axfr_next();
+		next unless $ans;
+
+		my $rcode = $ans->header->rcode;
+		$self->errorstring($rcode);			# historical quirk
+		( $reply = $ans, last ) if $rcode eq 'NOERROR';
 	}
 
-	croak $self->errorstring;
+	croak $self->errorstring unless $reply;
+
+	my $verify = $request->sigrr ? $request : undef;
+	return ( undef, $reply->answer ) unless $verify;
+
+	my $verifyok = $reply->verify($verify);
+	croak $self->errorstring( $reply->verifyerr ) unless $verifyok;
+	return ( $verifyok, $reply->answer );
 }
 
 
@@ -808,15 +824,13 @@ sub _axfr_next {
 	my $packet = Net::DNS::Packet->new( \$buffer );
 	croak $@, $self->errorstring('corrupt packet') if $@;
 
-	if ( $verify && not( $verify = $packet->verify($verify) ) ) {
-		croak $self->errorstring( $packet->verifyerr );
-	}
-
-	my $rcode = $packet->header->rcode;
-	croak $self->errorstring($rcode) unless $rcode eq 'NOERROR';
-
 	$packet->answerfrom($peerhost);
-	return ( $packet, $verify );
+
+	return ( $packet, undef ) unless $verify;
+
+	my $verifyok = $packet->verify($verify);
+	croak $self->errorstring( $packet->verifyerr ) unless $verifyok;
+	return ( $packet, $verifyok );
 }
 
 

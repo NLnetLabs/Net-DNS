@@ -246,6 +246,7 @@ sub _filename {				## rebase unqualified filename
 	return $name unless $include_dir;
 	require File::Spec;
 	return $name if File::Spec->file_name_is_absolute($name);
+	return $name if -f $name;
 	return File::Spec->catfile( $include_dir, $name );
 }
 

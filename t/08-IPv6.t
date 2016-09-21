@@ -61,17 +61,14 @@ eval {
 
 
 my $IP = eval {
-	my $resolver = new Net::DNS::Resolver( igntc => 1 );
-	my $nsreply = $resolver->send(qw(net-dns.org NS IN)) || die;
-	my @nsdname = map $_->nsdname, grep $_->type eq 'NS', $nsreply->answer;
-
-	# assume any IPv6 net-dns.org nameserver will do
-	$resolver->force_v6(1);
+	my @nsdname  = qw(ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl);
+	my $resolver = new Net::DNS::Resolver();
 	$resolver->nameservers(@nsdname);
+	$resolver->force_v6(1);
 
 	my @ip = $resolver->nameservers();
 	scalar(@ip) ? [@ip] : undef;
-} || exit( plan skip_all => 'Unable to reach target nameserver' );
+} || exit( plan skip_all => 'Unable to resolve nameserver name' );
 
 my $NOIP = '::';
 
@@ -268,8 +265,7 @@ NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw( ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
 	$resolver->igntc(1);
 
@@ -292,8 +288,7 @@ NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw( ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl ));
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->igntc(1);
 
 	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
@@ -414,9 +409,7 @@ NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw(ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl));
-	$resolver->force_v6(1);
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->tcp_timeout(10);
 
 	my @zone = $resolver->axfr('net-dns.org');
@@ -447,9 +440,7 @@ NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw(ns.net-dns.org));
-	$resolver->force_v6(1);
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
 	$resolver->tcp_timeout(10);
 

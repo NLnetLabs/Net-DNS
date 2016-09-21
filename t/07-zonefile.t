@@ -3,7 +3,7 @@
 use strict;
 use FileHandle;
 
-use Test::More tests => 89;
+use Test::More tests => 90;
 
 
 use constant LIBUTF8 => scalar eval {
@@ -376,6 +376,16 @@ EOF
 	eval {
 		local $SIG{__WARN__} = sub { };			# presumed not to exist
 		my $listref = Net::DNS::ZoneFile->read( '/zone0.txt', '.' );
+	};
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "read(): non-existent file\t[$exception]" );
+}
+
+
+{
+	eval {
+		local $SIG{__WARN__} = sub { };			# presumed not to exist
+		my $listref = Net::DNS::ZoneFile->read( 'zone0.txt', 't' );
 	};
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "read(): non-existent file\t[$exception]" );
