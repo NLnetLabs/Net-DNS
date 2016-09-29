@@ -61,7 +61,7 @@ eval {
 
 
 my $IP = eval {
-	my @nsdname  = qw(ns.net-dns.org ns.nlnetlabs.nl mcvax.nlnet.nl);
+	my @nsdname  = qw(ns.net-dns.org mcvax.nlnet.nl ns.nlnetlabs.nl);
 	my $resolver = new Net::DNS::Resolver();
 	$resolver->nameservers(@nsdname);
 	$resolver->force_v6(1);
@@ -123,7 +123,8 @@ NonFatalBegin();
 	$resolver->usevc(1);
 
 	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $tcp,		     '$resolver->bgsend(...)	TCP' );
+	ok( $tcp, '$resolver->bgsend(...)	TCP' );
+	while ( $resolver->bgbusy($tcp) ) { sleep 1; }
 	ok( $resolver->bgread($tcp), '$resolver->bgread($tcp)' );
 
 	ok( !$resolver->bgbusy(undef), '!$resolver->bgbusy(undef)' );
@@ -179,7 +180,8 @@ NonFatalBegin();
 	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
 	my $appendix = ${*$handle}{net_dns_bg};
 	$$appendix[1]->header->id(undef);			# random id
-	ok( !$resolver->bgread($handle), '$resolver->bgread($udp)	id mismatch' );
+	my $bgread = $resolver->bgread($handle);
+	ok( !$bgread, '$resolver->bgread($udp)	id mismatch' );
 }
 
 
@@ -188,7 +190,8 @@ NonFatalBegin();
 
 	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
 	delete ${*$handle}{net_dns_bg};
-	ok( $resolver->bgread($handle), '$resolver->bgread($udp)	workaround for SpamAssassin' );
+	my $bgread = $resolver->bgread($handle);
+	ok( $bgread, '$resolver->bgread($udp)	workaround for SpamAssassin' );
 }
 
 
@@ -197,8 +200,9 @@ NonFatalBegin();
 	$resolver->persistent_udp(1);
 
 	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $handle,			'$resolver->bgsend(...)	persistent UDP' );
-	ok( $resolver->bgread($handle), '$resolver->bgread($udp)' );
+	ok( $handle, '$resolver->bgsend(...)	persistent UDP' );
+	my $bgread = $resolver->bgread($handle);
+	ok( $bgread, '$resolver->bgread($udp)' );
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent UDP' );
 	is( $test, $handle, 'same UDP socket object used' );
@@ -211,13 +215,15 @@ NonFatalBegin();
 	$resolver->usevc(1);
 
 	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $handle,			'$resolver->bgsend(...)	persistent TCP' );
-	ok( $resolver->bgread($handle), '$resolver->bgread($tcp)' );
+	ok( $handle, '$resolver->bgsend(...)	persistent TCP' );
+	my $bgread = $resolver->bgread($handle);
+	ok( $bgread, '$resolver->bgread($tcp)' );
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent TCP' );
 	is( $test, $handle, 'same TCP socket object used' );
 	close($handle);
-	ok( $resolver->bgsend(qw(net-dns.org SOA IN)), 'connection recovered after close' );
+	my $recover = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $recover, 'connection recovered after close' );
 }
 
 
@@ -275,15 +281,20 @@ NonFatalBegin();
 	};
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
-	ok( $udp && ( $udp->verifyerr eq 'NOERROR' ), '$resolver->send(...)	UDP + automatic TSIG' );
+	ok( $udp, '$resolver->send(...)	UDP + automatic TSIG' );
 
 	$resolver->usevc(1);
 
 	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
-	ok( $tcp && ( $tcp->verifyerr eq 'NOERROR' ), '$resolver->send(...)	TCP + automatic TSIG' );
+	ok( $tcp, '$resolver->send(...)	TCP + automatic TSIG' );
 
-	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $resolver->bgread($handle), '$resolver->bgsend/read	TCP + automatic TSIG' );
+	my $bgread;
+	foreach my $ip (@$IP) {
+		$resolver->nameserver($ip);
+		my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
+		last if $bgread = $resolver->bgread($handle);
+	}
+	ok( $bgread, '$resolver->bgsend/read	TCP + automatic TSIG' );
 }
 
 
@@ -302,7 +313,8 @@ NonFatalBegin();
 	ok( !$tcp, '$resolver->send(...)	TCP + failed TSIG' );
 
 	my $handle = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( !$resolver->bgread($handle), '$resolver->bgsend/read	TCP + failed TSIG' );
+	my $bgread = $resolver->bgread($handle);
+	ok( !$bgread, '$resolver->bgsend/read	TCP + failed TSIG' );
 }
 
 
@@ -352,9 +364,9 @@ NonFatalBegin();
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	my $update = new Net::DNS::Update(qw(example.com));
-	ok( $resolver->send($update), '$resolver->send() NOTAUTH UDP' );
+	ok( $resolver->send($update), '$resolver->send($update) UDP' );
 	$resolver->usevc(1);
-	ok( $resolver->send($update), '$resolver->send() NOTAUTH TCP' );
+	ok( $resolver->send($update), '$resolver->send($update) TCP' );
 }
 
 

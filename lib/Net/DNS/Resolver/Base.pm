@@ -471,21 +471,19 @@ sub _send_tcp {
 		$lastanswer = $ans;
 
 		my $rcode = $ans->header->rcode;
-		$self->errorstring($rcode);			# historical quirk
-		last if $rcode eq "NOERROR";
-		last if $rcode eq "NXDOMAIN";
+		last if $rcode eq 'NOERROR';
+		last if $rcode eq 'NXDOMAIN';
+		$self->errorstring($rcode);
 	}
 
-	unless ($lastanswer) {
-		$self->_diag( $self->errorstring );
-		return;
-	}
+	return unless $lastanswer;
 
 	if ( $self->{tsig_rr} && !$lastanswer->verify($packet) ) {
 		$self->_diag( $self->errorstring( $lastanswer->verifyerr ) );
 		return;
 	}
 
+	$self->errorstring( $lastanswer->header->rcode );	# historical quirk
 	return $lastanswer;
 }
 
@@ -553,11 +551,10 @@ NAMESERVER: foreach my $ns (@ns) {
 				$lastanswer = $ans;
 
 				my $rcode = $header->rcode;
-				$self->errorstring($rcode);	# historical quirk
-				last if $rcode eq "NOERROR";
-				last if $rcode eq "NXDOMAIN";
+				last if $rcode eq 'NOERROR';
+				last if $rcode eq 'NXDOMAIN';
 
-				$$ns[3] = $rcode;
+				$self->errorstring( $$ns[3] = $rcode );
 			}					#SELECTOR LOOP
 
 			next unless $lastanswer;
@@ -568,6 +565,7 @@ NAMESERVER: foreach my $ns (@ns) {
 				next;
 			}
 
+			$self->errorstring( $lastanswer->header->rcode );    # historical quirk
 			return $lastanswer;
 		}						#NAMESERVER LOOP
 		no integer;
@@ -708,11 +706,9 @@ sub _bgread {
 	my $header = $ans->header;
 	return unless $header->qr;
 
-	if ( $self->{tsig_rr} ) {
-		unless ( $ans->verify($query) ) {
-			$self->errorstring( $ans->verifyerr );
-			return;
-		}
+	if ( $self->{tsig_rr} && !$ans->verify($query) ) {
+		$self->errorstring( $ans->verifyerr );
+		return;
 	}
 
 	$ans->answerfrom($peer);
@@ -780,6 +776,7 @@ sub _axfr_start {
 	$self->_diag("axfr_start( $dname @class )");
 
 	my $reply;
+	my $rcode;
 	foreach my $ns ( $self->nameservers ) {
 		my $socket = $self->_create_tcp_socket($ns) || next;
 
@@ -789,21 +786,23 @@ sub _axfr_start {
 		$socket->send($TCP_msg);
 		$self->errorstring($!);
 
-		my ($ans) = $self->_axfr_next();
-		next unless $ans;
-
-		my $rcode = $ans->header->rcode;
-		$self->errorstring($rcode);			# historical quirk
-		( $reply = $ans, last ) if $rcode eq 'NOERROR';
+		($reply) = $self->_axfr_next();
+		last if ( $rcode = $reply->header->rcode ) eq 'NOERROR';
 	}
 
 	croak $self->errorstring unless $reply;
 
+	$self->errorstring($rcode);				# historical quirk
+
 	my $verify = $request->sigrr ? $request : undef;
-	return ( undef, $reply->answer ) unless $verify;
+	unless ($verify) {
+		croak $self->errorstring unless $rcode eq 'NOERROR';
+		return ( undef, $reply->answer );
+	}
 
 	my $verifyok = $reply->verify($verify);
 	croak $self->errorstring( $reply->verifyerr ) unless $verifyok;
+	croak $self->errorstring unless $rcode eq 'NOERROR';
 	return ( $verifyok, $reply->answer );
 }
 

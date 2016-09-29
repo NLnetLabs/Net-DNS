@@ -747,10 +747,10 @@ take values are specified as C<option:value>.
 =head1 IPv6 TRANSPORT
 
 The Net::DNS::Resolver library will enable IPv6 transport if the
-appropriate libraries (IO::Socket::INET6 or IO::Socket::IP) are
+appropriate libraries (IO::Socket::IP or IO::Socket::INET6) are
 available and the destination nameserver has an IPv6 address.
 
-The force_v4(), force_v6(),prefer_v4 and prefer_v6() methods with a
+The force_v4(), force_v6(), prefer_v4 and prefer_v6() methods with a
 non-zero argument may be used to configure transport selection.
 
 The behaviour of the nameserver() method illustrates the transport

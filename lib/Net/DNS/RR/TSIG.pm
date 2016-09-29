@@ -557,6 +557,7 @@ sub vrfyerrstr {
 
 sub _chain {
 	my $self = shift;
+	$self->{link} = undef;
 	bless {%$self, link => $self}, ref($self);
 }
 

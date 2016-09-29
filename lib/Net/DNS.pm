@@ -325,7 +325,7 @@ Meaning:  At least one RR with the specified name and type must
 exist.
 
     # RRset exists (value-dependent)
-    $packet->push(pre => yxrrset("host.example.com A 10.1.2.3"));
+    $update->push(pre => yxrrset("host.example.com A 10.1.2.3"));
 
 Meaning:  At least one RR with the specified name and type must
 exist and must have matching data.
@@ -338,7 +338,7 @@ be created.
 Use this method to add an "RRset does not exist" prerequisite to
 a dynamic update packet.
 
-    $packet->push(pre => nxrrset("host.example.com A"));
+    $update->push(pre => nxrrset("host.example.com A"));
 
 Meaning:  No RRs with the specified name and type can exist.
 
@@ -350,7 +350,7 @@ be created.
 Use this method to add a "name is in use" prerequisite to a dynamic
 update packet.
 
-    $packet->push(pre => yxdomain("host.example.com"));
+    $update->push(pre => yxdomain("host.example.com"));
 
 Meaning:  At least one RR with the specified name must exist.
 
@@ -362,7 +362,7 @@ be created.
 Use this method to add a "name is not in use" prerequisite to a
 dynamic update packet.
 
-    $packet->push(pre => nxdomain("host.example.com"));
+    $update->push(pre => nxdomain("host.example.com"));
 
 Meaning:  No RR with the specified name can exist.
 
@@ -373,7 +373,7 @@ be created.
 
 Use this method to add RRs to a zone.
 
-    $packet->push(update => rr_add("host.example.com A 10.1.2.3"));
+    $update->push(update => rr_add("host.example.com A 10.1.2.3"));
 
 Meaning:  Add this RR to the zone.
 
@@ -390,17 +390,17 @@ Use this method to delete RRs from a zone.  There are three forms:
 delete all RRsets, delete an RRset, and delete a specific RR.
 
     # Delete all RRsets.
-    $packet->push(update => rr_del("host.example.com"));
+    $update->push(update => rr_del("host.example.com"));
 
 Meaning:  Delete all RRs having the specified name.
 
     # Delete an RRset.
-    $packet->push(update => rr_del("host.example.com A"));
+    $update->push(update => rr_del("host.example.com A"));
 
 Meaning:  Delete all RRs having the specified name and type.
 
     # Delete a specific RR.
-    $packet->push(update => rr_del("host.example.com A 10.1.2.3"));
+    $update->push(update => rr_del("host.example.com A 10.1.2.3"));
 
 Meaning:  Delete all RRs having the specified name, type, and data.
 
@@ -484,12 +484,11 @@ rrsort() returns an empty list when arguments are incorrect.
 
 =head1 EXAMPLES
 
-The following examples show how to use the C<Net::DNS> modules.
-See the other manual pages and the demo scripts included with the
-source code for additional examples.
+The following brief examples illustrate some of the features of Net::DNS.
+The documentation for individual modules and the demo scripts included
+with the distribution provide more extensive examples.
 
-See the C<Net::DNS::Update> manual page for an example of performing
-dynamic updates.
+See L<Net::DNS::Update> for an example of performing dynamic updates.
 
 
 =head2 Look up host addresses.
@@ -500,8 +499,7 @@ dynamic updates.
 
     if ($reply) {
 	foreach my $rr ($reply->answer) {
-	    next unless $rr->type eq "A";
-	    print $rr->address, "\n";
+	    print $rr->address, "\n" if $rr->type eq "A";
 	}
     } else {
 	warn "query failed: ", $res->errorstring, "\n";
@@ -518,8 +516,7 @@ dynamic updates.
 	foreach $rr (grep { $_->type eq 'NS' } $reply->answer) {
 	    print $rr->nsdname, "\n";
 	}
-    }
-    else {
+    } else {
 	warn "query failed: ", $res->errorstring, "\n";
     }
 
@@ -566,7 +563,7 @@ dynamic updates.
     }
 
 
-=head2 Perform a background query for the answer.
+=head2 Perform a background query and print the reply.
 
     use Net::DNS;
     my $res    = Net::DNS::Resolver->new;
@@ -579,34 +576,6 @@ dynamic updates.
 
     my $packet = $res->bgread($socket);
     $packet->print;
-
-
-=head2 Send a background query using select to detect completion
-
-    use Net::DNS;
-    use IO::Select;
-
-    my $timeout = 5;
-    my $res	= Net::DNS::Resolver->new;
-    my $bgsock	= $res->bgsend("host.example.com");
-    my $sel	= IO::Select->new($bgsock);
-
-    # Add more sockets to $sel if desired.
-    my @ready = $sel->can_read($timeout);
-    if (@ready) {
-	foreach my $sock (@ready) {
-	    if ($sock == $bgsock) {
-		my $packet = $res->bgread($bgsock);
-		$packet->print;
-		$bgsock = undef;
-	    }
-	    # Check for the other sockets.
-	    $sel->remove($sock);
-	    $sock = undef;
-	}
-    } else {
-	warn "timed out after $timeout seconds\n";
-    }
 
 
 =head1 BUGS
