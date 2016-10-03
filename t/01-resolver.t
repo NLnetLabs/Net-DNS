@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 21;
+use Test::More tests => 25;
 
 use Net::DNS;
 
@@ -57,6 +57,17 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 	my $resolver = Net::DNS::Resolver->new();
 	foreach my $value (qw(1.2.3.4 ::1 ::1.2.3.4)) {
 		is( $resolver->srcaddr($value), $value, "resolver->srcaddr($value)" );
+	}
+}
+
+
+{					## exercise possibly unused socket code
+	my $resolver = Net::DNS::Resolver->new();
+	foreach my $value (qw(127.0.0.1 ::1)) {
+		my $udp = eval { $resolver->_create_udp_socket($value) };
+		ok( !$@, "resolver->_create_udp_socket($value)" );
+		my $tcp = eval { $resolver->_create_tcp_socket($value) };
+		ok( !$@, "resolver->_create_tcp_socket($value)" );
 	}
 }
 

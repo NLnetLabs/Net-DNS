@@ -204,20 +204,21 @@ Net::DNS, although begun in 1997, is still under development and may still
 contain a few bugs. Please see CPAN RT and Changes file for more
 information.
 
-I recommend that you exercise caution when using Net::DNS to maintain a
+We recommend that you exercise caution when using Net::DNS to maintain a
 production nameserver via dynamic updates. Always test your code
 *thoroughly*. The Net::DNS authors accept no blame if you corrupt your
-zone. That warning in place, I am aware of at least one large company that
-has used Net::DNS to make thousands of dynamic updates per day for nearly
+zone. That warning in place, We are aware of one large company that has
+used Net::DNS to make thousands of dynamic updates per day for at least
 three years without any problems.
 
 Please use the following form to submit bug reports:
 
 	https://rt.cpan.org/NoAuth/ReportBug.html?Queue=Net-DNS
 
-If you find a bug, please report it in "rt.cpan.org" along with the
-following information:
+If you find any bugs, please report each in a separate "rt.cpan.org"
+report along with the following information:
 
+	* subject field containing a concise descriptive summary
 	* version of Perl (output of 'perl -V' is best)
 	* version of Net::DNS
 	* operating system type and version
@@ -227,9 +228,9 @@ following information:
 	* the specific queries you are making, if the fault can be
 	  demonstrated using Internet nameservers
 
-If I do not have access to a system similar to yours, I may ask you to
-insert some debugging lines and report back on the results. The more help
-and information you can provide, the better.
+If we do not have access to a system similar to yours, you may be asked
+to insert some debugging lines and report back on the results. The more
+focussed the help and information you provide, the better.
 
 Net::DNS is currently maintained at NLnet Labs (www.nlnetlabs.nl) by:
 	Willem Toorop.

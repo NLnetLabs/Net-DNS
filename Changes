@@ -22,7 +22,7 @@ Fix rt.cpan.org #114819
 
 **** 1.06 May 27, 2016
 
-Fix rt.cpan.org #114917
+Fix rt.cpan.org #114918
 
 	Net::DNS::ZoneFile fails when unnamed RR follows $ORIGIN
 

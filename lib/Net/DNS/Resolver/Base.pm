@@ -78,7 +78,6 @@ use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
 		defnames	=> 1,
 		dnsrch		=> 1,
 		debug		=> 0,
-		tsig_rr		=> undef,
 		tcp_timeout	=> 120,
 		udp_timeout	=> 30,
 		persistent_tcp	=> ( SOCKS ? 1 : 0 ),
@@ -99,34 +98,10 @@ use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
 
 
 # These are the attributes that the user may specify in the new() constructor.
-my %public_attr = map { $_ => $_ } qw(
-		nameserver
-		nameservers
-		port
-		srcaddr
-		srcport
-		domain
-		searchlist
-		retrans
-		retry
-		usevc
-		igntc
-		recurse
-		defnames
-		dnsrch
-		debug
-		tcp_timeout
-		udp_timeout
-		persistent_tcp
-		persistent_udp
-		dnssec
-		adflag
-		cdflag
-		force_v4
-		force_v6
-		prefer_v4
-		prefer_v6
-		);
+my %public_attr = (
+	map( {$_ => $_} keys %{&_defaults}, qw(domain nameserver nameservers prefer_v6 srcaddr) ),
+	map( {$_ => 0} qw(nameserver4 nameserver6 srcaddr4 srcaddr6) ),
+	);
 
 
 my $initial;
@@ -495,6 +470,7 @@ sub _send_udp {
 
 	my @ns	    = $self->nameservers;
 	my $port    = $self->{port};
+	my $queryid = $packet->header->id;
 	my $retrans = $self->{retrans} || 1;
 	my $retry   = $self->{retry} || 1;
 	my $select  = IO::Select->new();
@@ -545,7 +521,7 @@ NAMESERVER: foreach my $ns (@ns) {
 
 				my $header = $ans->header;
 				next unless $header->qr;
-				next unless $header->id == $packet->header->id;
+				next unless $header->id == $queryid;
 
 				$ans->answerfrom($peer);
 				$lastanswer = $ans;
@@ -703,13 +679,13 @@ sub _bgread {
 	$self->errorstring($@);
 	return unless $ans;
 
-	my $header = $ans->header;
-	return unless $header->qr;
-
 	if ( $self->{tsig_rr} && !$ans->verify($query) ) {
 		$self->errorstring( $ans->verifyerr );
 		return;
 	}
+
+	my $header = $ans->header;
+	return unless $header->qr;
 
 	$ans->answerfrom($peer);
 	return ( ref($query) && ( $header->id != $query->header->id ) ) ? undef : $ans;
@@ -720,14 +696,14 @@ sub axfr {				## zone transfer
 	eval {
 		my $self = shift;
 
-		my ( $verify, @rr, $soa ) = $self->_axfr_start(@_);    # iterator state
+		my ( $select, $verify, @rr, $soa ) = $self->_axfr_start(@_);
 
 		my $iterator = sub {	## iterate over RRs
 			my $rr = shift(@rr);
 
 			if ( ref($rr) eq 'Net::DNS::RR::SOA' ) {
 				return $soa = $rr unless $soa;
-				$self->{axfr_sel} = undef;
+				$select = undef;
 				return if $rr->encode eq $soa->encode;
 				croak $self->errorstring('mismatched final SOA');
 			}
@@ -735,8 +711,7 @@ sub axfr {				## zone transfer
 			return $rr if scalar @rr;
 
 			my $reply;
-			( $reply, $verify ) = $self->_axfr_next($verify);
-			return $self->{axfr_sel} = undef unless $reply;
+			( $reply, $verify ) = $self->_axfr_next( $select, $verify );
 			@rr = $reply->answer;
 			return $rr;
 		};
@@ -775,18 +750,17 @@ sub _axfr_start {
 
 	$self->_diag("axfr_start( $dname @class )");
 
-	my $reply;
-	my $rcode;
+	my ( $select, $reply, $rcode );
 	foreach my $ns ( $self->nameservers ) {
 		my $socket = $self->_create_tcp_socket($ns) || next;
 
 		$self->_diag("axfr_start nameserver [$ns]");
 
-		$self->{axfr_sel} = IO::Select->new($socket);
+		$select = IO::Select->new($socket);
 		$socket->send($TCP_msg);
 		$self->errorstring($!);
 
-		($reply) = $self->_axfr_next();
+		($reply) = $self->_axfr_next($select);
 		last if ( $rcode = $reply->header->rcode ) eq 'NOERROR';
 	}
 
@@ -797,35 +771,33 @@ sub _axfr_start {
 	my $verify = $request->sigrr ? $request : undef;
 	unless ($verify) {
 		croak $self->errorstring unless $rcode eq 'NOERROR';
-		return ( undef, $reply->answer );
+		return ( $select, $verify, $reply->answer );
 	}
 
 	my $verifyok = $reply->verify($verify);
 	croak $self->errorstring( $reply->verifyerr ) unless $verifyok;
 	croak $self->errorstring unless $rcode eq 'NOERROR';
-	return ( $verifyok, $reply->answer );
+	return ( $select, $verifyok, $reply->answer );
 }
 
 
 sub _axfr_next {
-	my ( $self, $verify ) = @_;
+	my $self   = shift;
+	my $select = shift || return;
+	my $verify = shift;
 
-	my $select = $self->{axfr_sel} || return;
-	my ($sock) = $select->can_read( $self->{tcp_timeout} );
-	croak $self->errorstring('timed out') unless $sock;
+	my ($socket) = $select->can_read( $self->{tcp_timeout} );
+	croak $self->errorstring('timed out') unless $socket;
 
-	my $peerhost = $sock->peerhost;
-	$self->answerfrom($peerhost);
+	$self->answerfrom( $socket->peerhost );
 
-	my $buffer = _read_tcp($sock);
+	my $buffer = _read_tcp($socket);
 	$self->_diag( 'received', length($buffer), 'bytes' );
 
 	my $packet = Net::DNS::Packet->new( \$buffer );
 	croak $@, $self->errorstring('corrupt packet') if $@;
 
-	$packet->answerfrom($peerhost);
-
-	return ( $packet, undef ) unless $verify;
+	return ( $packet, $verify ) unless $verify;
 
 	my $verifyok = $packet->verify($verify);
 	croak $self->errorstring( $packet->verifyerr ) unless $verifyok;
@@ -854,13 +826,11 @@ sub _read_tcp {
 		$socket->recv( $read_buf, $unread );
 
 		my $read = length $read_buf;
-		last unless $read;
+		last unless $read;				# uncoverable branch
 
 		$buffer .= $read_buf;
 		$unread -= $read;
 	}
-
-	warn "ERROR: tcp recv failed: $!\n" if $unread;
 	return $buffer;
 }
 

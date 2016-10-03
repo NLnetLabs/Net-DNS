@@ -303,6 +303,19 @@ sub ednsoptionbyval {
 }
 
 
+sub register {				## register( 'TOY',1234 )	(NOT part of published API)
+	my ( $mnemonic, $rrtype ) = @_;				# uncoverable pod
+	my $exists = $typebyname{uc $mnemonic};
+	return $exists if $exists;				# already registered
+	$rrtype = int rand( 65534 - 65280 ) + 65280 unless $rrtype;
+	for ( typebyval($rrtype) ) {
+		croak "'$mnemonic' conflicts with TYPE$rrtype ($_)" unless /^TYPE\d+$/;
+	}
+	$typebyval{$rrtype} = uc($mnemonic);
+	$typebyname{uc $mnemonic} = int($rrtype);
+}
+
+
 1;
 __END__
 
