@@ -86,12 +86,14 @@ sub new {
 
 	if ( ref($file) ) {
 		$self->{filename} = $self->{handle} = $file;
+		$self->{fileopen} = {};
 		return $self if ref($file) =~ /FileHandle|IO::File|GLOB|Text/;
 		croak 'argument not a file handle';
 	}
 
 	$self->{filename} = $file ||= '';
 	$self->{handle} = new FileHandle($file) or croak qq($! "$file");
+	$self->{fileopen}{$file}++;
 	return $self;
 }
 
@@ -536,6 +538,9 @@ sub _include {				## open $INCLUDE file
 	my $file = _filename(shift);
 	my $root = shift;
 
+	my $opened = {%{$self->{fileopen}}};
+	croak qq(recursive \$INCLUDE $file) if $opened->{$file}++;
+
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
 	my $handle = new FileHandle( $file, @discipline ) or croak qq($! "$file");
 
@@ -543,6 +548,7 @@ sub _include {				## open $INCLUDE file
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
 	$self->{context} = origin Net::DNS::Domain($root) if $root;
 	$self->{filename} = $file;
+	$self->{fileopen} = $opened;
 	return $self->{handle} = $handle;
 }
 

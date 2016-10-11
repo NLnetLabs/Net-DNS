@@ -262,13 +262,5 @@ eval {					## exercise but do not test print
 };
 
 
-eval {					## exercise but do not test ad hoc RRtype registration
-	Net::DNS::Parameters::register('PLAYTHING');		# assign random type number
-	Net::DNS::Parameters::register( 'PLAYTHING', 1234 );	# assign specific type number
-	Net::DNS::Parameters::register( 'A', 1 );		# ignore if mnemonic registered
-	Net::DNS::Parameters::register( 'X', 1 );		# reject conflicting type number
-};
-
-
 exit;
 

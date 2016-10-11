@@ -3,7 +3,7 @@
 use strict;
 use FileHandle;
 
-use Test::More tests => 90;
+use Test::More tests => 91;
 
 
 use constant LIBUTF8 => scalar eval {
@@ -48,6 +48,9 @@ sub source {				## zone file builder
 
 	return new Net::DNS::ZoneFile( $file, @args );
 }
+
+
+my $recursive = join ' ', '$INCLUDE', source('$INCLUDE zone1.txt')->name;
 
 
 {
@@ -202,6 +205,7 @@ EOF
 rr1	NULL
 $directive
 rr3	NULL
+$recursive
 $misdirect
 EOF
 
@@ -223,11 +227,19 @@ EOF
 	is( $zonefile->name, $fn1,  'zonefile->name identifies file' );
 	is( $zonefile->line, 3,	    'zonefile->line identifies record' );
 
-	my @rr = eval { $zonefile->read };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "non-existent include file\t[$exception]" );
+	{
+		my @rr = eval { $zonefile->read };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "recursive include\t[$exception]" );
+	}
+
+	{
+		my @rr = eval { $zonefile->read };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "non-existent include\t[$exception]" );
+	}
 	is( $zonefile->name, $fn1, 'zonefile->name identifies file' );
-	is( $zonefile->line, 4,	   'zonefile->line identifies directive' );
+	is( $zonefile->line, 5,	   'zonefile->line identifies directive' );
 }
 
 

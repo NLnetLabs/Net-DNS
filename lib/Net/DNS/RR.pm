@@ -665,11 +665,15 @@ sub _subclass {
 		unless ( $_LOADED{$mnemon} ) {			# load once only
 			$mnemon =~ s/[^A-Za-z0-9]//g;		# expect the unexpected
 
-			my $module = join '::', __PACKAGE__, $mnemon;
-			my $subclass = eval("require $module") ? $module : __PACKAGE__;
+			my $module;
+			foreach ( $mnemon, "TYPE$number" ) {
+				$module = join '::', __PACKAGE__, $_;
+				last if eval("require $module");
+			}
 
 			# cache pre-built minimal and populated default object images
-			my @base = ( 'type' => $number, $@ ? ( 'exception' => $@ ) : () );
+			my $subclass = $@ ? __PACKAGE__ : $module;
+			my @base = ( 'type' => $number, $@ ? ( 'module' => $module ) : () );
 
 			$_MINIMAL{$mnemon} = bless [@base], $subclass;
 
@@ -723,15 +727,15 @@ sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 sub AUTOLOAD {				## Default method
 	my $self = shift;
 	my $oref = ref($self);
-	confess 'undefined method ', $AUTOLOAD unless $oref;
-	confess "unknown RRtype\n" . $self->{exception} if $oref eq __PACKAGE__;
 
 	no strict q/refs/;
 	my ($method) = reverse split /::/, $AUTOLOAD;
 	*{$AUTOLOAD} = sub {undef};	## suppress repetition and deep recursion
+	croak "$self has no class method '$method'" unless $oref;
 
 	my $string = $self->string;
-	my @object = grep defined($_), $oref->VERSION, $oref;
+	my @object = grep defined($_), $oref, $oref->VERSION;
+	eval("require $self->{module}") if $oref eq __PACKAGE__;
 
 	@_ = (<<"END");
 ***  FATAL PROGRAM ERROR!!	Unknown method '$method'
@@ -739,7 +743,8 @@ sub AUTOLOAD {				## Default method
 ***
 $string
 ***
-***  The @object object has no method '$method'
+***  @object has no instance method '$method'
+***  $@
 ***  THIS IS A BUG IN THE CALLING SOFTWARE, which incorrectly assumes
 ***  that the object would be of a particular type.  The type of an
 ***  object should be checked before calling any of its methods.
