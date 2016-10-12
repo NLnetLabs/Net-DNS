@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 98;
+use Test::More tests => 100;
 
 
 BEGIN {
@@ -293,6 +293,8 @@ BEGIN {
 		my $test = new Net::DNS::RR( $rr->plain );
 		my $type = $rr->type;
 		is( $test->string, $rr->string, "parse rr->plain for multiline $type" );
+		my $rfc3597 = new Net::DNS::RR( $rr->rfc3597 );
+		is( $rfc3597->string, $rr->string, "parse rr->rfc3597 for multiline $type" );
 	}
 }
 

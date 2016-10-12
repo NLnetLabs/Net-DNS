@@ -391,6 +391,27 @@ sub token {
 }
 
 
+=head2 rfc3597
+
+    $rfc3597 = $rr->rfc3597;
+
+Returns the unknown type representation of the RR using the zone
+file format defined in RFC3597.  This facilitates creation of zone
+files for use with outdated nameservers and provisioning software.
+
+=cut
+
+sub rfc3597 {
+	my $self = shift;
+
+	my @ttl = grep defined, $self->{ttl};
+	my @core = ( $self->{owner}->string, @ttl, "TYPE$self->{type}" );
+	my $data = $self->rdata;
+	my $size = length($data);
+	join ' ', @core, '\\#', $size, unpack 'H*', $data;
+}
+
+
 =head2 owner name
 
     $owner = $rr->name;
@@ -665,10 +686,10 @@ sub _subclass {
 		unless ( $_LOADED{$mnemon} ) {			# load once only
 			$mnemon =~ s/[^A-Za-z0-9]//g;		# expect the unexpected
 
-			my $module;
-			foreach ( $mnemon, "TYPE$number" ) {
-				$module = join '::', __PACKAGE__, $_;
-				last if eval("require $module");
+			my $module = join '::', __PACKAGE__, $mnemon;
+			unless ( eval "require $module" ) {
+				$module = join '::', __PACKAGE__, "TYPE$number";
+				eval "require $module";
 			}
 
 			# cache pre-built minimal and populated default object images
