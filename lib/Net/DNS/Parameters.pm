@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2016-08-11)
+##	(last updated 2016-10-18)
 ##
 ################################################
 
@@ -99,7 +99,7 @@ use vars qw( %typebyname %typebyval );
 	NSEC3PARAM => 51,					# RFC5155
 	TLSA	   => 52,					# RFC6698
 	SMIMEA	   => 53,					# draft-ietf-dane-smime
-	HIP	   => 55,					# RFC-ietf-hip-rfc5205-bis-10
+	HIP	   => 55,					# RFC8005
 	NINFO	   => 56,					#
 	RKEY	   => 57,					#
 	TALINK	   => 58,					#
@@ -300,6 +300,21 @@ sub ednsoptionbyname {
 sub ednsoptionbyval {
 	my $val = shift;
 	$ednsoptionbyval{$val} || return $val;
+}
+
+
+sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
+	my ( $mnemonic, $rrtype ) = map uc($_), @_;		# uncoverable pod
+	$rrtype = rand(255) + 65280 unless $rrtype;
+	for ( typebyval $rrtype = int($rrtype) ) {
+		croak "'$mnemonic' is a CLASS identifier" if $classbyname{$mnemonic};
+		return $rrtype if /^$mnemonic$/;    # duplicate registration
+		croak "'$mnemonic' conflicts with TYPE$rrtype ($_)" unless /^TYPE\d+$/;
+		my $known = $typebyname{$mnemonic};
+		croak "'$mnemonic' conflicts with TYPE$known" if $known;
+	}
+	$typebyval{$rrtype} = $mnemonic;
+	return $typebyname{$mnemonic} = $rrtype;
 }
 
 

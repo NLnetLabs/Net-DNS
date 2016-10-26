@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 25;
+use Test::More tests => 24;
 
 use Net::DNS;
 
@@ -81,14 +81,15 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 }
 
 
-{					## check that warning raised for make_query_packet()
-	my $warnings;
-	local $SIG{__WARN__} = sub { $warnings++ };
-
-	$resolver->make_query_packet('example.com');
-	$resolver->make_query_packet('example.com');
-	is( $warnings, 1, 'deprecation warning not repeated' );
-}
+eval {					## exercise warning for make_query_packet()
+	local *STDERR;
+	my $filename = '01-resolver.tmp';
+	open( STDERR, ">$filename" ) || die "Could not open $filename for writing";
+	$resolver->make_query_packet('example.com');		# carp
+	$resolver->make_query_packet('example.com');		# silent
+	close(STDERR);
+	unlink($filename);
+};
 
 
 exit;

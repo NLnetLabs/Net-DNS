@@ -18,7 +18,7 @@ Net::DNS::RR - DNS resource record base class
     $rr = new Net::DNS::RR('example.com IN A 192.0.2.99');
 
     $rr = new Net::DNS::RR(
-	    name    => 'example.com',
+	    owner   => 'example.com',
 	    type    => 'A',
 	    address => '192.0.2.99'
 	    );
@@ -56,7 +56,7 @@ sub new {
 		scalar @_ > 2 ? &_new_hash : &_new_string;
 	} || do {
 		my $class = shift || __PACKAGE__;
-		my @param = map defined($_) ? split : 'undef', @_;
+		my @param = map defined($_) ? split /\s+/ : 'undef', @_;
 		my $stmnt = substr "new $class( @param )", 0, 80;
 		croak "${@}in $stmnt\n";
 	};
@@ -70,17 +70,16 @@ sub new {
     $cname = new Net::DNS::RR('www.example.com 300 IN CNAME host.example.com');
     $txt   = new Net::DNS::RR('txt.example.com 3600 HS TXT "text data"');
 
-Returns an RR object of the appropriate type, or a C<Net::DNS::RR>
-object if the type is not implemented.	The attribute values are
-extracted from the string passed by the user.  The syntax of the
-argument string follows the RFC1035 specification for zone files,
-and is compatible with the result returned by the string method.
+Returns an object of the appropriate RR type, or a L<Net::DNS::RR> object
+if the type is not implemented. The attribute values are extracted from the
+string passed by the user. The syntax of the argument string follows the
+RFC1035 specification for zone files, and is compatible with the result
+returned by the string method.
 
-The name and RR type are required; all other information is optional.
-If omitted, the TTL defaults to 0 and the RR class defaults to IN.
+The owner and RR type are required; all other information is optional.
 Omitting the optional fields is useful for creating the empty RDATA
-sections required for certain dynamic update operations.  See the
-C<Net::DNS::Update> manual page for additional examples.
+sections required for certain dynamic update operations.
+See the L<Net::DNS::Update> manual page for additional examples.
 
 All names are interpreted as fully qualified domain names.
 The trailing dot (.) is optional.
@@ -102,20 +101,20 @@ sub _new_string {
 	s/\\\(/\\040/g;						# disguise escaped bracket
 	s/\\\)/\\041/g;						# disguise escaped bracket
 	s/\\;/\\059/g;						# disguise escaped semicolon
-	my ( $name, @token ) = grep defined && length, split /$PARSE_REGEX/o;
+	my ( $owner, @token ) = grep defined && length, split /$PARSE_REGEX/o;
 
 	croak 'unable to parse RR string' unless scalar @token;
 	my $t1 = uc $token[0];
 	my $t2 = uc $token[1] if $#token;
 
 	my ( $ttl, $class );
-	unless ( defined $t2 ) {				# <name> <type>
-		@token = ('ANY') if $classbyname{$t1};		# <name> <class>
+	unless ( defined $t2 ) {				# <owner> <type>
+		@token = ('ANY') if $classbyname{$t1};		# <owner> <class>
 	} elsif ( $classbyname{$t1} || $t1 =~ /^CLASS\d/ ) {
-		$class = shift @token;				# <name> <class> [<ttl>] <type>
+		$class = shift @token;				# <owner> <class> [<ttl>] <type>
 		$ttl = shift @token if $t2 =~ /^\d/;
 	} elsif ( $t1 =~ /^\d/ ) {
-		$ttl = shift @token;				# <name> <ttl> [<class>] <type>
+		$ttl = shift @token;				# <owner> <ttl> [<class>] <type>
 		$class = shift @token if $classbyname{$t2} || $t2 =~ /^CLASS\d/;
 	}
 
@@ -123,7 +122,7 @@ sub _new_string {
 	my $populated = scalar @token;
 
 	my $self = $base->_subclass( $type, $populated );	# create RR object
-	$self->name($name);
+	$self->owner($owner);
 	$self->class($class) if defined $class;			# specify CLASS
 	$self->ttl($ttl)     if defined $ttl;			# specify TTL
 
@@ -149,7 +148,7 @@ sub _new_string {
     $rr = new Net::DNS::RR(%hash);
 
     $rr = new Net::DNS::RR(
-	    name    => 'host.example.com',
+	    owner   => 'host.example.com',
 	    ttl	    => 86400,
 	    class   => 'IN',
 	    type    => 'A',
@@ -157,18 +156,17 @@ sub _new_string {
 	    );
  
     $rr = new Net::DNS::RR(
-	    name    => 'txt.example.com',
+	    owner   => 'txt.example.com',
 	    type    => 'TXT',
 	    txtdata => [ 'one', 'two' ]
 	    );
 
-Returns an RR object of the appropriate type, or a C<Net::DNS::RR>
-object if the type is not implemented.	See the manual pages for
-each RR type to see what fields the type requires.
+Returns an object of the appropriate RR type, or a L<Net::DNS::RR> object
+if the type is not implemented. Consult the relevant manual pages for the
+usage of type specific attributes.
 
-The C<name> and C<type> fields are required; all others are optional.
-If omitted, C<ttl> defaults to 0 and C<class> defaults to IN.
-Omitting the optional fields is useful for creating the empty RDATA
+The owner and RR type are required; all other information is optional.
+Omitting optional attributes is useful for creating the empty RDATA
 sections required for certain dynamic update operations.
 
 =cut
@@ -176,18 +174,19 @@ sections required for certain dynamic update operations.
 sub _new_hash {
 	my ( $base, %argument ) = @_;
 
-	my %attribute = ( name => '.', type => 'ANY' );
+	my %attribute = ( owner => '.', type => 'ANY' );
 	while ( my ( $key, $value ) = each %argument ) {
 		$attribute{lc $key} = $value;
 	}
 
-	my ( $name, $type, $class, $ttl ) = @attribute{qw(name type class ttl)};
-	delete @attribute{qw(name class type ttl rdlength)};	# strip non-RDATA fields
+	my ( $owner, $type, $class, $ttl ) = @attribute{qw(owner type class ttl)};
+	$owner = $attribute{name} if exists $attribute{name};	# synonym for owner
 
+	delete @attribute{qw(owner name class type ttl rdlength)};
 	my $populated = scalar %attribute;			# RDATA specified
 
 	my $self = $base->_subclass( $type, $populated );	# RR with defaults (if appropriate)
-	$self->name($name);
+	$self->owner($owner);
 	$self->class($class) if defined $class;			# specify CLASS
 	$self->ttl($ttl)     if defined $ttl;			# specify TTL
 
@@ -233,7 +232,7 @@ sub decode {
 	my $index = $fixed + RRFIXEDSZ;
 	die 'corrupt wire-format data' if length $$data < $index;
 	my $type = unpack "\@$fixed n", $$data;
-	my $self = $base->_subclass( typebyval($type) );
+	my $self = $base->_subclass("TYPE$type");
 	$self->{owner} = $owner;
 	@{$self}{qw(class ttl rdlength)} = unpack "\@$fixed x2 n N n", $$data;
 
@@ -391,21 +390,22 @@ sub token {
 }
 
 
-=head2 rfc3597
+=head2 generic
 
-    $rfc3597 = $rr->rfc3597;
+    $generic = $rr->generic;
 
-Returns the unknown type representation of the RR using the zone
-file format defined in RFC3597.  This facilitates creation of zone
-files for use with outdated nameservers and provisioning software.
+Returns the generic RR representation defined in RFC3597. This facilitates
+creation of zone files containing RRs unrecognised by outdated nameservers
+and provisioning software.
 
 =cut
 
-sub rfc3597 {
+sub generic {
 	my $self = shift;
 
 	my @ttl = grep defined, $self->{ttl};
-	my @core = ( $self->{owner}->string, @ttl, "TYPE$self->{type}" );
+	my @class = map "CLASS$_", grep defined, $self->{class};
+	my @core = ( $self->{owner}->string, @ttl, @class, "TYPE$self->{type}" );
 	my $data = $self->rdata;
 	my $size = length($data);
 	join ' ', @core, '\\#', $size, unpack 'H*', $data;
@@ -414,19 +414,19 @@ sub rfc3597 {
 
 =head2 owner name
 
-    $owner = $rr->name;
+    $name = $rr->owner;
 
 Returns the owner name of the record.
 
 =cut
 
-sub name {
+sub owner {
 	my $self = shift;
 	$self->{owner} = new Net::DNS::DomainName1035(shift) if scalar @_;
 	$self->{owner}->name if defined wantarray;
 }
 
-sub owner { &name; }			## compatibility with RFC1034
+sub name { &owner; }			## historical
 
 
 =head2 type
@@ -676,19 +676,34 @@ $_MINIMAL{ANY} = bless ['type' => 255], __PACKAGE__;
 
 sub _subclass {
 	my $class   = shift;
-	my $rrtype  = shift;
+	my $rrname  = shift;
 	my $default = shift;
 
-	unless ( $_LOADED{$rrtype} ) {
-		my $number = typebyname($rrtype);
-		my $mnemon = typebyval($number);
+	unless ( $_LOADED{$rrname} ) {
+		my $number = eval { typebyname($rrname) };
+		unless ( defined $number ) {
+			_typespec("$rrname.RRNAME.ARPA.");
+			$number = typebyname($rrname);
+		}
 
-		unless ( $_LOADED{$mnemon} ) {			# load once only
+		my $rrtype = "TYPE$number";
+
+		unless ( $_LOADED{$rrtype} ) {			# load once only
+			my $mnemon = typebyval($number);
 			$mnemon =~ s/[^A-Za-z0-9]//g;		# expect the unexpected
 
 			my $module = join '::', __PACKAGE__, $mnemon;
+
+			#eval <<'END' unless eval "require $module";
 			unless ( eval "require $module" ) {
-				$module = join '::', __PACKAGE__, "TYPE$number";
+				local @INC = @INC;
+				push @INC, sub {
+					require FileHandle;
+					local $SIG{__WARN__} = sub { };
+					_typespec("$number.RRTYPE.ARPA.");
+					return new FileHandle("TYPEgen $number |");
+				};
+				$module = join '::', __PACKAGE__, $rrtype;
 				eval "require $module";
 			}
 
@@ -696,19 +711,35 @@ sub _subclass {
 			my $subclass = $@ ? __PACKAGE__ : $module;
 			my @base = ( 'type' => $number, $@ ? ( 'module' => $module ) : () );
 
-			$_MINIMAL{$mnemon} = bless [@base], $subclass;
+			$_MINIMAL{$rrtype} = bless [@base], $subclass;
 
 			my $object = bless {@base}, $subclass;
 			$object->_defaults;
-			$_LOADED{$mnemon} = bless [%$object], $subclass;
+			$_LOADED{$rrtype} = bless [%$object], $subclass;
 		}
 
-		$_MINIMAL{$rrtype} = $_MINIMAL{$mnemon};
-		$_LOADED{$rrtype}  = $_LOADED{$mnemon};
+		$_MINIMAL{$rrname} = $_MINIMAL{$rrtype};
+		$_LOADED{$rrname}  = $_LOADED{$rrtype};
 	}
 
-	my $prebuilt = $default ? $_LOADED{$rrtype} : $_MINIMAL{$rrtype};
+	my $prebuilt = $default ? $_LOADED{$rrname} : $_MINIMAL{$rrname};
 	bless {@$prebuilt}, ref($prebuilt);			# create object
+}
+
+
+sub _typespec {				## draft-levine-dnsextlang
+	eval <<'END';
+	my ($node) = @_;
+	require Net::DNS;
+	my $suffix = 'net-dns.org.';				# relocate repository
+	my @rr = Net::DNS::rr( "$node$suffix", 'TXT' );
+	foreach my $txt ( grep $_->type eq 'TXT', @rr ) {
+		my ( $tag, $language, @stanza ) = $txt->txtdata;
+		next unless $tag =~ /^RRTYPE=\d+$/;
+		Net::DNS::Parameters::register( split /[:\s]/, $stanza[0] );
+		last;
+	}
+END
 }
 
 

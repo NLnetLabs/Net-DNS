@@ -262,5 +262,13 @@ eval {					## exercise but do not test print
 };
 
 
+					## exercise but do not test ad hoc RRtype registration
+Net::DNS::Parameters::register( 'TOY', 65280 );			# RR type name and number
+Net::DNS::Parameters::register( 'TOY', 65280 );			# ignore duplicate entry
+eval { Net::DNS::Parameters::register('ANY') };			# reject CLASS identifier
+eval { Net::DNS::Parameters::register('A') };			# reject conflicting type name
+eval { Net::DNS::Parameters::register( 'Z', 1 ) };		# reject conflicting type number
+
+
 exit;
 

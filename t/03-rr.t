@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 100;
+use Test::More tests => 101;
 
 
 BEGIN {
@@ -121,6 +121,14 @@ BEGIN {
 	my $testcase = join "\t", qw( example.com. 3600 IN TYPE34 ), q(\# 4 c0000201);
 	my $rr	     = new Net::DNS::RR("$testcase");
 	is( $rr->string, $expected, "new Net::DNS::RR( $testcase )" );
+}
+
+
+{				## check for exception if RR name not recognised
+	my $testcase = join "\t", qw( example.com. 3600 IN BOGUS ), q(\# 4 c0000201);
+	eval { new Net::DNS::RR($testcase) };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unrecognised RR type: $testcase\t[$exception]" );
 }
 
 
@@ -293,8 +301,8 @@ BEGIN {
 		my $test = new Net::DNS::RR( $rr->plain );
 		my $type = $rr->type;
 		is( $test->string, $rr->string, "parse rr->plain for multiline $type" );
-		my $rfc3597 = new Net::DNS::RR( $rr->rfc3597 );
-		is( $rfc3597->string, $rr->string, "parse rr->rfc3597 for multiline $type" );
+		my $rfc3597 = new Net::DNS::RR( $rr->generic );
+		is( $rfc3597->string, $rr->string, "parse rr->generic RFC3597 format $type" );
 	}
 }
 
