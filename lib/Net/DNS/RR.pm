@@ -35,10 +35,16 @@ See also the manual pages for each specific RR type.
 use strict;
 use integer;
 use Carp;
+use FileHandle;
 
 use Net::DNS::Parameters;
 use Net::DNS::Domain;
 use Net::DNS::DomainName;
+
+use constant DNSEXTLANG => defined eval {
+	local $SIG{__WARN__} = sub { };
+	new FileHandle("RRTYPEgen |");
+};
 
 
 =head1 METHODS
@@ -658,8 +664,8 @@ sub get_rrsort_func {
 
 ################################################################################
 #
-#  Net::DNS::RR->_subclass($rrtype)
-#  Net::DNS::RR->_subclass($rrtype, $default)
+#  Net::DNS::RR->_subclass($rrname)
+#  Net::DNS::RR->_subclass($rrname, $default)
 #
 # Create a new object blessed into appropriate RR subclass, after
 # loading the subclass module (if necessary).  A subclass with no
@@ -680,12 +686,7 @@ sub _subclass {
 	my $default = shift;
 
 	unless ( $_LOADED{$rrname} ) {
-		my $number = eval { typebyname($rrname) };
-		unless ( defined $number ) {
-			_typespec("$rrname.RRNAME.ARPA.");
-			$number = typebyname($rrname);
-		}
-
+		my $number = typebyname($rrname);
 		my $rrtype = "TYPE$number";
 
 		unless ( $_LOADED{$rrtype} ) {			# load once only
@@ -694,15 +695,13 @@ sub _subclass {
 
 			my $module = join '::', __PACKAGE__, $mnemon;
 
-			#eval <<'END' unless eval "require $module";
 			unless ( eval "require $module" ) {
 				local @INC = @INC;
-				push @INC, sub {
-					require FileHandle;
-					local $SIG{__WARN__} = sub { };
-					_typespec("$number.RRTYPE.ARPA.");
-					return new FileHandle("TYPEgen $number |");
-				};
+				my @spec = Net::DNS::Parameters::_typespec("$number.RRTYPE");
+				if (DNSEXTLANG) {
+					my $pipe = new FileHandle("RRTYPEgen @spec |");
+					push @INC, eval "sub {$pipe}" if scalar @spec;
+				}
 				$module = join '::', __PACKAGE__, $rrtype;
 				eval "require $module";
 			}
@@ -724,22 +723,6 @@ sub _subclass {
 
 	my $prebuilt = $default ? $_LOADED{$rrname} : $_MINIMAL{$rrname};
 	bless {@$prebuilt}, ref($prebuilt);			# create object
-}
-
-
-sub _typespec {				## draft-levine-dnsextlang
-	eval <<'END';
-	my ($node) = @_;
-	require Net::DNS;
-	my $suffix = 'net-dns.org.';				# relocate repository
-	my @rr = Net::DNS::rr( "$node$suffix", 'TXT' );
-	foreach my $txt ( grep $_->type eq 'TXT', @rr ) {
-		my ( $tag, $language, @stanza ) = $txt->txtdata;
-		next unless $tag =~ /^RRTYPE=\d+$/;
-		Net::DNS::Parameters::register( split /[:\s]/, $stanza[0] );
-		last;
-	}
-END
 }
 
 

@@ -3,6 +3,11 @@ $Id$                       -*-text-*-
 
 **** 1.07 [unreleased]
 
+Fix rt.cpan.org #118598/#108908
+
+	Serious Makefile.PL issues
+	"make install" now suppressed if pre-1.01 version detected
+
 Fix rt.cpan.org #115558
 
 	Net::DNS::Nameserver does not allow EDNS replies

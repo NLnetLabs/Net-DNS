@@ -19,6 +19,12 @@ use strict;
 use integer;
 use Carp;
 
+use constant DNSEXTLANG => defined eval {
+	local $SIG{__WARN__} = sub { };
+	new FileHandle("RRTYPEgen |");
+};
+
+
 use base qw(Exporter);
 use vars qw(@EXPORT);
 @EXPORT = qw(
@@ -245,11 +251,14 @@ sub classbyval {
 sub typebyname {
 	my $name = shift;
 
-	$typebyname{$name} || $typebyname{uc $name} || do {
-		croak "unknown type $name" unless $name =~ m/(TYPE)?(\d+)/i;
-		my $val = 0 + $2;
-		croak "typebyname( $name ) out of range" if $val > 0xffff;
-		return $val;
+	$typebyname{$name} || do {
+		if ( $name =~ m/(TYPE)?(\d+)/i ) {
+			my $val = 0 + $2;
+			croak "typebyname( $name ) out of range" if $val > 0xffff;
+			return $val;
+		}
+		_typespec("$name.RRNAMES");
+		return $typebyname{uc $name} || croak "unknown type $name";
 			}
 }
 
@@ -259,7 +268,9 @@ sub typebyval {
 	$typebyval{$val} || do {
 		$val += 0;
 		croak "typebyval( $val ) out of range" if $val > 0xffff;
-		return "TYPE$val";
+		$typebyval{$val} = "TYPE$val";
+		_typespec("$val.RRTYPES");
+		return $typebyval{$val};
 			}
 }
 
@@ -315,6 +326,25 @@ sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
 	}
 	$typebyval{$rrtype} = $mnemonic;
 	return $typebyname{$mnemonic} = $rrtype;
+}
+
+
+sub _typespec {				## draft-levine-dnsextlang
+	eval <<'END' if DNSEXTLANG;
+	my ($node) = @_;
+	my $repository = 'ARPA.';
+	require Net::DNS::Resolver;
+	my $resolver = new Net::DNS::Resolver;
+	my $response = $resolver->send( "$node.$repository", 'TXT' );
+	my ( $tag, $language, @stanza );
+	foreach my $txt ( grep $_->type eq 'TXT', $response->answer ) {
+		( $tag, $language, @stanza ) = $txt->txtdata;
+		next unless $tag =~ /^RRTYPE=\d+$/;
+		register( split /[:\s]/, $stanza[0] );
+		last if $language =~ /^EN/i;
+	}
+	return @stanza;
+END
 }
 
 

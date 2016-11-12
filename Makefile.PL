@@ -19,30 +19,10 @@ The author is confident that this package will function
 properly with older perls such as yours, but bugs may lurk. 
 
 AMEN
-
-
-	eval 'require Net::DNS';
-	my @installed = grep $_ =~ m/DNS.pm$/i, values %INC;
-
-	warn <<AMEN if scalar(@installed) && ( $Net::DNS::VERSION < 1.00 );
-
-##
-##	The installation path for this version of Net::DNS may differ
-##	from the existing version $Net::DNS::VERSION in your perl library.
-##
-##	Please be aware that this upgrade may appear to fail because
-##	version $Net::DNS::VERSION will usually occur earlier in the search path.
-##	In most cases, deleting the old version resolves the problem.
-##
-##	@installed
-##
-
-AMEN
 }
 
-END { sleep(10) }
 
-
+use strict;
 use ExtUtils::MakeMaker;
 use Getopt::Long;
 use IO::Socket;
@@ -63,35 +43,35 @@ my %metadata = (
 
 my %platform = (			## platform-specific dependencies
 	MSWin32 => {
-		Win32::IPHelper	   => 0.07,
-		Win32::API	   => 0.55,
-		Win32::TieRegistry => 0.24,
+		'Win32::IPHelper'    => 0.07,
+		'Win32::API'	     => 0.55,
+		'Win32::TieRegistry' => 0.24,
 		} );
 
 my $platform = $platform{$^O} || {};
 
 
 my %prerequisite = (
-	Digest::HMAC => 1.03,
-	Digest::MD5  => 2.13,
-	Digest::SHA  => 5.23,
-	File::Spec   => 0.86,
-	IO::Socket   => 1.16,
-	MIME::Base64 => 2.11,
-	Time::Local  => 1.19,
-	Test::More   => 0.52,
+	'Digest::HMAC' => 1.03,
+	'Digest::MD5'  => 2.13,
+	'Digest::SHA'  => 5.23,
+	'File::Spec'   => 0.86,
+	'IO::Socket'   => 1.16,
+	'MIME::Base64' => 2.11,
+	'Time::Local'  => 1.19,
+	'Test::More'   => 0.52,
 	%$platform
 	);
 
 
 my %optional = (
-	Net::DNS::SEC	     => 1.01,	## For information only
-	Digest::BubbleBabble => 0.01,
-	Digest::GOST	     => 0.06,
-	IO::Socket::INET6    => 2.51,
-	IO::Socket::IP	     => 0.32,
-	Net::LibIDN	     => 0.12,
-	Scalar::Util	     => 1.25,
+	'Net::DNS::SEC'	       => 1.01,	## For information only
+	'Digest::BubbleBabble' => 0.01,
+	'Digest::GOST'	       => 0.06,
+	'IO::Socket::INET6'    => 2.51,
+	'IO::Socket::IP'       => 0.32,
+	'Net::LibIDN'	       => 0.12,
+	'Scalar::Util'	       => 1.25,
 	);
 
 
@@ -102,7 +82,7 @@ my @debris = qw(
 		);
 
 
-delete $optional{Net::DNS::SEC};	## Note: MUST NOT be installed automatically
+delete $optional{'Net::DNS::SEC'};	## Note: MUST NOT be installed automatically
 
 # clean up existing makefile
 unlink('Makefile');
@@ -218,7 +198,7 @@ if ($online_tests) {
 	}
 
 	$IPv6_tests = 1 unless defined $IPv6_tests;
-	if ( $optional{IO::Socket::IP} || $optional{IO::Socket::INET6} ) {
+	if ( $optional{'IO::Socket::IP'} || $optional{'IO::Socket::INET6'} ) {
 		if ($IPv6_tests) {
 			my $enable = 't/IPv6.enabled';
 			print "\nActivating IPv6 Tests...\n";
@@ -240,23 +220,51 @@ EOT
 }
 
 
-sub MY::postamble {
+package MY;				## customise generated Makefile
 
+use constant NOINSTALL => scalar eval 'require Net::DNS; $Net::DNS::VERSION < 1.00';
+
+
+sub install {
+	return shift->SUPER::install(@_) unless NOINSTALL;
+
+	return <<'END';
+install :
+	$(NOECHO) $(ECHO) "##	Makefile supports test build only"
+	$(NOECHO) $(ECHO) "##	(see message from Makefile.PL)"
+	$(FALSE)
+END
+}
+
+
+sub postamble {
 	return <<'END';
 test_cover : pure_all
 	cover -delete
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
 	cover -summary
 END
-
 }
 
 
-sub MY::libscan {
-	my $path = $_[1];
-	return '' if $path =~ /\B\.svn\b/;
-	return $path;
-}
+exit unless NOINSTALL;
+
+my @installed = grep $_ =~ m/\WNet\WDNS.pm$/i, values %INC;
+
+warn <<"END";
+##
+##	The install location for this version of Net::DNS may differ
+##	from the existing version $Net::DNS::VERSION in your perl library.
+##
+##	Version $Net::DNS::VERSION will usually occur earlier in the library
+##	search path, rendering the upgrade installation ineffective. 
+##
+##	The conflict can be resolved by removing the old version
+##	@installed
+##
+##	Makefile has been generated to support build and test only.
+##
+END
 
 
 __END__
