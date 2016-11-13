@@ -697,10 +697,12 @@ sub _subclass {
 
 			unless ( eval "require $module" ) {
 				local @INC = @INC;
-				my @spec = Net::DNS::Parameters::_typespec("$number.RRTYPE");
 				if (DNSEXTLANG) {
+					my $node = "$number.RRTYPE";
+					my @spec = Net::DNS::Parameters::_typespec($node);
 					my $pipe = new FileHandle("RRTYPEgen @spec |");
-					push @INC, eval "sub {$pipe}" if scalar @spec;
+					push @INC, sub {$pipe}
+							if scalar @spec;
 				}
 				$module = join '::', __PACKAGE__, $rrtype;
 				eval "require $module";

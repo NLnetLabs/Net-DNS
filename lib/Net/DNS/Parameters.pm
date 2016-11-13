@@ -257,7 +257,7 @@ sub typebyname {
 			croak "typebyname( $name ) out of range" if $val > 0xffff;
 			return $val;
 		}
-		_typespec("$name.RRNAMES");
+		_typespec("$name.RRNAME");
 		return $typebyname{uc $name} || croak "unknown type $name";
 			}
 }
@@ -269,7 +269,7 @@ sub typebyval {
 		$val += 0;
 		croak "typebyval( $val ) out of range" if $val > 0xffff;
 		$typebyval{$val} = "TYPE$val";
-		_typespec("$val.RRTYPES");
+		_typespec("$val.RRTYPE");
 		return $typebyval{$val};
 			}
 }
@@ -336,12 +336,14 @@ sub _typespec {				## draft-levine-dnsextlang
 	require Net::DNS::Resolver;
 	my $resolver = new Net::DNS::Resolver;
 	my $response = $resolver->send( "$node.$repository", 'TXT' );
-	my ( $tag, $language, @stanza );
+	my @stanza;
+
 	foreach my $txt ( grep $_->type eq 'TXT', $response->answer ) {
-		( $tag, $language, @stanza ) = $txt->txtdata;
-		next unless $tag =~ /^RRTYPE=\d+$/;
-		register( split /[:\s]/, $stanza[0] );
-		last if $language =~ /^EN/i;
+		@stanza = grep $_ =~ /[^-\w]/, $txt->txtdata;	# strip language tag
+		my ( $tag, $identifier ) = @stanza;
+		next unless defined($tag) && $tag =~ /^RRTYPE=\d+$/;
+		register( split /[:\s]/, $identifier );
+		return map { s/\s.*$//; qq("$_") } @stanza;	# strip descriptive text
 	}
 	return @stanza;
 END
