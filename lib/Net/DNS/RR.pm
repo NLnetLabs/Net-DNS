@@ -41,11 +41,6 @@ use Net::DNS::Parameters;
 use Net::DNS::Domain;
 use Net::DNS::DomainName;
 
-use constant DNSEXTLANG => defined eval {
-	local $SIG{__WARN__} = sub { };
-	new FileHandle("RRTYPEgen |");
-};
-
 
 =head1 METHODS
 
@@ -697,13 +692,14 @@ sub _subclass {
 
 			unless ( eval "require $module" ) {
 				local @INC = @INC;
-				if (DNSEXTLANG) {
-					my $node = "$number.RRTYPE";
-					my @spec = Net::DNS::Parameters::_typespec($node);
-					my $pipe = new FileHandle("RRTYPEgen @spec |");
-					push @INC, sub {$pipe}
-							if scalar @spec;
-				}
+				push @INC, sub {
+					eval q(
+						my $node = "$number.RRTYPE";
+						my @spec = Net::DNS::Parameters::_typespec($node);
+						new FileHandle("RRTYPEgen @spec |") if scalar @spec;
+						);
+				};
+
 				$module = join '::', __PACKAGE__, $rrtype;
 				eval "require $module";
 			}
