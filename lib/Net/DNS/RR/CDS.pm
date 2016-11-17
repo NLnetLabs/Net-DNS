@@ -17,6 +17,15 @@ Net::DNS::RR::CDS - DNS CDS resource record
 =cut
 
 
+sub digtype {				## CDS differs from DS by allowing digtype(0)
+	my $self = shift;
+	my ($arg) = @_;
+
+	return $self->{digtype} unless defined $arg;
+	return $arg ? $self->SUPER::digtype(@_) : ( $self->{digtype} = 0 );
+}
+
+
 1;
 __END__
 
@@ -48,7 +57,7 @@ other unpredictable behaviour.
 
 =head1 COPYRIGHT
 
-Copyright (c)2014 Dick Franks
+Copyright (c)2014,2016 Dick Franks
 
 All rights reserved.
 

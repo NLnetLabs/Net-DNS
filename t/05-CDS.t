@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 13;
+use Test::More tests => 14;
 
 
 use Net::DNS;
@@ -60,6 +60,9 @@ my $wire = join '', qw( A5FF 05 01 0FFBEBA0831B10B8B83440DAB81A2148576DA9F6 );
 
 	$rr->digtype('SHA256');
 	is( $rr->digtype(), 2, 'digest type mnemonic accepted' );
+
+	$rr->digtype(0);
+	is( $rr->digtype(), 0, 'digest type 0 accepted' );
 }
 
 

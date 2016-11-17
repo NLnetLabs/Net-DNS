@@ -24,6 +24,9 @@ use constant DNSEXTLANG => defined eval {
 	new FileHandle("RRTYPEgen |");
 };
 
+use vars qw($DNSEXTLANG);
+$DNSEXTLANG = 'ARPA.';			## draft-levine-dnsextlang
+
 
 use base qw(Exporter);
 use vars qw(@EXPORT);
@@ -330,12 +333,11 @@ sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
 
 
 sub _typespec {				## draft-levine-dnsextlang
-	eval <<'END' if DNSEXTLANG;
+	eval <<'END' if DNSEXTLANG && $DNSEXTLANG;
 	my ($node) = @_;
-	my $repository = 'ARPA.';
 	require Net::DNS::Resolver;
 	my $resolver = new Net::DNS::Resolver;
-	my $response = $resolver->send( "$node.$repository", 'TXT' );
+	my $response = $resolver->send( "$node.$DNSEXTLANG", 'TXT' );
 	my @stanza;
 
 	foreach my $txt ( grep $_->type eq 'TXT', $response->answer ) {
@@ -343,9 +345,8 @@ sub _typespec {				## draft-levine-dnsextlang
 		my ( $tag, $identifier ) = @stanza;
 		next unless defined($tag) && $tag =~ /^RRTYPE=\d+$/;
 		register( split /[:\s]/, $identifier );
-		return map { s/\s.*$//; qq("$_") } @stanza;	# strip descriptive text
 	}
-	return @stanza;
+	map { s/\s.*$//; qq("$_") } @stanza if wantarray;	# strip descriptive text
 END
 }
 
@@ -386,7 +387,7 @@ the given numerical code.
 
 =head1 COPYRIGHT
 
-Copyright (c)2012 Dick Franks
+Copyright (c)2012,2016 Dick Franks.
 
 Portions Copyright (c)1997 Michael Fuhr.
 
