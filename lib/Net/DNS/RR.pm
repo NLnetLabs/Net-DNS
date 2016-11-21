@@ -35,7 +35,6 @@ See also the manual pages for each specific RR type.
 use strict;
 use integer;
 use Carp;
-use FileHandle;
 
 use Net::DNS::Parameters;
 use Net::DNS::Domain;
@@ -689,15 +688,12 @@ sub _subclass {
 			$mnemon =~ s/[^A-Za-z0-9]//g;		# expect the unexpected
 
 			my $module = join '::', __PACKAGE__, $mnemon;
+			my $modreq = $module;
 
 			unless ( eval "require $module" ) {
 				local @INC = @INC;
 				push @INC, sub {
-					eval q(
-						my $node = "$number.RRTYPE";
-						my @spec = Net::DNS::Parameters::_typespec($node);
-						new FileHandle("RRTYPEgen @spec |") if scalar @spec;
-						);
+					Net::DNS::Parameters::_typespec("$number.RRTYPE");
 				};
 
 				$module = join '::', __PACKAGE__, $rrtype;
@@ -706,7 +702,7 @@ sub _subclass {
 
 			# cache pre-built minimal and populated default object images
 			my $subclass = $@ ? __PACKAGE__ : $module;
-			my @base = ( 'type' => $number, $@ ? ( 'module' => $module ) : () );
+			my @base = ( 'type' => $number, $@ ? ( '_module' => $modreq ) : () );
 
 			$_MINIMAL{$rrtype} = bless [@base], $subclass;
 
@@ -768,7 +764,7 @@ sub AUTOLOAD {				## Default method
 
 	my $string = $self->string;
 	my @object = grep defined($_), $oref, $oref->VERSION;
-	eval("require $self->{module}") if $oref eq __PACKAGE__;
+	eval("require $self->{_module}") if $oref eq __PACKAGE__;
 
 	@_ = (<<"END");
 ***  FATAL PROGRAM ERROR!!	Unknown method '$method'

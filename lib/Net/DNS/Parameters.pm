@@ -19,13 +19,16 @@ use strict;
 use integer;
 use Carp;
 
-use constant DNSEXTLANG => defined eval {
-	local $SIG{__WARN__} = sub { };
-	new FileHandle("RRTYPEgen |");
-};
 
-use vars qw($DNSEXTLANG);
-$DNSEXTLANG = 'ARPA.';			## draft-levine-dnsextlang
+use vars qw($DNSEXTLANG);		## draft-levine-dnsextlang
+$DNSEXTLANG = 'ARPA.';
+
+use constant DNSEXTLANG => defined eval <<'END';
+	die 'preempt failure' if $^O =~ /cygwin|MSWin32/i;
+	require FileHandle;
+	local $SIG{__WARN__} = sub { };
+	new FileHandle('RRTYPEgen |');
+END
 
 
 use base qw(Exporter);
@@ -333,20 +336,22 @@ sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
 
 
 sub _typespec {				## draft-levine-dnsextlang
-	eval <<'END' if DNSEXTLANG && $DNSEXTLANG;
+	eval <<'END' if DNSEXTLANG;
 	my ($node) = @_;
 	require Net::DNS::Resolver;
 	my $resolver = new Net::DNS::Resolver;
 	my $response = $resolver->send( "$node.$DNSEXTLANG", 'TXT' );
-	my @stanza;
 
 	foreach my $txt ( grep $_->type eq 'TXT', $response->answer ) {
-		@stanza = grep $_ =~ /[^-\w]/, $txt->txtdata;	# strip language tag
+		my @stanza = grep $_ =~ /[:=]/, $txt->txtdata;	# strip language tag
 		my ( $tag, $identifier ) = @stanza;
 		next unless defined($tag) && $tag =~ /^RRTYPE=\d+$/;
 		register( split /[:\s]/, $identifier );
+		return unless defined wantarray;
+		my @arg = map { s/\s.*$//; qq("$_") } @stanza;	# strip descriptive text
+		return new FileHandle("RRTYPEgen @arg |");
 	}
-	map { s/\s.*$//; qq("$_") } @stanza if wantarray;	# strip descriptive text
+	return undef;
 END
 }
 

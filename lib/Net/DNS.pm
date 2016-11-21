@@ -569,7 +569,7 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
     my $res    = Net::DNS::Resolver->new;
     my $socket = $res->bgsend("host.example.com");
 
-    until ($res->bgisready($socket)) {
+    while ( $res->bgbusy($socket) ) {
 	# do some work here while waiting for the answer
 	# ...and some more here
     }

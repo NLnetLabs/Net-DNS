@@ -37,23 +37,24 @@ foreach my $file ( sort @files ) {
 
 END {
 	eval 'local @INC = grep $_ !~ m/blib/i, @INC; require Net::DNS';
-	my @installed = grep $_ =~ m/DNS.pm$/i, values %INC;
+	my @installed = grep $_ =~ m/\WNet\WDNS.pm$/i, values %INC;
 
 	warn <<AMEN if scalar(@installed) && ( $Net::DNS::VERSION < 1.00 );
 
 ##
-##	The installation path for this version of Net::DNS may differ
+##	The install location for this version of Net::DNS may differ
 ##	from the existing version $Net::DNS::VERSION in your perl library.
 ##
-##	Please be aware that this upgrade may appear to fail because
-##	version $Net::DNS::VERSION will usually occur earlier in the search path.
-##	In most cases, deleting the old version resolves the problem.
+##	Version $Net::DNS::VERSION will usually occur earlier in the library
+##	search path, rendering the upgrade installation ineffective. 
 ##
+##	The conflict can be resolved by removing the old version
 ##	@installed
 ##
 AMEN
 
 }
+
 
 __END__
 
