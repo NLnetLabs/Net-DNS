@@ -123,8 +123,9 @@ other unpredictable behaviour.
 
     $rr->txtdata( @list );
 
-When invoked in scalar context, txtdata() returns the descriptive text
-as a single string, regardless of the number of elements.
+When invoked in scalar context, txtdata() returns a concatenation
+of the descriptive text elements each separated by a single space
+character.
 
 In a list context, txtdata() returns a list of the text elements.
 
