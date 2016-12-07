@@ -343,11 +343,12 @@ sub _typespec {				## draft-levine-dnsextlang
 	my $response = $resolver->send( "$node.$DNSEXTLANG", 'TXT' );
 
 	foreach my $txt ( grep $_->type eq 'TXT', $response->answer ) {
-		my @stanza = grep $_ =~ /[:=]/, $txt->txtdata;	# strip language tag
+		my @stanza = $txt->txtdata;
 		my ( $tag, $identifier ) = @stanza;
 		next unless defined($tag) && $tag =~ /^RRTYPE=\d+$/;
 		register( split /[:\s]/, $identifier );
 		return unless defined wantarray;
+		require 5.008009;				# support for reference in @INC
 		my @arg = map { s/\s.*$//; qq("$_") } @stanza;	# strip descriptive text
 		return new FileHandle("RRTYPEgen @arg |");
 	}

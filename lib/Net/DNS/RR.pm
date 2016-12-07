@@ -36,6 +36,8 @@ use strict;
 use integer;
 use Carp;
 
+use constant LIB => grep !ref($_), @INC;
+
 use Net::DNS::Parameters;
 use Net::DNS::Domain;
 use Net::DNS::DomainName;
@@ -231,8 +233,7 @@ sub decode {
 
 	my $index = $fixed + RRFIXEDSZ;
 	die 'corrupt wire-format data' if length $$data < $index;
-	my $type = unpack "\@$fixed n", $$data;
-	my $self = $base->_subclass("TYPE$type");
+	my $self = $base->_subclass( unpack "\@$fixed n", $$data );
 	$self->{owner} = $owner;
 	@{$self}{qw(class ttl rdlength)} = unpack "\@$fixed x2 n N n", $$data;
 
@@ -680,30 +681,28 @@ sub _subclass {
 	my $default = shift;
 
 	unless ( $_LOADED{$rrname} ) {
-		my $number = typebyname($rrname);
-		my $rrtype = "TYPE$number";
+		local @INC = LIB;
+		my $rrtype = typebyname($rrname);
 
 		unless ( $_LOADED{$rrtype} ) {			# load once only
-			my $mnemon = typebyval($number);
+			my $mnemon = typebyval($rrtype);
 			$mnemon =~ s/[^A-Za-z0-9]//g;		# expect the unexpected
 
-			my $module = join '::', __PACKAGE__, $mnemon;
-			my $modreq = $module;
+			my $subclass = join '::', __PACKAGE__, $mnemon;
 
-			unless ( eval "require $module" ) {
-				local @INC = @INC;
+			unless ( eval "require $subclass" ) {
 				push @INC, sub {
-					Net::DNS::Parameters::_typespec("$number.RRTYPE");
+					Net::DNS::Parameters::_typespec("$rrtype.RRTYPE");
 				};
 
-				$module = join '::', __PACKAGE__, $rrtype;
-				eval "require $module";
+				$subclass = join '::', __PACKAGE__, "TYPE$rrtype";
+				eval "require $subclass";
 			}
 
-			# cache pre-built minimal and populated default object images
-			my $subclass = $@ ? __PACKAGE__ : $module;
-			my @base = ( 'type' => $number, $@ ? ( '_module' => $modreq ) : () );
+			$subclass = __PACKAGE__ if $@;
 
+			# cache pre-built minimal and populated default object images
+			my @base = ( 'type' => $rrtype );
 			$_MINIMAL{$rrtype} = bless [@base], $subclass;
 
 			my $object = bless {@base}, $subclass;
@@ -764,7 +763,8 @@ sub AUTOLOAD {				## Default method
 
 	my $string = $self->string;
 	my @object = grep defined($_), $oref, $oref->VERSION;
-	eval("require $self->{_module}") if $oref eq __PACKAGE__;
+	my $module = join '::', __PACKAGE__, typebyval( $self->{type} );
+	eval("require $module") if $oref eq __PACKAGE__;
 
 	@_ = (<<"END");
 ***  FATAL PROGRAM ERROR!!	Unknown method '$method'
