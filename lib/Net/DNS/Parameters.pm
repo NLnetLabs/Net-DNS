@@ -10,7 +10,7 @@ $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2016-10-18)
+##	(last updated 2016-12-09)
 ##
 ################################################
 
@@ -204,6 +204,7 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	'TCP-KEEPALIVE' => 11,					# RFC7828
 	PADDING		=> 12,					# RFC7830
 	CHAIN		=> 13,					# RFC7901
+	DEVICEID	=> 26946,				# https://docs.umbrella.com/developer/networkdevices-api/identifying-dns-traffic2
 	);
 %ednsoptionbyval = reverse %ednsoptionbyname;
 %ednsoptionbyname = ( %ednsoptionbyname, map lc($_), %ednsoptionbyname );

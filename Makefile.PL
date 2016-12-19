@@ -232,7 +232,7 @@ sub install {
 install :
 	$(NOECHO) $(ECHO) "##	Makefile supports test build only"
 	$(NOECHO) $(ECHO) "##	(see message from Makefile.PL)"
-	$(FALSE)
+	$(NOECHO) $(FALSE)
 END
 }
 
