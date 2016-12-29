@@ -191,8 +191,7 @@ sub encode {
 
 	my $edns = $self->edns;					# EDNS support
 	my @addl = grep !$_->isa('Net::DNS::RR::OPT'), @{$self->{additional}};
-	unshift( @addl, $edns ) if $edns->_specified;
-	$self->{additional} = \@addl;
+	$self->{additional} = [@addl, $edns] if $edns->_specified;
 
 	return $self->truncate($size) if $size;
 
@@ -241,6 +240,7 @@ sub edns {
 	my $link = \$self->{xedns};
 	($$link) = grep $_->isa(qw(Net::DNS::RR::OPT)), @{$self->{additional}} unless $$link;
 	$$link = new Net::DNS::RR( type => 'OPT' ) unless $$link;
+	return $$link;
 }
 
 
@@ -275,7 +275,11 @@ sub reply {
 	$header->rd( $qheadr->rd );				# copy these flags into reply
 	$header->cd( $qheadr->cd );
 
-	$reply->edns->size($UDPmax) if $query->edns->_specified;
+	return $reply unless grep $_->isa('Net::DNS::RR::OPT'), @{$query->{additional}};
+
+	my $edns = $reply->edns();
+	CORE::push( @{$reply->{additional}}, $edns );
+	$edns->size($UDPmax);
 	return $reply;
 }
 

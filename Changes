@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.07 [unreleased]
+**** 1.07 December 29, 2016
 
 Fix rt.cpan.org #118598/#108908
 
@@ -501,9 +501,12 @@ Fix rt.cpan.org #77444
 	Make use of new extended header modus operandi for OPT records
 	also in the resolver. Preventing a warning.
 
+
 **** 0.70 Dec 6, 2012
 
-Feature added support for NID L32 L64 LP, RFC6742.
+Feature
+	Add support for NID L32 L64 LP, RFC6742.
+
 
 **** 0.69 Dec 5, 2012
 
@@ -1109,7 +1112,7 @@ Feature: The Net::DNS::RR->new() method used to call
     Use Net::DNS::RR->new_from_data() directly if you depended on that.
 
 Feature: Net::DNS::Packets unique_push now ignores the TTL in
-    comparison of uniqueness, this is closer to the intend of
+    comparison of uniqueness, this is closer to the intent of
     RFC2181, but not yet fully compliant.
 
 Fix rt.cpan.org #29816

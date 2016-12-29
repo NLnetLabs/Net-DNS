@@ -269,8 +269,8 @@ __DATA__	## DEFAULT HINTS
 ; (2 servers found)
 ;; global options: +cmd
 ;; Got answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 20118
-;; flags: qr aa rd; QUERY: 1, ANSWER: 13, AUTHORITY: 0, ADDITIONAL: 25
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 47020
+;; flags: qr aa rd; QUERY: 1, ANSWER: 13, AUTHORITY: 0, ADDITIONAL: 27
 ;; WARNING: recursion requested but not available
 
 ;; OPT PSEUDOSECTION:
@@ -313,10 +313,11 @@ c.root-servers.net.	3600000	IN	AAAA	2001:500:2::c
 d.root-servers.net.	3600000	IN	AAAA	2001:500:2d::d
 e.root-servers.net.	3600000	IN	AAAA	2001:500:a8::e
 f.root-servers.net.	3600000	IN	AAAA	2001:500:2f::f
+g.root-servers.net.	3600000	IN	AAAA	2001:500:12::d0d
 h.root-servers.net.	3600000	IN	AAAA	2001:500:1::53
 i.root-servers.net.	3600000	IN	AAAA	2001:7fe::53
 j.root-servers.net.	3600000	IN	AAAA	2001:503:c27::2:30
 k.root-servers.net.	3600000	IN	AAAA	2001:7fd::1
-l.root-servers.net.	3600000	IN	AAAA	2001:500:3::42
+l.root-servers.net.	3600000	IN	AAAA	2001:500:9f::42
 m.root-servers.net.	3600000	IN	AAAA	2001:dc3::35
 
