@@ -79,7 +79,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 86;
+plan tests => 91;
 
 NonFatalBegin();
 
@@ -173,17 +173,6 @@ NonFatalBegin();
 	$resolver->nameserver($NOIP);
 	my $packet = $resolver->bgread($handle);
 	ok( $packet && $packet->header->tc, '$resolver->bgread($udp)	background TCP fail' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-
-	my $handle   = $resolver->bgsend(qw(net-dns.org SOA IN));
-	my $appendix = ${*$handle}{net_dns_bg};
-	$$appendix[1]->header->id(undef);			# random id
-	my $bgread = $resolver->bgread($handle);
-	ok( !$bgread, '$resolver->bgread($udp)	id mismatch' );
 }
 
 
@@ -382,10 +371,6 @@ NonFatalBegin();
 	$query->edns->option( 65001, pack 'x500' );		# pad to force TCP
 	ok( !$resolver->send($query),	'$resolver->send() failure' );
 	ok( !$resolver->bgsend($query), '$resolver->bgsend() failure' );
-
-	$resolver->usevc(1);
-	my $update = new Net::DNS::Update('bogus.example.com');
-	ok( !$resolver->send($update), '$resolver->send() update' );
 }
 
 
@@ -448,7 +433,7 @@ NonFatalBegin();
 
 	my $axfr_start = $resolver->axfr_start('net-dns.org');
 	ok( $axfr_start, '$resolver->axfr_start()	(historical)' );
-	ok( eval { $resolver->axfr_next() }, '$resolver->axfr_next() works' );
+	ok( eval { $resolver->axfr_next() }, '$resolver->axfr_next()	(historical)' );
 	ok( $resolver->answerfrom(), '$resolver->answerfrom() works' );
 }
 
@@ -552,6 +537,54 @@ NonFatalBegin();
 		my $exception = $1 if $@ =~ /^(.+)\n/;
 		ok( $exception ||= '', "verify fail\t[$exception]" );
 	}
+}
+
+
+{					## exercise error paths in _send_???() and bgbusy()
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	my $packet = $resolver->_make_query_packet(qw(net-dns.org SOA));
+
+	my $mismatch = $resolver->_make_query_packet(qw(net-dns.org SOA));
+	ok( !$resolver->_send_tcp( $mismatch, $packet->data ), '_send_tcp()	id mismatch' );
+	ok( !$resolver->_send_udp( $mismatch, $packet->data ), '_send_udp()	id mismatch' );
+	my $handle = $resolver->_bgsend_udp( $mismatch, $packet->data );
+	ok( !$resolver->bgread($handle), 'bgbusy()	id mismatch' );
+}
+
+
+{					## exercise error paths in _decode_reply()
+	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
+
+	my $corrupt = '';
+	ok( !$resolver->_decode_reply( \$corrupt ), '_decode_reply()	corrupt reply' );
+
+	my $query = new Net::DNS::Packet(qw(net-dns.org SOA IN));
+	my $qdata = $query->data;
+	ok( !$resolver->_decode_reply( \$qdata ), '_decode_reply()	qr not set' );
+
+	my $reply = new Net::DNS::Packet(qw(net-dns.org SOA IN));
+	$reply->header->qr(1);
+	my $rdata = $reply->data;
+	ok( !$resolver->_decode_reply( \$rdata, $query ), '_decode_reply()	id mismatch' );
+}
+
+
+{					## exercise error path in _read_tcp()
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->tcp_timeout(10);
+
+	my $packet = $resolver->_make_query_packet(qw(net-dns.org SOA));
+	my $socket = $resolver->_bgsend_tcp( $packet, $packet->data );
+	my $select = new IO::Select($socket);
+	while ( $resolver->bgbusy($socket) ) { sleep 1 }
+
+	my $size_buf = '';
+	$socket->recv( $size_buf, 2 );
+	my ($size) = unpack 'n*', $size_buf;
+	my $discarded = '';		## data dependent: last 16 bits must not all be zero
+	$socket->recv( $discarded, $size - 2 ) if $size;
+
+	ok( !$resolver->_bgread($socket), '_read_tcp()	corrupt data' );
 }
 
 

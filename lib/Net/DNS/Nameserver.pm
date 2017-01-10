@@ -233,6 +233,14 @@ sub make_reply {
 				$rcode = "NOTIMP";
 			}
 
+		} elsif ( $opcode eq "UPDATE" ) {		#RFC2136
+			if ( ref $self->{UpdateHandler} eq "CODE" ) {
+				( $rcode, $ans, $auth, $add, $headermask ) =
+						&{$self->{UpdateHandler}}(@arglist);
+			} else {
+				$rcode = "NOTIMP";
+			}
+
 		} else {
 			print "ERROR: opcode $opcode unsupported\n" if $self->{Verbose};
 			$rcode = "FORMERR";
@@ -575,6 +583,9 @@ Attributes are:
     NotifyHandler	Reference to reply-handling
 			subroutine for queries with
 			opcode NOTIFY (RFC1996)
+    UpdateHandler	Reference to reply-handling
+			subroutine for queries with
+			opcode UPDATE (RFC2136)
     Verbose		Print info about received
 			queries.			Defaults to 0 (off).
     Truncate		Truncates UDP packets that

@@ -7,24 +7,6 @@ use vars qw($VERSION);
 $VERSION = (qw$LastChangedRevision$)[1];
 
 
-# Allow taint tests to be optimised away when appropriate.
-use constant UTIL  => defined eval 'require Scalar::Util';
-use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
-use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
-
-
-use strict;
-use integer;
-use Carp;
-use IO::Select;
-use IO::Socket;
-
-use Net::DNS::RR;
-use Net::DNS::Packet;
-
-use constant INT16SZ  => 2;
-use constant PACKETSZ => 512;
-
 #
 #  Implementation notes wrt IPv6 support when using perl before 5.20.0.
 #
@@ -56,6 +38,25 @@ use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
 
 # If SOCKSified Perl, use TCP instead of UDP and keep the socket open.
 use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
+
+
+# Allow taint tests to be optimised away when appropriate.
+use constant UTIL  => defined eval 'require Scalar::Util';
+use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
+use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
+
+
+use strict;
+use integer;
+use Carp;
+use IO::Select;
+use IO::Socket;
+
+use Net::DNS::RR;
+use Net::DNS::Packet;
+
+use constant INT16SZ  => 2;
+use constant PACKETSZ => 512;
 
 
 #
@@ -421,6 +422,7 @@ sub _send_tcp {
 	my $tcp_packet = pack 'n a*', length($packet_data), $packet_data;
 	my @ns = $self->nameservers();
 	my $lastanswer;
+	my $timeout = $self->{tcp_timeout};
 
 	foreach my $ip (@ns) {
 		my $socket = $self->_create_tcp_socket($ip) || next;
@@ -431,16 +433,13 @@ sub _send_tcp {
 		$socket->send($tcp_packet);
 		$self->errorstring($!);
 
-		next unless $select->can_read( $self->{tcp_timeout} );
+		next unless $select->can_read($timeout);	# uncoverable branch
 
 		my $buffer = _read_tcp($socket);
 		$self->answerfrom($ip);
 		$self->_diag( 'answer from', "[$ip]", length($buffer), 'bytes' );
 
-		my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
-		$self->errorstring($@);
-
-		next unless $ans;
+		my $ans = $self->_decode_reply( \$buffer, $packet ) || next;
 
 		$ans->answerfrom($ip);
 		$lastanswer = $ans;
@@ -470,7 +469,6 @@ sub _send_udp {
 
 	my @ns	    = $self->nameservers;
 	my $port    = $self->{port};
-	my $queryid = $packet->header->id;
 	my $retrans = $self->{retrans} || 1;
 	my $retry   = $self->{retry} || 1;
 	my $select  = IO::Select->new();
@@ -514,19 +512,12 @@ NAMESERVER: foreach my $ns (@ns) {
 				my $buffer = _read_udp( $socket, $self->_packetsz );
 				$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
-				my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
-				$self->errorstring($@);
-
-				next unless $ans;
-
-				my $header = $ans->header;
-				next unless $header->qr;
-				next unless $header->id == $queryid;
+				my $ans = $self->_decode_reply( \$buffer, $packet ) || next;
 
 				$ans->answerfrom($peer);
 				$lastanswer = $ans;
 
-				my $rcode = $header->rcode;
+				my $rcode = $ans->header->rcode;
 				last if $rcode eq 'NOERROR';
 				last if $rcode eq 'NXDOMAIN';
 
@@ -577,6 +568,7 @@ sub _bgsend_tcp {
 
 		$self->_diag( 'bgsend', "[$ip]" );
 
+		$socket->blocking(0);
 		$socket->send($tcp_packet);
 		$self->errorstring($!);
 
@@ -675,20 +667,26 @@ sub _bgread {
 	my $buffer = $dgram ? _read_udp( $handle, $self->_packetsz ) : _read_tcp($handle);
 	$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
-	my $ans = Net::DNS::Packet->new( \$buffer, $self->{debug} );
+	my $reply = $self->_decode_reply( \$buffer, $query ) || return;
+
+	return $reply unless $self->{tsig_rr} && !$reply->verify($query);
+	$self->errorstring( $reply->verifyerr );
+	return;
+}
+
+
+sub _decode_reply {
+	my ( $self, $bufref, $query ) = @_;
+
+	my $reply = Net::DNS::Packet->decode( $bufref, $self->{debug} );
 	$self->errorstring($@);
-	return unless $ans;
 
-	if ( $self->{tsig_rr} && !$ans->verify($query) ) {
-		$self->errorstring( $ans->verifyerr );
-		return;
-	}
+	return unless $reply;
 
-	my $header = $ans->header;
+	my $header = $reply->header;
 	return unless $header->qr;
-
-	$ans->answerfrom($peer);
-	return ( ref($query) && ( $header->id != $query->header->id ) ) ? undef : $ans;
+	return unless $query;
+	return ( $header->id != $query->header->id ) ? undef : $reply;
 }
 
 
@@ -816,7 +814,7 @@ sub _read_tcp {
 	my ($unread) = unpack 'n*', $size_buf;
 
 	my $buffer = '';
-	while ($unread) {
+	while ( $unread > 0 ) {
 
 		# During some of my tests recv() returned undef even
 		# though there was no error.  Checking for the amount
@@ -825,11 +823,8 @@ sub _read_tcp {
 		my $read_buf = '';
 		$socket->recv( $read_buf, $unread );
 
-		my $read = length $read_buf;
-		last unless $read;				# uncoverable branch
-
+		$unread -= length( $read_buf || last );
 		$buffer .= $read_buf;
-		$unread -= $read;
 	}
 	return $buffer;
 }
@@ -861,7 +856,7 @@ sub _create_tcp_socket {
 
 	my $dstport = $self->{port};
 	my $srcport = $self->{srcport};
-	my $timeout = $self->{tcp_timeout} || 1;
+	my $timeout = $self->{tcp_timeout};
 
 	if (USE_SOCKET_IP) {
 		my $srcaddr = _ipv6($ip) ? $self->{srcaddr6} : $self->{srcaddr4};
@@ -1003,7 +998,7 @@ sub _make_query_packet {
 		my $header = $packet->header;
 		$header->ad( $self->{adflag} );			# RFC6840, 5.7
 		$header->cd( $self->{cdflag} );			# RFC6840, 5.9
-		$header->do(1) if $self->dnssec;
+		$header->do(1) if $self->{dnssec};
 		$header->rd( $self->{recurse} );
 	}
 

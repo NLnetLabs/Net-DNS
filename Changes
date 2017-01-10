@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.08 [unreleased]
+
+Feature rt.cpan.org #119679
+
+	UpdateHandler for responding to UPDATE packets
+
+
 **** 1.07 December 29, 2016
 
 Fix rt.cpan.org #118598/#108908
@@ -833,9 +840,8 @@ Fix AAAA dynamic update
 
     Dynamic update of AAAA caused FORMERR on the prerequisite caused
     by AAAA creating rdata even when an address was never specified.
-    This fix may cause difference in behavior for people who expect a
-
-    NULL address ("::") when creating a AAAA without an address
+    This fix may cause difference in behavior for people who expect
+    a NULL address ("::") when creating a AAAA without an address
     specified.
 
 
@@ -873,7 +879,7 @@ Fix rt.cpan.org #43273
     Nameserver.pm
 
 Fix rt.cpan.org #46635
-    Minor documentation error in opt.pm
+    Minor documentation error in OPT.pm
 
 Fix rt.cpan.org #51009
      Fixed handling of empty string in Net::DNS::stripdot. 
