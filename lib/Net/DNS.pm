@@ -3,14 +3,11 @@ package Net::DNS;
 #
 # $Id$
 #
-BEGIN {
-	require 5.004_04;
-	require vars;
-	'vars'->import(qw($VERSION $SVNVERSION));
-	$VERSION    = '1.07';
-	$VERSION    = eval $VERSION;
-	$SVNVERSION = (qw$LastChangedRevision$)[1];
-}
+require 5.006;
+our $VERSION;
+$VERSION = '1.07';
+$VERSION = eval $VERSION;
+our $SVNVERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -35,11 +32,11 @@ details.
 
 
 use strict;
+use warnings;
 use integer;
 
 use base qw(Exporter);
-use vars qw(@EXPORT);
-@EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
+our @EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
 		yxrrset nxrrset yxdomain nxdomain rr_add rr_del
 		mx rr rrsort);
 

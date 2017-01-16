@@ -3,8 +3,7 @@ package Net::DNS::Nameserver;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -31,17 +30,25 @@ objects.  See L</EXAMPLE> for an example.
 
 =cut
 
+use constant USE_SOCKET_IP => defined eval 'use Socket 1.98; use IO::Socket::IP 0.32; 1;';
+
+use constant USE_SOCKET_INET => defined eval 'require IO::Socket::INET';
+
+use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
+
+use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
+
 
 use strict;
+use warnings;
 use integer;
 use Carp qw(cluck);
 use Net::DNS;
 
 use IO::Socket;
-use IO::Socket::INET;
 use IO::Select;
 
-use constant FORCE_INET4 => 0;
+use constant FORCE_IPv4 => 0;
 
 use constant DEFAULT_ADDR => 0;
 use constant DEFAULT_PORT => 53;
@@ -51,18 +58,6 @@ use constant STATE_GOT_LENGTH => 2;
 use constant STATE_SENDING    => 3;
 
 use constant PACKETSZ => 512;
-
-use vars qw($has_inet6);
-
-BEGIN {
-	$has_inet6 = eval {
-		require IO::Socket::INET6;
-		IO::Socket::INET6->VERSION("2.01");
-		1;
-	} || 0;
-
-	$has_inet6 = 0 if FORCE_INET4;
-}
 
 
 #------------------------------------------------------------------------------
@@ -88,7 +83,7 @@ sub new {
 			? @{$self{LocalAddr}}
 			: ( $self{LocalAddr} || DEFAULT_ADDR );
 	my $resolver = new Net::DNS::Resolver( nameservers => [@LocalAddr] );
-	$resolver->force_v4(1) unless $has_inet6;
+	$resolver->force_v4(1) if FORCE_IPv4;
 	my @localaddresses = $resolver->nameservers;
 
 	my $port = $self{LocalPort} || DEFAULT_PORT;
@@ -168,11 +163,14 @@ sub new {
 #------------------------------------------------------------------------------
 
 sub inet_new {
-	if ($has_inet6) {
-		return new IO::Socket::INET6(@_);
-	} else {
-		return new IO::Socket::INET(@_);
-	}
+	return new IO::Socket::INET(@_) unless IPv6;
+
+	return new IO::Socket::IP(@_) if USE_SOCKET_IP;
+
+	my %param = @_;
+
+	return new IO::Socket::INET6(@_) if $param{LocalAddr} =~ /:/;
+	return new IO::Socket::INET(@_);
 }
 
 #------------------------------------------------------------------------------

@@ -3,11 +3,11 @@ package Net::DNS::RR::DNSKEY;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME
@@ -42,6 +42,8 @@ use constant BASE64 => defined eval 'require MIME::Base64';
 		'ECC-GOST'	     => 12,			# [RFC5933]
 		'ECDSAP256SHA256'    => 13,			# [RFC6605]
 		'ECDSAP384SHA384'    => 14,			# [RFC6605]
+		'Ed25519'	     => 15,			# []
+		'Ed448'		     => 16,			# []
 
 		'INDIRECT'   => 252,				# [RFC4034]
 		'PRIVATEDNS' => 253,				# [RFC4034]
@@ -53,19 +55,22 @@ use constant BASE64 => defined eval 'require MIME::Base64';
 
 	my $map = sub {
 		my $arg = shift;
-		return $arg if $arg =~ /^\d/;
-		$arg =~ s/[^A-Za-z0-9]//g;			# strip non-alphanumerics
-		uc($arg);
+		unless ( $arg =~ /^\d/ ) {
+			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
+			return uc $arg;
+		}
+		my @map = ( $arg, "$arg" => $arg );		# also accept number
 	};
 
-	my @pairedval = sort ( 1 .. 254, 1 .. 254 );		# also accept number
-	my %algbyname = map &$map($_), @algbyname, @pairedval;
+	my %algbyname = map &$map($_), @algbyname;
 
 	sub _algbyname {
-		my $name = shift;
-		my $key	 = uc $name;				# synthetic key
+		my $arg = shift;
+		my $key = uc $arg;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
-		$algbyname{$key} || croak "unknown algorithm $name";
+		my $val = $algbyname{$key};
+		return $val if defined $val;
+		return $key =~ /^\d/ ? $arg : croak "unknown algorithm $arg";
 	}
 
 	sub _algbyval {
@@ -87,27 +92,28 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{keybin};
-	return &Net::DNS::RR::_format_rdata($self) unless BASE64;
-	pack 'n C2 a*', $self->flags, $self->protocol, $self->algorithm, $self->{keybin};
+	return '' unless $self->{algorithm};
+	pack 'n C2 a*', @{$self}{qw(flags protocol algorithm keybin)};
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{keybin};
+	return '' unless $self->{algorithm};
 	$self->_annotation( 'Key ID =', $self->keytag );
+	return $self->SUPER::_format_rdata() unless BASE64;
 	my @base64 = split /\s+/, MIME::Base64::encode( $self->{keybin} );
-	my @params = map $self->$_, qw(flags protocol algorithm);
-	my @rdata = ( @params, @base64 );
+	my @rdata = ( @{$self}{qw(flags protocol algorithm)}, @base64 );
 }
 
 
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	foreach (qw(flags protocol algorithm)) { $self->$_(shift) }
+	$self->flags(shift);
+	$self->protocol(shift);
+	return unless $self->algorithm(shift);
 	$self->key(@_);
 }
 
@@ -179,8 +185,8 @@ sub algorithm {
 	}
 
 	return $self->{algorithm} unless defined $arg;
-	return _algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
-	return $self->{algorithm} = _algbyname($arg);
+	return _algbyval( $self->{algorithm} ) if uc($arg) eq 'MNEMONIC';
+	$self->{algorithm} = _algbyname($arg) || die _algbyname('')    # disallow algorithm(0)
 }
 
 

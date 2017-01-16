@@ -3,11 +3,11 @@ package Net::DNS::RR::DS;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME
@@ -53,6 +53,8 @@ my %digest = (
 		'ECC-GOST'	     => 12,			# [RFC5933]
 		'ECDSAP256SHA256'    => 13,			# [RFC6605]
 		'ECDSAP384SHA384'    => 14,			# [RFC6605]
+		'Ed25519'	     => 15,			# []
+		'Ed448'		     => 16,			# []
 
 		'INDIRECT'   => 252,				# [RFC4034]
 		'PRIVATEDNS' => 253,				# [RFC4034]
@@ -64,19 +66,22 @@ my %digest = (
 
 	my $map = sub {
 		my $arg = shift;
-		return $arg if $arg =~ /^\d/;
-		$arg =~ s/[^A-Za-z0-9]//g;			# strip non-alphanumerics
-		uc($arg);
+		unless ( $arg =~ /^\d/ ) {
+			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
+			return uc $arg;
+		}
+		my @map = ( $arg, "$arg" => $arg );		# also accept number
 	};
 
-	my @pairedval = sort ( 1 .. 254, 1 .. 254 );		# also accept number
-	my %algbyname = map &$map($_), @algbyname, @pairedval;
+	my %algbyname = map &$map($_), @algbyname;
 
 	sub _algbyname {
-		my $name = shift;
-		my $key	 = uc $name;				# synthetic key
+		my $arg = shift;
+		my $key = uc $arg;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
-		$algbyname{$key} || croak "unknown algorithm $name";
+		my $val = $algbyname{$key};
+		return $val if defined $val;
+		return $key =~ /^\d/ ? $arg : croak "unknown algorithm $arg";
 	}
 
 	sub _algbyval {
@@ -90,19 +95,23 @@ my %digest = (
 #
 {
 	my @digestbyname = (
-		'SHA-1'	  => 1,					# RFC3658
-		'SHA-256' => 2,					# RFC4509
-		'GOST'	  => 3,					# RFC5933
-		'SHA-384' => 4,					# RFC6605
+		'NULL'		  => 0,				# CDNSKEY & CDS only
+		'SHA-1'		  => 1,				# RFC3658
+		'SHA-256'	  => 2,				# RFC4509
+		'GOST-R-34.11-94' => 3,				# RFC5933
+		'SHA-384'	  => 4,				# RFC6605
 		);
 
-	my @digestbyalias = ( 'SHA' => 1 );
+	my @digestbyalias = (
+		'SHA'  => 1,
+		'GOST' => 3,
+		);
 
 	my %digestbyval = reverse @digestbyname;
 
 	my $map = sub {
 		my $arg = shift;
-		unless ( $digestbyval{$arg} ) {
+		unless ( $arg =~ /^\d/ ) {
 			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
 			return uc $arg;
 		}
@@ -116,7 +125,8 @@ my %digest = (
 		my $name = shift;
 		my $key	 = uc $name;				# synthetic key
 		$key =~ s /[^A-Z0-9]//g;			# strip non-alphanumerics
-		$digestbyname{$key} || croak "unknown digest type $name";
+		my $val = $digestbyname{$key};
+		defined $val ? $val : croak "unknown digest type $name";
 	}
 
 	sub _digestbyval {
@@ -138,7 +148,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{digestbin};
+	return '' unless $self->{algorithm};
 	pack 'n C2 a*', @{$self}{qw(keytag algorithm digtype digestbin)};
 }
 
@@ -146,7 +156,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{digestbin};
+	return '' unless $self->{algorithm};
 	$self->_annotation( $self->babble ) if BABBLE;
 	my @digest = split /(\S{64})/, $self->digest;
 	my @rdata = ( @{$self}{qw(keytag algorithm digtype)}, @digest );
@@ -156,7 +166,9 @@ sub _format_rdata {			## format rdata portion of RR string.
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	foreach (qw(keytag algorithm digtype)) { $self->$_(shift) }
+	$self->keytag(shift);
+	return unless $self->algorithm(shift);
+	$self->digtype(shift);
 	$self->digest(@_);
 }
 
@@ -178,8 +190,8 @@ sub algorithm {
 	}
 
 	return $self->{algorithm} unless defined $arg;
-	return _algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
-	return $self->{algorithm} = _algbyname($arg);
+	return _algbyval( $self->{algorithm} ) if uc($arg) eq 'MNEMONIC';
+	$self->{algorithm} = _algbyname($arg) || die _algbyname('')    # disallow algorithm(0)
 }
 
 
@@ -192,15 +204,16 @@ sub digtype {
 	}
 
 	return $self->{digtype} unless defined $arg;
-	return _digestbyval( $self->{digtype} ) if $arg =~ /MNEMONIC/i;
-	return $self->{digtype} = _digestbyname($arg);
+	return _digestbyval( $self->{digtype} ) if uc($arg) eq 'MNEMONIC';
+	$self->{digtype} = _digestbyname($arg) || die _digestbyname('')	   # disallow digtype(0)
 }
 
 
 sub digest {
 	my $self = shift;
+	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
 
-	$self->digestbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	$self->digestbin( pack "H*", join "", @args ) if scalar @args;
 	unpack "H*", $self->digestbin() if defined wantarray;
 }
 
@@ -227,9 +240,9 @@ sub create {
 
 	my $kname = $keyrr->name;
 	my $flags = $keyrr->flags;
-	croak "Unable to create $kname $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
-	croak "Unable to create $kname $type record for non-authentication key" if $flags & 0x8000;
-	croak "Unable to create $kname $type record for non-ZONE key" unless ( $flags & 0x300 ) == 0x100;
+	croak "Unable to create $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
+	croak "Unable to create $type record for non-authentication key" if $flags & 0x8000;
+	croak "Unable to create $type record for non-ZONE key" unless ( $flags & 0x300 ) == 0x100;
 
 	my $self = new Net::DNS::RR(
 		name	  => $kname,				# per definition, same as keyrr

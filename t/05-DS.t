@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 32;
+use Test::More tests => 36;
 
 
 use Net::DNS;
@@ -14,7 +14,7 @@ my @attr = qw( keytag algorithm digtype digest );
 my @data = ( 60485, 5, 1, '2bb183af5f22588179a53b0a98631fad1a292118' );
 my @also = qw( digestbin babble );
 
-my $wire = qw( EC4505012BB183AF5F22588179A53B0A98631FAD1A292118 );
+my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
@@ -68,16 +68,24 @@ my $wire = qw( EC4505012BB183AF5F22588179A53B0A98631FAD1A292118 );
 	my $rr	  = new Net::DNS::RR(". $type @data");
 	my $class = ref($rr);
 
-	$rr->algorithm('RSASHA512');
-	is( $rr->algorithm(),		    10,		 'algorithm mnemonic accepted' );
-	is( $rr->algorithm('MNEMONIC'),	    'RSASHA512', "rr->algorithm('MNEMONIC')" );
-	is( $class->algorithm('RSASHA512'), 10,		 "class method algorithm('RSASHA512')" );
-	is( $class->algorithm(10),	    'RSASHA512', "class method algorithm(10)" );
-	is( $class->algorithm(255),	    255,	 "class method algorithm(255)" );
+	$rr->algorithm(255);
+	is( $rr->algorithm(), 255, 'algorithm number accepted' );
+	$rr->algorithm('RSASHA1');
+	is( $rr->algorithm(),		5,	   'algorithm mnemonic accepted' );
+	is( $rr->algorithm('MNEMONIC'), 'RSASHA1', 'rr->algorithm("MNEMONIC") returns mnemonic' );
+	is( $rr->algorithm(),		5,	   'rr->algorithm("MNEMONIC") preserves value' );
 
 	eval { $rr->algorithm('X'); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+	my $exception1 = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception1 ||= '', "unknown mnemonic\t[$exception1]" );
+
+	eval { $rr->algorithm(0); };
+	my $exception2 = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception2 ||= '', "disallowed algorithm 0\t[$exception2]" );
+
+	is( $class->algorithm('RSASHA256'), 8,		 'class method algorithm("RSASHA256")' );
+	is( $class->algorithm(8),	    'RSASHA256', 'class method algorithm(8)' );
+	is( $class->algorithm(255),	    255,	 'class method algorithm(255)' );
 }
 
 
@@ -86,15 +94,17 @@ my $wire = qw( EC4505012BB183AF5F22588179A53B0A98631FAD1A292118 );
 	my $class = ref($rr);
 
 	$rr->digtype('SHA256');
-	is( $rr->digtype(),	       2,	  'digest type mnemonic accepted' );
-	is( $rr->digtype('MNEMONIC'),  'SHA-256', "rr->digtype('MNEMONIC')" );
-	is( $class->digtype('SHA256'), 2,	  "class method digtype('SHA256')" );
-	is( $class->digtype(2),	       'SHA-256', "class method digtype(2)" );
-	is( $class->digtype(255),      255,	  "class method digtype(255)" );
+	is( $rr->digtype(),	      2,	 'digest type mnemonic accepted' );
+	is( $rr->digtype('MNEMONIC'), 'SHA-256', 'rr->digtype("MNEMONIC") returns mnemonic' );
+	is( $rr->digtype(),	      2,	 'rr->digtype("MNEMONIC") preserves value' );
 
-	eval { $rr->digtype('X'); };
+	eval { $rr->digtype(0); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+	ok( $exception ||= '', "disallowed digtype 0\t[$exception]" );
+
+	is( $class->digtype('SHA256'), 2,	  'class method digtype("SHA256")' );
+	is( $class->digtype(2),	       'SHA-256', 'class method digtype(2)' );
+	is( $class->digtype(255),      255,	  'class method digtype(255)' );
 }
 
 

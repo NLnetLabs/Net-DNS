@@ -4,25 +4,17 @@
 
 
 BEGIN {
-	die <<RIP if $] < 5.004_04;
-
-This version of Net::DNS will not function correctly with perl $]
-
-RIP
-
-	warn <<AMEN if $] < 5.006;
+	die <<RIP if $] < 5.006;
 
 This version of Net::DNS has not been tested against perl $]
-because Test::More requires version 5.6 or later.
+and now requires version 5.6 or later.
 
-The author is confident that this package will function 
-properly with older perls such as yours, but bugs may lurk. 
-
-AMEN
+RIP
 }
 
 
 use strict;
+use warnings;
 use ExtUtils::MakeMaker;
 use Getopt::Long;
 use IO::Socket;
@@ -37,7 +29,7 @@ my %metadata = (
 	ABSTRACT_FROM	 => 'lib/Net/DNS.pm',
 	AUTHOR		 => 'Olaf Kolkman et al',
 	LICENSE		 => 'mit',
-	MIN_PERL_VERSION => 5.004_04,
+	MIN_PERL_VERSION => 5.006,
 	);
 
 

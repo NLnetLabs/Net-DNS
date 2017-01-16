@@ -3,11 +3,11 @@ package Net::DNS::RR::CDS;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR::DS);
 
 =head1 NAME
@@ -17,12 +17,42 @@ Net::DNS::RR::CDS - DNS CDS resource record
 =cut
 
 
-sub digtype {				## CDS differs from DS by allowing digtype(0)
+use integer;
+
+
+sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
-	my ($arg) = @_;
+
+	return $self->SUPER::_encode_rdata() if $self->{algorithm};
+	return defined $self->{algorithm} ? pack 'x4' : '';
+}
+
+
+sub _format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return $self->SUPER::_format_rdata() if $self->{algorithm};
+	return defined $self->{algorithm} ? '0 0 0 0' : '';
+}
+
+
+sub algorithm {
+	my ( $self, $arg ) = @_;
+
+	return $self->{algorithm} unless defined $arg;
+	return Net::DNS::RR::DS::_algbyval( $self->{algorithm} ) if uc($arg) eq 'MNEMONIC';
+	my $val = Net::DNS::RR::DS::_algbyname($arg);
+	@{$self}{qw(keytag digtype digestbin)} = ( 0, 0, '' ) unless $val;
+	return $self->{algorithm} = $val;
+}
+
+
+sub digtype {
+	my ( $self, $arg ) = @_;
 
 	return $self->{digtype} unless defined $arg;
-	return $arg ? $self->SUPER::digtype(@_) : ( $self->{digtype} = 0 );
+	return Net::DNS::RR::DS::_digestbyval( $self->{digtype} ) if uc($arg) eq 'MNEMONIC';
+	return $self->{digtype} = Net::DNS::RR::DS::_digestbyname($arg);
 }
 
 
@@ -57,7 +87,7 @@ other unpredictable behaviour.
 
 =head1 COPYRIGHT
 
-Copyright (c)2014,2016 Dick Franks
+Copyright (c)2014,2017 Dick Franks
 
 All rights reserved.
 

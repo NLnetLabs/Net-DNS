@@ -3,11 +3,11 @@ package Net::DNS::RR::CDNSKEY;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR::DNSKEY);
 
 =head1 NAME
@@ -15,6 +15,36 @@ use base qw(Net::DNS::RR::DNSKEY);
 Net::DNS::RR::CDNSKEY - DNS CDNSKEY resource record
 
 =cut
+
+
+use integer;
+
+
+sub _encode_rdata {			## encode rdata as wire-format octet string
+	my $self = shift;
+
+	return $self->SUPER::_encode_rdata() if $self->{algorithm};
+	return defined $self->{algorithm} ? pack( 'xxH*x', '03' ) : '';
+}
+
+
+sub _format_rdata {			## format rdata portion of RR string.
+	my $self = shift;
+
+	return $self->SUPER::_format_rdata() if $self->{algorithm};
+	return defined $self->{algorithm} ? '0 3 0 0' : '';
+}
+
+
+sub algorithm {
+	my ( $self, $arg ) = @_;
+
+	return $self->{algorithm} unless defined $arg;
+	return Net::DNS::RR::DNSKEY::_algbyval( $self->{algorithm} ) if uc($arg) eq 'MNEMONIC';
+	my $val = Net::DNS::RR::DNSKEY::_algbyname($arg);
+	@{$self}{qw(flags protocol keybin)} = ( 0, 3, '' ) unless $val;
+	return $self->{algorithm} = $val;
+}
 
 
 1;
@@ -48,7 +78,7 @@ other unpredictable behaviour.
 
 =head1 COPYRIGHT
 
-Copyright (c)2014 Dick Franks
+Copyright (c)2014,2017 Dick Franks
 
 All rights reserved.
 

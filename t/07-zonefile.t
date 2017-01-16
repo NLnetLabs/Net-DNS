@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use FileHandle;
+use IO::File;
 
 use Test::More tests => 91;
 
@@ -39,7 +39,7 @@ sub source {				## zone file builder
 	my $tag	 = ++$seq;
 	my $file = "zone$tag.txt";
 
-	my $handle = new FileHandle( $file, '>' );		# create test file
+	my $handle = new IO::File( $file, '>' );		# create test file
 	die "Failed to create $file" unless $handle;
 	eval { binmode($handle) };				# suppress encoding layer
 
@@ -472,7 +472,7 @@ SKIP: {					## Non-ASCII zone content
 
 	my $greek = pack 'C*', 103, 114, 9, 84, 88, 84, 9, 229, 224, 241, 231, 234, 225, 10;
 	my $file1 = source($greek);
-	my $fh1	  = new FileHandle( $file1->name, '<:encoding(ISO8859-7)' );		       # Greek
+	my $fh1	  = new IO::File( $file1->name, '<:encoding(ISO8859-7)' );		       # Greek
 	my $zone1 = new Net::DNS::ZoneFile($fh1);
 	my $txtgr = $zone1->read;
 	my $text  = pack 'U*', 949, 944, 961, 951, 954, 945;
@@ -481,7 +481,7 @@ SKIP: {					## Non-ASCII zone content
 	eval { binmode(DATA) };					# suppress encoding layer
 	my $jptxt = <DATA>;
 	my $file2 = source($jptxt);
-	my $fh2	  = new FileHandle( $file2->name, '<:utf8' );	# UTF-8 character encoding
+	my $fh2	  = new IO::File( $file2->name, '<:utf8' );	# UTF-8 character encoding
 	my $zone2 = new Net::DNS::ZoneFile($fh2);
 	my $txtrr = $zone2->read;				# TXT RR with kanji RDATA
 	my @rdata = $txtrr->txtdata;

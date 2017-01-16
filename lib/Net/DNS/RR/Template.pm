@@ -24,11 +24,11 @@ package Net::DNS::RR::XXXX;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME

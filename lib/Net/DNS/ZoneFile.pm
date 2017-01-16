@@ -3,8 +3,7 @@ package Net::DNS::ZoneFile;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -44,9 +43,10 @@ automatically to all subsequent records.
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
-use FileHandle;
+use IO::File;
 
 use constant PERLIO => defined eval 'require PerlIO';
 
@@ -61,7 +61,7 @@ require Net::DNS::RR;
 
     $zonefile = new Net::DNS::ZoneFile( 'filename', ['example.com'] );
 
-    $handle   = new FileHandle( 'filename', '<:encoding(ISO8859-7)' );
+    $handle   = new IO::File( 'filename', '<:encoding(ISO8859-7)' );
     $zonefile = new Net::DNS::ZoneFile( $handle, ['example.com'] );
 
 The new() constructor returns a Net::DNS::ZoneFile object which
@@ -72,7 +72,7 @@ exhausted or all references to the ZoneFile object cease to exist.
 
 The optional second argument specifies $ORIGIN for the zone file.
 
-Character encoding is specified indirectly by creating a FileHandle
+Character encoding is specified indirectly by creating a file handle
 with the desired encoding layer, which is then passed as an argument
 to new(). The specified encoding is propagated to files introduced
 by $include directives.
@@ -87,12 +87,12 @@ sub new {
 	if ( ref($file) ) {
 		$self->{filename} = $self->{handle} = $file;
 		$self->{fileopen} = {};
-		return $self if ref($file) =~ /FileHandle|IO::File|GLOB|Text/;
+		return $self if ref($file) =~ /IO::File|FileHandle|GLOB|Text/;
 		croak 'argument not a file handle';
 	}
 
 	$self->{filename} = $file ||= '';
-	$self->{handle} = new FileHandle($file) or croak qq($! "$file");
+	$self->{handle} = new IO::File($file) or croak qq($! "$file");
 	$self->{fileopen}{$file}++;
 	return $self;
 }
@@ -240,7 +240,7 @@ error is encountered by the parser.
 
 =cut
 
-use vars qw($include_dir);		## dynamically scoped
+our $include_dir;			## dynamically scoped
 
 sub _filename {				## rebase unqualified filename
 	my $name = shift;
@@ -278,20 +278,11 @@ sub _read {
 
 	use overload ( '<>' => 'readline' );
 
-	use constant OVERLOAD_OK => scalar eval 'no integer; $] > 5.006';
-
 	sub new {
 		my $self = bless {}, shift;
 		my $data = shift;
 		$self->{data} = [split /\n/, ref($data) ? $$data : $data];
-
-		return OVERLOAD_OK ? $self : do {		# Plan B
-			require IO::File;
-			my $fh = IO::File->new_tmpfile() or die "$!";
-			while ( my $line = $self->readline ) { print $fh $line, "\n"; }
-			seek $fh, 0, 0;
-			return $fh;
-		};
+		return $self;
 	}
 
 	sub readline {
@@ -353,8 +344,6 @@ sub parse {
 
 	use overload ( '<>' => 'readline' );
 
-	use constant OVERLOAD_OK => scalar eval 'no integer; $] > 5.006';
-
 	sub new {
 		my $self = bless {}, shift;
 		my ( $range, $template, $line ) = @_;
@@ -371,14 +360,7 @@ sub parse {
 		$self->{count} = int( ( $last - $first ) / $step ) + 1;
 
 		@{$self}{qw(instant step template line)} = ( $first, $step, $template, $line );
-
-		return OVERLOAD_OK ? $self : do {		# Plan B
-			require IO::File;
-			my $fh = IO::File->new_tmpfile() or die "$!";
-			while ( my $line = $self->readline ) { print $fh $line, "\n"; }
-			seek $fh, 0, 0;
-			return $fh;
-		};
+		return $self;
 	}
 
 	sub readline {
@@ -542,11 +524,11 @@ sub _include {				## open $INCLUDE file
 	croak qq(recursive \$INCLUDE $file) if $opened->{$file}++;
 
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
-	my $handle = new FileHandle( $file, @discipline ) or croak qq($! "$file");
+	my $handle = new IO::File( $file, @discipline ) or croak qq($! "$file");
 
 	delete $self->{latest};					# forget previous owner
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
-	$self->{context} = origin Net::DNS::Domain($root) if $root;
+	$self->{context}  = origin Net::DNS::Domain($root) if $root;
 	$self->{filename} = $file;
 	$self->{fileopen} = $opened;
 	return $self->{handle} = $handle;

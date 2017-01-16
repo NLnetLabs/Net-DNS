@@ -15,16 +15,17 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 29;
+plan tests => 32;
 
 
 my $name = 'DNSKEY.example';
 my $type = 'DNSKEY';
 my $code = 48;
-my @attr = qw( flags protocol algorithm key );
+my @attr = qw( flags protocol algorithm publickey );
 
 my @data = (
-	256, 3, 5, join '', qw( AQPSKmynfzW4kyBv015MUG2DeIQ3
+	256, 3, 5, join '', qw(
+			AQPSKmynfzW4kyBv015MUG2DeIQ3
 			Cbl+BBZH4b/0PY1kxkmvHjcZc8no
 			kfzj31GajIQKY+5CptLr3buXA10h
 			WqTkF7H6RfoRqXQeogmMHfpftf6z
@@ -81,23 +82,6 @@ my $wire = join '', qw( 010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E
 
 
 {
-	my $rr	  = new Net::DNS::RR(". $type @data");
-	my $class = ref($rr);
-
-	$rr->algorithm('RSASHA512');
-	is( $rr->algorithm(),		    10,		 'algorithm mnemonic accepted' );
-	is( $rr->algorithm('MNEMONIC'),	    'RSASHA512', "rr->algorithm('MNEMONIC')" );
-	is( $class->algorithm('RSASHA512'), 10,		 "class method algorithm('RSASHA512')" );
-	is( $class->algorithm(10),	    'RSASHA512', "class method algorithm(10)" );
-	is( $class->algorithm(255),	    255,	 "class method algorithm(255)" );
-
-	eval { $rr->algorithm('X'); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
-}
-
-
-{
 	my $rr = new Net::DNS::RR(". $type");
 	foreach ( @attr, qw(keylength keytag rdstring) ) {
 		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
@@ -106,10 +90,35 @@ my $wire = join '', qw( 010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E
 
 
 {
+	my $rr	  = new Net::DNS::RR(". $type @data");
+	my $class = ref($rr);
+
+	$rr->algorithm(255);
+	is( $rr->algorithm(), 255, 'algorithm number accepted' );
+	$rr->algorithm('RSASHA1');
+	is( $rr->algorithm(),		5,	   'algorithm mnemonic accepted' );
+	is( $rr->algorithm('MNEMONIC'), 'RSASHA1', 'rr->algorithm("MNEMONIC") returns mnemonic' );
+	is( $rr->algorithm(),		5,	   'rr->algorithm("MNEMONIC") preserves value' );
+
+	eval { $rr->algorithm('X'); };
+	my $exception1 = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception1 ||= '', "unknown mnemonic\t[$exception1]" );
+
+	eval { $rr->algorithm(0); };
+	my $exception2 = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception2 ||= '', "disallowed algorithm 0\t[$exception2]" );
+
+	is( $class->algorithm('RSASHA256'), 8,		 'class method algorithm("RSASHA256")' );
+	is( $class->algorithm(8),	    'RSASHA256', 'class method algorithm(8)' );
+	is( $class->algorithm(255),	    255,	 'class method algorithm(255)' );
+}
+
+
+{
 	my $rr = new Net::DNS::RR("$name $type @data");
 	$rr->print;
 }
 
-exit;
 
+exit;
 

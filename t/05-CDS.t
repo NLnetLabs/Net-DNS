@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 14;
+use Test::More tests => 29;
 
 
 use Net::DNS;
@@ -11,10 +11,10 @@ my $name = 'CDS.example';
 my $type = 'CDS';
 my $code = 59;
 my @attr = qw( keytag algorithm digtype digest );
-my @data = ( 42495, 5, 1, '0ffbeba0831b10b8b83440dab81a2148576da9f6' );
+my @data = ( 60485, 5, 1, '2bb183af5f22588179a53b0a98631fad1a292118' );
 my @also = qw( digestbin babble );
 
-my $wire = join '', qw( A5FF 05 01 0FFBEBA0831B10B8B83440DAB81A2148576DA9F6 );
+my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
@@ -53,16 +53,44 @@ my $wire = join '', qw( A5FF 05 01 0FFBEBA0831B10B8B83440DAB81A2148576DA9F6 );
 	my $hex3    = uc unpack 'H*', substr( $encoded, length $empty->encode );
 	is( $hex1, $hex2, 'encode/decode transparent' );
 	is( $hex3, $wire, 'encoded RDATA matches example' );
+}
 
 
-	$rr->algorithm('RSASHA512');
-	is( $rr->algorithm(), 10, 'algorithm mnemonic accepted' );
+{
+	my $rr = new Net::DNS::RR(". $type");
+	foreach ( @attr, 'rdstring' ) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
+}
 
-	$rr->digtype('SHA256');
-	is( $rr->digtype(), 2, 'digest type mnemonic accepted' );
 
-	$rr->digtype(0);
-	is( $rr->digtype(), 0, 'digest type 0 accepted' );
+{
+	my $rr = new Net::DNS::RR(". $type");
+
+	$rr->algorithm(255);
+	is( $rr->algorithm(), 255, 'algorithm number accepted' );
+	$rr->algorithm('RSASHA1');
+	is( $rr->algorithm(),		5,	   'algorithm mnemonic accepted' );
+	is( $rr->algorithm('MNEMONIC'), 'RSASHA1', 'rr->algorithm("MNEMONIC") returns mnemonic' );
+	is( $rr->algorithm(),		5,	   'rr->algorithm("MNEMONIC") preserves value' );
+
+	$rr->digtype('SHA-256');
+	is( $rr->digtype(),	      2,	 'digest type mnemonic accepted' );
+	is( $rr->digtype('MNEMONIC'), 'SHA-256', 'rr->digtype("MNEMONIC") returns mnemonic' );
+	is( $rr->digtype(),	      2,	 'rr->digtype("MNEMONIC") preserves value' );
+}
+
+
+{
+	my $rr = new Net::DNS::RR("$name. $type 0 0 0 0");
+	is( $rr->rdstring(),  '0 0 0 0', "DS delete: $name. $type  0 0 0 0" );
+	is( $rr->keytag(),    0,	 'DS delete: keytag 0' );
+	is( $rr->algorithm(), 0,	 'DS delete: algorithm 0' );
+	is( $rr->digtype(),   0,	 'DS delete: digtype 0' );
+	is( $rr->digest(),    '',	 'DS delete: digest empty' );
+
+	my $rdata = $rr->rdata();
+	is( unpack( 'H*', $rdata ), '00000000', 'DS delete: rdata wire-format' );
 }
 
 
@@ -70,5 +98,7 @@ my $wire = join '', qw( A5FF 05 01 0FFBEBA0831B10B8B83440DAB81A2148576DA9F6 );
 	my $rr = new Net::DNS::RR("$name $type @data");
 	$rr->print;
 }
+
+
 exit;
 
