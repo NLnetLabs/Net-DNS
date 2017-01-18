@@ -3,8 +3,7 @@ package Net::DNS::Resolver;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 =head1 NAME
 
@@ -14,6 +13,7 @@ Net::DNS::Resolver - DNS resolver class
 
 
 use strict;
+use warnings;
 
 use constant CONFIG => defined eval "require Net::DNS::Resolver::$^O";
 

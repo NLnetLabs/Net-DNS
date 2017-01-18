@@ -114,10 +114,9 @@ is( $header->adcount, $header->arcount, 'adcount value matches arcount' );
 
 
 foreach my $method (qw(qdcount ancount nscount arcount)) {
+	local $Net::DNS::Header::warned;
 	eval {
 		local $SIG{__WARN__} = sub { die @_ };
-		my $was = $Net::DNS::Header::warned;
-		$Net::DNS::Header::warned = 0;
 		$header->$method(1);
 	};
 	my $exception = $1 if $@ =~ /^(.+)\n/;

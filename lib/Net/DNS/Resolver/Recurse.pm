@@ -3,8 +3,7 @@ package Net::DNS::Resolver::Recurse;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -31,6 +30,7 @@ This module is a subclass of Net::DNS::Resolver.
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::Resolver);
 
 

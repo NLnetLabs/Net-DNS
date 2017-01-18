@@ -3,8 +3,7 @@ package Net::DNS::DomainName;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -40,6 +39,7 @@ introduced by RFC3597.
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::Domain);
 
 use integer;

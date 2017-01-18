@@ -3,8 +3,7 @@ package Net::DNS::Resolver::os2;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -15,6 +14,7 @@ Net::DNS::Resolver::os2 - OS2 resolver class
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
 

@@ -3,8 +3,7 @@ package Net::DNS::Update;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -31,6 +30,7 @@ Programmers should refer to RFC2136 for dynamic update semantics.
 
 
 use strict;
+use warnings;
 use base 'Net::DNS::Packet';
 
 use Carp;

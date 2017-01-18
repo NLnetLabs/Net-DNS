@@ -3,8 +3,7 @@ package Net::DNS::Resolver::MSWin32;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -15,21 +14,18 @@ Net::DNS::Resolver::MSWin32 - MS Windows resolver class
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
 use Carp;
 
-BEGIN {
-	use vars qw($Registry);
+use constant WINHLP => defined eval 'require Win32::IPHelper';
+use constant WINREG => defined eval 'require Win32::TieRegistry';
 
-	use constant WINHLP => defined eval 'require Win32::IPHelper';
 
-	Win32::IPHelper->import if WINHLP;
+our $Registry;
 
-	use constant WINREG => defined eval 'require Win32::TieRegistry';
-
-	Win32::TieRegistry->import(qw(KEY_READ REG_DWORD)) if WINREG;
-}
+Win32::TieRegistry->import(qw(KEY_READ REG_DWORD)) if WINREG;
 
 
 sub _untaint {

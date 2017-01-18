@@ -3,8 +3,7 @@ package Net::DNS::Header;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -27,6 +26,7 @@ C<Net::DNS::Header> represents the header portion of a DNS packet.
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
 
@@ -299,7 +299,7 @@ to the number of RRs in the zone section.
 
 =cut
 
-use vars qw($warned);
+our $warned;
 
 sub qdcount {
 	my $self = shift;

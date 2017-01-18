@@ -3,8 +3,7 @@ package Net::DNS::Parameters;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 ################################################
@@ -16,24 +15,23 @@ $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
 
 
-use vars qw($DNSEXTLANG);		## draft-levine-dnsextlang
-$DNSEXTLANG = 'ARPA.';
+our $DNSEXTLANG = 'ARPA.';		## draft-levine-dnsextlang
 
 use constant DNSEXTLANG => defined eval <<'END';
 	die 'preempt failure' if $^O =~ /cygwin|MSWin32/i;
-	require FileHandle;
+	require IO::File;
 	local $SIG{__WARN__} = sub { };
-	new FileHandle('RRTYPEgen |');
+	new IO::File('RRTYPEgen |');
 END
 
 
 use base qw(Exporter);
-use vars qw(@EXPORT);
-@EXPORT = qw(
+our @EXPORT = qw(
 		classbyname classbyval %classbyname
 		typebyname typebyval %typebyname
 		opcodebyname opcodebyval
@@ -43,21 +41,19 @@ use vars qw(@EXPORT);
 
 
 # Registry: DNS CLASSes
-use vars qw( %classbyname %classbyval );
-%classbyname = (
+our %classbyname = (
 	IN   => 1,						# RFC1035
 	CH   => 3,						# Chaosnet
 	HS   => 4,						# Hesiod
 	NONE => 254,						# RFC2136
 	ANY  => 255,						# RFC1035
 	);
-%classbyval = reverse %classbyname;
+our %classbyval = reverse %classbyname;
 %classbyname = ( '*' => 255, %classbyname, map lc($_), %classbyname );
 
 
 # Registry: Resource Record (RR) TYPEs
-use vars qw( %typebyname %typebyval );
-%typebyname = (
+our %typebyname = (
 	A	   => 1,					# RFC1035
 	NS	   => 2,					# RFC1035
 	MD	   => 3,					# RFC1035
@@ -143,26 +139,24 @@ use vars qw( %typebyname %typebyval );
 	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
 	);
-%typebyval = reverse %typebyname;
+our %typebyval = reverse %typebyname;
 %typebyname = ( '*' => 255, %typebyname, map lc($_), %typebyname );
 
 
 # Registry: DNS OpCodes
-use vars qw( %opcodebyname %opcodebyval );
-%opcodebyname = (
+our %opcodebyname = (
 	QUERY  => 0,						# RFC1035
 	IQUERY => 1,						# RFC3425
 	STATUS => 2,						# RFC1035
 	NOTIFY => 4,						# RFC1996
 	UPDATE => 5,						# RFC2136
 	);
-%opcodebyval = reverse %opcodebyname;
+our %opcodebyval = reverse %opcodebyname;
 %opcodebyname = ( NS_NOTIFY_OP => 4, %opcodebyname, map lc($_), %opcodebyname );
 
 
 # Registry: DNS RCODEs
-use vars qw( %rcodebyname %rcodebyval );
-%rcodebyname = (
+our %rcodebyname = (
 	NOERROR	  => 0,						# RFC1035
 	FORMERR	  => 1,						# RFC1035
 	SERVFAIL  => 2,						# RFC1035
@@ -185,13 +179,12 @@ use vars qw( %rcodebyname %rcodebyval );
 	BADTRUNC  => 22,					# RFC4635
 	BADCOOKIE => 23,					# RFC7873
 	);
-%rcodebyval = reverse( BADSIG => 16, %rcodebyname );
+our %rcodebyval = reverse( BADSIG => 16, %rcodebyname );
 %rcodebyname = ( %rcodebyname, map lc($_), %rcodebyname );
 
 
 # Registry: DNS EDNS0 Option Codes (OPT)
-use vars qw( %ednsoptionbyname %ednsoptionbyval );
-%ednsoptionbyname = (
+our %ednsoptionbyname = (
 	LLQ		=> 1,					# http://files.dns-sd.org/draft-sekar-dns-llq.txt
 	UL		=> 2,					# http://files.dns-sd.org/draft-sekar-dns-ul.txt
 	NSID		=> 3,					# RFC5001
@@ -206,13 +199,12 @@ use vars qw( %ednsoptionbyname %ednsoptionbyval );
 	CHAIN		=> 13,					# RFC7901
 	DEVICEID	=> 26946,				# https://docs.umbrella.com/developer/networkdevices-api/identifying-dns-traffic2
 	);
-%ednsoptionbyval = reverse %ednsoptionbyname;
+our %ednsoptionbyval = reverse %ednsoptionbyname;
 %ednsoptionbyname = ( %ednsoptionbyname, map lc($_), %ednsoptionbyname );
 
 
 # Registry: DNS Header Flags
-use vars qw( %dnsflagbyname );
-%dnsflagbyname = (
+our %dnsflagbyname = (
 	AA => 0x0400,						# RFC1035
 	TC => 0x0200,						# RFC1035
 	RD => 0x0100,						# RFC1035
@@ -220,13 +212,14 @@ use vars qw( %dnsflagbyname );
 	AD => 0x0020,						# RFC4035
 	CD => 0x0010,						# RFC4035
 	);
+%dnsflagbyname = ( %dnsflagbyname, map lc($_), %dnsflagbyname );
 
 
 # Registry: EDNS Header Flags (16 bits)
-use vars qw( %ednsflagbyname );
-%ednsflagbyname = (
+our %ednsflagbyname = (
 	DO => 0x8000,						# RFC4035 RFC3225
 	);
+%ednsflagbyname = ( %ednsflagbyname, map lc($_), %ednsflagbyname );
 
 
 ########
@@ -351,7 +344,7 @@ sub _typespec {				## draft-levine-dnsextlang
 		return unless defined wantarray;
 		require 5.008009;				# support for reference in @INC
 		my @arg = map { s/\s.*$//; qq("$_") } @stanza;	# strip descriptive text
-		return new FileHandle("RRTYPEgen @arg |");
+		return new IO::File("RRTYPEgen @arg |");
 	}
 	return undef;
 END

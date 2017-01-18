@@ -3,8 +3,7 @@ package Net::DNS::Text;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -36,6 +35,7 @@ lifetime.
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
 

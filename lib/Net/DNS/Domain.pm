@@ -3,8 +3,7 @@ package Net::DNS::Domain;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -37,6 +36,7 @@ partially mitigated by use of caches.
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
 
@@ -89,7 +89,7 @@ for zone files described in RFC1035.
 
 =cut
 
-use vars qw($ORIGIN);
+our $ORIGIN;
 my ( $cache1, $cache2, $limit ) = ( {}, {}, 100 );
 
 sub new {

@@ -3,8 +3,7 @@ package Net::DNS::Packet;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -28,6 +27,7 @@ A Net::DNS::Packet object represents a DNS protocol packet.
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
 

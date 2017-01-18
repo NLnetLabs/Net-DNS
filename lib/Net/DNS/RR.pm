@@ -3,8 +3,7 @@ package Net::DNS::RR;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 =head1 NAME
@@ -33,6 +32,7 @@ See also the manual pages for each specific RR type.
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
 
@@ -339,15 +339,12 @@ sub string {
 	my $tab = length($name) < 72 ? "\t" : ' ';
 	return join $tab, @core, '; no data' unless scalar @rdata;
 
-	my @note = map "; $_", $self->_annotation;
 	my @line = _wrap( join( $tab, @core, '(' ), @rdata, ')' );
-	return join "\n\t", @line, @note if scalar(@line) > 1;	# multi-line RR
 
-	for (@line) {						# single line RR
-		s/\s+[(]\s*/\t/;				# strip redundant ( )
-		s/\s+[)]$//;
-		return join "\n\t", $_, @note;
-	}
+	my $last = pop(@line);					# last or only line
+	$last = join $tab, @core, "@rdata" unless scalar(@line);
+
+	return join "\n\t", @line, _wrap( $last, map "; $_", $self->_annotation );
 }
 
 
@@ -624,7 +621,7 @@ The above example is the sorting function implemented in MX.
 
 =cut
 
-use vars qw(%rrsortfunct);
+our %rrsortfunct;
 
 sub set_rrsort_func {
 	my $class     = shift;
@@ -670,10 +667,8 @@ sub get_rrsort_func {
 # The optional second argument indicates that default values are
 # to be copied into the newly created object.
 
-use vars qw(%_LOADED %_MINIMAL);
-
-$_MINIMAL{ANY} = bless ['type' => 255], __PACKAGE__;
-%_LOADED = %_MINIMAL;
+our %_MINIMAL = ( 'ANY' => bless ['type' => 255], __PACKAGE__ );
+our %_LOADED = %_MINIMAL;
 
 sub _subclass {
 	my $class   = shift;
@@ -748,7 +743,7 @@ sub _wrap {
 
 ################################################################################
 
-use vars qw($AUTOLOAD);
+our $AUTOLOAD;
 
 sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 

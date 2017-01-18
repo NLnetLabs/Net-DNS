@@ -3,8 +3,7 @@ package Net::DNS::Resolver::Base;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 #
@@ -47,6 +46,7 @@ use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
 
 
 use strict;
+use warnings;
 use integer;
 use Carp;
 use IO::Select;
@@ -1109,7 +1109,7 @@ sub _diag {				## debug output
 }
 
 
-use vars qw($AUTOLOAD);
+our $AUTOLOAD;
 
 sub DESTROY { }				## Avoid tickling AUTOLOAD (in cleanup)
 
