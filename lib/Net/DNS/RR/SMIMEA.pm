@@ -3,11 +3,11 @@ package Net::DNS::RR::SMIMEA;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME
@@ -18,6 +18,8 @@ Net::DNS::RR::SMIMEA - DNS SMIMEA resource record
 
 
 use integer;
+
+use Carp;
 
 use constant BABBLE => defined eval 'require Digest::BubbleBabble';
 
@@ -88,8 +90,9 @@ sub matchingtype {
 
 sub cert {
 	my $self = shift;
+	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
 
-	$self->certbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	$self->certbin( pack "H*", join "", @args ) if scalar @args;
 	unpack "H*", $self->certbin() if defined wantarray;
 }
 

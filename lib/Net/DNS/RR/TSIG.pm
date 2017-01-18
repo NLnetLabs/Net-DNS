@@ -3,11 +3,11 @@ package Net::DNS::RR::TSIG;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME
@@ -229,8 +229,9 @@ sub macbin {
 
 sub prior_mac {
 	my $self = shift;
+	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
 
-	$self->prior_macbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	$self->prior_macbin( pack "H*", join "", @args ) if scalar @args;
 	unpack "H*", $self->prior_macbin() if defined wantarray;
 }
 
@@ -245,8 +246,9 @@ sub prior_macbin {
 
 sub request_mac {
 	my $self = shift;
+	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
 
-	$self->request_macbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	$self->request_macbin( pack "H*", join "", @args ) if scalar @args;
 	unpack "H*", $self->request_macbin() if defined wantarray;
 }
 
@@ -282,7 +284,7 @@ sub other {
 }
 
 
-sub other_data {&other}						# uncoverable pod
+sub other_data { &other; }					# uncoverable pod
 
 
 sub sig_function {

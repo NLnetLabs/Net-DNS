@@ -3,11 +3,11 @@ package Net::DNS::RR::HIP;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME
@@ -82,8 +82,9 @@ sub pkalgorithm {
 
 sub hit {
 	my $self = shift;
+	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
 
-	$self->hitbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	$self->hitbin( pack "H*", join "", @args ) if scalar @args;
 	unpack "H*", $self->hitbin() if defined wantarray;
 }
 

@@ -3,11 +3,11 @@ package Net::DNS::RR::SSHFP;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME
@@ -18,6 +18,8 @@ Net::DNS::RR::SSHFP - DNS SSHFP resource record
 
 
 use integer;
+
+use Carp;
 
 use constant BABBLE => defined eval 'require Digest::BubbleBabble';
 
@@ -76,8 +78,9 @@ sub fptype {
 
 sub fp {
 	my $self = shift;
+	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
 
-	$self->fpbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	$self->fpbin( pack "H*", join "", @args ) if scalar @args;
 	unpack "H*", $self->fpbin() if defined wantarray;
 }
 

@@ -3,11 +3,11 @@ package Net::DNS::RR::NSEC3;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR::NSEC);
 
 =head1 NAME
@@ -19,11 +19,10 @@ Net::DNS::RR::NSEC3 - DNS NSEC3 resource record
 
 use integer;
 
-use Carp;
-
 use base qw(Exporter);
-use vars qw(@EXPORT_OK);
-@EXPORT_OK = qw(name2hash);
+our @EXPORT_OK = qw(name2hash);
+
+use Carp;
 
 require Net::DNS::DomainName;
 
@@ -163,8 +162,9 @@ sub iterations {
 
 sub salt {
 	my $self = shift;
+	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
 
-	$self->saltbin( pack "H*", map { die "!hex!" if m/[^0-9A-Fa-f]/; $_ } join "", @_ ) if scalar @_;
+	$self->saltbin( pack "H*", join "", @args ) if scalar @args;
 	unpack "H*", $self->saltbin() if defined wantarray;
 }
 

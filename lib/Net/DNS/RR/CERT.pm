@@ -3,11 +3,11 @@ package Net::DNS::RR::CERT;
 #
 # $Id$
 #
-use vars qw($VERSION);
-$VERSION = (qw$LastChangedRevision$)[1];
+our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use strict;
+use warnings;
 use base qw(Net::DNS::RR);
 
 =head1 NAME
@@ -56,6 +56,8 @@ my %certtype = (
 		'ECC-GOST'	     => 12,			# [RFC5933]
 		'ECDSAP256SHA256'    => 13,			# [RFC6605]
 		'ECDSAP384SHA384'    => 14,			# [RFC6605]
+		'Ed25519'	     => 15,			# []
+		'Ed448'		     => 16,			# []
 
 		'INDIRECT'   => 252,				# [RFC4034]
 		'PRIVATEDNS' => 253,				# [RFC4034]
@@ -67,19 +69,22 @@ my %certtype = (
 
 	my $map = sub {
 		my $arg = shift;
-		return $arg if $arg =~ /^\d/;
-		$arg =~ s/[^A-Za-z0-9]//g;			# strip non-alphanumerics
-		uc($arg);
+		unless ( $arg =~ /^\d/ ) {
+			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
+			return uc $arg;
+		}
+		my @map = ( $arg, "$arg" => $arg );		# also accept number
 	};
 
-	my @pairedval = sort ( 1 .. 254, 1 .. 254 );		# also accept number
-	my %algbyname = map &$map($_), @algbyname, @pairedval;
+	my %algbyname = map &$map($_), @algbyname;
 
 	sub _algbyname {
-		my $name = shift;
-		my $key	 = uc $name;				# synthetic key
+		my $arg = shift;
+		my $key = uc $arg;				# synthetic key
 		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
-		$algbyname{$key} || croak "unknown algorithm $name";
+		my $val = $algbyname{$key};
+		return $val if defined $val;
+		return $key =~ /^\d/ ? $arg : croak "unknown algorithm $arg";
 	}
 
 	sub _algbyval {
@@ -151,8 +156,8 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	return $self->{algorithm} unless defined $arg;
-	return _algbyval( $self->{algorithm} ) if $arg =~ /MNEMONIC/i;
-	return $self->{algorithm} = $arg ? _algbyname($arg) : 0;
+	return _algbyval( $self->{algorithm} ) if uc($arg) eq 'MNEMONIC';
+	$self->{algorithm} = _algbyname($arg);
 }
 
 

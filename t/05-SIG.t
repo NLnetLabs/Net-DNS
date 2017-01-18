@@ -16,7 +16,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 72;
+plan tests => 75;
 
 
 my $name = '.';
@@ -96,27 +96,31 @@ my $wire =
 
 
 {
-	my $rr	  = new Net::DNS::RR(". $type @data");
-	my $class = ref($rr);
-
-	$rr->algorithm('RSASHA1');
-	is( $rr->algorithm(),		  5,	     'algorithm mnemonic accepted' );
-	is( $rr->algorithm('MNEMONIC'),	  'RSASHA1', "rr->algorithm('MNEMONIC')" );
-	is( $class->algorithm('RSASHA1'), 5,	     "class method algorithm('RSASHA1')" );
-	is( $class->algorithm(5),	  'RSASHA1', "class method algorithm(5)" );
-	is( $class->algorithm(255),	  255,	     "class method algorithm(255)" );
-
-	eval { $rr->algorithm('X'); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+	my $rr = new Net::DNS::RR(". $type");
+	foreach ( @attr, 'rdstring' ) {
+		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
+	}
 }
 
 
 {
-	my $rr = new Net::DNS::RR(". $type");
-	foreach (@attr) {
-		ok( !$rr->$_(), "'$_' attribute of empty RR undefined" );
-	}
+	my $rr	  = new Net::DNS::RR(". $type @data");
+	my $class = ref($rr);
+
+	$rr->algorithm(255);
+	is( $rr->algorithm(), 255, 'algorithm number accepted' );
+	$rr->algorithm('RSASHA1');
+	is( $rr->algorithm(),		5,	   'algorithm mnemonic accepted' );
+	is( $rr->algorithm('MNEMONIC'), 'RSASHA1', 'rr->algorithm("MNEMONIC") returns mnemonic' );
+	is( $rr->algorithm(),		5,	   'rr->algorithm("MNEMONIC") preserves value' );
+
+	eval { $rr->algorithm('X'); };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+
+	is( $class->algorithm('RSASHA256'), 8,		 'class method algorithm("RSASHA256")' );
+	is( $class->algorithm(8),	    'RSASHA256', 'class method algorithm(8)' );
+	is( $class->algorithm(255),	    255,	 'class method algorithm(255)' );
 }
 
 
