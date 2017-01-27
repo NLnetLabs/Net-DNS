@@ -285,7 +285,7 @@ sub _dns_addr {				## Map IP address into reverse lookup namespace
 	return unless m#^[:\w]+:([.\w]*)(/\d+)?$#;
 	my $rhs = $1 || '0';
 	return _dns_addr($rhs) if m#^[:0]*:0*:[fF]{4}:[^:]+$#;	# IPv4
-	$rhs = sprintf '%x%0.2x:%x%0.2x', split( /\./, $rhs ), 0, 0, 0 if /\./;
+	$rhs = sprintf '%x%0.2x:%x%0.2x', map $_ || 0, split( /\./, $rhs, 4 ) if /\./;
 	$address =~ s/:[^:]*$/:0$rhs/;
 	my @parse = split /:/, ( reverse "0$address" ), 9;
 	my @xpand = map { /./ ? $_ : ('0') x ( 9 - @parse ) } @parse;	 # expand ::

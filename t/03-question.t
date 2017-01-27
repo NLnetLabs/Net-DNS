@@ -194,12 +194,12 @@ use Test::More tests => 119 + keys(%classbyname) + keys(%typebyname);
 		"8.0.0.0.7.0.0.0.6.0.0.0.5.0.0.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.ip6.arpa.\tIN\tPTR",
 		'interpret IPv6 address as PTR query in ip6.arpa namespace'
 		);
-	is(	new Net::DNS::Question('::ffff:1.2.3.4')->string,
-		"4.3.2.1.in-addr.arpa.\tIN\tPTR",
+	is(	new Net::DNS::Question('::ffff:192.0.2.1')->string,
+		"1.2.0.192.in-addr.arpa.\tIN\tPTR",
 		'interpret IPv6 form of IPv4 address as query in in-addr.arpa'
 		);
-	is(	new Net::DNS::Question('1:2:3:4:5:6:254.235.218.237')->string,
-		"d.e.a.d.b.e.e.f.6.0.0.0.5.0.0.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.ip6.arpa.\tIN\tPTR",
+	is(	new Net::DNS::Question('1:2:3:4:5:6:192.0.2.1')->string,
+		"1.0.2.0.0.0.0.c.6.0.0.0.5.0.0.0.4.0.0.0.3.0.0.0.2.0.0.0.1.0.0.0.ip6.arpa.\tIN\tPTR",
 		'interpret IPv6 + embedded IPv4 address as query in ip6.arpa'
 		);
 	is(	new Net::DNS::Question(':x:')->string,

@@ -76,6 +76,14 @@ my @debris = qw(
 
 delete $optional{'Net::DNS::SEC'};	## Note: MUST NOT be installed automatically
 
+
+use constant USE_SOCKET_IP => defined eval 'use Socket 1.98; use IO::Socket::IP 0.32; 1;';
+
+use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
+
+delete $optional{'IO::Socket::INET6'} if USE_SOCKET_IP;		# exclude redundant dependency
+
+
 # clean up existing makefile
 unlink('Makefile');
 
@@ -85,11 +93,6 @@ WriteMakefile(				## Makefile & distribution metadata
 	META_MERGE => {recommends => {%optional}},
 	clean	   => {FILES => "@debris"},
 	);
-
-
-for my $module ( keys %optional ) {	## check optional module availability
-	delete $optional{$module} unless eval "require $module";
-}
 
 
 # clean up the online testing flag file.
@@ -155,8 +158,7 @@ EOT
 # Check if we have internet connection	(code lifted from LWP)
 #
 if ($online_tests) {
-	my @option = grep $optional{$_}, qw(IO::Socket::IP);
-	my ($class) = ( @option, qw(IO::Socket::INET) );
+	my $class = USE_SOCKET_IP ? 'IO::Socket::IP' : 'IO::Socket::INET';
 
 	my $socket = $class->new(
 		PeerAddr => "www.google.com:80",
@@ -190,7 +192,7 @@ if ($online_tests) {
 	}
 
 	$IPv6_tests = 1 unless defined $IPv6_tests;
-	if ( $optional{'IO::Socket::IP'} || $optional{'IO::Socket::INET6'} ) {
+	if ( USE_SOCKET_IP || USE_SOCKET_INET6 ) {
 		if ($IPv6_tests) {
 			my $enable = 't/IPv6.enabled';
 			print "\nActivating IPv6 Tests...\n";

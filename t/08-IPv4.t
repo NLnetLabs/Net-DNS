@@ -209,7 +209,7 @@ NonFatalBegin();
 	my $test = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $test, '$resolver->bgsend(...)	persistent TCP' );
 	is( $test, $handle, 'same TCP socket object used' );
-	close($handle);
+	eval { close($handle) };
 	my $recover = $resolver->bgsend(qw(net-dns.org SOA IN));
 	ok( $recover, 'connection recovered after close' );
 }

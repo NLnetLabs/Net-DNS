@@ -854,40 +854,38 @@ sub _create_tcp_socket {
 		$self->_diag('socket disconnected (trying to connect)');
 	}
 
-	my $dstport = $self->{port};
-	my $srcport = $self->{srcport};
-	my $timeout = $self->{tcp_timeout};
+	my $ip6_addr = IPv6 && _ipv6($ip);
 
-	if (USE_SOCKET_IP) {
-		my $srcaddr = _ipv6($ip) ? $self->{srcaddr6} : $self->{srcaddr4};
-		$socket = IO::Socket::IP->new(
-			LocalAddr => $srcaddr,
-			LocalPort => $srcport,
-			PeerAddr  => $ip,
-			PeerPort  => $dstport,
-			Proto	  => 'tcp',
-			Timeout	  => $timeout
-			)
+	$socket = IO::Socket::IP->new(
+		LocalAddr => $ip6_addr ? $self->{srcaddr6} : $self->{srcaddr4},
+		LocalPort => $self->{srcport},
+		PeerAddr  => $ip,
+		PeerPort  => $self->{port},
+		Proto	  => 'tcp',
+		Timeout	  => $self->{tcp_timeout},
+		)
+			if USE_SOCKET_IP;
 
-	} elsif ( not _ipv6($ip) ) {
-		$socket = IO::Socket::INET->new(
-			LocalAddr => $self->{srcaddr4},
-			LocalPort => ( $srcport || undef ),
-			PeerAddr  => $ip,
-			PeerPort  => $dstport,
-			Proto	  => 'tcp',
-			Timeout	  => $timeout
-			)
-
-	} elsif (USE_SOCKET_INET6) {
+	unless (USE_SOCKET_IP) {
 		$socket = IO::Socket::INET6->new(
 			LocalAddr => $self->{srcaddr6},
-			LocalPort => ( $srcport || undef ),
+			LocalPort => ( $self->{srcport} || undef ),
 			PeerAddr  => $ip,
-			PeerPort  => $dstport,
+			PeerPort  => $self->{port},
 			Proto	  => 'tcp',
-			Timeout	  => $timeout
-			);
+			Timeout	  => $self->{tcp_timeout},
+			)
+				if USE_SOCKET_INET6 && $ip6_addr;
+
+		$socket = IO::Socket::INET->new(
+			LocalAddr => $self->{srcaddr4},
+			LocalPort => ( $self->{srcport} || undef ),
+			PeerAddr  => $ip,
+			PeerPort  => $self->{port},
+			Proto	  => 'tcp',
+			Timeout	  => $self->{tcp_timeout},
+			)
+				unless USE_SOCKET_INET6 && $ip6_addr;
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_tcp} ? $socket : undef;
@@ -905,32 +903,30 @@ sub _create_udp_socket {
 	my $socket;
 	return $socket if $socket = $self->{persistent}{$sock_key};
 
-	my $srcport = $self->{srcport};
+	$socket = IO::Socket::IP->new(
+		LocalAddr => $ip6_addr ? $self->{srcaddr6} : $self->{srcaddr4},
+		LocalPort => $self->{srcport},
+		Proto	  => 'udp',
+		Type	  => SOCK_DGRAM
+		)
+			if USE_SOCKET_IP;
 
-	if (USE_SOCKET_IP) {
-		my $srcaddr = $ip6_addr ? $self->{srcaddr6} : $self->{srcaddr4};
-		$socket = IO::Socket::IP->new(
-			LocalAddr => $srcaddr,
-			LocalPort => $srcport,
-			Proto	  => 'udp',
-			Type	  => SOCK_DGRAM
-			)
-
-	} elsif ( not $ip6_addr ) {
-		$socket = IO::Socket::INET->new(
-			LocalAddr => $self->{srcaddr4},
-			LocalPort => ( $srcport || undef ),
-			Proto	  => 'udp',
-			Type	  => SOCK_DGRAM
-			)
-
-	} elsif (USE_SOCKET_INET6) {
+	unless (USE_SOCKET_IP) {
 		$socket = IO::Socket::INET6->new(
 			LocalAddr => $self->{srcaddr6},
-			LocalPort => ( $srcport || undef ),
+			LocalPort => ( $self->{srcport} || undef ),
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM
-			);
+			)
+				if USE_SOCKET_INET6 && $ip6_addr;
+
+		$socket = IO::Socket::INET->new(
+			LocalAddr => $self->{srcaddr4},
+			LocalPort => ( $self->{srcport} || undef ),
+			Proto	  => 'udp',
+			Type	  => SOCK_DGRAM
+			)
+				unless USE_SOCKET_INET6 && $ip6_addr;
 	}
 
 	$self->{persistent}{$sock_key} = $self->{persistent_udp} ? $socket : undef;
@@ -939,31 +935,40 @@ sub _create_udp_socket {
 }
 
 
+my $hints4 = {
+	family	 => AF_INET,
+	flags	 => Socket::AI_NUMERICHOST,
+	protocol => Socket::IPPROTO_UDP,
+	socktype => SOCK_DGRAM
+	}
+		if USE_SOCKET_IP;
+
+my $hints6 = {
+	family	 => AF_INET6,
+	flags	 => Socket::AI_NUMERICHOST,
+	protocol => Socket::IPPROTO_UDP,
+	socktype => SOCK_DGRAM
+	}
+		if USE_SOCKET_IP;
+
+BEGIN {
+	import Socket6 qw(AI_NUMERICHOST) if USE_SOCKET_INET6;
+}
+
+my @inet6 = ( AF_INET6, SOCK_DGRAM, 0, AI_NUMERICHOST ) if USE_SOCKET_INET6;
+
 sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 	my ( $self, $ip, $port ) = @_;
 
-	no strict;
-	if (USE_SOCKET_IP) {
-		my $family = _ipv6($ip) ? AF_INET6 : AF_INET;
-		my ( $error, $result ) = Socket::getaddrinfo(
-			$ip, $port,
-			{	family	 => $family,
-				flags	 => Socket::AI_NUMERICHOST,
-				protocol => Socket::IPPROTO_UDP,
-				socktype => SOCK_DGRAM
-				} );
-		return $result->{addr};				# NB: error flagged by socket->send
+	unless (USE_SOCKET_IP) {
+		return ( Socket6::getaddrinfo( $ip, $port, @inet6 ) )[3]
+				if USE_SOCKET_INET6 && _ipv6($ip);
 
-	} elsif (USE_SOCKET_INET6) {
-		return sockaddr_in( $port, inet_aton($ip) ) unless _ipv6($ip);
-
-		local $^W = 0;					# circumvent perl -w warnings
-		my @res = Socket6::getaddrinfo( $ip, $port, AF_INET6, SOCK_DGRAM, 0, AI_NUMERICHOST );
-		return $res[3];					# NB: error flagged by socket->send
-
-	} else {
-		return sockaddr_in( $port, inet_aton($ip) ) unless _ipv6($ip);
+		return sockaddr_in( $port, inet_aton($ip) );	# NB: errors raised in socket->send
 	}
+
+	( Socket::getaddrinfo( $ip, $port, _ipv6($ip) ? $hints6 : $hints4 ) )[1]->{addr}
+			if USE_SOCKET_IP;			# NB: errors raised in socket->send
 }
 
 

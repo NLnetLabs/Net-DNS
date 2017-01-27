@@ -7,6 +7,10 @@ Feature rt.cpan.org #119679
 
 	UpdateHandler for responding to UPDATE packets
 
+Discontinue support for pre-5.6 perl
+
+	Remove pre-5.6 workarounds and outdated language features
+
 
 **** 1.07 December 29, 2016
 
@@ -1377,9 +1381,9 @@ Fix dependency on "CC" rt.cpan.org 19352
 
 Fix compressed dnames in NAPTR/SRV
 
-    Clayton O'Neill noted that the the domain names in in the NAPTR
-    and SRV RRs rdata were subject to name compression which is not
-    conform the specs. Also see RFC 2782 and 2915.
+    Clayton O'Neill noted that the domain names in the NAPTR and
+    SRV RRs rdata were subject to name compression which does not
+    conform to specs. Also see RFC 2782 and 2915.
 
 
 Fix rt.cpan.org 18897
@@ -1388,8 +1392,8 @@ Fix rt.cpan.org 18897
 
 Fix rt.cpan.org 18785
 
-   SPF would not work unless the TXT RR was not loaded first. No
-   wonder, SPF fully inherits TXT and loading of TXT.pm is therefore a
+   SPF would not work unless the TXT RR was already loaded.
+   SPF fully inherits TXT and loading of TXT.pm is therefore a
    prerequisite.
 
 
@@ -1500,10 +1504,10 @@ Fix AXFR persistent sockets colliding with query sockets.
 Fix rt.cpan.org 17596
     
     The fixes and features above also fixed the timeout problem reported by
-    Paul Hofman
-   
+    Paul Hoffman
+ 
 
- Profiling
+Profiling
 
     It turned out that each time we were calling
     Net::DNS::Resolver::Base::nameserver(); We were creating a
@@ -2056,7 +2060,7 @@ CERT fixes.  [Olaf]
 *** 0.47 April 1, 2004
 
 safe_push() is back in Net::DNS::Packet, due to the excellent debate
-skills of Luis E Monoz.  However, the name safe_push() is deprecated,
+skills of Luis E Munoz.  However, the name safe_push() is deprecated,
 use the new name unique_push() instead.
 
 Fixed a bug in Net::DNS::Nameserver which caused the class to build 

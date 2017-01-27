@@ -405,8 +405,10 @@ sub generic {
 	my @class = map "CLASS$_", grep defined, $self->{class};
 	my @core = ( $self->{owner}->string, @ttl, @class, "TYPE$self->{type}" );
 	my $data = $self->rdata;
-	my $size = length($data);
-	join ' ', @core, '\\#', $size, unpack 'H*', $data;
+	my @data = ( '\\#', length($data), split /(\S{32})/, unpack 'H*', $data );
+	my @line = _wrap( "@core (", @data, ')' );
+	return join "\n\t", @line if scalar(@line) > 1;
+	join ' ', @core, @data;
 }
 
 
@@ -507,9 +509,9 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 
 sub _format_rdata {			## format rdata portion of RR string
 	my $self = shift;
-	my $data = $self->_encode_rdata;
-	my $size = length($data) || return '';
-	join ' ', '\\#', $size, unpack 'H*', $data;		# RFC3597 unknown RR format
+	my $data = $self->rdata;
+	my $size = length($data) || return '';			# RFC3597 unknown RR format
+	my @data = ( '\\#', $size, split /(\S{32})/, unpack 'H*', $data );
 }
 
 

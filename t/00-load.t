@@ -14,7 +14,6 @@ my @module = qw(
 	Digest::MD5
 	Digest::SHA
 	File::Spec
-	FileHandle
 	IO::File
 	IO::Select
 	IO::Socket

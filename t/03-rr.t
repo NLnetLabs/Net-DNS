@@ -124,14 +124,6 @@ BEGIN {
 }
 
 
-{				## check for exception if RR name not recognised
-	my $testcase = join "\t", qw( example.com. 3600 IN BOGUS ), q(\# 4 c0000201);
-	eval { new Net::DNS::RR($testcase) };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unrecognised RR type: $testcase\t[$exception]" );
-}
-
-
 {				## check for exception if RFC3597 format hexadecimal data inconsistent
 	foreach my $testcase ( '\# 0 c0 00 02 01', '\# 3 c0 00 02 01', '\# 5 c0 00 02 01' ) {
 		eval { new Net::DNS::RR("example.com 3600 IN A $testcase") };
@@ -181,6 +173,13 @@ BEGIN {
 	eval { xxxx Net::DNS::RR( type => 'X' ); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "unknown class method:\t[$exception]" );
+}
+
+
+{				## check for exception if RR name not recognised
+	eval { new Net::DNS::RR('example.com. IN BOGUS') };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "unrecognised RR type:\t[$exception]" );
 }
 
 
@@ -286,23 +285,24 @@ BEGIN {
 
 
 {					## check plain format and long RR strings
-	foreach my $testcase (
-		[join( ' ', 'example.com TXT', ' text' x 30 )],
-		['example.com.	600	IN	SOA	(
+	my @testcase = (
+		'example.com.	IN	NS	a.iana-servers.net.',
+		'example.com.	IN	SOA	(
 				sns.dns.icann.org. noc.dns.icann.org.
 				2015082417	;serial
 				7200		;refresh
 				3600		;retry
 				1209600		;expire
 				3600		;minimum
-		)'],
-		) {
-		my $rr = new Net::DNS::RR(@$testcase);
-		my $test = new Net::DNS::RR( $rr->plain );
+		)',
+		);
+	foreach my $testcase (@testcase) {
+		my $rr = new Net::DNS::RR($testcase);
 		my $type = $rr->type;
-		is( $test->string, $rr->string, "parse rr->plain for multiline $type" );
+		my $plain = new Net::DNS::RR( $rr->plain );
+		is( $plain->string, $rr->string, "parse rr->plain format $type" );
 		my $rfc3597 = new Net::DNS::RR( $rr->generic );
-		is( $rfc3597->string, $rr->string, "parse rr->generic RFC3597 format $type" );
+		is( $rfc3597->string, $rr->string, "parse rr->generic format $type" );
 	}
 }
 
