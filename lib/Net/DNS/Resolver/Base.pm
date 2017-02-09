@@ -625,8 +625,8 @@ sub bgbusy {
 	}
 
 	return if $self->{igntc};
-	return unless $query;
 	return unless $handle->socktype() == SOCK_DGRAM;
+	return unless $query;					# SpamAssassin 3.4.1 workaround
 
 	my $ans = $self->_bgread($handle);
 	$$appendix[2] = [$ans];
@@ -634,8 +634,8 @@ sub bgbusy {
 	return unless $ans->header->tc;
 
 	$self->_diag('packet truncated: retrying using TCP');
-	my $tcp = $self->_bgsend_tcp( $query, $query->data );
-	return defined( $_[1] = $tcp ) if $tcp;
+	my $tcp = $self->_bgsend_tcp( $query, $query->data ) || return;
+	return defined( $_[1] = $tcp );
 }
 
 
@@ -685,7 +685,7 @@ sub _decode_reply {
 
 	my $header = $reply->header;
 	return unless $header->qr;
-	return unless $query;
+	return $reply unless $query;				# SpamAssassin 3.4.1 workaround
 	return ( $header->id != $query->header->id ) ? undef : $reply;
 }
 

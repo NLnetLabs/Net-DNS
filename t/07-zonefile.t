@@ -30,7 +30,12 @@ BEGIN {
 }
 
 
+my @file;
 my $seq;
+
+END {
+	unlink $_ foreach @file;
+}
 
 sub source {				## zone file builder
 	my $text = shift;
@@ -42,6 +47,7 @@ sub source {				## zone file builder
 	my $handle = new IO::File( $file, '>' );		# create test file
 	die "Failed to create $file" unless $handle;
 	eval { binmode($handle) };				# suppress encoding layer
+	push @file, $file;
 
 	print $handle $text;
 	close $handle;
