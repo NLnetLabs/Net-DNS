@@ -216,11 +216,43 @@ EOT
 
 package MY;				## customise generated Makefile
 
-use constant NOINSTALL => scalar eval 'require Net::DNS; $Net::DNS::VERSION < 1.00';
-
-
 sub install {
-	return shift->SUPER::install(@_) unless NOINSTALL;
+	my $self = shift;
+
+	my $install_dirs = $self->{INSTALLDIRS};		# expand Makefile macros
+	my %install_type = qw(perl INSTALLPRIVLIB site INSTALLSITELIB vendor INSTALLVENDORLIB);
+	my $install_site = join '', $self->{DESTDIR}, $self->{$install_type{$install_dirs}};
+	$install_site =~ s/\$\((PERLPREFIX|SITEPREFIX|VENDORPREFIX)\)/$self->{$1}/;
+	$install_site =~ s/\$\((INSTALL_BASE|PREFIX)\)/$self->{$1}/;
+	$install_site =~ s|([/])[/]+|$1|g;
+
+	eval 'require Net::DNS';
+
+	my @installed = grep $_ =~ m/\WNet\WDNS.pm$/i, values %INC;
+	my %noinstall;
+
+	foreach my $existing (@installed) {			# mark hidden directories
+		my $x;
+		foreach my $path (@INC) {
+			$noinstall{$path} ||= $existing =~ /^$path/ ? $x++ : $x;
+		}
+	}
+
+	return $self->SUPER::install(@_) unless $noinstall{$install_site};
+
+	warn <<"AMEN";
+##
+##	The install location for this version of Net::DNS differs
+##	from the existing version $Net::DNS::VERSION in your perl library.
+##	@installed
+##
+##	The installation will be rendered ineffective because Net::DNS
+##	will be found on the library search path before the proposed
+##	location  $install_site
+##
+##	Makefile has been generated to support build and test only.
+##
+AMEN
 
 	return <<'END';
 install :
@@ -239,26 +271,6 @@ test_cover : pure_all
 	cover -summary
 END
 }
-
-
-exit unless NOINSTALL;
-
-my @installed = grep $_ =~ m/\WNet\WDNS.pm$/i, values %INC;
-
-warn <<"END";
-##
-##	The install location for this version of Net::DNS may differ
-##	from the existing version $Net::DNS::VERSION in your perl library.
-##
-##	Version $Net::DNS::VERSION will usually occur earlier in the library
-##	search path, rendering the upgrade installation ineffective. 
-##
-##	The conflict can be resolved by removing the old version
-##	@installed
-##
-##	Makefile has been generated to support build and test only.
-##
-END
 
 
 __END__

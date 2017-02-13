@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.08 [unreleased]
 
+Feature rt.cpan.org #120208
+
+	Unable to install 1.07 in local::lib environment
+
 Feature rt.cpan.org #119679
 
 	UpdateHandler for responding to UPDATE packets
