@@ -26,7 +26,7 @@ plan skip_all => 'Not sure how to parse versions.' unless eval { MM->can('parse_
 
 plan tests => scalar @files;
 
-foreach my $file ( sort @files ) {
+foreach my $file ( sort @files ) {				# reconcile files with MANIFEST
 	my $version = MM->parse_version($file);
 	diag("$file\t=>\t$version") if $ENV{'NET_DNS_DEBUG'};
 	ok( $version =~ /[\d.]{3}/, "file version: $version\t$file" );
@@ -36,20 +36,45 @@ foreach my $file ( sort @files ) {
 
 
 END {
-	eval 'local @INC = grep $_ !~ m/blib/i, @INC; require Net::DNS';
+	my %macro;						# extract Makefile macros
+	open MAKEFILE, 'Makefile' or die $!;
+	while (<MAKEFILE>) {
+		next if /^#/;
+		next unless /^([A-Z_]+)\s+=\s+(.*)$/;
+		$macro{$1} = $2;
+	}
+	close MAKEFILE;
+
+	my %install_type = qw(perl INSTALLPRIVLIB site INSTALLSITELIB vendor INSTALLVENDORLIB);
+	my $install_site = join '', '$(DESTDIR)$(', $install_type{$macro{INSTALLDIRS}}, ')';
+	for ($install_site) {
+		s/\$\(([A-Z_]+)\)/$macro{$1}/g while /\$\(/;	# expand Makefile macros
+		s|([/])[/]+|$1|g;				# remove gratuitous //s
+	}
+
+	eval { local @INC = grep $_ !~ m/\Wblib\W/i, @INC; require Net::DNS };
 	my @installed = grep $_ =~ m/\WNet\WDNS.pm$/i, values %INC;
+	my %noinstall;
 
-	warn <<AMEN if scalar(@installed) && ( $Net::DNS::VERSION < 1.00 );
+	foreach my $existing (@installed) {			# mark hidden directories
+		my $x;
+		foreach my $path (@INC) {
+			$noinstall{$path} ||= $existing =~ /^$path/ ? $x++ : $x;
+		}
+	}
+
+	warn <<"AMEN" if $noinstall{$install_site};
 
 ##
-##	The install location for this version of Net::DNS may differ
+##	The install location for this version of Net::DNS differs
 ##	from the existing version $Net::DNS::VERSION in your perl library.
-##
-##	Version $Net::DNS::VERSION will usually occur earlier in the library
-##	search path, rendering the upgrade installation ineffective. 
-##
-##	The conflict can be resolved by removing the old version
 ##	@installed
+##
+##	The installation will be rendered ineffective because Net::DNS
+##	will be found on the library search path before the proposed
+##	location  $install_site
+##
+##	Makefile has been generated to support build and test only.
 ##
 AMEN
 

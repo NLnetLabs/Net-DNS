@@ -219,12 +219,12 @@ package MY;				## customise generated Makefile
 sub install {
 	my $self = shift;
 
-	my $install_dirs = $self->{INSTALLDIRS};		# expand Makefile macros
 	my %install_type = qw(perl INSTALLPRIVLIB site INSTALLSITELIB vendor INSTALLVENDORLIB);
-	my $install_site = join '', $self->{DESTDIR}, $self->{$install_type{$install_dirs}};
-	$install_site =~ s/\$\((PERLPREFIX|SITEPREFIX|VENDORPREFIX)\)/$self->{$1}/;
-	$install_site =~ s/\$\((INSTALL_BASE|PREFIX)\)/$self->{$1}/;
-	$install_site =~ s|([/])[/]+|$1|g;
+	my $install_site = join '', '$(DESTDIR)$(', $install_type{$self->{INSTALLDIRS}}, ')';
+	for ($install_site) {
+		s/\$\(([A-Z_]+)\)/$self->{$1}/g while /\$\(/;	# expand Makefile macros
+		s|([/])[/]+|$1|g;				# remove gratuitous //s
+	}
 
 	eval 'require Net::DNS';
 

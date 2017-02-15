@@ -196,6 +196,7 @@ sub make_reply {
 	my $reply  = $query->reply();
 	my $header = $reply->header;
 	my $headermask;
+	my $optionmask;
 
 	my $opcode  = $query->header->opcode;
 	my $qdcount = $query->header->qdcount;
@@ -220,12 +221,12 @@ sub make_reply {
 		my @arglist = ( $qname, $qclass, $qtype, $peerhost, $query, $conn );
 
 		if ( $opcode eq "QUERY" ) {
-			( $rcode, $ans, $auth, $add, $headermask ) =
+			( $rcode, $ans, $auth, $add, $headermask, $optionmask ) =
 					&{$self->{ReplyHandler}}(@arglist);
 
 		} elsif ( $opcode eq "NOTIFY" ) {		#RFC1996
 			if ( ref $self->{NotifyHandler} eq "CODE" ) {
-				( $rcode, $ans, $auth, $add, $headermask ) =
+				( $rcode, $ans, $auth, $add, $headermask, $optionmask ) =
 						&{$self->{NotifyHandler}}(@arglist);
 			} else {
 				$rcode = "NOTIMP";
@@ -233,7 +234,7 @@ sub make_reply {
 
 		} elsif ( $opcode eq "UPDATE" ) {		#RFC2136
 			if ( ref $self->{UpdateHandler} eq "CODE" ) {
-				( $rcode, $ans, $auth, $add, $headermask ) =
+				( $rcode, $ans, $auth, $add, $headermask, $optionmask ) =
 						&{$self->{UpdateHandler}}(@arglist);
 			} else {
 				$rcode = "NOTIMP";
@@ -260,7 +261,11 @@ sub make_reply {
 		$header->$key($value);
 	}
 
-	$header->print if $self->{Verbose} && defined $headermask;
+	while ( my ( $option, $value ) = each %{$optionmask || {}} ) {
+		$reply->edns->option( $option, $value );
+	}
+
+	$header->print if $self->{Verbose} && ( $headermask || $optionmask );
 
 	return $reply;
 }
@@ -619,6 +624,9 @@ hashref with the settings for the C<aa>, C<ra>, and C<ad>
 header bits. The argument is of the form
 C<< { ad => 1, aa => 0, ra => 1 } >>.
 
+EDNS options may be specified in a similar manner using optionmask
+C<< { $optioncode => $value, $optionname => $value } >>.
+
 
 See RFC 1035 and the IANA dns-parameters file for more information:
 
@@ -718,15 +726,22 @@ additional filtering on its basis may be applied.
 		$rcode = "NXDOMAIN";
 	}
 
-	# mark the answer as authoritative (by setting the 'aa' flag
-	return ($rcode, \@ans, \@auth, \@add, { aa => 1 });
+	# mark the answer as authoritative (by setting the 'aa' flag)
+	my $headermask = { aa => 1 };
+
+	# specify EDNS options	{ option => value }
+	my $optionmask = { };
+
+	return ($rcode, \@ans, \@auth, \@add, $headermask, $optionmask });
     }
+
 
     my $ns = new Net::DNS::Nameserver(
 	LocalPort    => 5353,
 	ReplyHandler => \&reply_handler,
 	Verbose	     => 1
 	) || die "couldn't create nameserver object\n";
+
 
     $ns->main_loop;
 

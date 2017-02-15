@@ -3,13 +3,18 @@ $Id$                       -*-text-*-
 
 **** 1.08 [unreleased]
 
-Feature rt.cpan.org #120208
+Fix rt.cpan.org #120208
 
 	Unable to install 1.07 in local::lib environment
 
 Feature rt.cpan.org #119679
 
-	UpdateHandler for responding to UPDATE packets
+	Net::DNS::Nameserver: UpdateHandler for responding to UPDATE packets
+
+Feature rt.cpan.org #75357
+
+	Net::DNS::Nameserver: optionmask (similar to headermask) added
+	to allow user to set EDNS CLIENT-SUBNET option in reply packet
 
 Discontinue support for pre-5.6 perl
 
