@@ -52,14 +52,22 @@ END {
 		s|([/])[/]+|$1|g;				# remove gratuitous //s
 	}
 
-	eval { local @INC = grep $_ !~ m/\Wblib\W/i, @INC; require Net::DNS };
-	my @installed = grep $_ =~ m/\WNet\WDNS.pm$/i, values %INC;
+	local @INC = grep $_ !~ m/\bblib\W(arch|lib)$/i, @INC;
+	eval { require Net::DNS };
+
+	my $nameregex = '\W+Net\WDNS.pm$';
+	my @installed = grep $_ =~ m/$nameregex/i, values %INC;
 	my %noinstall;
 
-	foreach my $existing (@installed) {			# mark hidden directories
-		my $x;
-		foreach my $path (@INC) {
-			$noinstall{$path} ||= $existing =~ /^$path/ ? $x++ : $x;
+	foreach (@installed) {
+		my $path = lc($1) if m/^(.+)$nameregex/i;
+		my %seen;
+		foreach (@INC) {
+			$seen{$_}++;				# find $path in @INC
+			last if $path eq lc($_);
+		}
+		foreach ( grep !$seen{$_}, @INC ) {
+			$noinstall{$_}++;			# mark hidden libraries
 		}
 	}
 
@@ -70,9 +78,9 @@ END {
 ##	from the existing version $Net::DNS::VERSION in your perl library.
 ##	@installed
 ##
-##	The installation will be rendered ineffective because Net::DNS
-##	will be found on the library search path before the proposed
-##	location  $install_site
+##	The installation will be rendered ineffective because old
+##	Net::DNS will be found on the library search path before
+##	$install_site
 ##
 ##	Makefile has been generated to support build and test only.
 ##
