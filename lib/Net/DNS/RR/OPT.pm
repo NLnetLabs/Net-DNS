@@ -251,12 +251,11 @@ When called in a list context, options() returns a list of option codes
 found in the OPT record.
 
 When called with a single argument, option() returns the octet string
-corresponding to the specified option. The function value is undefined
-if the specified option is absent.
+corresponding to the specified option. The method returns undef if the
+specified option is absent.
 
-Options can be changed by providing an argument list containing one or
-more (name => value) pairs to be added or modified. The effect of such
-changes is cumulative. An option is deleted if the value is undefined.
+Options can be changed by providing the (name => value) pair to be added
+or modified. The option is deleted if the value is undefined.
 
 
 =head1 COPYRIGHT
