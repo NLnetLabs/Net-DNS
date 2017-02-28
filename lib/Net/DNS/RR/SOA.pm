@@ -66,7 +66,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 
 	$self->mname(shift);
 	$self->rname(shift);
-	$self->serial(shift);
+	$self->serial(shift) if scalar @_;
 	for (qw(refresh retry expire minimum)) {
 		$self->$_( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
 	}
@@ -77,7 +77,7 @@ sub _defaults {				## specify RR attribute default values
 	my $self = shift;
 
 	$self->_parse_rdata(qw(. . 0 4h 1h 3w 1h));
-	$self->{serial} = undef;
+	delete $self->{serial};
 }
 
 

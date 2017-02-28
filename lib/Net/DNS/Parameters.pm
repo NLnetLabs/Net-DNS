@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2016-12-09)
+##	(last updated 2017-02-23)
 ##
 ################################################
 
@@ -18,17 +18,6 @@ use strict;
 use warnings;
 use integer;
 use Carp;
-
-
-our $DNSEXTLANG = 'ARPA.';		## draft-levine-dnsextlang
-
-use constant DNSEXTLANG => defined eval <<'END';
-	die 'preempt failure' if $^O =~ /cygwin|MSWin32/i;
-	require IO::File;
-	local $SIG{__WARN__} = sub { };
-	new IO::File('RRTYPEgen |');
-END
-
 
 use base qw(Exporter);
 our @EXPORT = qw(
@@ -197,6 +186,7 @@ our %ednsoptionbyname = (
 	'TCP-KEEPALIVE' => 11,					# RFC7828
 	PADDING		=> 12,					# RFC7830
 	CHAIN		=> 13,					# RFC7901
+	'KEY-TAG'	=> 14,					# RFC-ietf-dnsop-edns-key-tag-05
 	DEVICEID	=> 26946,				# https://docs.umbrella.com/developer/networkdevices-api/identifying-dns-traffic2
 	);
 our %ednsoptionbyval = reverse %ednsoptionbyname;
@@ -312,6 +302,16 @@ sub ednsoptionbyval {
 	my $val = shift;
 	$ednsoptionbyval{$val} || return $val;
 }
+
+
+our $DNSEXTLANG = 'ARPA.';		## draft-levine-dnsextlang
+
+use constant DNSEXTLANG => defined eval <<'END';
+	die 'preempt failure' if $^O =~ /cygwin|MSWin32/i;
+	require IO::File;
+	local $SIG{__WARN__} = sub { };
+	new IO::File('RRTYPEgen |') or die $!;
+END
 
 
 sub register {				## register( 'TOY', 1234 )	(NOT part of published API)

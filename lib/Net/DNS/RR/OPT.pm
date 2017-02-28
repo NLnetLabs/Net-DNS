@@ -31,18 +31,18 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $limit = $offset + $self->{rdlength};
-
 	my $index = $offset - CLASS_TTL_RDLENGTH;		# OPT redefines class and TTL fields
 	@{$self}{qw(size rcode version flags)} = unpack "\@$index n C2 n", $$data;
 	@{$self}{rcode} = @{$self}{rcode} << 4;
 	delete @{$self}{qw(class ttl)};
 
-	while ( $offset <= $limit - 4 ) {
+	my $limit = $offset + $self->{rdlength} - 4;
+
+	while ( $offset <= $limit ) {
 		my ( $code, $length ) = unpack "\@$offset nn", $$data;
-		$offset += 4;
-		$self->option( $code, substr $$data, $offset, $length );
-		$offset += $length;
+		my $value = unpack "\@$offset x4 a$length", $$data;
+		$self->{option}{$code} = $value;
+		$offset += $length + 4;
 	}
 }
 
@@ -50,12 +50,8 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $rdata = '';
-	foreach ( $self->options ) {
-		my $value = $self->option($_);
-		$rdata .= pack 'nna*', $_, length($value), $value;
-	}
-	return $rdata;
+	my $option = $self->{option} || {};
+	join '', map pack( 'nna*', $_, length $option->{$_}, $option->{$_} ), keys %$option;
 }
 
 
@@ -77,7 +73,7 @@ sub string {				## overide RR method
 	my $rcode  = $self->rcode;
 	my $size   = $self->size;
 	my @option = sort { $a <=> $b } $self->options;
-	my @lines  = map sprintf( "%s\t%s", ednsoptionbyval($_), unpack 'H*', $self->option($_) ), @option;
+	my @lines  = map $self->_format_option($_), @option;
 	my @format = join "\n;;\t\t", @lines;
 
 	$rcode = 0 if $rcode < 16;				# weird: 1 .. 15 not EDNS codes!!
@@ -147,21 +143,66 @@ sub flags {
 
 sub options {
 	my ($self) = @_;
-	&option;
-	return keys %{$self->{option}};
+	my $options = $self->{option} || {};
+	return keys %$options;
 }
 
 sub option {
-	my $self = shift;
+	my $self   = shift;
+	my $number = ednsoptionbyname(shift);
+	return $self->_get_option($number) unless scalar @_;
+	$self->_set_option( $number, @_ );
+}
+
+
+sub _format_option {
+	my ( $self, $number ) = @_;
+	my $option  = ednsoptionbyval($number);
+	my $options = $self->{option} || {};
+	my $payload = $options->{$number};
+	return () unless defined $payload;
+	my $package = join '::', __PACKAGE__, $option;
+	$package =~ s/-/_/g;
+	my $defined = length($payload) && $package->can('_image');
+	my @payload = $defined ? eval { $package->_image($payload) } : unpack 'H*', $payload;
+	Net::DNS::RR::_wrap( "$option\t=> (", @payload, ')' );
+}
+
+
+sub _get_option {
+	my ( $self, $number ) = @_;
+
+	my $options = $self->{option} || {};
+	my $payload = $options->{$number};
+	return $payload unless wantarray;
+	return () unless $payload;
+	my $package = join '::', __PACKAGE__, ednsoptionbyval($number);
+	$package =~ s/-/_/g;
+	return ( 'OPTION-DATA' => $payload ) unless $package->can('_decompose');
+	my @payload = eval { $package->_decompose($payload) };
+}
+
+
+sub _set_option {
+	my ( $self, $number, $value, @etc ) = @_;
 
 	my $options = $self->{option} ||= {};
-	while ( scalar @_ ) {
-		my $number = ednsoptionbyname(shift);
-		return $options->{$number} unless scalar @_;
-		my $value = shift;
-		delete $options->{$number};
-		$options->{$number} = $value if defined $value;
+	delete $options->{$number};
+	if ( ref($value) || scalar(@etc) ) {
+		my $option = ednsoptionbyval($number);
+		my @arg = ( $value, @etc );
+		@arg = @$value if ref($value) eq 'ARRAY';
+		@arg = %$value if ref($value) eq 'HASH';
+		if ( $arg[0] eq 'OPTION-DATA' ) {
+			$value = $arg[1];
+		} else {
+			my $package = join '::', __PACKAGE__, $option;
+			$package =~ s/-/_/g;
+			croak "unable to compose $option" unless $package->can('_compose');
+			$value = $package->_compose(@arg);
+		}
 	}
+	$options->{$number} = $value if defined $value;
 }
 
 
@@ -172,6 +213,146 @@ sub _specified {
 }
 
 
+########################################
+
+package Net::DNS::RR::OPT::DAU;					# RFC6975
+
+sub _compose {
+	my ( $class, @argument ) = @_;
+	pack 'C*', @argument;
+}
+
+sub _decompose {
+	my @payload = unpack 'C*', $_[1];
+}
+
+sub _image { &_decompose; }
+
+
+package Net::DNS::RR::OPT::DHU;					# RFC6975
+use base qw(Net::DNS::RR::OPT::DAU);
+
+package Net::DNS::RR::OPT::N3U;					# RFC6975
+use base qw(Net::DNS::RR::OPT::DAU);
+
+
+package Net::DNS::RR::OPT::CLIENT_SUBNET;			# RFC7871
+use Net::DNS::RR::A;
+use Net::DNS::RR::AAAA;
+
+my %family = qw(1 Net::DNS::RR::A	2 Net::DNS::RR::AAAA);
+my @field  = qw(FAMILY SOURCE-PREFIX-LENGTH SCOPE-PREFIX-LENGTH ADDRESS);
+
+sub _compose {
+	my ( $class, %argument ) = @_;
+	my $address = bless( {}, $family{$argument{FAMILY}} )->address( $argument{ADDRESS} );
+	my $preamble = pack 'nC2', map $_ ||= 0, @argument{@field};
+	my $bitmask = $argument{'SOURCE-PREFIX-LENGTH'};
+	pack "a* B$bitmask", $preamble, unpack 'B*', $address;
+}
+
+sub _decompose {
+	my %hash;
+	@hash{@field} = unpack 'nC2a*', $_[1];
+	$hash{ADDRESS} = bless( {address => $hash{ADDRESS}}, $family{$hash{FAMILY}} )->address;
+	my @payload = map { ( $_ => $hash{$_} ) } @field;
+}
+
+sub _image { &_decompose; }
+
+
+package Net::DNS::RR::OPT::EXPIRE;				# RFC7314
+
+sub _compose {
+	my ( $class, %argument ) = @_;
+	pack 'N', values %argument;
+}
+
+sub _decompose {
+	my @payload = ( 'EXPIRE-TIMER' => unpack 'N', $_[1] );
+}
+
+sub _image { &_decompose; }
+
+
+package Net::DNS::RR::OPT::COOKIE;				# RFC7873
+
+my @key = qw(CLIENT-COOKIE SERVER-COOKIE);
+
+sub _compose {
+	my ( $class, %argument ) = @_;
+	pack 'a8 a*', map $_ || '', @argument{@key};
+}
+
+sub _decompose {
+	my %hash;
+	my $template = ( length( $_[1] ) < 16 ) ? 'a8' : 'a8 a*';
+	@hash{@key} = unpack $template, $_[1];
+	my @payload = map { ( $_ => $hash{$_} ) } @key;
+}
+
+
+package Net::DNS::RR::OPT::TCP_KEEPALIVE;			# RFC7828
+
+sub _compose {
+	my ( $class, %argument ) = @_;
+	pack 'n', values %argument;
+}
+
+sub _decompose {
+	my @payload = ( TIMEOUT => unpack 'n', $_[1] );
+}
+
+sub _image { &_decompose; }
+
+
+package Net::DNS::RR::OPT::PADDING;				# RFC7830
+
+sub _compose {
+	my ( $class, %argument ) = @_;
+	my ($size) = values %argument;
+	pack "x$size";
+}
+
+sub _decompose {
+	my @payload = ( 'OPTION-LENGTH' => length( $_[1] ) );
+}
+
+sub _image { &_decompose; }
+
+
+package Net::DNS::RR::OPT::CHAIN;				# RFC7901
+use Net::DNS::DomainName;
+
+sub _compose {
+	my ( $class, %argument ) = @_;
+	my ($trust_point) = values %argument;
+	Net::DNS::DomainName->new( $trust_point || return '' )->encode;
+}
+
+sub _decompose {
+	my ( $class, $payload ) = @_;
+	my $fqdn = Net::DNS::DomainName->decode( \$payload )->string;
+	my @payload = ( 'CLOSEST-TRUST-POINT' => $fqdn );
+}
+
+sub _image { &_decompose; }
+
+
+package Net::DNS::RR::OPT::KEY_TAG;				# RFC????
+
+sub _compose {
+	my ( $class, @argument ) = @_;
+	pack 'n*', @argument;
+}
+
+sub _decompose {
+	my @payload = unpack 'n*', $_[1];
+}
+
+sub _image { &_decompose; }
+
+
 1;
 __END__
 
@@ -179,12 +360,21 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $opt = new Net::DNS::RR(
-	type	=> "OPT",  
-	flags	=> 0x8000,	# extended flags
-	rcode	=> 0,		# extended RCODE
-	size	=> 1280,	# UDP payload size
-	);
+    $packet = new Net::DNS::Packet( ... );
+
+    $packet->header->do(1);			# extended flag
+
+    $packet->edns->size(1280);			# UDP payload size
+
+    $packet->edns->option( COOKIE => $cookie );
+
+    $packet->edns->print;
+
+    ;; EDNS version 0
+    ;;	    flags:  8000
+    ;;	    rcode:  NOERROR
+    ;;	    size:   1280
+    ;;	    option: COOKIE  => ( 7261776279746573 )
 
 =head1 DESCRIPTION
 
@@ -193,8 +383,9 @@ EDNS OPT pseudo resource record.
 The OPT record supports EDNS protocol extensions and is not intended to be
 created, accessed or modified directly by user applications.
 
-All access to EDNS features is performed indirectly by operations on the
-packet header. The underlying mechanism is entirely hidden from the user.
+All EDNS features are performed indirectly by operations on the objects
+returned by the $packet->header and $packet->edns creator methods.
+The underlying mechanisms are entirely hidden from the user.
 
 =head1 METHODS
 
@@ -208,7 +399,7 @@ other unpredictable behaviour.
 
 =head2 version
 
-    $version = $rr->version;
+	$version = $rr->version;
 
 The version of EDNS used by this OPT record.
 
@@ -244,25 +435,54 @@ header.
 
 	$octets = $packet->edns->option($option_code);
 
-	$packet->edns->option( NSID => 'value' );
-	$packet->edns->option( 3    => 'value' );
+	$packet->edns->option( COOKIE => $cookie );
+	$packet->edns->option( 10     => $cookie );
 
 When called in a list context, options() returns a list of option codes
 found in the OPT record.
 
-When called with a single argument, option() returns the octet string
-corresponding to the specified option. The method returns undef if the
-specified option is absent.
+When called in a scalar context with a single argument,
+option() returns the uninterpreted octet string
+corresponding to the specified option.
+The method returns undef if the specified option is absent.
 
-Options can be changed by providing the (name => value) pair to be added
-or modified. The option is deleted if the value is undefined.
+Options can be added or replaced by providing the (name => string) pair.
+The option is deleted if the value is undefined.
+
+
+When option() is called in a list context with a single argument,
+the returned array provides a structured interpretation
+appropriate to the specified option.
+
+For the example above:
+
+	%hash = $packet->edns->option(10);
+
+	{
+	    'CLIENT-COOKIE' => 'rawbytes',
+	    'SERVER-COOKIE' => undef
+	};
+
+
+For some options, an array is more appropriate:
+
+	@algorithms = $packet->edns->option(5);
+
+
+Similar forms of array syntax may be used to construct the option value:
+
+	$packet->edns->option( DAU => [1, 2, 3, 4] );
+	$packet->edns->option( 5   => (1, 2, 3, 4) );
+
+	$packet->edns->option( COOKIE => {'CLIENT-COOKIE' => $cookie} );
+	$packet->edns->option( 10     => ('CLIENT-COOKIE' => $cookie) );
 
 
 =head1 COPYRIGHT
 
 Copyright (c)2001,2002 RIPE NCC.  Author Olaf M. Kolkman.
 
-Portions Copyright (c)2012 Dick Franks.
+Portions Copyright (c)2012,2017 Dick Franks.
 
 All rights reserved.
 
