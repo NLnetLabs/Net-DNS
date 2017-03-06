@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.09 [unreleased]
+
+Feature rt.cpan.org #75357
+
+	Add mechanism to encode/decode EDNS option octet strings
+
+
 **** 1.08 February 20, 2017
 
 Fix rt.cpan.org #120208
@@ -14,7 +21,7 @@ Feature rt.cpan.org #119679
 Feature rt.cpan.org #75357
 
 	Net::DNS::Nameserver: optionmask (similar to headermask) added
-	to allow user to set EDNS CLIENT-SUBNET option in reply packet
+	to allow user to set EDNS options in reply packet
 
 Discontinue support for pre-5.6 perl
 

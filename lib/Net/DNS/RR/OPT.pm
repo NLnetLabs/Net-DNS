@@ -198,7 +198,7 @@ sub _set_option {
 		} else {
 			my $package = join '::', __PACKAGE__, $option;
 			$package =~ s/-/_/g;
-			croak "unable to compose $option" unless $package->can('_compose');
+			croak "unable to compose option $option" unless $package->can('_compose');
 			$value = $package->_compose(@arg);
 		}
 	}

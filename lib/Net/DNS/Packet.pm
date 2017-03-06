@@ -191,7 +191,7 @@ sub encode {
 
 	my $edns = $self->edns;					# EDNS support
 	my @addl = grep !$_->isa('Net::DNS::RR::OPT'), @{$self->{additional}};
-	$self->{additional} = [@addl, $edns] if $edns->_specified;
+	$self->{additional} = [$edns, @addl] if $edns->_specified;
 
 	return $self->truncate($size) if $size;
 

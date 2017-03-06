@@ -66,7 +66,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 
 	$self->mname(shift);
 	$self->rname(shift);
-	$self->serial(shift) if scalar @_;
+	$self->serial(shift);
 	for (qw(refresh retry expire minimum)) {
 		$self->$_( Net::DNS::RR::ttl( {}, shift ) ) if scalar @_;
 	}
@@ -103,9 +103,9 @@ sub serial {
 	return $self->{serial} || 0 unless scalar @_;		# current/default value
 
 	my $value = shift;					# replace if in sequence
-	return $self->{serial} = 0 + $value if _ordered( $self->{serial}, $value );
+	return $self->{serial} = 0 + ( $value || 0 ) if _ordered( $self->{serial}, $value );
 
-	# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
+	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
 	my $serial = ( 0 + $self->{serial} ) & 0xFFFFFFFF;
 	return $self->{serial} = $serial ^ 0xFFFFFFFF if ( $serial & 0x7FFFFFFF ) == 0x7FFFFFFF;    # wrap
 	return $self->{serial} = $serial + 1;			# increment
@@ -150,10 +150,10 @@ sub _ordered($$) {			## irreflexive 32-bit partial ordering
 	use integer;
 	my ( $a, $b ) = @_;
 
-	return defined $b unless defined $a;			# ( undef, any )
+	return 1 unless defined $a;				# ( undef, any )
 	return 0 unless defined $b;				# ( any, undef )
 
-	# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
+	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
 	if ( $a < 0 ) {						# translate $a<0 region
 		$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;		#  0	 <= $a < 2**31
 		$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;		# -2**31 <= $b < 2**32
