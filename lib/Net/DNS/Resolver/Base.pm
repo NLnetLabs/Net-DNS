@@ -55,7 +55,6 @@ use IO::Socket;
 use Net::DNS::RR;
 use Net::DNS::Packet;
 
-use constant INT16SZ  => 2;
 use constant PACKETSZ => 512;
 
 
@@ -362,7 +361,7 @@ sub query {
 	my $name = shift || '.';
 
 	# resolve name containing no dots or colons by appending domain
-	my @sfix = $self->{defnames} && $name !~ m/[:.]/ ? $self->domain : ();
+	my @sfix = ( $self->{defnames} && $name !~ m/[:.]/ ) ? $self->domain : ();
 	my $fqdn = join '.', $name, @sfix;
 
 	$self->_diag( 'query(', $fqdn, @_, ')' );
@@ -685,6 +684,7 @@ sub _decode_reply {
 
 	my $header = $reply->header;
 	return unless $header->qr;
+
 	return $reply unless $query;				# SpamAssassin 3.4.1 workaround
 	return ( $header->id != $query->header->id ) ? undef : $reply;
 }
@@ -809,22 +809,22 @@ sub _axfr_next {
 sub _read_tcp {
 	my $socket = shift;
 
-	my $size_buf = '';
-	$socket->recv( $size_buf, INT16SZ );
-	my ($unread) = unpack 'n*', $size_buf;
+	my ( $s1, $s2 );
+	$socket->recv( $s1, 2 );				# one lump
+	$socket->recv( $s2, 2 - length $s1 );			# or two?
+	my $size = unpack 'n', pack( 'a*a*@2', $s1, $s2 );
 
 	my $buffer = '';
-	while ( $unread > 0 ) {
+	while ( ( my $read = length $buffer ) < $size ) {
 
 		# During some of my tests recv() returned undef even
-		# though there was no error.  Checking for the amount
+		# though there was no error.  Checking the amount
 		# of data read appears to work around that problem.
 
-		my $read_buf = '';
-		$socket->recv( $read_buf, $unread );
+		my $recv_buf;
+		$socket->recv( $recv_buf, $size - $read );
 
-		$unread -= length( $read_buf || last );
-		$buffer .= $read_buf;
+		$buffer .= $recv_buf || last;
 	}
 	return $buffer;
 }
