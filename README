@@ -304,9 +304,8 @@ Thanks to Rob Brown and Dick Franks for all their patches and input.
 
 Thanks to all who have used Net::DNS and reported bugs, made suggestions,
 contributed code, and encouraged me to add certain features. Many of these
-people are mentioned by name in the Changes and TODO files; lack of
-mention should be considered an oversight and not a conscious act of
-omission.
+people are mentioned by name in the Changes file; lack of mention should
+be considered an oversight and not a conscious act of omission.
 
 Thanks to Larry Wall and all who have made Perl possible.
 
