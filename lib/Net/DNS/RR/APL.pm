@@ -33,7 +33,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 		my $xlen = unpack "\@$offset x3 C", $$data;
 		my $size = ( $xlen & 0x7F );
 		my $item = bless {}, 'Net::DNS::RR::APL::Item';
-		$item->negate(1) if $xlen & 0x80;
+		$item->{negate} = $xlen - $size;
 		@{$item}{qw(family prefix address)} = unpack "\@$offset n C x a$size", $$data;
 		$offset += $size + 4;
 		push @$aplist, $item;
@@ -49,7 +49,8 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $aplist = $self->{aplist} || [];
 	foreach (@$aplist) {
 		my $address = $_->{address};
-		my $xlength = $_->negate | length($address);
+		$address =~ s/[\000]+$//;			# strip trailing null octets
+		my $xlength = ( $_->{negate} ? 0x80 : 0 ) | length($address);
 		push @rdata, pack 'n C2 a*', @{$_}{qw(family prefix)}, $xlength, $address;
 	}
 	join '', @rdata;
@@ -75,10 +76,12 @@ sub aplist {
 	my $self = shift;
 
 	while ( scalar @_ ) {					# parse apitem strings
-		last unless $_[0] =~ m#^(!?)(\d+):(.+)/(\d+)$#;
+		last unless $_[0] =~ m#[!:./]#;
+		shift =~ m#^(!?)(\d+):(.+)/(\d+)$#;
 		my $n = $1 ? 1 : 0;
-		my $f = $2;
-		my ( $x, $a, $p ) = split m#^[^:]+:|/#, shift;
+		my $f = $2 || 0;
+		my $a = $3;
+		my $p = $4 || 0;
 		$self->aplist( negate => $n, family => $f, address => $a, prefix => $p );
 	}
 
@@ -102,13 +105,17 @@ sub aplist {
 
 package Net::DNS::RR::APL::Item;
 
+use Net::DNS::RR::A;
+use Net::DNS::RR::AAAA;
+
+my %family = qw(1 Net::DNS::RR::A	2 Net::DNS::RR::AAAA);
+
 
 sub negate {
 	my $bit = 0x80;
 	for ( shift->{negate} ) {
 		my $set = $bit | ( $_ ||= 0 );
-		return $bit & $_ unless scalar @_;
-		$_ = (shift) ? $set : ( $set ^ $bit );
+		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
 		return $_ & $bit;
 	}
 }
@@ -130,56 +137,22 @@ sub prefix {
 }
 
 
-{
-	use Net::DNS::RR::A;
-	use Net::DNS::RR::AAAA;
-
-	sub _address_1 {
-		my $self = shift;
-
-		my $A = bless {%$self}, 'Net::DNS::RR::A';
-
-		return $A->address unless scalar @_;
-
-		my $alength = ( $self->prefix + 7 ) >> 3;	# mask non-prefix bits, suppress nulls
-		my @address = unpack "C$alength", $A->address(shift);
-		my $bitmask = 0xFF << ( 8 - $self->prefix & 7 );
-		push @address, ( $bitmask & pop(@address) ) if $alength;
-		for ( reverse @address ) { last if $_; pop @address }
-		$self->{address} = pack 'C*', @address;
-	}
-
-
-	sub _address_2 {
-		my $self = shift;
-
-		my $AAAA = bless {%$self}, 'Net::DNS::RR::AAAA';
-
-		return $AAAA->address_long unless scalar @_;
-
-		my $alength = ( $self->prefix + 7 ) >> 3;	# mask non-prefix bits, suppress nulls
-		my @address = unpack "C$alength", $AAAA->address(shift);
-		my $bitmask = 0xFF << ( 8 - $self->prefix & 7 );
-		push @address, ( $bitmask & pop(@address) ) if $alength;
-		for ( reverse @address ) { last if $_; pop @address }
-		$self->{address} = pack 'C*', @address;
-	}
-}
-
-
 sub address {
-	for ( $_[0]->family ) {
-		return &_address_1 if /1/;
-		return &_address_2 if /2/;
-		die 'unknown address family';
-	}
+	my $self = shift;
+
+	my $family = $family{$self->family} || die 'unknown address family';
+	return bless( {%$self}, $family )->address unless scalar @_;
+
+	my $bitmask = $self->prefix;
+	my $address = bless( {}, $family )->address(shift);
+	$self->{address} = pack "B$bitmask", unpack 'B*', $address;
 }
 
 
 sub string {
 	my $self = shift;
 
-	my $not = $self->negate ? '!' : '';
+	my $not = $self->{negate} ? '!' : '';
 	my ( $family, $address, $prefix ) = ( $self->family, $self->address, $self->prefix );
 	return "$not$family:$address/$prefix";
 }
@@ -275,7 +248,7 @@ Returns the prefix list item in the form required in zone files.
 
 Copyright (c)2008 Olaf Kolkman, NLnet Labs.
 
-Portions Copyright (c)2011 Dick Franks.
+Portions Copyright (c)2011,2017 Dick Franks.
 
 All rights reserved.
 
