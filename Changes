@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.09 [unreleased]
 
+Fix rt.cpan.org #120542
+
+	Fails tests when no "." in @INC
+
 Feature rt.cpan.org #75357
 
 	Add mechanism to encode/decode EDNS option octet strings

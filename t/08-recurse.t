@@ -2,7 +2,11 @@
 
 use strict;
 use Test::More;
-use t::NonFatal;
+
+BEGIN {
+	local @INC = ( @INC, qw(t) );
+	require NonFatal;
+}
 
 use Net::DNS;
 use Net::DNS::Resolver::Recurse;
