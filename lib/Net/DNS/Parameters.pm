@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2017-02-23)
+##	(last updated 2017-03-07)
 ##
 ################################################
 
@@ -199,8 +199,8 @@ our %dnsflagbyname = (
 	TC => 0x0200,						# RFC1035
 	RD => 0x0100,						# RFC1035
 	RA => 0x0080,						# RFC1035
-	AD => 0x0020,						# RFC4035
-	CD => 0x0010,						# RFC4035
+	AD => 0x0020,						# RFC4035 RFC6840
+	CD => 0x0010,						# RFC4035 RFC6840
 	);
 %dnsflagbyname = ( %dnsflagbyname, map lc($_), %dnsflagbyname );
 

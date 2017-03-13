@@ -37,7 +37,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	$offset += 3;
 
 	my $gatetype = $self->{gatetype};
-	unless ($gatetype) {
+	if ( not $gatetype ) {
 		$self->{gateway} = undef;			# no gateway
 
 	} elsif ( $gatetype == 1 ) {
@@ -70,7 +70,8 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $precedence = $self->precedence;
 	my $algorithm  = $self->algorithm;
 	my $keybin     = $self->keybin;
-	unless ($gatetype) {
+
+	if ( not $gatetype ) {
 		return pack 'C3 a*', $precedence, $gatetype, $algorithm, $keybin;
 
 	} elsif ( $gatetype == 1 ) {

@@ -39,7 +39,7 @@ my %digest = (
 #
 {
 	my @algbyname = (
-		'DELETE'	     => 0,			# [RFC4034][RFC4398][]
+		'DELETE'	     => 0,			# [RFC4034][RFC4398][RFC8087]
 		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
 		'DH'		     => 2,			# [RFC2539]
 		'DSA'		     => 3,			# [RFC3755][RFC2536]

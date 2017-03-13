@@ -108,11 +108,10 @@ sub decode {
 	my $index  = $offset;
 
 	while ( $index < $buflen ) {
-		my $header = unpack( "\@$index C", $$buffer );
-		unless ($header) {				# terminal empty label
-			return wantarray ? ( $self, ++$index ) : $self;
+		my $header = unpack( "\@$index C", $$buffer )
+				|| return wantarray ? ( $self, ++$index ) : $self;
 
-		} elsif ( $header < 0x40 ) {			# non-terminal label
+		if ( $header < 0x40 ) {				# non-terminal label
 			push @$label, substr( $$buffer, ++$index, $header );
 			$index += $header;
 

@@ -110,7 +110,7 @@ sub _new_string {
 	my $t2 = uc $token[1] if $#token;
 
 	my ( $ttl, $class );
-	unless ( defined $t2 ) {				# <owner> <type>
+	if ( not defined $t2 ) {				# <owner> <type>
 		@token = ('ANY') if $classbyname{$t1};		# <owner> <class>
 	} elsif ( $classbyname{$t1} || $t1 =~ /^CLASS\d/ ) {
 		$class = shift @token;				# <owner> <class> [<ttl>] <type>

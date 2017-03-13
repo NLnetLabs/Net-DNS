@@ -122,7 +122,8 @@ sub _defaults {				## specify RR attribute default values
 # source: http://www.iana.org/assignments/dns-sec-alg-numbers
 #
 {
-	my @algbyname = (		## Reserved	=> 0,	# [RFC4034][RFC4398]
+	my @algbyname = (
+		'DELETE'	     => 0,			# [RFC4034][RFC4398][RFC8087]
 		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
 		'DH'		     => 2,			# [RFC2539]
 		'DSA'		     => 3,			# [RFC3755][RFC2536]
@@ -137,8 +138,8 @@ sub _defaults {				## specify RR attribute default values
 		'ECC-GOST'	     => 12,			# [RFC5933]
 		'ECDSAP256SHA256'    => 13,			# [RFC6605]
 		'ECDSAP384SHA384'    => 14,			# [RFC6605]
-		'Ed25519'	     => 15,			# []
-		'Ed448'		     => 16,			# []
+		'Ed25519'	     => 15,			# [RFC8080]
+		'Ed448'		     => 16,			# [RFC8080]
 
 		'INDIRECT'   => 252,				# [RFC4034]
 		'PRIVATEDNS' => 253,				# [RFC4034]
@@ -438,7 +439,7 @@ sub _ordered($$) {			## irreflexive 32-bit partial ordering
 	return defined $b unless defined $a;			# ( undef, any )
 	return 0 unless defined $b;				# ( any, undef )
 
-	# unwise to assume 32-bit arithmetic, or that integer overflow goes unpunished
+	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
 	if ( $a < 0 ) {						# translate $a<0 region
 		$a = ( $a ^ 0x80000000 ) & 0xFFFFFFFF;		#  0	 <= $a < 2**31
 		$b = ( $b ^ 0x80000000 ) & 0xFFFFFFFF;		# -2**31 <= $b < 2**32
@@ -462,7 +463,7 @@ sub _string2time {			## parse time specification string
 	croak 'undefined time' unless defined $arg;
 	return int($arg) if length($arg) < 12;
 	my ( $y, $m, @dhms ) = unpack 'a4 a2 a2 a2 a2 a2', $arg . '00';
-	unless ( $arg gt '20380119031407' ) {			# calendar folding
+	if ( $arg lt '20380119031408' ) {			# calendar folding
 		return timegm( reverse(@dhms), $m - 1, $y ) if $y < 2026;
 		return timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2026;
 	} elsif ( $y > 2082 ) {

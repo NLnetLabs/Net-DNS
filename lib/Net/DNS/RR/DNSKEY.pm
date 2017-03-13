@@ -28,7 +28,7 @@ use constant BASE64 => defined eval 'require MIME::Base64';
 #
 {
 	my @algbyname = (
-		'DELETE'	     => 0,			# [RFC4034][RFC4398][]
+		'DELETE'	     => 0,			# [RFC4034][RFC4398][RFC8087]
 		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
 		'DH'		     => 2,			# [RFC2539]
 		'DSA'		     => 3,			# [RFC3755][RFC2536]
@@ -140,8 +140,7 @@ sub zone {
 	my $bit = 0x0100;
 	for ( shift->{flags} ) {
 		my $set = $bit | ( $_ ||= 0 );
-		return $bit & $_ unless scalar @_;
-		$_ = (shift) ? $set : ( $set ^ $bit );
+		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
 		return $_ & $bit;
 	}
 }
@@ -151,8 +150,7 @@ sub revoke {
 	my $bit = 0x0080;
 	for ( shift->{flags} ) {
 		my $set = $bit | ( $_ ||= 0 );
-		return $bit & $_ unless scalar @_;
-		$_ = (shift) ? $set : ( $set ^ $bit );
+		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
 		return $_ & $bit;
 	}
 }
@@ -162,8 +160,7 @@ sub sep {
 	my $bit = 0x0001;
 	for ( shift->{flags} ) {
 		my $set = $bit | ( $_ ||= 0 );
-		return $bit & $_ unless scalar @_;
-		$_ = (shift) ? $set : ( $set ^ $bit );
+		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
 		return $_ & $bit;
 	}
 }
