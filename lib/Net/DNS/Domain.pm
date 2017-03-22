@@ -46,15 +46,11 @@ use constant ASCII => ref eval {
 	Encode::find_encoding('ascii');				# encoding object
 };
 
-use constant LIBUTF8 => scalar eval {
-	Encode::decode_utf8( chr(91) ) eq '[';			# not UTF-EBCDIC  [see UTR#16 3.6]
+use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
+	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
 };
 
-use constant UTF8 => ref eval {
-	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
-};
-
-use constant LIBIDN => UTF8 && defined eval 'require Net::LibIDN';
+use constant LIBIDN => defined eval { require Net::LibIDN; };
 
 
 # perlcc: address of encoding objects must be determined at runtime
@@ -185,7 +181,7 @@ Net::LibIDN module is installed.
 sub xname {
 	my $name = &name;
 
-	if ( LIBIDN && $name =~ /xn--/ ) {
+	if ( LIBIDN && UTF8 && $name =~ /xn--/ ) {
 		my $self = shift;
 		return $self->{xname} if defined $self->{xname};
 		return $self->{xname} = $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' );
@@ -275,7 +271,7 @@ sub _encode_ascii {			## translate perl string to ASCII
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
 
-	if ( LIBIDN && $s =~ /[^\000-\177]/ ) {
+	if ( LIBIDN && UTF8 && $s =~ /[^\000-\177]/ ) {
 		my $xn = Net::LibIDN::idn_to_ascii( $s, 'utf-8' );
 		croak 'invalid name' unless $xn;
 		return pack "a* x$z", $xn;

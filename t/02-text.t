@@ -4,22 +4,7 @@ use strict;
 use Test::More tests => 37;
 
 
-BEGIN {
-	my $codeword = unpack 'H*', '[|';
-	my %codename = (
-		'5b7c' => 'ASCII superset',
-		'ba4f' => 'EBCDIC cp37',
-		'4abb' => 'EBCDIC cp500',
-		'4a6a' => 'EBCDIC cp875',
-		'68bb' => 'EBCDIC cp1026',
-		'ad4f' => 'EBCDIC cp1047',
-		'bb4f' => 'EBCDIC posix-bc'
-		);
-	my $encoding = $codename{lc $codeword} || "unknown codeset [$codeword]";
-	diag $encoding unless $encoding =~ /ASCII/;
-
-	use_ok('Net::DNS::Text');
-}
+use_ok('Net::DNS::Text');
 
 
 {

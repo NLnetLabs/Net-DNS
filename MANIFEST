@@ -110,6 +110,7 @@ t/01-resolver-opt.t
 t/01-resolver.t
 t/02-domain.t
 t/02-domainname.t
+t/02-IDN.t
 t/02-mailbox.t
 t/02-text.t
 t/03-header.t

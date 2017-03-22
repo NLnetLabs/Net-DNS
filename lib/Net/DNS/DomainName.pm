@@ -68,7 +68,7 @@ as defined in RFC2535(8.1).
 =cut
 
 my $lc = sub {				## work around 5.8.x case-folding bug
-	( my $s = shift ) =~ tr [\101-\132] [\141-\172];
+	( my $s = shift ) =~ tr [A-Z] [a-z];
 	return $s;
 };
 

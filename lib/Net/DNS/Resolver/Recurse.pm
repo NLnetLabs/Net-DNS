@@ -58,6 +58,7 @@ my $root = [];
 sub hints {
 	my $self = shift;
 
+	splice @hints, 0, 0, splice( @hints, int( rand scalar @hints ) );    # cut deck
 	return @hints unless scalar @_;
 	$root  = [];
 	@hints = @_;
@@ -95,8 +96,7 @@ sub send {
 	unless ( defined $head ) {
 		my $defres = new Net::DNS::Resolver();
 		$defres->nameservers( $res->_hints );		# fall back to inbuilt list
-		$defres->recurse(0);
-		$defres->udppacketsize(1024);
+		$defres->udppacketsize(1024);			# RFC8109
 		my @config = $defres->nameserver( $res->hints );
 		return $defres->send(qw(. NS));
 	}
@@ -214,7 +214,10 @@ sub recursion_callback { &callback; }				# uncoverable pod
 	my @ip = map @$_, values %glue;
 
 
-	sub _hints { @ip; }		## default hints
+	sub _hints {			## default hints
+		splice @ip, 0, 0, splice( @ip, int( rand scalar @ip ) );    # cut deck
+		return @ip;
+	}
 }
 
 

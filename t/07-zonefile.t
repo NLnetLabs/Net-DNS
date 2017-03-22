@@ -6,28 +6,20 @@ use IO::File;
 use Test::More tests => 91;
 
 
-use constant LIBUTF8 => scalar eval {
+use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
 	require Encode;
-	Encode::decode_utf8( chr(91) ) eq '[';			# not UTF-EBCDIC  [see UTR#16 3.6]
+	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
 };
 
-use constant UTF8 => ref eval {
-	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
-};
+use constant LIBIDN => defined eval { require Net::LibIDN; };
 
-
-use constant LIBIDN => UTF8 && defined eval { require Net::LibIDN; };
-
-use constant LIBIDNOK => scalar eval {
+use constant LIBIDNOK => LIBIDN && scalar eval {
 	my $cn = pack( 'U*', 20013, 22269 );
-	my $xn = 'xn--fiqs8s';
-	LIBIDN && ( Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq $xn );
+	Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq 'xn--fiqs8s';
 };
 
 
-BEGIN {
-	use_ok('Net::DNS::ZoneFile');
-}
+use_ok('Net::DNS::ZoneFile');
 
 
 my @file;

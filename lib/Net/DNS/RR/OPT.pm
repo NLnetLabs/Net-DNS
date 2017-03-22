@@ -466,13 +466,13 @@ For the example above:
 
 For some options, an array is more appropriate:
 
-	@algorithms = $packet->edns->option(5);
+	@algorithms = $packet->edns->option(6);
 
 
 Similar forms of array syntax may be used to construct the option value:
 
-	$packet->edns->option( DAU => [1, 2, 3, 4] );
-	$packet->edns->option( 5   => (1, 2, 3, 4) );
+	$packet->edns->option( DHU => [1, 2, 4] );
+	$packet->edns->option( 6   => (1, 2, 4) );
 
 	$packet->edns->option( COOKIE => {'CLIENT-COOKIE' => $cookie} );
 	$packet->edns->option( 10     => ('CLIENT-COOKIE' => $cookie) );

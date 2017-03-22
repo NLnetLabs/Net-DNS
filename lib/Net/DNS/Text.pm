@@ -45,12 +45,8 @@ use constant ASCII => ref eval {
 	Encode::find_encoding('ascii');				# encoding object
 };
 
-use constant LIBUTF8 => scalar eval {
-	Encode::decode_utf8( chr(91) ) eq '[';			# not UTF-EBCDIC  [see UTR#16 3.6]
-};
-
-use constant UTF8 => ref eval {
-	LIBUTF8 && Encode::find_encoding('utf8');		# encoding object
+use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
+	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
 };
 
 
