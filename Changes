@@ -1,6 +1,15 @@
 $Id$                       -*-text-*-
 
 
+**** 1.10 [unreleased]
+
+Fix rt.cpan.org #120748
+
+	Net::DNS::Resolver::MSWin32 critical issue
+	Thanks to Dmytro Zagashev for his valuable assistence during
+	the investigation which exposed five distinct issues.
+
+
 **** 1.09 March 24, 2017
 
 Fix rt.cpan.org #120542
@@ -679,7 +688,7 @@ New improved version of the check_soa script in the contrib section.
 
 Fix rt.cpan.org #70830
 
-	Make t/08-online.t handle NXDOMAIN hijacking that return more then one
+	Make t/08-online.t handle NXDOMAIN hijacking that return more than one
 	answer.
 
 Fix rt.cpan.org #24525

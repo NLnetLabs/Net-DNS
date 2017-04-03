@@ -118,18 +118,18 @@ sub _init {
 
 
 	# fix devolution if configured, and simultaneously
-	# make sure no dups (but keep the order)
+	# eliminate duplicate entries (but keep the order)
 	my @list;
 	my %seen;
-	foreach my $entry (@searchlist) {
-		push @list, $entry unless $seen{$entry}++;
+	foreach (@searchlist) {
+		s/\.+$//;
+		push( @list, $_ ) unless $seen{lc $_}++;
 
 		next unless $devolution;
 
-		# as long there are more than two pieces, cut
-		while ( $entry =~ m#\..+\.# ) {
-			$entry =~ s#^[^\.]+\.(.+)$#$1#;
-			push @list, $entry unless $seen{$entry}++;
+		# while there are more than two labels, cut
+		while (s#^[^.]+\.(.+\..+)$#$1#) {
+			push( @list, $_ ) unless $seen{lc $_}++;
 		}
 	}
 	$defaults->searchlist(@list);

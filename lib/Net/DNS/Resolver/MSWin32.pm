@@ -19,13 +19,10 @@ use base qw(Net::DNS::Resolver::Base);
 
 use Carp;
 
-use constant WINHLP => defined eval 'require Win32::IPHelper';
-use constant WINREG => defined eval 'require Win32::TieRegistry';
-
-
 our $Registry;
 
-Win32::TieRegistry->import(qw(KEY_READ REG_DWORD)) if WINREG;
+use constant WINHLP => defined eval 'require Win32::IPHelper';
+use constant WINREG => defined eval 'use Win32::TieRegistry qw(KEY_READ REG_DWORD); 1';
 
 
 sub _untaint {
@@ -40,20 +37,21 @@ sub _init {
 
 	my $FIXED_INFO = {};
 
-	if ( my $ret = Win32::IPHelper::GetNetworkParams($FIXED_INFO) ) {
-		Carp::croak "GetNetworkParams() error %u: %s\n", $ret, Win32::FormatMessage($ret);
-	} elsif ($debug) {
+	my $err = Win32::IPHelper::GetNetworkParams($FIXED_INFO);
+	croak "GetNetworkParams() error %u: %s\n", $err, Win32::FormatMessage($err) if $err;
+
+	if ($debug) {
 		require Data::Dumper;
 		print Data::Dumper::Dumper $FIXED_INFO;
 	}
 
 
-	my @nameservers = map { $_->{IpAddress} } @{$FIXED_INFO->{DnsServersList}};
+	my @nameservers = map $_->{IpAddress}, @{$FIXED_INFO->{DnsServersList}};
 	$defaults->nameservers( _untaint @nameservers );
 
 	my $devolution = 0;
 	my $domainname = $FIXED_INFO->{DomainName} || '';
-	my @searchlist = map length, lc $domainname;
+	my @searchlist = grep length, $domainname;
 
 	if (WINREG) {
 
@@ -72,7 +70,7 @@ sub _init {
 
 		if ( defined $reg_tcpip ) {
 			my $searchlist = $reg_tcpip->GetValue('SearchList') || '';
-			push @searchlist, split m/[\s,]+/, lc $searchlist;
+			push @searchlist, split m/[\s,]+/, $searchlist;
 
 			my ( $value, $type ) = $reg_tcpip->GetValue('UseDomainNameDevolution');
 			$devolution = defined $value && $type == REG_DWORD ? hex $value : 0;
@@ -81,18 +79,18 @@ sub _init {
 
 
 	# fix devolution if configured, and simultaneously
-	# make sure no dups (but keep the order)
+	# eliminate duplicate entries (but keep the order)
 	my @list;
 	my %seen;
-	foreach my $entry (@searchlist) {
-		push( @list, $entry ) unless $seen{$entry}++;
+	foreach (@searchlist) {
+		s/\.+$//;
+		push( @list, $_ ) unless $seen{lc $_}++;
 
 		next unless $devolution;
 
-		# as long there are more than two pieces, cut
-		while ( $entry =~ m#\..+\.# ) {
-			$entry =~ s#^[^\.]+\.(.+)$#$1#;
-			push( @list, $entry ) unless $seen{$entry}++;
+		# while there are more than two labels, cut
+		while (s#^[^.]+\.(.+\..+)$#$1#) {
+			push( @list, $_ ) unless $seen{lc $_}++;
 		}
 	}
 	$defaults->searchlist( _untaint @list );

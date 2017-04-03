@@ -26,6 +26,9 @@ my @module = qw(
 	Scalar::Util
 	Socket
 	Time::Local
+	Win32::API
+	Win32::IPHelper
+	Win32::TieRegistry
 	);
 
 diag("\n\nThese tests were run using:\n");

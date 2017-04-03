@@ -50,7 +50,7 @@ use IO::Select;
 
 use constant FORCE_IPv4 => 0;
 
-use constant DEFAULT_ADDR => 0;
+use constant DEFAULT_ADDR => qw(::1 127.0.0.1);
 use constant DEFAULT_PORT => 53;
 
 use constant STATE_ACCEPTED   => 1;
@@ -78,11 +78,8 @@ sub new {
 	}
 
 	# local server addresses must also be accepted by a resolver
-	my @LocalAddr =
-			ref $self{LocalAddr}
-			? @{$self{LocalAddr}}
-			: ( $self{LocalAddr} || DEFAULT_ADDR );
-	my $resolver = new Net::DNS::Resolver( nameservers => [@LocalAddr] );
+	my $LocalAddr = $self{LocalAddr} || [DEFAULT_ADDR];
+	my $resolver = new Net::DNS::Resolver( nameservers => $LocalAddr );
 	$resolver->force_v4(1) if FORCE_IPv4;
 	my @localaddresses = $resolver->nameservers;
 
@@ -334,9 +331,7 @@ sub tcp_connection {
 				return;				# Still not 2 octets ready
 			}
 			my $msglen = unpack( "n", $1 );
-			print "Removed 2 octets from the input buffer from $peer.\n"
-					. "$peer said his query contains $msglen octets.\n"
-					if $self->{Verbose};
+			print "$peer said his query contains $msglen octets\n" if $self->{Verbose};
 			$self->{_tcp}{$sock}{state}	  = STATE_GOT_LENGTH;
 			$self->{_tcp}{$sock}{querylength} = $msglen;
 		}
@@ -401,7 +396,7 @@ sub udp_connection {
 
 	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{Verbose};
 
-	my $query = new Net::DNS::Packet( \$buf, $self->{Verbose} );
+	my $query = new Net::DNS::Packet(\$buf);
 	if ( my $err = $@ ) {
 		print "Error decoding query packet: $err\n" if $self->{Verbose};
 		undef $query;					# force FORMERR reply
@@ -417,7 +412,7 @@ sub udp_connection {
 	my $max_len = ( $query && $self->{Truncate} ) ? $query->edns->size : undef;
 	if ( $self->{Verbose} ) {
 		local $| = 1;
-		print "Maximum UDP size advertised by $peerhost:$peerport: $max_len\n" if $max_len;
+		print "Maximum UDP size advertised by $peerhost#$peerport: $max_len\n" if $max_len;
 		print "Writing response - ";
 		print $sock->send( $reply->data($max_len) ) ? "done" : "failed: $!", "\n";
 
@@ -708,31 +703,31 @@ additional filtering on its basis may be applied.
     use Net::DNS::Nameserver;
 
     sub reply_handler {
-	my ($qname, $qclass, $qtype, $peerhost,$query,$conn) = @_;
-	my ($rcode, @ans, @auth, @add);
+	my ( $qname, $qclass, $qtype, $peerhost, $query, $conn ) = @_;
+	my ( $rcode, @ans, @auth, @add );
 
-	print "Received query from $peerhost to ". $conn->{sockhost}. "\n";
+	print "Received query from $peerhost to " . $conn->{sockhost} . "\n";
 	$query->print;
 
-	if ($qtype eq "A" && $qname eq "foo.example.com" ) {
-		my ($ttl, $rdata) = (3600, "10.1.2.3");
+	if ( $qtype eq "A" && $qname eq "foo.example.com" ) {
+		my ( $ttl, $rdata ) = ( 3600, "10.1.2.3" );
 		my $rr = new Net::DNS::RR("$qname $ttl $qclass $qtype $rdata");
 		push @ans, $rr;
 		$rcode = "NOERROR";
-	}elsif( $qname eq "foo.example.com" ) {
+	} elsif ( $qname eq "foo.example.com" ) {
 		$rcode = "NOERROR";
 
-	}else{
+	} else {
 		$rcode = "NXDOMAIN";
 	}
 
 	# mark the answer as authoritative (by setting the 'aa' flag)
-	my $headermask = { aa => 1 };
+	my $headermask = {aa => 1};
 
 	# specify EDNS options	{ option => value }
-	my $optionmask = { };
+	my $optionmask = {};
 
-	return ($rcode, \@ans, \@auth, \@add, $headermask, $optionmask });
+	return ( $rcode, \@ans, \@auth, \@add, $headermask, $optionmask );
     }
 
 

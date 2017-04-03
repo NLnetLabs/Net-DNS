@@ -45,8 +45,6 @@ use base qw(Net::DNS::Domain);
 use integer;
 use Carp;
 
-use constant FIXlc => scalar eval 'no integer; $] < 5.010';
-
 
 =head1 METHODS
 
@@ -67,13 +65,11 @@ as defined in RFC2535(8.1).
 
 =cut
 
-my $lc = sub {				## work around 5.8.x case-folding bug
-	( my $s = shift ) =~ tr [A-Z] [a-z];
-	return $s;
-};
-
 sub canonical {
-	join '', map pack( 'C a*', length($_), FIXlc ? &$lc($_) : lc($_) ), shift->_wire, '';
+	join '', map( { tr /\101-\132/\141-\172/;
+					pack 'C a*', length($_), $_;
+					} shift->_wire ),
+			pack 'x';
 }
 
 
