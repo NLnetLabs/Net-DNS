@@ -11,7 +11,8 @@ my $name = 'TKEY.example';
 my $type = 'TKEY';
 my $code = 249;
 my @attr = qw( algorithm inception expiration mode error key other );
-my @data = qw( alg.example 1434806118 1434806118 1 17 dummy dummy );
+my $fake = pack 'H*', '64756d6d79';
+my @data = ( qw( alg.example 1434806118 1434806118 1 17 ), $fake, $fake );
 my @also = qw( other_data );
 
 my $wire = '03616c67076578616d706c6500558567665585676600010011000564756d6d79000564756d6d79';

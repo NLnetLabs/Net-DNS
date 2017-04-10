@@ -85,6 +85,8 @@ for zone files described in RFC1035.
 
 =cut
 
+my ( %escape, %unescape );		## precalculated escape tables
+
 our $ORIGIN;
 my ( $cache1, $cache2, $limit ) = ( {}, {}, 100 );
 
@@ -100,20 +102,25 @@ sub new {
 
 	my $self = bless {}, $class;
 
-	$s =~ s/\\\\/\\092/g;					# disguise escaped escape
-	$s =~ s/\\\./\\046/g;					# disguise escaped dot
+	local $_ = _encode_ascii($s);
 
-	my $label = $self->{label} = $s eq '@' ? [] : [split /\056/, _encode_ascii($s)];
+	s/\134\134/\134\060\071\062/g;				# disguise escaped escape
+	s/\134\056/\134\060\064\066/g;				# disguise escaped dot
 
-	foreach my $l (@$label) {
-		$l = _unescape($l) if $l =~ /\\/;
-		croak 'empty domain label' unless my $size = length($l);
-		( substr( $l, 63 ) = '', carp 'domain label truncated' ) if $size > 63;
+	my $label = $self->{label} = $_ eq "\100" ? [] : [split /\056/];
+
+	foreach (@$label) {
+		s/\134([\060-\071]{3})/$unescape{$1}/eg;	# numeric escape
+		s/\134(.)/$1/g;					# character escape
+		croak 'empty domain label' unless length;
+		next unless length > 63;
+		substr( $_, 63 ) = '';
+		carp 'domain label truncated';
 	}
 
 	$$cache1{$k} = $self;					# cache object reference
 
-	return $self if $s =~ /\.$/;				# fully qualified name
+	return $self if /\056$/;				# fully qualified name
 	$self->{origin} = $ORIGIN || return $self;		# dynamically scoped $ORIGIN
 	return $self;
 }
@@ -134,20 +141,16 @@ numerical escape sequence.
 
 =cut
 
-my $dot = '.';
-
 sub name {
 	my ($self) = @_;
 
 	return $self->{name} if defined $self->{name};
 	return unless defined wantarray;
 
-	my $lref = $self->{label};
-	my $head = _decode_ascii( join chr(46), map _escape($_), @$lref );
-	my $tail = $self->{origin} || return $self->{name} = $head || $dot;
-	return $self->{name} = $tail->name unless length $head;
-	my $suffix = $tail->name;
-	return $self->{name} = $suffix eq $dot ? $head : join $dot, $head, $suffix;
+	my @label = map { s/([^\055\101-\132\141-\172\060-\071])/$escape{$1}/eg; $_ } $self->_label;
+
+	return $self->{name} = '.' unless scalar @label ;
+	$self->{name} = _decode_ascii( join chr(46), @label );
 }
 
 
@@ -162,7 +165,7 @@ name, including the trailing dot.
 
 sub fqdn {
 	my $name = &name;
-	return $name =~ /[$dot]$/o ? $name : $name . $dot;	# append trailing dot
+	return $name =~ /[.]$/ ? $name : $name . '.';		# append trailing dot
 }
 
 
@@ -199,11 +202,19 @@ Identifies the domain by means of a list of domain labels.
 =cut
 
 sub label {
+	map {
+		s/([^\055\101-\132\141-\172\060-\071])/$escape{$1}/eg;
+		_decode_ascii($_)
+	} shift->_label;
+}
+
+
+sub _label {
 	my $self = shift;
 
-	my @head = map _decode_ascii( _escape($_) ), @{$self->{label}};
-	my $tail = $self->{origin} || return (@head);
-	return ( @head, $tail->label );
+	my $label = $self->{label};
+	my $origin = $self->{origin} || return (@$label);
+	return ( @$label, $origin->_label );
 }
 
 
@@ -221,7 +232,7 @@ represented by the appropriate escape sequence.
 
 sub string {
 	( my $name = &name ) =~ s/(["'\$();@])/\\$1/;		# escape special char
-	return $name =~ /[$dot]$/o ? $name : $name . $dot;	# append trailing dot
+	return $name =~ /[.]$/ ? $name : $name . '.';		# append trailing dot
 }
 
 
@@ -259,7 +270,7 @@ sub _decode_ascii {			## translate ASCII to perl string
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
 	[\040-\176\000-\377]
-	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
+	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
 	return ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
@@ -279,14 +290,14 @@ sub _encode_ascii {			## translate perl string to ASCII
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
-	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
+	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
 	[\040-\176\077] unless ASCII;
 
 	return ASCII ? pack( "a* x$z", $ascii->encode($s) ) : $s;
 }
 
 
-my %esc = eval {			## precalculated ASCII escape table
+%escape = eval {			## precalculated ASCII escape table
 	my %table;
 
 	foreach ( 33 .. 126 ) {					# ASCII printable
@@ -311,14 +322,7 @@ my %esc = eval {			## precalculated ASCII escape table
 };
 
 
-sub _escape {				## Insert escape sequences in string
-	my $s = shift;
-	$s =~ s/([^\055\101-\132\141-\172\060-\071])/$esc{$1}/eg;
-	return $s;
-}
-
-
-my %unesc = eval {			## precalculated numeric escape table
+%unescape = eval {			## precalculated numeric escape table
 	my %table;
 
 	foreach my $n ( 0 .. 255 ) {
@@ -327,19 +331,12 @@ my %unesc = eval {			## precalculated numeric escape table
 		# partial transliteration for non-ASCII character encodings
 		$key =~ tr [0-9] [\060-\071];
 
-		$table{$key} = pack 'C*', $n, $n == 92 ? ($n) : ();
+		$table{$key} = pack 'C', $n;
+		$table{$key} = pack 'C2', 92, $n if $n == 92;	   # escaped escape
 	}
 
 	return %table;
 };
-
-
-sub _unescape {				## Remove escape sequences in string
-	my $s = shift;
-	$s =~ s/\134([\060-\071]{3})/$unesc{$1}/eg;		# numeric escape
-	$s =~ s/\134(.)/$1/g;					# character escape
-	return $s;
-}
 
 
 1;

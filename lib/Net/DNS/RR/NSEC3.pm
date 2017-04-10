@@ -145,8 +145,7 @@ sub optout {
 	my $bit = 0x01;
 	for ( shift->{flags} ) {
 		my $set = $bit | ( $_ ||= 0 );
-		return $bit & $_ unless scalar @_;
-		$_ = (shift) ? $set : ( $set ^ $bit );
+		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
 		return $_ & $bit;
 	}
 }
@@ -189,12 +188,12 @@ sub covered {
 	my $name = shift;
 
 	# first test if the domain name is in the NSEC3 zone.
-	my @domainlabels = new Net::DNS::DomainName($name)->_wire;
-	my ( $owner, @zonelabels ) = $self->{owner}->_wire;
+	my @labels = map { tr /\101-\132/\141-\172/; $_ } new Net::DNS::DomainName($name)->_wire;
+	my ( $owner, @zonelabels ) = map { tr /\101-\132/\141-\172/; $_ } $self->{owner}->_wire;
 	my $ownerhash = _decode_base32($owner);
 
 	foreach ( reverse @zonelabels ) {
-		return 0 unless lc($_) eq lc( pop(@domainlabels) || return 0 );
+		return 0 unless $_ eq ( pop(@labels) || return 0 );
 	}
 
 	my $namehash = _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );

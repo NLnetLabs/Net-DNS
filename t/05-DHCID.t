@@ -22,7 +22,7 @@ my $name = 'DHCID.example';
 my $type = 'DHCID';
 my $code = 49;
 my @attr = qw( identifiertype digesttype digest );
-my @data = qw( 2 1 ObfuscatedIdentityData );
+my @data = ( 2, 1, pack 'H*', '4f6266757363617465644964656e7469747944617461' );
 my @also = qw( rdata );
 
 my $wire = '0002014f6266757363617465644964656e7469747944617461';

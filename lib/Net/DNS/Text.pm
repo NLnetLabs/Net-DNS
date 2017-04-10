@@ -212,7 +212,7 @@ my $decode_ascii = sub {		## ASCII to perl internal encoding
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
 	[\040-\176\000-\377]
-	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
+	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
 	ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
@@ -229,7 +229,7 @@ my $encode_ascii = sub {		## perl internal encoding to ASCII
 
 	# partial transliteration for non-ASCII character encodings
 	$s =~ tr
-	[ !"#$%&'()*+,-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~]
+	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~]
 	[\040-\176] unless ASCII;
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround

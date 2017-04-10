@@ -13,6 +13,7 @@ my @module = qw(
 	Digest::HMAC
 	Digest::MD5
 	Digest::SHA
+	Encode
 	File::Spec
 	IO::File
 	IO::Select

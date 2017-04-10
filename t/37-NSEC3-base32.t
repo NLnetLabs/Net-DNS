@@ -19,16 +19,16 @@ plan tests => 20;
 
 
 my %testcase = (
-	"U"	     => 'ak',
-	"UU"	     => 'alag',
-	"UUU"	     => 'alala',
-	"UUUU"	     => 'alalal8',
-	"UUUUU"	     => 'alalalal',
-	"UUUUUU"     => 'alalalalak',
-	"UUUUUUU"    => 'alalalalalag',
-	"UUUUUUUU"   => 'alalalalalala',
-	"UUUUUUUUU"  => 'alalalalalalal8',
-	"UUUUUUUUUU" => 'alalalalalalalal',
+	chr(85) x 1  => 'ak',
+	chr(85) x 2  => 'alag',
+	chr(85) x 3  => 'alala',
+	chr(85) x 4  => 'alalal8',
+	chr(85) x 5  => 'alalalal',
+	chr(85) x 6  => 'alalalalak',
+	chr(85) x 7  => 'alalalalalag',
+	chr(85) x 8  => 'alalalalalala',
+	chr(85) x 9  => 'alalalalalalal8',
+	chr(85) x 10 => 'alalalalalalalal',
 	);
 
 

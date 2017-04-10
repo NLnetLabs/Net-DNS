@@ -9,12 +9,21 @@ Fix rt.cpan.org #120748
 	Thanks to Dmytro Zagashev for his valuable assistence during
 	the investigation which exposed five distinct issues.
 
+Feature rt.cpan.org #18819
+
+	Perl 5.22.0 puts EBCDIC character encoding back on the agenda.
+	Thanks to Yaroslav Kuzmin for successful test build on os390.
+
 
 **** 1.09 March 24, 2017
 
 Fix rt.cpan.org #120542
 
 	Fails tests when no "." in @INC
+
+Fix rt.cpan.org #120470
+
+	Fragmented TCP length not correctly reassembled
 
 Feature rt.cpan.org #75357
 
