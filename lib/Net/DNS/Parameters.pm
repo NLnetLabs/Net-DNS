@@ -242,7 +242,7 @@ sub typebyname {
 	my $name = shift;
 
 	$typebyname{$name} || do {
-		if ( $name =~ m/(TYPE)?(\d+)/i ) {
+		if ( $name =~ m/^(TYPE)?(\d+)/i ) {
 			my $val = 0 + $2;
 			croak "typebyname( $name ) out of range" if $val > 0xffff;
 			return $val;
