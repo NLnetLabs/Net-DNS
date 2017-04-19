@@ -3,18 +3,18 @@
 use strict;
 use Test::More;
 
+					## vvv	verbatim from Domain.pm
+use constant ASCII => ref eval {
+	require Encode;
+	Encode::find_encoding('ascii');
+};
 
 use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
-	require Encode;
 	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
 };
 
 use constant LIBIDN => defined eval { require Net::LibIDN; };
-
-use constant LIBIDNOK => LIBIDN && scalar eval {
-	my $cn = pack( 'U*', 20013, 22269 );
-	Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq 'xn--fiqs8s';
-};
+					## ^^^	verbatim from Domain.pm
 
 
 my $codeword = unpack 'H*', '[|';
@@ -28,7 +28,19 @@ my $encoding = $codename{lc $codeword} || "not recognised	[$codeword]";
 diag "character encoding: $encoding" unless $encoding =~ /ASCII/;
 
 
-plan skip_all => 'Unicode/UTF-8 not supported' unless UTF8;
+use constant ENCODE => defined eval { require Encode; };
+
+use constant LIBIDNOK => LIBIDN && scalar eval {
+	my $cn = pack( 'U*', 20013, 22269 );
+	Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq 'xn--fiqs8s';
+};
+
+
+plan skip_all => 'Encode package not installed' unless ENCODE;
+
+plan skip_all => 'Encode: ASCII encoding not available' unless ASCII;
+
+plan skip_all => 'Encode: UTF-8 encoding not available' unless UTF8;
 
 plan skip_all => 'Net::LibIDN not installed' unless LIBIDN;
 

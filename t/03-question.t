@@ -5,7 +5,7 @@ use strict;
 use Net::DNS::Question;
 use Net::DNS::Parameters;
 
-use Test::More tests => 119 + keys(%classbyname) + keys(%typebyname);
+use Test::More tests => 121 + keys(%classbyname) + keys(%typebyname);
 
 
 {					## check type conversion functions
@@ -16,7 +16,7 @@ use Test::More tests => 119 + keys(%classbyname) + keys(%typebyname);
 	is( typebyname("TYPE0$anon"), $anon,	   "typebyname('TYPE0$anon')" );
 
 	my $large = 1 << 16;
-	foreach my $testcase ( "BOGUS", "TYPE$large" ) {
+	foreach my $testcase ( "BOGUS", "Bogus", "TYPE$large" ) {
 		eval { typebyname($testcase); };
 		my $exception = $1 if $@ =~ /^(.+)\n/;
 		ok( $exception ||= '', "typebyname($testcase)\t[$exception]" );
@@ -43,7 +43,7 @@ use Test::More tests => 119 + keys(%classbyname) + keys(%typebyname);
 	is( classbyname("CLASS0$anon"), $anon,	      "classbyname('CLASS0$anon')" );
 
 	my $large = 1 << 16;
-	foreach my $testcase ( "BOGUS", "CLASS$large" ) {
+	foreach my $testcase ( "BOGUS", "Bogus", "CLASS$large" ) {
 		eval { classbyname($testcase); };
 		my $exception = $1 if $@ =~ /^(.+)\n/;
 		ok( $exception ||= '', "classbyname($testcase)\t[$exception]" );

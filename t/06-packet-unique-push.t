@@ -14,8 +14,8 @@ my $domain = 'example.com';
 my $method = 'unique_push';
 my $packet = Net::DNS::Packet->new($domain);
 
-my $rr_1 = Net::DNS::RR->new('bla.FOO 100 IN TXT "lower case"');
-my $rr_2 = Net::DNS::RR->new('bla.foo 100 IN TXT "lower case"');
+my $rr_1 = Net::DNS::RR->new('bla.foo 100 IN TXT "text" ;lower case');
+my $rr_2 = Net::DNS::RR->new('bla.Foo 100 IN Txt "text" ;mixed case');
 my $rr_3 = Net::DNS::RR->new('bla.foo 100 IN TXT "mixed CASE"');
 my $rr_4 = Net::DNS::RR->new('bla.foo 100 IN TXT "MIXED case"');
 

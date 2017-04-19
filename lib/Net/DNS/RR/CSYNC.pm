@@ -82,8 +82,7 @@ sub immediate {
 	my $bit = 0x0001;
 	for ( shift->{flags} ) {
 		my $set = $bit | ( $_ ||= 0 );
-		return $bit & $_ unless scalar @_;
-		$_ = (shift) ? $set : ( $set ^ $bit );
+		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
 		return $_ & $bit;
 	}
 }
@@ -93,8 +92,7 @@ sub soaminimum {
 	my $bit = 0x0002;
 	for ( shift->{flags} ) {
 		my $set = $bit | ( $_ ||= 0 );
-		return $bit & $_ unless scalar @_;
-		$_ = (shift) ? $set : ( $set ^ $bit );
+		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
 		return $_ & $bit;
 	}
 }

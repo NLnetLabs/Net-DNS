@@ -7,11 +7,11 @@ use Net::DNS;
 
 my @prerequisite = qw(
 		Digest::SHA
-		Net::DNS::RR::NSEC3;
+		Net::DNS::RR::NSEC3
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "require $package";
+	next if eval "use $package; 1;";
 	plan skip_all => "$package not installed";
 	exit;
 }
@@ -23,7 +23,7 @@ my $algorithm = 1;			## test vectors from RFC5155
 my $flags     = 0;
 my $iteration = 12;
 my $salt      = 'aabbccdd';
-my $hnxtname  = 'irrelevent';
+my $hnxtname  = 'irrelevant';
 
 my @name = qw(example a.example ai.example ns1.example ns2.example
 		w.example *.w.example x.w.example y.w.example x.y.w.example);
@@ -49,5 +49,7 @@ foreach my $name (@name) {
 
 
 exit;
+
+__END__
 
 

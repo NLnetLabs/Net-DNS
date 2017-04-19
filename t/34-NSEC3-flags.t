@@ -6,11 +6,11 @@ use Test::More;
 use Net::DNS;
 
 my @prerequisite = qw(
-		Net::DNS::RR::NSEC3;
+		Net::DNS::RR::NSEC3
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "require $package";
+	next if eval "use $package; 1;";
 	plan skip_all => "$package not installed";
 	exit;
 }

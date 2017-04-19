@@ -339,7 +339,7 @@ sub _decompose {
 sub _image { &_decompose; }
 
 
-package Net::DNS::RR::OPT::KEY_TAG;				# RFC????
+package Net::DNS::RR::OPT::KEY_TAG;				# RFC8145
 
 sub _compose {
 	my ( $class, @argument ) = @_;

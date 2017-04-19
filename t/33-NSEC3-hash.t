@@ -7,11 +7,11 @@ use Net::DNS;
 
 my @prerequisite = qw(
 		Digest::SHA
-		Net::DNS::RR::NSEC3;
+		Net::DNS::RR::NSEC3
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "require $package";
+	next if eval "use $package; 1;";
 	plan skip_all => "$package not installed";
 	exit;
 }
@@ -53,4 +53,7 @@ foreach my $name (@name) {
 
 
 exit;
+
+__END__
+
 

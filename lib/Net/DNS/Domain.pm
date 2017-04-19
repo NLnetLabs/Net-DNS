@@ -43,7 +43,7 @@ use Carp;
 
 use constant ASCII => ref eval {
 	require Encode;
-	Encode::find_encoding('ascii');				# encoding object
+	Encode::find_encoding('ascii');
 };
 
 use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
@@ -85,7 +85,7 @@ for zone files described in RFC1035.
 
 =cut
 
-my ( %escape, %unescape );		## precalculated escape tables
+my ( %escape, %unescape );		## precalculated ASCII escape tables
 
 our $ORIGIN;
 my ( $cache1, $cache2, $limit ) = ( {}, {}, 100 );
@@ -147,9 +147,9 @@ sub name {
 	return $self->{name} if defined $self->{name};
 	return unless defined wantarray;
 
-	my @label = map { s/([^\055\101-\132\141-\172\060-\071])/$escape{$1}/eg; $_ } $self->_label;
+	my @label = map { s/([^\055\101-\132\141-\172\060-\071])/$escape{$1}/eg; $_ } $self->_wire;
 
-	return $self->{name} = '.' unless scalar @label ;
+	return $self->{name} = '.' unless scalar @label;
 	$self->{name} = _decode_ascii( join chr(46), @label );
 }
 
@@ -205,16 +205,16 @@ sub label {
 	map {
 		s/([^\055\101-\132\141-\172\060-\071])/$escape{$1}/eg;
 		_decode_ascii($_)
-	} shift->_label;
+	} shift->_wire;
 }
 
 
-sub _label {
+sub _wire {
 	my $self = shift;
 
 	my $label = $self->{label};
 	my $origin = $self->{origin} || return (@$label);
-	return ( @$label, $origin->_label );
+	return ( @$label, $origin->_wire );
 }
 
 
@@ -357,7 +357,7 @@ compiled into the code.
 
 =head1 COPYRIGHT
 
-Copyright (c)2009-2011 Dick Franks.
+Copyright (c)2009-2011,2017 Dick Franks.
 
 All rights reserved.
 

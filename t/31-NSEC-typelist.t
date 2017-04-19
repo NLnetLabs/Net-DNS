@@ -7,12 +7,12 @@ use Net::DNS;
 use Net::DNS::Parameters;
 
 my @prerequisite = qw(
-		Net::DNS::RR::NSEC;
-		Net::DNS::DomainName;
+		Net::DNS::RR::NSEC
+		Net::DNS::DomainName
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "require $package";
+	next if eval "use $package; 1;";
 	plan skip_all => "$package not installed";
 	exit;
 }

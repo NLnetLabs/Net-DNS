@@ -535,7 +535,7 @@ sub vrfyerrstr {
 		my $private = shift;	# closure keeps private key private
 		$keyref->{key} = sub {
 			my $function = $keyref->{digest};
-			return &$function( $private, shift );
+			return &$function( $private, @_ );
 		};
 		return undef;
 	}
@@ -549,7 +549,7 @@ sub vrfyerrstr {
 		my $keyref = $keytable{$owner};
 		$keyref->{digest} = $self->sig_function unless $keyref->{digest};
 		my $function = $keyref->{key};
-		&$function(shift);
+		&$function(@_);
 	}
 }
 

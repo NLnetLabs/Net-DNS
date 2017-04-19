@@ -106,8 +106,8 @@ sub _defaults {				## specify RR attribute default values
 		'ECC-GOST'	     => 12,			# [RFC5933]
 		'ECDSAP256SHA256'    => 13,			# [RFC6605]
 		'ECDSAP384SHA384'    => 14,			# [RFC6605]
-		'Ed25519'	     => 15,			# [RFC8080]
-		'Ed448'		     => 16,			# [RFC8080]
+		'ED25519'	     => 15,			# [RFC8080]
+		'ED448'		     => 16,			# [RFC8080]
 
 		'INDIRECT'   => 252,				# [RFC4034]
 		'PRIVATEDNS' => 253,				# [RFC4034]

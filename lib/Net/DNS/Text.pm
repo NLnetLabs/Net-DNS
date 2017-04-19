@@ -42,7 +42,7 @@ use Carp;
 
 use constant ASCII => ref eval {
 	require Encode;
-	Encode::find_encoding('ascii');				# encoding object
+	Encode::find_encoding('ascii');
 };
 
 use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
@@ -68,7 +68,7 @@ interpretation.
 
 =cut
 
-my %unescape;				## precalculated numeric escape table
+my ( %escape, %unescape );		## precalculated ASCII escape tables
 
 sub new {
 	my $self = bless [], shift;
@@ -183,8 +183,6 @@ sub value {
 Conditionally quoted zone file representation of the text object.
 
 =cut
-
-my %escape;				## precalculated ASCII/UTF-8 escape table
 
 sub string {
 	my $self = shift;

@@ -78,7 +78,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{typebm};
+	return '' unless defined $self->{hnxtname};
 	my $salt = $self->saltbin;
 	my $hash = $self->{hnxtname};
 	pack 'CCn C a* C a* a*', $self->algorithm, $self->flags, $self->iterations,
@@ -91,7 +91,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{typebm};
+	return '' unless defined $self->{hnxtname};
 	my @rdata = (
 		$self->algorithm, $self->flags, $self->iterations,
 		$self->salt || '-', $self->hnxtname, $self->typelist
@@ -178,8 +178,8 @@ sub saltbin {
 
 sub hnxtname {
 	my $self = shift;
-	$self->{hnxtname} = _decode_base32(shift) if scalar @_;
-	_encode_base32( $self->{hnxtname} ) if defined wantarray;
+	$self->{hnxtname} = _decode_base32hex(shift) if scalar @_;
+	_encode_base32hex( $self->{hnxtname} ) if defined wantarray;
 }
 
 
@@ -188,24 +188,21 @@ sub covered {
 	my $name = shift;
 
 	# first test if the domain name is in the NSEC3 zone.
-	my @labels = map { tr /\101-\132/\141-\172/; $_ } new Net::DNS::DomainName($name)->_wire;
-	my ( $owner, @zonelabels ) = map { tr /\101-\132/\141-\172/; $_ } $self->{owner}->_wire;
-	my $ownerhash = _decode_base32($owner);
-
+	my ( $owner, @zonelabels ) = $self->{owner}->_wire;
+	my @labels = new Net::DNS::DomainName( lc $name )->_wire;
 	foreach ( reverse @zonelabels ) {
-		return 0 unless $_ eq ( pop(@labels) || return 0 );
+		tr /\101-\132/\141-\172/;
+		return 0 unless $_ eq ( pop(@labels) || '' );
 	}
+
+	my $ownerhash = _decode_base32hex($owner);
+	my $nexthash  = "$self->{hnxtname}";
 
 	my $namehash = _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
-	my $nexthash = "$self->{hnxtname}";
 
-	unless ( $ownerhash lt $nexthash ) {			# last or only NSEC3 RR
-		return 1 if $namehash lt $nexthash;
-		return $namehash gt $ownerhash;
-	}
-
-	return 0 unless $namehash gt $ownerhash;		# general case
-	return $namehash lt $nexthash;
+	my $c1 = $namehash cmp $ownerhash;
+	my $c2 = $nexthash cmp $namehash;
+	return ( $c1 + $c2 ) == 2;
 }
 
 
@@ -213,20 +210,18 @@ sub match {
 	my $self = shift;
 	my $name = shift;
 
-	my $namehash = _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
-
 	my ($owner) = $self->{owner}->_wire;
-	my $ownerhash = _decode_base32($owner);
+	my $ownerhash = _decode_base32hex($owner);
 
-	$namehash eq $ownerhash;
+	$ownerhash eq _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
 }
 
 
 ########################################
 
-sub _decode_base32 {
+sub _decode_base32hex {
 	local $_ = shift || '';
-	tr [0-9a-vA-V] [\000-\037\012-\037];
+	tr [0-9A-Va-v\060-\071\101-\126\141-\166] [\000-\037\012-\037\000-\037\012-\037];
 	$_ = unpack 'B*', $_;
 	s/000(.....)/$1/g;
 	my $l = length;
@@ -235,7 +230,7 @@ sub _decode_base32 {
 }
 
 
-sub _encode_base32 {
+sub _encode_base32hex {
 	local $_ = unpack 'B*', shift;
 	s/(.....)/000$1/g;
 	my $l = length;
@@ -271,7 +266,7 @@ sub _hash {
 }
 
 
-sub name2hash { _encode_base32(&_hash); }			# uncoverable pod
+sub name2hash { _encode_base32hex(&_hash); }			# uncoverable pod
 
 
 sub hashalgo { &algorithm; }					# uncoverable pod
@@ -408,7 +403,9 @@ matches as defined in the NSEC3 specification:
 
 =head1 COPYRIGHT
 
-Copyright (c)2007,2008 NLnet Labs.  Author Olaf M. Kolkman
+Copyright (c)2017 Dick Franks
+
+Portions Copyright (c)2007,2008 NLnet Labs.  Author Olaf M. Kolkman
 
 All rights reserved.
 

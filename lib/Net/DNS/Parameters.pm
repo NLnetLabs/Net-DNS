@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2017-03-07)
+##	(last updated 2017-04-13)
 ##
 ################################################
 
@@ -95,7 +95,7 @@ our %typebyname = (
 	NSEC3	   => 50,					# RFC5155
 	NSEC3PARAM => 51,					# RFC5155
 	TLSA	   => 52,					# RFC6698
-	SMIMEA	   => 53,					# draft-ietf-dane-smime
+	SMIMEA	   => 53,					# RFC-ietf-dane-smime-16
 	HIP	   => 55,					# RFC8005
 	NINFO	   => 56,					#
 	RKEY	   => 57,					#
@@ -186,7 +186,7 @@ our %ednsoptionbyname = (
 	'TCP-KEEPALIVE' => 11,					# RFC7828
 	PADDING		=> 12,					# RFC7830
 	CHAIN		=> 13,					# RFC7901
-	'KEY-TAG'	=> 14,					# RFC-ietf-dnsop-edns-key-tag-05
+	'KEY-TAG'	=> 14,					# RFC8145
 	DEVICEID	=> 26946,				# https://docs.umbrella.com/developer/networkdevices-api/identifying-dns-traffic2
 	);
 our %ednsoptionbyval = reverse %ednsoptionbyname;
@@ -207,7 +207,7 @@ our %dnsflagbyname = (
 
 # Registry: EDNS Header Flags (16 bits)
 our %ednsflagbyname = (
-	DO => 0x8000,						# RFC4035 RFC3225
+	DO => 0x8000,						# RFC4035 RFC3225 RFC6840
 	);
 %ednsflagbyname = ( %ednsflagbyname, map lc($_), %ednsflagbyname );
 
@@ -220,7 +220,7 @@ sub classbyname {
 	my $name = shift;
 
 	$classbyname{$name} || $classbyname{uc $name} || do {
-		croak "unknown class $name" unless $name =~ m/(CLASS)?(\d+)/i;
+		croak "unknown class $name" unless $name =~ m/^(CLASS)?(\d+)/i;
 		my $val = 0 + $2;
 		croak "classbyname( $name ) out of range" if $val > 0xffff;
 		return $val;
@@ -248,7 +248,7 @@ sub typebyname {
 			return $val;
 		}
 		_typespec("$name.RRNAME");
-		return $typebyname{uc $name} || croak "unknown type $name";
+		croak "unknown type $name" unless $typebyname{uc $name};
 			}
 }
 

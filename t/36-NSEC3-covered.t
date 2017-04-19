@@ -7,98 +7,125 @@ use Net::DNS;
 
 my @prerequisite = qw(
 		Digest::SHA
-		Net::DNS::RR::NSEC3;
+		Net::DNS::RR::NSEC3
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "require $package";
+	next if eval "use $package; 1;";
 	plan skip_all => "$package not installed";
 	exit;
 }
 
-plan tests => 14;
+plan tests => 18;
 
 
-## IMPORTANT:	Do not modify names or hash parameters in any way.
-##		These are crafted to provide known hash relationships.
-my $algorithm = 1;
-my $flags     = 0;
-my $iteration = 12;
-my $salt      = 'aabbccdd';
-my $saltbin   = pack 'H*', $salt;
-my @param     = ( $algorithm, $flags, $iteration, $salt );
+## Tests based on example zone from RFC5155, Appendix A
+## as amended by erratum 4993
 
-my @name = qw(
-		domain.parent.example
-		d.domain.parent.example
-		n.domain.parent.example
-		p.domain.parent.example
-		q.domain.parent.example
-		*.domain.parent.example
-		);
+my %H = (
+	'example'       => '0p9mhaveqvm6t7vbl5lop2u3t2rp3tom',
+	'a.example'     => '35mthgpgcu1qg68fab165klnsnk3dpvl',
+	'ai.example'    => 'gjeqe526plbf1g8mklp59enfd789njgi',
+	'ns1.example'   => '2t7b4g4vsa5smi47k61mv5bv1a22bojr',
+	'ns2.example'   => 'q04jkcevqvmu85r014c7dkba38o0ji5r',
+	'w.example'     => 'k8udemvp1j2f7eg6jebps17vp3n8i58h',
+	'*.w.example'   => 'r53bq7cc2uvmubfu5ocmm6pers9tk9en',
+	'x.w.example'   => 'b4um86eghhds6nea196smvmlo4ors995',
+	'y.w.example'   => 'ji6neoaepv8b5o6k4ev33abha8ht9fgc',
+	'x.y.w.example' => '2vptu5timamqttgl4luu9kg21e0aor3s',
+	'xx.example'    => 't644ebqk9bibcna874givr6joj62mlhv',
+);
 
-my %hash;
-foreach my $name (@name) {
-	$hash{$name} = Net::DNS::RR::NSEC3::name2hash( $algorithm, $name, $iteration, $saltbin );
-}
-
-my %name = reverse %hash;
-foreach ( sort keys %name ) {
-	print join "\t", $_, $name{$_}, "\n";
-}
+my %name = reverse %H;
+foreach ( sort keys %name ) { print "$_\t$name{$_}\n" }
 
 
-my $hzone = $hash{'domain.parent.example'};
-my $cover = $hash{'n.domain.parent.example'};
-my $hnext = $hash{'d.domain.parent.example'};
-my $bfore = $hash{'p.domain.parent.example'};
-my $after = $hash{'q.domain.parent.example'};
-my $nsec3 = new Net::DNS::RR("$hzone.$name{$hzone}. NSEC3 @param $hnext");
+## Exercise examples from RFC5155, Appendix B
 
-foreach my $name ( $name{$hzone} ) {
-	ok( !$nsec3->covered($name), "NSEC3 owner name not covered\t($name)" );
-}
+ok( Net::DNS::RR->new("$H{'example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'ns1.example'} MX DNSKEY NS SOA NSEC3PARAM RRSIG )")->covered('c.x.w.example'),
+	'B.1: NSEC3 covers "next closer" name (c.x.w.example.)' );
 
-foreach my $name ( $name{$cover} ) {
-	ok( $nsec3->covered($name), "NSEC3 covers enclosed name\t($name)" );
-}
+ok( Net::DNS::RR->new("$H{'x.w.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'ai.example'} MX RRSIG )")->match('x.w.example'),
+	'B.1: NSEC3 matches closest encloser (x.w.example.)' );
 
-foreach my $name ( $name{$hnext} ) {
-	ok( !$nsec3->covered($name), "NSEC3 next name not covered\t($name)" );
-}
-
-foreach my $name ( $name{$bfore}, $name{$after} ) {
-	ok( !$nsec3->covered($name), "NSEC3 does not cover other name\t($name)" );
-}
+ok( Net::DNS::RR->new("$H{'a.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'x.w.example'} NS DS RRSIG )")->covered('*.x.w.example'),
+	'B.1: NSEC3 covers wildcard at closest encloser (*.x.w.example.)' );
 
 
-my $last = new Net::DNS::RR("$hnext.$name{$hzone}. NSEC3 @param $hzone");
-foreach my $name ( $name{$hnext} ) {
-	ok( !$last->covered($name), "last NSEC3 owner not covered\t($name)" );
-}
+ok( Net::DNS::RR->new("$H{'ns1.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'x.y.w.example'} A RRSIG )")->match('ns1.example'),
+	'B.2: NSEC3 matches QNAME (example.) proving MX and CNAME absent' );
 
-foreach my $name ( $name{$hzone} ) {
-	ok( !$last->covered($name), "last NSEC3 next not covered\t($name)" );
-}
-
-foreach my $name ( $name{$bfore}, $name{$after} ) {
-	ok( $last->covered($name), "last NSEC3 covers other name\t($name)" );
-}
+ok( Net::DNS::RR->new("$H{'y.w.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'w.example'} )")->match('y.w.example'),
+	'B.2.1: NSEC3 matches empty non-terminal (y.w.example.)' );
 
 
-my @domain = qw(
-		sibling.parent.example
-		parent.example
-		uncle.example
-		cousin.uncle.example
-		domain.unrelated
-		);
+ok( Net::DNS::RR->new("$H{'a.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'x.w.example'} NS DS RRSIG )")->covered('c.example'),
+	'B.3: NSEC3 covers "next closer" name (c.example.)' );
 
-foreach my $name (@domain) {
-	ok( !$nsec3->covered($name), "other domain not covered\t($name)" );
-}
+ok( Net::DNS::RR->new("$H{'example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'ns1.example'} MX DNSKEY NS SOA NSEC3PARAM RRSIG )")->match('example'),
+	'B.3: NSEC3 matches closest provable encloser (example.)' );
+
+
+ok( Net::DNS::RR->new("$H{'ns2.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'*.w.example'} A RRSIG )")->covered('z.w.example'),
+	'B.4: NSEC3 covers "next closer" name (z.w.example.)' );
+
+
+ok( Net::DNS::RR->new("$H{'w.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'ns2.example'} )")->match('w.example'),
+	'B.5: NSEC3 matches closest encloser (w.example.)' );
+
+ok( Net::DNS::RR->new("$H{'ns2.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'*.w.example'} A RRSIG )")->covered('z.w.example'),
+	'B.5: NSEC3 covers "next closer name" (z.w.example.)' );
+
+ok( Net::DNS::RR->new("$H{'*.w.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'xx.example'} MX RRSIG )")->match('*.w.example'),
+	'B.5: NSEC3 matches wildcard at closest encloser (*.w.example.)' );
+
+
+ok( Net::DNS::RR->new("$H{'example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'ns1.example'} MX DNSKEY NS SOA NSEC3PARAM RRSIG )")->match('example'),
+	'B.6: NSEC3 matches QNAME (example.) and shows DS type bit not set' );
+
+
+## covered() returns false for hashed name not strictly between ownerhash and nexthash
+
+ok( !Net::DNS::RR->new("$H{'example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'ns1.example'} A RRSIG )")->covered('.'),
+	'ancestor name not covered (.)' );			# too few matching labels
+
+ok( !Net::DNS::RR->new("$H{'ns2.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'*.w.example'} A RRSIG )")->covered('unrelated.name'),
+	'name out of zone not covered (unrelated.name.)' );	# non-matching label
+
+
+ok( !Net::DNS::RR->new("$H{'a.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'w.example'} )")->covered('a.example'),
+	'owner name not covered (a.example.)' );
+
+ok( !Net::DNS::RR->new("$H{'a.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'w.example'} )")->covered('w.example'),
+	'next hashed name not covered (w.example.)' );
+
+ok( !Net::DNS::RR->new("$H{'a.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'w.example'} )")->covered('xx.example'),
+	'name beyond next hashed name not covered (xx.example.)' );
+
+ok( !Net::DNS::RR->new("$H{'a.example'}.example. NSEC3 1 1 12 aabbccdd (
+	$H{'example'} )")->covered('xx.example'),
+	'name beyond last hashed name not covered (xx.example.)' );
 
 
 exit;
+
+__END__
 
 
