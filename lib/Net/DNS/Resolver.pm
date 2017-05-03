@@ -48,7 +48,7 @@ __END__
 
 =head1 DESCRIPTION
 
-Instances of the C<Net::DNS::Resolver> class represent resolver objects.
+Instances of the Net::DNS::Resolver class represent resolver objects.
 A program can have multiple resolver objects, each maintaining its
 own state information such as the nameservers to be queried, whether
 recursion is desired, etc.
@@ -112,7 +112,7 @@ If both are present, the resulting behaviour is unspecified.
 
 On Windows systems, an attempt is made to determine the system defaults
 using the registry.  Systems with many dynamically configured network
-interfaces may confuse Net::DNS.
+interfaces may confuse L<Net::DNS>.
 
 
 You can include a configuration file of your own when creating a
@@ -205,7 +205,7 @@ The record type and class can be omitted; they default to A and IN.
 If the name looks like an IP address (IPv4 or IPv6),
 then a query within in-addr.arpa or ip6.arpa will be performed.
 
-Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
+Returns a L<Net::DNS::Packet> object, or C<undef> if no answers were found.
 The reason for failure may be determined using errorstring().
 
 If you need to examine the response packet, whether it contains
@@ -244,7 +244,7 @@ The record type and class can be omitted; they default to A and IN.
 If the name looks like an IP address (IPv4 or IPv6),
 then a query within in-addr.arpa or ip6.arpa will be performed.
 
-Returns a C<Net::DNS::Packet> object, or C<undef> if no answers were found.
+Returns a L<Net::DNS::Packet> object, or C<undef> if no answers were found.
 The reason for failure may be determined using errorstring().
 
 If you need to examine the response packet, whether it contains
@@ -263,12 +263,12 @@ any answers or not, use the send() method instead.
 Performs a DNS query for the given name.  Neither the searchlist
 nor the default domain will be appended.
 
-The argument list can be either a C<Net::DNS::Packet> object or a list
+The argument list can be either a L<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (IPv4 or IPv6),
 then a query within in-addr.arpa or ip6.arpa will be performed.
 
-Returns a C<Net::DNS::Packet> object whether there were any answers or not.
+Returns a L<Net::DNS::Packet> object whether there were any answers or not.
 Use C<< $packet->header->ancount >> or C<< $packet->answer >> to find out
 if there were any records in the answer section.
 Returns C<undef> if no response was received.
@@ -295,7 +295,7 @@ in the resolver search list.
 If the class is omitted, it defaults to IN.
 
 
-When called in list context, axfr() returns a list of C<Net::DNS::RR>
+When called in list context, C<axfr()> returns a list of L<Net::DNS::RR>
 objects.  The redundant SOA record that terminates the zone transfer
 is not returned to the caller.
 
@@ -315,8 +315,8 @@ Here is an example that uses a timeout and TSIG verification:
     }
 
 
-When called in scalar context, axfr() returns an iterator object.
-Each invocation of the iterator returns a single C<Net::DNS::RR>
+When called in scalar context, C<axfr()> returns an iterator object.
+Each invocation of the iterator returns a single L<Net::DNS::RR>
 or C<undef> when the zone is exhausted.
 
 An exception is raised if the zone transfer can not be completed.
@@ -348,7 +348,7 @@ Performs a background DNS query for the given name and returns immediately
 without waiting for the response. The program can then perform other tasks
 while awaiting the response from the nameserver.
 
-The argument list can be either a C<Net::DNS::Packet> object or a list
+The argument list can be either a L<Net::DNS::Packet> object or a list
 of strings.  The record type and class can be omitted; they default to
 A and IN.  If the name looks like an IP address (IPv4 or IPv6),
 then a query within in-addr.arpa or ip6.arpa will be performed.
@@ -361,7 +361,7 @@ the reason for failure may be determined using errorstring().
 The program may determine when the handle is ready for reading by
 calling C<bgbusy>.
 
-The response C<Net::DNS::Packet> object is obtained by calling C<bgread>.
+The response L<Net::DNS::Packet> object is obtained by calling C<bgread>.
 
 B<BEWARE>:
 Programs should make no assumptions about the nature of the handles
@@ -375,7 +375,7 @@ returned by C<bgsend> which should be used strictly as described here.
 Reads the answer from a background query.
 The argument is the handle returned by C<bgsend>.
 
-Returns a C<Net::DNS::Packet> object or C<undef> if no response was
+Returns a L<Net::DNS::Packet> object or C<undef> if no response was
 received or timeout occurred. 
 
 
@@ -466,7 +466,7 @@ Also see the IPv6 transport notes below
     $resolver->persistent_tcp(1);
 
 Get or set the persistent TCP setting.
-If true, Net::DNS will keep a TCP socket open for each host:port
+If true, L<Net::DNS> will keep a TCP socket open for each host:port
 to which it connects.
 This is useful if you are using TCP and need to make a lot of queries
 or updates to the same nameserver.
@@ -481,7 +481,7 @@ in which case the default is true.
     $resolver->persistent_udp(1);
 
 Get or set the persistent UDP setting.
-If true, a Net::DNS resolver will use the same UDP socket
+If true, a L<Net::DNS> resolver will use the same UDP socket
 for all queries within each address family.
 
 This avoids the cost of creating and tearing down UDP sockets,
@@ -634,8 +634,8 @@ method immediately after.
    $resolver->dnssec(1);		# DNSSEC using default packetsize
    $resolver->udppacketsize(1250);	# lower the UDP packet size
 
-A fatal exception will be raised if the dnssec() method is called
-but the Net::DNS::SEC library has not been installed.
+A fatal exception will be raised if the C<dnssec()> method is called
+but the L<Net::DNS::SEC> library has not been installed.
 
 
 =head2 adflag
@@ -747,7 +747,7 @@ take values are specified as C<option:value>.
 =head1 IPv6 TRANSPORT
 
 The Net::DNS::Resolver library will enable IPv6 transport if the
-appropriate libraries (IO::Socket::IP or IO::Socket::INET6) are
+appropriate library (L<IO::Socket::IP> or L<IO::Socket::INET6>) is
 available and the destination nameserver has an IPv6 address.
 
 The force_v4(), force_v6(), prefer_v4 and prefer_v6() methods with a

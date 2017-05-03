@@ -694,6 +694,7 @@ sub axfr {				## zone transfer
 	eval {
 		my $self = shift;
 
+		# initialise iterator state vector
 		my ( $select, $verify, @rr, $soa ) = $self->_axfr_start(@_);
 
 		my $iterator = sub {	## iterate over RRs
@@ -716,7 +717,7 @@ sub axfr {				## zone transfer
 
 		return $iterator unless wantarray;
 
-		my @zone;					# assemble whole zone
+		my @zone;		## subvert iterator to assemble entire zone
 		while ( my $rr = $iterator->() ) {
 			push @zone, $rr, @rr;			# copy RRs en bloc
 			@rr = pop(@zone);			# leave last one in @rr

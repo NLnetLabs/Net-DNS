@@ -442,8 +442,8 @@ date information to remain useful.
 
 rrsort() provides functionality to help you sort RR arrays. In most cases
 rrsort() will give you the answer that you want, but you can specify your
-own sorting method by using the Net::DNS::RR::FOO->set_rrsort_func() class
-method. See Net::DNS::RR for details.
+own sorting method by using the C<< Net::DNS::RR::FOO->set_rrsort_func() >>
+class method. See L<Net::DNS::RR> for details.
 
 =head2 rrsort()
 
@@ -577,7 +577,7 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
 
 =head1 BUGS
 
-C<Net::DNS> is slow.
+Net::DNS is slow.
 
 For other items to be fixed, or if you discover a bug in this
 distribution please use the CPAN bug reporting system.
