@@ -31,6 +31,7 @@ lib/Net/DNS/Resolver/Base.pm
 lib/Net/DNS/Resolver/cygwin.pm
 lib/Net/DNS/Resolver/MSWin32.pm
 lib/Net/DNS/Resolver/os2.pm
+lib/Net/DNS/Resolver/os390.pm
 lib/Net/DNS/Resolver/Recurse.pm
 lib/Net/DNS/Resolver/UNIX.pm
 lib/Net/DNS/RR.pm
