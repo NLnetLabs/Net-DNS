@@ -364,7 +364,7 @@ NonFatalBegin();
 	$resolver->retry(0);
 	$resolver->tcp_timeout(0);
 
-	my @query = (qw(. SOA IN));
+	my @query = (qw(:: SOA IN));
 	my $query = new Net::DNS::Packet(@query);
 	ok( !$resolver->query(@query),	'$resolver->query() failure' );
 	ok( !$resolver->search(@query), '$resolver->search() failure' );

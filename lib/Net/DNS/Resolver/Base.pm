@@ -77,6 +77,7 @@ use constant PACKETSZ => 512;
 		recurse		=> 1,
 		defnames	=> 1,
 		dnsrch		=> 1,
+		ndots		=> 1,
 		debug		=> 0,
 		tcp_timeout	=> 120,
 		udp_timeout	=> 30,
@@ -114,10 +115,10 @@ sub new {
 	my $init = $initial;
 	$initial ||= bless {%$base}, $class;
 	if ( my $file = $args{config_file} ) {
-		$self = bless {%$initial}, $class;
-		$self->_read_config_file($file);		# user specified config
-		$self->nameserver( map { m/^(.*)$/; $1 } $self->nameserver );
-		$self->searchlist( map { m/^(.*)$/; $1 } $self->searchlist );
+		my $conf = bless {%$initial}, $class;
+		$conf->_read_config_file($file);		# user specified config
+		$self = bless {%$conf}, $class unless TAINT;
+		$self = bless {map { m/^(.*)$/; $1 } %$conf}, $class if TAINT;
 		%$base = %$self unless $init;			# define default configuration
 
 	} elsif ($init) {
@@ -146,11 +147,19 @@ my %resolv_conf = (			## map traditional resolv.conf option names
 	timeout	 => 'retrans',
 	);
 
-my %env_option = (			## any resolver attribute except as listed below
+my %res_option = (			## any resolver attribute except as listed below
 	%public_attr,
 	%resolv_conf,
 	map { $_ => 0 } qw(nameserver nameservers domain searchlist),
 	);
+
+sub _option {
+	my ( $self, $name, @value ) = @_;
+	my $attribute = $res_option{lc $name} || return;
+	push @value, 1 unless scalar @value;
+	$self->$attribute(@value);
+}
+
 
 sub _read_env {				## read resolver config environment variables
 	my $self = shift;
@@ -163,10 +172,7 @@ sub _read_env {				## read resolver config environment variables
 
 	if ( exists $ENV{RES_OPTIONS} ) {
 		foreach ( map split, $ENV{RES_OPTIONS} ) {
-			my ( $name, $val ) = split( m/:/, $_, 2 );
-			my $attribute = $env_option{$name} || next;
-			$val = 1 unless defined $val;
-			$self->$attribute($val);
+			$self->_option( split m/:/ );
 		}
 	}
 }
@@ -176,11 +182,11 @@ sub _read_config_file {			## read resolver config file
 	my $self = shift;
 	my $file = shift;
 
-	my @ns;
-
 	local *FILE;
+	open( FILE, $file ) or croak "$file: $!";
 
-	open( FILE, $file ) or croak "Could not open $file: $!";
+	my @nameserver;
+	my @searchlist;
 
 	local $_;
 	while (<FILE>) {
@@ -188,18 +194,7 @@ sub _read_config_file {			## read resolver config file
 
 		/^nameserver/ && do {
 			my ( $keyword, @ip ) = grep defined, split;
-			push @ns, @ip;
-			next;
-		};
-
-		/^option/ && do {
-			my ( $keyword, @option ) = grep defined, split;
-			foreach (@option) {
-				my ( $name, $val ) = split( m/:/, $_, 2 );
-				my $attribute = $resolv_conf{$name} || next;
-				$val = 1 unless defined $val;
-				$self->$attribute($val);
-			}
+			push @nameserver, @ip;
 			next;
 		};
 
@@ -210,15 +205,23 @@ sub _read_config_file {			## read resolver config file
 		};
 
 		/^search/ && do {
-			my ( $keyword, @searchlist ) = grep defined, split;
-			$self->searchlist(@searchlist);
+			my ( $keyword, @domain ) = grep defined, split;
+			push @searchlist, @domain;
 			next;
+		};
+
+		/^option/ && do {
+			my ( $keyword, @option ) = grep defined, split;
+			foreach (@option) {
+				$self->_option( split m/:/ );
+			}
 		};
 	}
 
 	close(FILE);
 
-	$self->nameservers(@ns);
+	$self->nameservers(@nameserver) if @nameserver;
+	$self->searchlist(@searchlist)	if @searchlist;
 }
 
 
@@ -230,15 +233,16 @@ sub string {
 	my $domain = $self->domain;
 	return <<END;
 ;; RESOLVER state:
+;; nameservers	= @nslist
 ;; domain	= $domain
 ;; searchlist	= @{$self->{searchlist}}
-;; nameservers	= @nslist
+;; ndots	= $self->{ndots}
 ;; defnames	= $self->{defnames}	dnsrch		= $self->{dnsrch}
 ;; retrans	= $self->{retrans}	retry		= $self->{retry}
 ;; recurse	= $self->{recurse}	igntc		= $self->{igntc}
-;; usevc	= $self->{usevc}	port		= $self->{port}
 ;; tcp_timeout	= $self->{tcp_timeout}	persistent_tcp	= $self->{persistent_tcp}
 ;; udp_timeout	= $self->{udp_timeout}	persistent_udp	= $self->{persistent_udp}
+;; usevc	= $self->{usevc}	port		= $self->{port}
 ;; prefer_v4	= $self->{prefer_v4}	force_v4	= $self->{force_v4}
 ;; debug	= $self->{debug}	force_v6	= $self->{force_v6}
 END
@@ -360,14 +364,15 @@ sub query {
 	my $self = shift;
 	my $name = shift || '.';
 
-	# resolve name containing no dots or colons by appending domain
-	my @sfix = ( $self->{defnames} && $name !~ m/[:.]/ ) ? $self->domain : ();
+	my @sfix;
+
+	if ( $self->{defnames} && ( ( $name =~ tr/././ ) < $self->{ndots} ) ) {
+		@sfix = $self->domain unless $name =~ m/:|\.\d*$/;
+	}
+
 	my $fqdn = join '.', $name, @sfix;
-
 	$self->_diag( 'query(', $fqdn, @_, ')' );
-
 	my $packet = $self->send( $fqdn, @_ ) || return;
-
 	return $packet->header->ancount ? $packet : undef;
 }
 
@@ -378,16 +383,16 @@ sub search {
 	return $self->query(@_) unless $self->{dnsrch};
 
 	my $name = shift || '.';
-	my @sfix = $self->searchlist;
-	my @list = $name =~ m/[.]/ ? ( undef, @sfix ) : ( @sfix, undef );
+	my @sfix;
 
-	foreach my $suffix ( $name =~ m/:|\.\d*$/ ? undef : @list ) {
+	if ( ( $name =~ tr/././ ) < $self->{ndots} ) {
+		@sfix = $self->searchlist unless $name =~ m/:|\.\d*$/;
+	}
+
+	foreach my $suffix ( @sfix, undef ) {
 		my $fqname = $suffix ? join( '.', $name, $suffix ) : $name;
-
 		$self->_diag( 'search(', $fqname, @_, ')' );
-
 		my $packet = $self->send( $fqname, @_ ) || next;
-
 		return $packet->header->ancount ? $packet : next;
 	}
 
@@ -1130,7 +1135,7 @@ sub AUTOLOAD {				## Default method
 	*{$AUTOLOAD} = sub {
 		my $self = shift;
 		$self = $self->_defaults unless ref($self);
-		$self->{$name} = shift if scalar @_;
+		$self->{$name} = shift || 0 if scalar @_;
 		return $self->{$name};
 	};
 

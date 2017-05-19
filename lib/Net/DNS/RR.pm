@@ -472,7 +472,6 @@ Resource record time to live in seconds.
 # published API.  These are required for parsing BIND zone files but
 # should not be used in other contexts.
 my %unit = ( W => 604800, D => 86400, H => 3600, M => 60, S => 1 );
-%unit = ( %unit, map /\D/ ? lc($_) : $_, %unit );
 
 sub ttl {
 	my ( $self, $time ) = @_;
@@ -482,7 +481,7 @@ sub ttl {
 	my $ttl = 0;
 	my %time = reverse split /(\D)\D*/, $time . 'S';
 	while ( my ( $u, $t ) = each %time ) {
-		my $scale = $unit{$u} || die qq(bad time: $t$u);
+		my $scale = $unit{uc $u} || die qq(bad time: $t$u);
 		$ttl += $t * $scale;
 	}
 	$self->{ttl} = $ttl;

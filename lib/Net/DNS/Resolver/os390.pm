@@ -18,19 +18,22 @@ use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
 
-use Sys::Hostname;
-
-my ($host) = split /[.]/, uc hostname();
-
-my @resolv_conf = ( "//'$host.TCPPARMS(TCPDATA)'", "/etc/resolv.conf" );
+my ($sysname) = _untaint(`sysvar SYSNAME`);
 
 
-my @config_path;
+my @dataset = (				## plausible places to seek resolver configuration
+	$ENV{RESOLVER_CONFIG},					# MVS dataset or Unix file name
+	'/etc/resolv.conf',
+	'//TCPIP.DATA',						# <username>.TCPIP.DATA
+	"//'${sysname}.TCPPARMS(TCPDATA)'",
+	"//'SYS1.TCPPARMS(TCPDATA)'",
+	"//'TCPIP.TCPIP.DATA'"
+	);
+
+
 my $dotfile = '.resolv.conf';
-push( @config_path, $ENV{HOME} ) if exists $ENV{HOME};
-push( @config_path, '.' );
-
-my @config_file = grep -f $_ && -o _, map "$_/$dotfile", @config_path;
+my @dotpath = grep defined, $ENV{HOME}, '.';
+my @dotfile = grep -f $_ && -o _, map "$_/$dotfile", @dotpath;
 
 
 sub _untaint {
@@ -38,13 +41,23 @@ sub _untaint {
 }
 
 
+my %option = (				## map MVS config option names
+	NSPORTADDR	   => 'port',
+	RESOLVERTIMEOUT	   => 'retrans',
+	RESOLVERUDPRETRIES => 'retry',
+	SORTLIST	   => 'sortlist',
+	);
+
+
 sub _init {
 	my $defaults = shift->_defaults;
 
-	foreach my $conf (@resolv_conf) {
-		eval {
-			local *FILE;
-			open( FILE, $conf ) or die;
+	foreach my $dataset ( grep defined, @dataset ) {
+		last if scalar eval {
+			local *FILE;				# "cat" able to read MVS dataset
+			open( FILE, qq[cat "$dataset" 2>/dev/null |] ) or die "$dataset: $!";
+
+			my $qual = $dataset =~ m!^//[']?\w+[.]\w+!;
 
 			my @nameserver;
 			my @searchlist;
@@ -55,37 +68,63 @@ sub _init {
 				s/^\s+//;			# strip leading white space
 				next unless $_;			# skip empty line
 
-				/^($host:)?(NSINTERADDR|NAMESERVER)/oi && do {
+				next if $qual && m/^\w+:\w+/ && !m/^$sysname:/oi;
+
+
+				m/^(\w+:)?(NSINTERADDR|nameserver)/i && do {
 					my ( $keyword, @ip ) = grep defined, split;
 					push @nameserver, @ip;
 					next;
 				};
 
 
-				/^($host:)?(DOMAINORIGIN|DOMAIN)/oi && do {
+				m/^(\w+:)?(DOMAINORIGIN|domain)/i && do {
 					my ( $keyword, $domain ) = grep defined, split;
 					$defaults->domain( _untaint $domain );
 					next;
 				};
 
 
-				/^($host:)?SEARCH/oi && do {
+				m/^(\w+:)?search/i && do {
 					my ( $keyword, @domain ) = grep defined, split;
 					push @searchlist, @domain;
 					next;
 				};
 
+
+				m/^(\w+:)?option/i && do {
+					my ( $keyword, @option ) = grep defined, split;
+					foreach (@option) {
+						$defaults->_option( split m/:/ );
+					}
+					next;
+				};
+
+
+				m/^(\w+:)?RESOLVEVIA/i && do {
+					my ( $keyword, $value ) = grep defined, split;
+					$defaults->_option( 'usevc', $value eq 'TCP' );
+					next;
+				};
+
+
+				m/^(\w+:)?(\w+)\s/ && do {
+					my $attribute = $option{uc $2} || next;
+					my ( $keyword, @value ) = grep defined, split;
+					$defaults->_option( $attribute, @value );
+				};
 			}
 
 			close(FILE);
 
-			$defaults->nameservers( _untaint @nameserver );
-			$defaults->searchlist( _untaint @searchlist );
+			$defaults->searchlist( _untaint @searchlist ) if @searchlist;
+			$defaults->nameserver( _untaint @nameserver ) if @nameserver;
 		};
+		warn $@ if $@;
 	}
 
 
-	map $defaults->_read_config_file($_), @config_file;
+	map $defaults->_read_config_file($_), @dotfile;
 
 	$defaults->_read_env;
 }

@@ -30,19 +30,20 @@ our @EXPORT = qw(
 
 
 # Registry: DNS CLASSes
-our %classbyname = (
+my @classbyname = (
 	IN   => 1,						# RFC1035
 	CH   => 3,						# Chaosnet
 	HS   => 4,						# Hesiod
 	NONE => 254,						# RFC2136
 	ANY  => 255,						# RFC1035
 	);
-our %classbyval = reverse %classbyname;
-%classbyname = ( '*' => 255, %classbyname, map lc($_), %classbyname );
+our %classbyval = reverse @classbyname;
+push @classbyname, map /^\d/ ? $_ : lc($_), @classbyname;
+our %classbyname = ( '*' => 255, @classbyname );
 
 
 # Registry: Resource Record (RR) TYPEs
-our %typebyname = (
+my @typebyname = (
 	A	   => 1,					# RFC1035
 	NS	   => 2,					# RFC1035
 	MD	   => 3,					# RFC1035
@@ -128,24 +129,26 @@ our %typebyname = (
 	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
 	);
-our %typebyval = reverse %typebyname;
-%typebyname = ( '*' => 255, %typebyname, map lc($_), %typebyname );
+our %typebyval = reverse @typebyname;
+push @typebyname, map /^\d/ ? $_ : lc($_), @typebyname;
+our %typebyname = ( '*' => 255, @typebyname );
 
 
 # Registry: DNS OpCodes
-our %opcodebyname = (
+my @opcodebyname = (
 	QUERY  => 0,						# RFC1035
 	IQUERY => 1,						# RFC3425
 	STATUS => 2,						# RFC1035
 	NOTIFY => 4,						# RFC1996
 	UPDATE => 5,						# RFC2136
 	);
-our %opcodebyval = reverse %opcodebyname;
-%opcodebyname = ( NS_NOTIFY_OP => 4, %opcodebyname, map lc($_), %opcodebyname );
+our %opcodebyval = reverse @opcodebyname;
+push @opcodebyname, map /^\d/ ? $_ : lc($_), @opcodebyname;
+our %opcodebyname = ( NS_NOTIFY_OP => 4, @opcodebyname );
 
 
 # Registry: DNS RCODEs
-our %rcodebyname = (
+my @rcodebyname = (
 	NOERROR	  => 0,						# RFC1035
 	FORMERR	  => 1,						# RFC1035
 	SERVFAIL  => 2,						# RFC1035
@@ -168,12 +171,13 @@ our %rcodebyname = (
 	BADTRUNC  => 22,					# RFC4635
 	BADCOOKIE => 23,					# RFC7873
 	);
-our %rcodebyval = reverse( BADSIG => 16, %rcodebyname );
-%rcodebyname = ( %rcodebyname, map lc($_), %rcodebyname );
+our %rcodebyval = reverse( BADSIG => 16, @rcodebyname );
+push @rcodebyname, map /^\d/ ? $_ : lc($_), @rcodebyname;
+our %rcodebyname = @rcodebyname;
 
 
 # Registry: DNS EDNS0 Option Codes (OPT)
-our %ednsoptionbyname = (
+my @ednsoptionbyname = (
 	LLQ		=> 1,					# http://files.dns-sd.org/draft-sekar-dns-llq.txt
 	UL		=> 2,					# http://files.dns-sd.org/draft-sekar-dns-ul.txt
 	NSID		=> 3,					# RFC5001
@@ -189,12 +193,13 @@ our %ednsoptionbyname = (
 	'KEY-TAG'	=> 14,					# RFC8145
 	DEVICEID	=> 26946,				# https://docs.umbrella.com/developer/networkdevices-api/identifying-dns-traffic2
 	);
-our %ednsoptionbyval = reverse %ednsoptionbyname;
-%ednsoptionbyname = ( %ednsoptionbyname, map lc($_), %ednsoptionbyname );
+our %ednsoptionbyval = reverse @ednsoptionbyname;
+push @ednsoptionbyname, map /^\d/ ? $_ : lc($_), @ednsoptionbyname;
+our %ednsoptionbyname = @ednsoptionbyname;
 
 
 # Registry: DNS Header Flags
-our %dnsflagbyname = (
+my @dnsflagbyname = (
 	AA => 0x0400,						# RFC1035
 	TC => 0x0200,						# RFC1035
 	RD => 0x0100,						# RFC1035
@@ -202,14 +207,16 @@ our %dnsflagbyname = (
 	AD => 0x0020,						# RFC4035 RFC6840
 	CD => 0x0010,						# RFC4035 RFC6840
 	);
-%dnsflagbyname = ( %dnsflagbyname, map lc($_), %dnsflagbyname );
+push @dnsflagbyname, map /^\d/ ? $_ : lc($_), @dnsflagbyname;
+our %dnsflagbyname = @dnsflagbyname;
 
 
 # Registry: EDNS Header Flags (16 bits)
-our %ednsflagbyname = (
+my @ednsflagbyname = (
 	DO => 0x8000,						# RFC4035 RFC3225 RFC6840
 	);
-%ednsflagbyname = ( %ednsflagbyname, map lc($_), %ednsflagbyname );
+push @ednsflagbyname, map /^\d/ ? $_ : lc($_), @ednsflagbyname;
+our %ednsflagbyname = @ednsflagbyname;
 
 
 ########
@@ -248,7 +255,7 @@ sub typebyname {
 			return $val;
 		}
 		_typespec("$name.RRNAME");
-		croak "unknown type $name" unless $typebyname{uc $name};
+		return $typebyname{uc $name} || croak "unknown type $name";
 			}
 }
 

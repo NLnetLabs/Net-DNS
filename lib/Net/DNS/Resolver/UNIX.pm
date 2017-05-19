@@ -18,16 +18,11 @@ use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
 
-my $resolv_conf = "/etc/resolv.conf";
-my $dotfile	= '.resolv.conf';
+my @config_file = grep -f $_ && -r _, '/etc/resolv.conf';
 
-my @resolv_conf = grep -f $_ && -r _, $resolv_conf;
-
-my @config_path;
-push( @config_path, $ENV{HOME} ) if exists $ENV{HOME};
-push( @config_path, '.' );
-
-my @config_file = grep -f $_ && -o _, map "$_/$dotfile", @config_path;
+my $dotfile = '.resolv.conf';
+my @dotpath = grep defined, $ENV{HOME}, '.';
+my @dotfile = grep -f $_ && -o _, map "$_/$dotfile", @dotpath;
 
 
 sub _untaint {
@@ -38,13 +33,12 @@ sub _untaint {
 sub _init {
 	my $defaults = shift->_defaults;
 
-	map $defaults->_read_config_file($_), @resolv_conf;
-
-	foreach my $attr (qw(nameservers searchlist)) {
-		$defaults->$attr( _untaint $defaults->$attr() );
-	}
-
 	map $defaults->_read_config_file($_), @config_file;
+
+	$defaults->nameserver( _untaint $defaults->nameserver );
+	$defaults->searchlist( _untaint $defaults->searchlist );
+
+	map $defaults->_read_config_file($_), @dotfile;
 
 	$defaults->_read_env;
 }

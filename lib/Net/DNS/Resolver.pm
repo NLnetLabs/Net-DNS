@@ -450,7 +450,7 @@ If false, the query will be retried using TCP.
 The default is false.
 
 
-=head2 nameservers
+=head2 nameserver, nameservers
 
     @nameservers = $resolver->nameservers();
     $resolver->nameservers( '192.0.2.1', '192.0.2.2', '2001:DB8::3' );

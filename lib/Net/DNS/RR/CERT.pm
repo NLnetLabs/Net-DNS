@@ -68,21 +68,13 @@ my %certtype = (
 
 	my %algbyval = reverse @algbyname;
 
-	my $map = sub {
-		my $arg = shift;
-		unless ( $arg =~ /^\d/ ) {
-			$arg =~ s/[^A-Za-z0-9]//g;		# synthetic key
-			return uc $arg;
-		}
-		my @map = ( $arg, "$arg" => $arg );		# also accept number
-	};
-
-	my %algbyname = map &$map($_), @algbyname;
+	my @algrehash = map /^\d/ ? ($_) x 3 : do { s/[\W]//g; uc($_) }, @algbyname;
+	my %algbyname = @algrehash;    # work around broken cperl
 
 	sub _algbyname {
 		my $arg = shift;
 		my $key = uc $arg;				# synthetic key
-		$key =~ s/[^A-Z0-9]//g;				# strip non-alphanumerics
+		$key =~ s/[\W_]//g;				# strip non-alphanumerics
 		my $val = $algbyname{$key};
 		return $val if defined $val;
 		return $key =~ /^\d/ ? $arg : croak "unknown algorithm $arg";

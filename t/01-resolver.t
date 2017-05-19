@@ -1,13 +1,13 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 24;
+use Test::More tests => 25;
 
 use Net::DNS;
 
 
-my $resolver = Net::DNS::Resolver->new( prefer_v4 => 1 );
-my $class = ref($resolver);
+my $resolver = Net::DNS::Resolver->new();
+my $class    = ref($resolver);
 
 for (@Net::DNS::Resolver::ISA) {
 	diag $_ unless /[:]UNIX$/;
@@ -19,21 +19,25 @@ ok( $resolver->print, '$resolver->print' );
 
 ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' );
 
+
 {					## check class methods
-	ok( $class->domain('example.com'),     'class->domain' );
-	ok( $class->searchlist('example.com'), 'class->searchlist' );
 	$class->nameservers(qw(127.0.0.1 ::1));
-	ok( $class->srcport(1234), 'class->srcport' );
-	ok( $class->string(),	   'class->string' );
+	ok( scalar( $class->nameservers ), '$class->nameservers' );
+	$class->searchlist(qw(sub1.example.com sub2.example.com));
+	ok( scalar( $class->searchlist ), '$class->searchlist' );
+	$class->domain('example.com');
+	ok( $class->domain,	   '$class->domain' );
+	ok( $class->srcport(1234), '$class->srcport' );
+	ok( $class->string(),	   '$class->string' );
 }
 
 
 {					## check instance methods
-	ok( $resolver->domain('example.com'),	  'resolver->domain' );
-	ok( $resolver->searchlist('example.com'), 'resolver->searchlist' );
+	ok( $resolver->domain('example.com'),	  '$resolver->domain' );
+	ok( $resolver->searchlist('example.com'), '$resolver->searchlist' );
 	$resolver->nameservers(qw(127.0.0.1 ::1));
-	ok( $resolver->nameservers(), 'resolver->nameservers' );
-	ok( $resolver->nameserver(),  'resolver->nameserver' );
+	ok( $resolver->nameservers(), '$resolver->nameservers' );
+	ok( $resolver->nameserver(),  '$resolver->nameserver' );
 }
 
 
@@ -56,7 +60,7 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 {
 	my $resolver = Net::DNS::Resolver->new();
 	foreach my $value (qw(1.2.3.4 ::1 ::1.2.3.4)) {
-		is( $resolver->srcaddr($value), $value, "resolver->srcaddr($value)" );
+		is( $resolver->srcaddr($value), $value, "\$resolver->srcaddr($value)" );
 	}
 }
 

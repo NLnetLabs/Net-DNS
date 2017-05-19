@@ -1,12 +1,19 @@
 $Id$                       -*-text-*-
 
 
+**** 1.11 [unreleased]
+
+Feature
+	Extract default resolver configuration from OS/390 MVS datasets.
+	Thanks to Sandra Carroll and Yaroslav Kuzmin for their assistance.
+
+
 **** 1.10 May 5, 2017
 
 Fix rt.cpan.org #120748
 
 	Net::DNS::Resolver::MSWin32 critical issue
-	Thanks to Dmytro Zagashev for his valuable assistence during
+	Thanks to Dmytro Zagashev for his valuable assistance during
 	the investigation which exposed five distinct issues.
 
 Feature rt.cpan.org #18819

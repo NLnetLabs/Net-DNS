@@ -1,38 +1,15 @@
 # $Id$    -*-perl-*-
 
-
 use strict;
-use Test::More tests => 37;
-
+use Test::More tests => 31;
 use File::Spec;
+
 use Net::DNS;
 
 
-# .txt because this test will run under windows, unlike the other file
-# configuration tests.
-my $test_file = File::Spec->catfile( 't', 'custom.txt' );		# redefines default config
-
-my $object = new Net::DNS::Resolver( config_file => $test_file );
-ok( $object->isa('Net::DNS::Resolver'), 'new() created object' );
-
-
-my $no_file = File::Spec->catfile( 't', 'nonexist.txt' );
-eval { new Net::DNS::Resolver( config_file => $no_file ); };		# presumed not to exist
-my $exception = $1 if $@ =~ /^(.+)\n/;
-ok( $exception ||= '', "new(): non-existent file\t[$exception]" );
-
-
-my $res = new Net::DNS::Resolver( config_file => $test_file );
-
-my @servers = $res->nameservers;
-is( $servers[0], '10.0.1.42', 'nameserver list correct' );
-is( $servers[1], '10.0.2.42', 'nameserver list correct' );
-
-my @search = $res->searchlist;
-is( $search[0], 'alt.net-dns.org', 'searchlist correct' );
-is( $search[1], 'ext.net-dns.org', 'searchlist correct' );
-
-is( $res->domain, 'alt.net-dns.org', 'domain correct' );
+my $filename = File::Spec->catfile( 't', 'custom.txt' );	# .txt to run on Windows
+my $resolver = new Net::DNS::Resolver( config_file => $filename );
+ok( $resolver->isa('Net::DNS::Resolver'), "new( config_file => '$filename' )" );
 
 
 #
