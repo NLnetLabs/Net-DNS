@@ -17,8 +17,19 @@ use strict;
 use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
+use constant UTIL  => defined eval 'require Scalar::Util';
+use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
+use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
 
-my ($sysname) = _untaint(`sysvar SYSNAME`);
+
+my $sysname = eval {
+	$ENV{'PATH'} = '/bin:/usr/bin' if TAINT;
+	open( HANDLE, 'sysvar SYSNAME |' ) or die $!;
+	local $_ = <HANDLE>;
+	close HANDLE;
+	chomp;
+	return $_;
+} || '';
 
 
 my @dataset = (				## plausible places to seek resolver configuration
@@ -36,11 +47,6 @@ my @dotpath = grep defined, $ENV{HOME}, '.';
 my @dotfile = grep -f $_ && -o _, map "$_/$dotfile", @dotpath;
 
 
-sub _untaint {
-	map { m/^(.*)$/; $1 } grep defined, @_;
-}
-
-
 my %option = (				## map MVS config option names
 	NSPORTADDR	   => 'port',
 	RESOLVERTIMEOUT	   => 'retrans',
@@ -52,7 +58,7 @@ my %option = (				## map MVS config option names
 sub _init {
 	my $defaults = shift->_defaults;
 
-	foreach my $dataset ( grep defined, @dataset ) {
+	foreach my $dataset ( Net::DNS::Resolver::Base::_untaint(@dataset) ) {
 		last if scalar eval {
 			local *FILE;				# "cat" able to read MVS dataset
 			open( FILE, qq[cat "$dataset" 2>/dev/null |] ) or die "$dataset: $!";
@@ -80,7 +86,7 @@ sub _init {
 
 				m/^(\w+:)?(DOMAINORIGIN|domain)/i && do {
 					my ( $keyword, $domain ) = grep defined, split;
-					$defaults->domain( _untaint $domain );
+					$defaults->domain($domain);
 					next;
 				};
 
@@ -117,12 +123,13 @@ sub _init {
 
 			close(FILE);
 
-			$defaults->searchlist( _untaint @searchlist ) if @searchlist;
-			$defaults->nameserver( _untaint @nameserver ) if @nameserver;
+			$defaults->searchlist(@searchlist) if @searchlist;
+			$defaults->nameserver(@nameserver) if @nameserver;
 		};
 		warn $@ if $@;
 	}
 
+	%$defaults = Net::DNS::Resolver::Base::_untaint(%$defaults);
 
 	map $defaults->_read_config_file($_), @dotfile;
 

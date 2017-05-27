@@ -58,10 +58,21 @@ use Net::DNS::Packet;
 use constant PACKETSZ => 512;
 
 
+my $uname = eval {
+        $ENV{'PATH'} = '/bin:/usr/bin' if TAINT;
+        open( HANDLE, qq[uname -n |] ) or die $!;
+        local $_ = <HANDLE>;
+        close HANDLE;
+	chomp;
+        return $_;
+};
+
+
 #
 # Set up a closure to be our class data.
 #
 {
+	my ( $host, @domain ) = split /[.]/, $uname, 2;
 	my $defaults = bless {
 		nameserver4	=> ['127.0.0.1'],
 		nameserver6	=> ['::1'],
@@ -69,7 +80,7 @@ use constant PACKETSZ => 512;
 		srcaddr4	=> '0.0.0.0',
 		srcaddr6	=> '::',
 		srcport		=> 0,
-		searchlist	=> [],
+		searchlist	=> [_untaint(@domain)],
 		retrans		=> 5,
 		retry		=> 4,
 		usevc		=> ( SOCKS ? 1 : 0 ),
@@ -117,8 +128,7 @@ sub new {
 	if ( my $file = $args{config_file} ) {
 		my $conf = bless {%$initial}, $class;
 		$conf->_read_config_file($file);		# user specified config
-		$self = bless {%$conf}, $class unless TAINT;
-		$self = bless {map { m/^(.*)$/; $1 } %$conf}, $class if TAINT;
+		$self = bless {_untaint(%$conf)}, $class;
 		%$base = %$self unless $init;			# define default configuration
 
 	} elsif ($init) {
@@ -161,6 +171,11 @@ sub _option {
 }
 
 
+sub _untaint {
+	return TAINT ? map ref($_) ? [_untaint(@$_)] : do { /^(.*)$/; $1 }, grep defined, @_ : @_;
+}
+
+
 sub _read_env {				## read resolver config environment variables
 	my $self = shift;
 
@@ -170,10 +185,8 @@ sub _read_env {				## read resolver config environment variables
 
 	$self->searchlist( map split, $ENV{RES_SEARCHLIST} ) if exists $ENV{RES_SEARCHLIST};
 
-	if ( exists $ENV{RES_OPTIONS} ) {
-		foreach ( map split, $ENV{RES_OPTIONS} ) {
-			$self->_option( split m/:/ );
-		}
+	foreach ( map split, $ENV{RES_OPTIONS} || '' ) {
+		$self->_option( split m/:/ );
 	}
 }
 
@@ -230,11 +243,9 @@ sub string {
 	$self = $self->_defaults unless ref($self);
 
 	my @nslist = $self->nameservers();
-	my $domain = $self->domain;
 	return <<END;
 ;; RESOLVER state:
 ;; nameservers	= @nslist
-;; domain	= $domain
 ;; searchlist	= @{$self->{searchlist}}
 ;; ndots	= $self->{ndots}
 ;; defnames	= $self->{defnames}	dnsrch		= $self->{dnsrch}
@@ -246,7 +257,6 @@ sub string {
 ;; prefer_v4	= $self->{prefer_v4}	force_v4	= $self->{force_v4}
 ;; debug	= $self->{debug}	force_v6	= $self->{force_v6}
 END
-
 }
 
 
@@ -383,13 +393,11 @@ sub search {
 	return $self->query(@_) unless $self->{dnsrch};
 
 	my $name = shift || '.';
-	my @sfix;
 
-	if ( ( $name =~ tr/././ ) < $self->{ndots} ) {
-		@sfix = $self->searchlist unless $name =~ m/:|\.\d*$/;
-	}
+	my @sfix = ( $name =~ m/:|\.\d*$/ ) ? () : @{$self->{searchlist}};
+	my ( $domain, @etc ) = ( $name =~ tr/././ ) < $self->{ndots} ? (@sfix) : ( undef, @sfix );
 
-	foreach my $suffix ( @sfix, undef ) {
+	foreach my $suffix ( $domain, @etc ) {
 		my $fqname = $suffix ? join( '.', $name, $suffix ) : $name;
 		$self->_diag( 'search(', $fqname, @_, ')' );
 		my $packet = $self->send( $fqname, @_ ) || next;

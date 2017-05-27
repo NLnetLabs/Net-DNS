@@ -25,11 +25,6 @@ use constant WINHLP => defined eval 'require Win32::IPHelper';
 use constant WINREG => defined eval 'use Win32::TieRegistry qw(KEY_READ REG_DWORD); 1';
 
 
-sub _untaint {
-	map { m/^(.*)$/; $1 } grep defined, @_;
-}
-
-
 sub _init {
 	my $defaults = shift->_defaults;
 
@@ -47,7 +42,7 @@ sub _init {
 
 
 	my @nameservers = map $_->{IpAddress}, @{$FIXED_INFO->{DnsServersList}};
-	$defaults->nameservers( _untaint @nameservers );
+	$defaults->nameservers(@nameservers);
 
 	my $devolution = 0;
 	my $domainname = $FIXED_INFO->{DomainName} || '';
@@ -93,7 +88,9 @@ sub _init {
 			push( @list, $_ ) unless $seen{lc $_}++;
 		}
 	}
-	$defaults->searchlist( _untaint @list );
+	$defaults->searchlist(@list);
+
+	%$defaults = Net::DNS::Resolver::Base::_untaint(%$defaults);
 
 	$defaults->_read_env;
 }

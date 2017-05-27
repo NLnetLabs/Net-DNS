@@ -27,11 +27,6 @@ my @dotpath = grep defined, $ENV{HOME}, '.';
 my @dotfile = grep -f $_ && -o _, map "$_/$dotfile", @dotpath;
 
 
-sub _untaint {
-	map { m/^(.*)$/; $1 } grep defined, @_;
-}
-
-
 sub _init {
 	my $defaults = shift->_defaults;
 
@@ -47,8 +42,7 @@ sub _init {
 
 	map $defaults->_read_config_file($_), @config_file;
 
-	$defaults->nameserver( _untaint $defaults->nameserver );
-	$defaults->searchlist( _untaint $defaults->searchlist );
+	%$defaults = Net::DNS::Resolver::Base::_untaint(%$defaults);
 
 	map $defaults->_read_config_file($_), @dotfile;
 
