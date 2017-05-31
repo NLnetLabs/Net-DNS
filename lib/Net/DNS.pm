@@ -178,7 +178,7 @@ sub rr_add {
 
 sub rr_del {
 	my ( $domain, @etc ) = map split, @_;
-	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain ) );
+	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain, type => 'ANY' ) );
 	$rr->class( $rr->rdata ? 'NONE' : 'ANY' );
 	$rr->ttl(0);
 	return $rr;
@@ -492,11 +492,11 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
 
     use Net::DNS;
     my $res   = Net::DNS::Resolver->new;
-    my $reply = $res->search("host.example.com");
+    my $reply = $res->search("www.example.com", "A");
 
     if ($reply) {
 	foreach my $rr ($reply->answer) {
-	    print $rr->address, "\n" if $rr->type eq "A";
+	    print $rr->address, "\n" if $rr->can("address");
 	}
     } else {
 	warn "query failed: ", $res->errorstring, "\n";
@@ -510,7 +510,7 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
     my $reply = $res->query("example.com", "NS");
 
     if ($reply) {
-	foreach $rr (grep { $_->type eq 'NS' } $reply->answer) {
+	foreach $rr (grep { $_->type eq "NS" } $reply->answer) {
 	    print $rr->nsdname, "\n";
 	}
     } else {
@@ -527,7 +527,7 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
 
     if (@mx) {
 	foreach $rr (@mx) {
-	    print $rr->preference, " ", $rr->exchange, "\n";
+	    print $rr->preference, "\t", $rr->exchange, "\n";
 	}
     } else {
 	warn "Can not find MX records for $name: ", $res->errorstring, "\n";
@@ -541,9 +541,11 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
     my $reply = $res->query("example.com", "SOA");
 
     if ($reply) {
-	($reply->answer)[0]->print;
+	foreach my $rr ($reply->answer) {
+	    $rr->print;
+	}
     } else {
-	print "query failed: ", $res->errorstring, "\n";
+	warn "query failed: ", $res->errorstring, "\n";
     }
 
 
@@ -551,6 +553,7 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
 
     use Net::DNS;
     my $res  = Net::DNS::Resolver->new;
+    $res->tcp_timeout(20);
     $res->nameservers("ns.example.com");
 
     my @zone = $res->axfr("example.com");
@@ -559,11 +562,15 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
 	$rr->print;
     }
 
+    warn $res->errorstring if $res->errorstring;
+
 
 =head2 Perform a background query and print the reply.
 
     use Net::DNS;
     my $res    = Net::DNS::Resolver->new;
+    $res->udp_timeout(10);
+    $res->tcp_timeout(20);
     my $socket = $res->bgsend("host.example.com");
 
     while ( $res->bgbusy($socket) ) {
@@ -572,7 +579,11 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
     }
 
     my $packet = $res->bgread($socket);
-    $packet->print;
+    if ($packet) {
+	$packet->print;
+    } else {
+	warn "query failed: ", $res->errorstring, "\n";
+    }
 
 
 =head1 BUGS

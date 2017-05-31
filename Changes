@@ -80,6 +80,10 @@ Fix rt.cpan.org #114819
 
 	Net::DNS fails to compile with taint checks enabled
 
+Feature
+	Add support for dynamic RR subtype package creation
+	per draft-levine-dnsextlang
+
 
 **** 1.06 May 27, 2016
 

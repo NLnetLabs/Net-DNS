@@ -17,27 +17,32 @@ use strict;
 use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
-use constant UTIL  => defined eval 'require Scalar::Util';
 use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
-use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
+use constant TAINT => UNCND || eval '${^TAINT}';
 
 
 my $sysname = eval {
-	$ENV{'PATH'} = '/bin:/usr/bin' if TAINT;
-	open( HANDLE, 'sysvar SYSNAME |' ) or die $!;
+	local $ENV{PATH} = TAINT ? '/bin:/usr/bin' : $ENV{PATH};
+	local *HANDLE;
+	open( HANDLE, 'sysvar SYSNAME |' ) or die "sysvar $!";
 	local $_ = <HANDLE>;
-	close HANDLE;
+	close(HANDLE) or die "$? $!";
 	chomp;
 	return $_;
 } || '';
 
 
+my %RESOLVER_SETUP;			## placeholders for unimplemented search list elements
+
 my @dataset = (				## plausible places to seek resolver configuration
+	$RESOLVER_SETUP{GLOBALTCPIPDATA},
 	$ENV{RESOLVER_CONFIG},					# MVS dataset or Unix file name
-	'/etc/resolv.conf',
-	'//TCPIP.DATA',						# <username>.TCPIP.DATA
+	"/etc/resolv.conf",
+	$RESOLVER_SETUP{SYSTCPD},
+	"//TCPIP.DATA",						# <username>.TCPIP.DATA
 	"//'${sysname}.TCPPARMS(TCPDATA)'",
 	"//'SYS1.TCPPARMS(TCPDATA)'",
+	$RESOLVER_SETUP{DEFAULTTCPIPDATA},
 	"//'TCPIP.TCPIP.DATA'"
 	);
 
@@ -57,9 +62,11 @@ my %option = (				## map MVS config option names
 
 sub _init {
 	my $defaults = shift->_defaults;
+	my %stop;
+	local $ENV{PATH} = TAINT ? '/bin:/usr/bin' : $ENV{PATH};
 
-	foreach my $dataset ( Net::DNS::Resolver::Base::_untaint(@dataset) ) {
-		last if scalar eval {
+	foreach my $dataset ( Net::DNS::Resolver::Base::_untaint( grep defined, @dataset ) ) {
+		eval {
 			local *FILE;				# "cat" able to read MVS dataset
 			open( FILE, qq[cat "$dataset" 2>/dev/null |] ) or die "$dataset: $!";
 
@@ -85,8 +92,8 @@ sub _init {
 
 
 				m/^(\w+:)?(DOMAINORIGIN|domain)/i && do {
-					my ( $keyword, $domain ) = grep defined, split;
-					$defaults->domain($domain);
+					my ( $keyword, @domain ) = grep defined, split;
+					$defaults->domain(@domain) unless $stop{search}++;
 					next;
 				};
 
@@ -101,7 +108,9 @@ sub _init {
 				m/^(\w+:)?option/i && do {
 					my ( $keyword, @option ) = grep defined, split;
 					foreach (@option) {
-						$defaults->_option( split m/:/ );
+						my ( $attribute, @value ) = split m/:/;
+						$defaults->_option( $attribute, @value )
+							unless $stop{$attribute}++;
 					}
 					next;
 				};
@@ -109,7 +118,8 @@ sub _init {
 
 				m/^(\w+:)?RESOLVEVIA/i && do {
 					my ( $keyword, $value ) = grep defined, split;
-					$defaults->_option( 'usevc', $value eq 'TCP' );
+					$defaults->_option( 'usevc', $value eq 'TCP' )
+							unless $stop{usevc}++;
 					next;
 				};
 
@@ -117,14 +127,15 @@ sub _init {
 				m/^(\w+:)?(\w+)\s/ && do {
 					my $attribute = $option{uc $2} || next;
 					my ( $keyword, @value ) = grep defined, split;
-					$defaults->_option( $attribute, @value );
+					$defaults->_option( $attribute, @value )
+							unless $stop{$attribute}++;
 				};
 			}
 
 			close(FILE);
 
-			$defaults->searchlist(@searchlist) if @searchlist;
-			$defaults->nameserver(@nameserver) if @nameserver;
+			$defaults->nameserver(@nameserver) if @nameserver && !$stop{nameserver}++;
+			$defaults->searchlist(@searchlist) if @searchlist && !$stop{search}++;
 		};
 		warn $@ if $@;
 	}

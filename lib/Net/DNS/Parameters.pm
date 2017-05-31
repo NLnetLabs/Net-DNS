@@ -311,16 +311,6 @@ sub ednsoptionbyval {
 }
 
 
-our $DNSEXTLANG = 'ARPA.';		## draft-levine-dnsextlang
-
-use constant DNSEXTLANG => defined eval <<'END';
-	die 'preempt failure' if $^O =~ /cygwin|MSWin32/i;
-	require IO::File;
-	local $SIG{__WARN__} = sub { };
-	new IO::File('RRTYPEgen |') or die $!;
-END
-
-
 sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
 	my ( $mnemonic, $rrtype ) = map uc($_), @_;		# uncoverable pod
 	$rrtype = rand(255) + 65280 unless $rrtype;
@@ -336,22 +326,38 @@ sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
 }
 
 
+use constant DNSEXTLANG => defined eval 'require Net::DNS::Extlang';
+
+our $DNSEXTLANG = DNSEXTLANG ? eval 'Net::DNS::Extlang->new()->domain' : undef;
+
 sub _typespec {				## draft-levine-dnsextlang
-	eval <<'END' if DNSEXTLANG;
+	eval <<'END' if DNSEXTLANG && $DNSEXTLANG;
 	my ($node) = @_;
+
 	require Net::DNS::Resolver;
-	my $resolver = new Net::DNS::Resolver;
+	my $resolver = new Net::DNS::Resolver();
 	my $response = $resolver->send( "$node.$DNSEXTLANG", 'TXT' );
 
 	foreach my $txt ( grep $_->type eq 'TXT', $response->answer ) {
 		my @stanza = $txt->txtdata;
-		my ( $tag, $identifier ) = @stanza;
+		my ( $tag, $identifier, @attribute ) = @stanza;
 		next unless defined($tag) && $tag =~ /^RRTYPE=\d+$/;
-		register( split /[:\s]/, $identifier );
+		register( $1, $2 ) if $identifier =~ /^(\w+):(\d+)\W*/;
 		return unless defined wantarray;
-		require 5.008009;				# support for reference in @INC
-		my @arg = map { s/\s.*$//; qq("$_") } @stanza;	# strip descriptive text
-		return new IO::File("RRTYPEgen @arg |");
+
+		my $extobj = new Net::DNS::Extlang();
+		my @nodesc = map { m/^(\S+)\s*/; $1 } $identifier, @attribute;
+		my $recipe = $extobj->xlstorerecord(@nodesc);
+		my $result = $extobj->compilerr($recipe);
+
+		my $fh	= new IO::File();
+		my $pid = open( $fh, '-|' );
+		die "fork: $!" unless defined $pid;
+
+		return $fh if $pid;				# parent
+
+		print $result;					# child
+		exit;
 	}
 	return undef;
 END

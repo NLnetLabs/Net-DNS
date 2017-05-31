@@ -40,9 +40,9 @@ use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
 
 
 # Allow taint tests to be optimised away when appropriate.
-use constant UTIL  => defined eval 'require Scalar::Util';
 use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
-use constant TAINT => UTIL && ( UNCND || eval '${^TAINT}' );
+use constant TAINT => UNCND || eval '${^TAINT}';
+use constant TESTS => TAINT && defined eval 'require Scalar::Util';
 
 
 use strict;
@@ -59,12 +59,13 @@ use constant PACKETSZ => 512;
 
 
 my $uname = eval {
-        $ENV{'PATH'} = '/bin:/usr/bin' if TAINT;
-        open( HANDLE, qq[uname -n |] ) or die $!;
-        local $_ = <HANDLE>;
-        close HANDLE;
+	local $ENV{PATH} = TAINT ? '/bin:/usr/bin' : $ENV{PATH};
+	local *HANDLE;
+	open( HANDLE, 'uname -n |' ) or die "uname: $!";
+	local $_ = <HANDLE>;
+	close(HANDLE) or die "$? $!";
 	chomp;
-        return $_;
+	return $_;
 };
 
 
@@ -72,7 +73,7 @@ my $uname = eval {
 # Set up a closure to be our class data.
 #
 {
-	my ( $host, @domain ) = split /[.]/, $uname, 2;
+	my ( $host, @domain ) = _untaint( split /[.]/, $uname, 2 );
 	my $defaults = bless {
 		nameserver4	=> ['127.0.0.1'],
 		nameserver6	=> ['::1'],
@@ -80,7 +81,7 @@ my $uname = eval {
 		srcaddr4	=> '0.0.0.0',
 		srcaddr6	=> '::',
 		srcport		=> 0,
-		searchlist	=> [_untaint(@domain)],
+		searchlist	=> [@domain],
 		retrans		=> 5,
 		retry		=> 4,
 		usevc		=> ( SOCKS ? 1 : 0 ),
@@ -111,8 +112,8 @@ my $uname = eval {
 
 # These are the attributes that the user may specify in the new() constructor.
 my %public_attr = (
-	map( {$_ => $_} keys %{&_defaults}, qw(domain nameserver nameservers prefer_v6 srcaddr) ),
-	map( {$_ => 0} qw(nameserver4 nameserver6 srcaddr4 srcaddr6) ),
+	map( ( $_ => $_ ), keys %{&_defaults}, qw(domain nameserver nameservers prefer_v6 srcaddr) ),
+	map( ( $_ => 0 ), qw(nameserver4 nameserver6 srcaddr4 srcaddr6) ),
 	);
 
 
@@ -160,7 +161,7 @@ my %resolv_conf = (			## map traditional resolv.conf option names
 my %res_option = (			## any resolver attribute except as listed below
 	%public_attr,
 	%resolv_conf,
-	map { $_ => 0 } qw(nameserver nameservers domain searchlist),
+	map( ( $_ => $_ ), qw(nameserver nameservers domain searchlist) ),
 	);
 
 sub _option {
@@ -172,7 +173,7 @@ sub _option {
 
 
 sub _untaint {
-	return TAINT ? map ref($_) ? [_untaint(@$_)] : do { /^(.*)$/; $1 }, grep defined, @_ : @_;
+	return TAINT ? map ref($_) ? [_untaint(@$_)] : do { /^(.*)$/; $1 }, @_ : @_;
 }
 
 
@@ -303,7 +304,7 @@ sub nameservers {
 
 		$self->errorstring( $defres->errorstring );
 
-		my %address = map { ( $_ => $_ ) } @iplist;	# tainted
+		my %address = map( ( $_ => $_ ), @iplist );	# tainted
 		my @unique = values %address;
 		carp "unresolvable name: $ns" unless @unique;
 		push @ipv4, grep _ipv4($_), @unique;
@@ -511,7 +512,7 @@ NAMESERVER: foreach my $ns (@ns) {
 
 			# handle failure to detect taint inside socket->send()
 			die 'Insecure dependency while running with -T switch'
-					if TAINT && Scalar::Util::tainted($dst_sockaddr);
+					if TESTS && Scalar::Util::tainted($dst_sockaddr);
 
 			$select->add($socket);
 
@@ -612,7 +613,7 @@ sub _bgsend_udp {
 
 		# handle failure to detect taint inside $socket->send()
 		die 'Insecure dependency while running with -T switch'
-				if TAINT && Scalar::Util::tainted($dst_sockaddr);
+				if TESTS && Scalar::Util::tainted($dst_sockaddr);
 
 		my $expire = time() + $self->{udp_timeout};
 		${*$socket}{net_dns_bg} = [$expire, $packet];

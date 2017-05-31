@@ -176,7 +176,7 @@ sections required for certain dynamic update operations.
 sub _new_hash {
 	my ( $base, %argument ) = @_;
 
-	my %attribute = ( owner => '.', type => 'ANY' );
+	my %attribute = ( owner => '.', type => 'NULL' );
 	while ( my ( $key, $value ) = each %argument ) {
 		$attribute{lc $key} = $value;
 	}
@@ -191,6 +191,8 @@ sub _new_hash {
 	$self->owner($owner);
 	$self->class($class) if defined $class;			# specify CLASS
 	$self->ttl($ttl)     if defined $ttl;			# specify TTL
+
+	die "type $type not implemented" if $populated && ref($self) eq __PACKAGE__;
 
 	while ( my ( $attribute, $value ) = each %attribute ) {
 		$self->$attribute( ref($value) eq 'ARRAY' ? @$value : $value );
@@ -516,7 +518,7 @@ sub _format_rdata {			## format rdata portion of RR string
 
 sub _parse_rdata {			## parse RR attributes in argument list
 	my $self = shift;
-	die join ' ', $self->type, 'not implemented' if ref($self) eq __PACKAGE__;
+	die join ' ', 'type', $self->type, 'not implemented' if ref($self) eq __PACKAGE__;
 	die join ' ', 'no zone file representation defined for', $self->type;
 }
 
@@ -672,15 +674,14 @@ our %_MINIMAL = ( 'ANY' => bless ['type' => 255], __PACKAGE__ );
 our %_LOADED = %_MINIMAL;
 
 sub _subclass {
-	my $class   = shift;
-	my $rrname  = shift;
-	my $default = shift;
+	my ( $class, $rrname, $default ) = @_;
 
 	unless ( $_LOADED{$rrname} ) {
-		local @INC = LIB;
 		my $rrtype = typebyname($rrname);
 
 		unless ( $_LOADED{$rrtype} ) {			# load once only
+			local @INC = LIB;
+
 			my $mnemon = typebyval($rrtype);
 			$mnemon =~ s/[^A-Za-z0-9]//g;		# expect the unexpected
 
@@ -762,17 +763,16 @@ sub AUTOLOAD {				## Default method
 	my $module = join '::', __PACKAGE__, typebyval( $self->{type} );
 	eval("require $module") if $oref eq __PACKAGE__;
 
-	@_ = (<<"END");
-***  FATAL PROGRAM ERROR!!	Unknown method '$method'
+	@_ = ( <<"END", $@, "@object" );
+***  FATAL PROGRAM ERROR!!	Unknown instance method '$method'
 ***  which the program has attempted to call for the object:
 ***
 $string
 ***
-***  @object has no instance method '$method'
-***  $@
 ***  THIS IS A BUG IN THE CALLING SOFTWARE, which incorrectly assumes
 ***  that the object would be of a particular type.  The type of an
 ***  object should be checked before calling any of its methods.
+***
 END
 	goto &{'Carp::confess'};
 }
