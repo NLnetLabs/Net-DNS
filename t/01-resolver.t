@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 25;
+use Test::More tests => 26;
 
 use Net::DNS;
 
@@ -36,15 +36,34 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 	ok( $resolver->domain('example.com'),	  '$resolver->domain' );
 	ok( $resolver->searchlist('example.com'), '$resolver->searchlist' );
 	$resolver->nameservers(qw(127.0.0.1 ::1));
-	ok( $resolver->nameservers(), '$resolver->nameservers' );
-	ok( $resolver->nameserver(),  '$resolver->nameserver' );
+	ok( scalar( $resolver->nameservers() ), '$resolver->nameservers' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers(qw(127.0.0.1 ::1));
+	$resolver->force_v4(0);					# set by default if no IPv6
+	$resolver->prefer_v6(1);
+	my ($address) = $resolver->nameserver();
+	is( $address, '::1', '$resolver->prefer_v6(1)' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new();
+	$resolver->nameservers(qw(127.0.0.1 ::1));
+	$resolver->force_v6(0);
+	$resolver->prefer_v4(1);
+	my ($address) = $resolver->nameserver();
+	is( $address, '127.0.0.1', '$resolver->prefer_v4(1)' );
 }
 
 
 {
 	my $resolver = Net::DNS::Resolver->new();
 	$resolver->force_v6(1);
-	ok( !$resolver->nameservers(qw(127.0.0.1)), 'no IPv4 nameservers' );
+	ok( !$resolver->nameservers(qw(127.0.0.1)), '$resolver->force_v6(1)' );
 	like( $resolver->errorstring, '/IPv4.+disabled/', 'errorstring: IPv4 disabled' );
 }
 
@@ -52,7 +71,7 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 {
 	my $resolver = Net::DNS::Resolver->new();
 	$resolver->force_v4(1);
-	ok( !$resolver->nameservers(qw(::)), 'no IPv6 nameservers' );
+	ok( !$resolver->nameservers(qw(::)), '$resolver->force_v4(1)' );
 	like( $resolver->errorstring, '/IPv6.+disabled/', 'errorstring: IPv6 disabled' );
 }
 

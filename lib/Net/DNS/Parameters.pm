@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2017-04-13)
+##	(last updated 2017-06-01)
 ##
 ################################################
 
@@ -96,7 +96,7 @@ my @typebyname = (
 	NSEC3	   => 50,					# RFC5155
 	NSEC3PARAM => 51,					# RFC5155
 	TLSA	   => 52,					# RFC6698
-	SMIMEA	   => 53,					# RFC-ietf-dane-smime-16
+	SMIMEA	   => 53,					# RFC8162
 	HIP	   => 55,					# RFC8005
 	NINFO	   => 56,					#
 	RKEY	   => 57,					#

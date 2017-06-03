@@ -75,6 +75,7 @@ my $uname = eval {
 {
 	my ( $host, @domain ) = _untaint( split /[.]/, $uname, 2 );
 	my $defaults = bless {
+		nameservers	=> [qw(::1 127.0.0.1)],
 		nameserver4	=> ['127.0.0.1'],
 		nameserver6	=> ['::1'],
 		port		=> 53,
@@ -101,7 +102,8 @@ my $uname = eval {
 		udppacketsize	=> 0,	# value bounded below by PACKETSZ
 		force_v4	=> ( IPv6 ? 0 : 1 ),
 		force_v6	=> 0,	# only relevant if IPv6 is supported
-		prefer_v4	=> ( IPv6 ? 1 : 0 ),
+		prefer_v4	=> 0,
+		prefer_v6	=> 0,
 		},
 			__PACKAGE__;
 
@@ -112,7 +114,7 @@ my $uname = eval {
 
 # These are the attributes that the user may specify in the new() constructor.
 my %public_attr = (
-	map( ( $_ => $_ ), keys %{&_defaults}, qw(domain nameserver nameservers prefer_v6 srcaddr) ),
+	map( ( $_ => $_ ), keys %{&_defaults}, qw(domain nameserver srcaddr) ),
 	map( ( $_ => 0 ), qw(nameserver4 nameserver6 srcaddr4 srcaddr6) ),
 	);
 
@@ -125,9 +127,9 @@ sub new {
 	my $self;
 	my $base = $class->_defaults;
 	my $init = $initial;
-	$initial ||= bless {%$base}, $class;
+	$initial ||= [%$base];
 	if ( my $file = $args{config_file} ) {
-		my $conf = bless {%$initial}, $class;
+		my $conf = bless {@$initial}, $class;
 		$conf->_read_config_file($file);		# user specified config
 		$self = bless {_untaint(%$conf)}, $class;
 		%$base = %$self unless $init;			# define default configuration
@@ -158,10 +160,9 @@ my %resolv_conf = (			## map traditional resolv.conf option names
 	timeout	 => 'retrans',
 	);
 
-my %res_option = (			## any resolver attribute except as listed below
+my %res_option = (			## any resolver attribute plus those listed above
 	%public_attr,
 	%resolv_conf,
-	map( ( $_ => $_ ), qw(nameserver nameservers domain searchlist) ),
 	);
 
 sub _option {
@@ -180,11 +181,11 @@ sub _untaint {
 sub _read_env {				## read resolver config environment variables
 	my $self = shift;
 
-	$self->nameservers( map split, $ENV{RES_NAMESERVERS} ) if exists $ENV{RES_NAMESERVERS};
+	$self->nameservers( map split, $ENV{RES_NAMESERVERS} ) if defined $ENV{RES_NAMESERVERS};
 
-	$self->domain( $ENV{LOCALDOMAIN} ) if exists $ENV{LOCALDOMAIN};
+	$self->domain( $ENV{LOCALDOMAIN} ) if defined $ENV{LOCALDOMAIN};
 
-	$self->searchlist( map split, $ENV{RES_SEARCHLIST} ) if exists $ENV{RES_SEARCHLIST};
+	$self->searchlist( map split, $ENV{RES_SEARCHLIST} ) if defined $ENV{RES_SEARCHLIST};
 
 	foreach ( map split, $ENV{RES_OPTIONS} || '' ) {
 		$self->_option( split m/:/ );
@@ -244,19 +245,20 @@ sub string {
 	$self = $self->_defaults unless ref($self);
 
 	my @nslist = $self->nameservers();
+	my ($force)  = ( grep( $self->{$_}, qw(force_v6 force_v4) ),   'force_v4' );
+	my ($prefer) = ( grep( $self->{$_}, qw(prefer_v6 prefer_v4) ), 'prefer_v4' );
 	return <<END;
 ;; RESOLVER state:
 ;; nameservers	= @nslist
 ;; searchlist	= @{$self->{searchlist}}
-;; ndots	= $self->{ndots}
 ;; defnames	= $self->{defnames}	dnsrch		= $self->{dnsrch}
+;; igntc	= $self->{igntc}	usevc		= $self->{usevc}
+;; recurse	= $self->{recurse}	port		= $self->{port}
 ;; retrans	= $self->{retrans}	retry		= $self->{retry}
-;; recurse	= $self->{recurse}	igntc		= $self->{igntc}
 ;; tcp_timeout	= $self->{tcp_timeout}	persistent_tcp	= $self->{persistent_tcp}
 ;; udp_timeout	= $self->{udp_timeout}	persistent_udp	= $self->{persistent_udp}
-;; usevc	= $self->{usevc}	port		= $self->{port}
-;; prefer_v4	= $self->{prefer_v4}	force_v4	= $self->{force_v4}
-;; debug	= $self->{debug}	force_v6	= $self->{force_v6}
+;; ${prefer}	= $self->{$prefer}	${force}	= $self->{$force}
+;; debug	= $self->{debug}	ndots		= $self->{ndots}
 END
 }
 
@@ -285,54 +287,56 @@ sub nameservers {
 	my $self = shift;
 	$self = $self->_defaults unless ref($self);
 
-	my ( @ipv4, @ipv6 );
+	my @ip;
 	foreach my $ns ( grep defined, @_ ) {
-		do { push @ipv6, $ns; next } if _ipv6($ns);
-		do { push @ipv4, $ns; next } if _ipv4($ns);
+		if ( _ipv4($ns) || _ipv6($ns) ) {
+			push @ip, $ns;
 
-		my $defres = ref($self)->new( debug => $self->{debug} );
-		$defres->{persistent} = $self->{persistent};
+		} else {
+			my $defres = ref($self)->new( debug => $self->{debug} );
+			$defres->{persistent} = $self->{persistent};
 
-		my $names  = {};
-		my $packet = $defres->search( $ns, 'A' );
-		my @iplist = _cname_addr( $packet, $names );
+			my $names  = {};
+			my $packet = $defres->search( $ns, 'A' );
+			my @iplist = _cname_addr( $packet, $names );
 
-		if (IPv6) {
-			$packet = $defres->search( $ns, 'AAAA' );
-			push @iplist, _cname_addr( $packet, $names );
+			if (IPv6) {
+				$packet = $defres->search( $ns, 'AAAA' );
+				push @iplist, _cname_addr( $packet, $names );
+			}
+
+			$self->errorstring( $defres->errorstring );
+
+			my %unique = map( ( $_ => $_ ), @iplist );
+
+			my @address = values(%unique);		# tainted
+			carp "unresolvable name: $ns" unless scalar @address;
+
+			push @ip, @address;
 		}
-
-		$self->errorstring( $defres->errorstring );
-
-		my %address = map( ( $_ => $_ ), @iplist );	# tainted
-		my @unique = values %address;
-		carp "unresolvable name: $ns" unless @unique;
-		push @ipv4, grep _ipv4($_), @unique;
-		push @ipv6, grep _ipv6($_), @unique;
 	}
 
-	unless ( defined wantarray ) {
-		$self->{nameserver4} = \@ipv4;
-		$self->{nameserver6} = \@ipv6;
-		return;
-	}
-
-	if ( scalar @_ ) {
+	if ( scalar(@_) || !defined(wantarray) ) {
+		my @ipv4 = grep _ipv4($_), @ip;
+		my @ipv6 = grep _ipv6($_), @ip;
+		$self->{nameservers} = \@ip;
 		$self->{nameserver4} = \@ipv4;
 		$self->{nameserver6} = \@ipv6;
 	}
 
-	my @ns4 = $self->force_v6 ? () : @{$self->{nameserver4}};
-	my @ns6 = $self->force_v4 ? () : @{$self->{nameserver6}};
-	my @returnval = $self->{prefer_v4} ? ( @ns4, @ns6 ) : ( @ns6, @ns4 );
+	my @ns4 = $self->{force_v6} ? () : @{$self->{nameserver4}};
+	my @ns6 = $self->{force_v4} ? () : @{$self->{nameserver6}};
+	my @nameservers = @{$self->{nameservers}};
+	@nameservers = ( @ns4, @ns6 ) if $self->{prefer_v4} || !scalar(@ns6);
+	@nameservers = ( @ns6, @ns4 ) if $self->{prefer_v6} || !scalar(@ns4);
 
-	return @returnval if scalar @returnval;
+	return @nameservers if scalar @nameservers;
 
 	my $error = 'no nameservers';
 	$error = 'IPv4 transport disabled' if scalar(@ns4) < scalar @{$self->{nameserver4}};
 	$error = 'IPv6 transport disabled' if scalar(@ns6) < scalar @{$self->{nameserver6}};
 	$self->errorstring($error);
-	return @returnval;
+	return @nameservers;
 }
 
 sub nameserver { &nameservers; }				# uncoverable pod
@@ -633,9 +637,7 @@ sub bgbusy {
 	my ( $expire, $query, $read ) = @$appendix;
 	return if ref($read);
 
-	unless ( IO::Select->new($handle)->can_read(0.2) ) {
-		return time() <= $expire;
-	}
+	return time() <= $expire unless IO::Select->new($handle)->can_read(0);
 
 	return if $self->{igntc};
 	return unless $handle->socktype() == SOCK_DGRAM;
@@ -658,7 +660,10 @@ sub bgisready {				## historical
 
 
 sub bgread {
-	while (&bgbusy) { next; }				# side effect: TCP retry
+	my ( $self, $handle ) = @_;
+	while (&bgbusy) {					# side effect: TCP retry
+		IO::Select->new($handle)->can_read(0.02);	# cut CPU by 3 orders of magnitude
+	}
 	&_bgread;
 }
 
@@ -1046,30 +1051,26 @@ sub dnssec {
 
 sub force_v6 {
 	my $self = shift;
-	return $self->{force_v6} unless scalar @_;
-	my $value = shift;
-	$self->force_v4(0) if $value;
-	$self->{force_v6} = $value ? 1 : 0;
+	my $value = scalar(@_) ? shift() : $self->{force_v6};
+	$self->{force_v6} = $value ? do { $self->{force_v4} = 0; 1 } : 0;
 }
 
 sub force_v4 {
 	my $self = shift;
-	return $self->{force_v4} unless scalar @_;
-	my $value = shift;
-	$self->force_v6(0) if $value;
-	$self->{force_v4} = $value ? 1 : 0;
+	my $value = scalar(@_) ? shift() : $self->{force_v4};
+	$self->{force_v4} = $value ? do { $self->{force_v6} = 0; 1 } : 0;
 }
 
 sub prefer_v6 {
 	my $self = shift;
-	$self->{prefer_v4} = shift() ? 0 : 1 if scalar @_;
-	$self->{prefer_v4} ? 0 : 1;
+	my $value = scalar(@_) ? shift() : $self->{prefer_v6};
+	$self->{prefer_v6} = $value ? do { $self->{prefer_v4} = 0; 1 } : 0;
 }
 
 sub prefer_v4 {
 	my $self = shift;
-	return $self->{prefer_v4} unless scalar @_;
-	$self->{prefer_v4} = shift() ? 1 : 0;
+	my $value = scalar(@_) ? shift() : $self->{prefer_v4};
+	$self->{prefer_v4} = $value ? do { $self->{prefer_v6} = 0; 1 } : 0;
 }
 
 
@@ -1193,7 +1194,7 @@ Copyright (c)2003,2004 Chris Reinhardt.
 
 Portions Copyright (c)2005 Olaf Kolkman.
 
-Portions Copyright (c)2014,2015 Dick Franks.
+Portions Copyright (c)2014-2017 Dick Franks.
 
 All rights reserved.
 
