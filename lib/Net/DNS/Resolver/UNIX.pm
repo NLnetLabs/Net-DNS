@@ -25,6 +25,13 @@ my @dotpath = grep defined, $ENV{HOME}, '.';
 my @dotfile = grep -f $_ && -o _, map "$_/$dotfile", @dotpath;
 
 
+local $ENV{PATH} = '/bin:/usr/bin';
+my $uname = eval {`uname -n 2>/dev/null`} || '';
+chomp $uname;
+my ( $host, @domain ) = split /\./, $uname, 2;
+__PACKAGE__->domain(@domain);
+
+
 sub _init {
 	my $defaults = shift->_defaults;
 

@@ -1,15 +1,9 @@
 # $Id$    -*-perl-*-
 
 use strict;
-use Test::More tests => 31;
-use File::Spec;
+use Test::More tests => 30;
 
 use Net::DNS;
-
-
-my $filename = File::Spec->catfile( 't', 'custom.txt' );	# .txt to run on Windows
-my $resolver = new Net::DNS::Resolver( config_file => $filename );
-ok( $resolver->isa('Net::DNS::Resolver'), "new( config_file => '$filename' )" );
 
 
 #

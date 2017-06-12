@@ -3,6 +3,15 @@
 use strict;
 use Test::More tests => 26;
 
+
+BEGIN {
+	eval {
+		open( TOUCH, '>.resolv.conf' ) || die $!;	# owned by effective UID
+		close(TOUCH);
+	};
+}
+
+
 use Net::DNS;
 
 

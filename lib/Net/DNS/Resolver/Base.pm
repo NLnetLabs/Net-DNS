@@ -58,22 +58,10 @@ use Net::DNS::Packet;
 use constant PACKETSZ => 512;
 
 
-my $uname = eval {
-	local $ENV{PATH} = TAINT ? '/bin:/usr/bin' : $ENV{PATH};
-	local *HANDLE;
-	open( HANDLE, 'uname -n |' ) or die "uname: $!";
-	local $_ = <HANDLE>;
-	close(HANDLE) or die "$? $!";
-	chomp;
-	return $_;
-};
-
-
 #
 # Set up a closure to be our class data.
 #
 {
-	my ( $host, @domain ) = _untaint( split /[.]/, $uname, 2 );
 	my $defaults = bless {
 		nameservers	=> [qw(::1 127.0.0.1)],
 		nameserver4	=> ['127.0.0.1'],
@@ -82,7 +70,7 @@ my $uname = eval {
 		srcaddr4	=> '0.0.0.0',
 		srcaddr6	=> '::',
 		srcport		=> 0,
-		searchlist	=> [@domain],
+		searchlist	=> [],
 		retrans		=> 5,
 		retry		=> 4,
 		usevc		=> ( SOCKS ? 1 : 0 ),
