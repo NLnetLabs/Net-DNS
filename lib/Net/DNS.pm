@@ -276,7 +276,7 @@ Returns the version of Net::DNS.
 
     my ($ptr) = rr("192.0.2.1");
 
-The rr() method provides simple RR lookup for scenarios where
+The C<rr()> method provides simple RR lookup for scenarios where
 the full flexibility of Net::DNS is not required.
 
 Returns a list of L<Net::DNS::RR> objects for the specified name
@@ -431,7 +431,7 @@ elapsed since the previous update is less than one second.
 
     $successor = $soa->serial( YYYYMMDDxx );
 
-The 32 bit value returned by the auxiliary YYYYMMDDxx() function
+The 32 bit value returned by the auxiliary C<YYYYMMDDxx()> function
 will be used as the base for the date-coded zone serial number.
 Serial number increments must be limited to 100 per day for the
 date information to remain useful.
@@ -440,8 +440,8 @@ date information to remain useful.
 
 =head1 Sorting of RR arrays
 
-rrsort() provides functionality to help you sort RR arrays. In most cases
-rrsort() will give you the answer that you want, but you can specify your
+C<rrsort()> provides functionality to help you sort RR arrays. In most cases
+C<rrsort()> will give you the answer that you want, but you can specify your
 own sorting method by using the C<< Net::DNS::RR::FOO->set_rrsort_func() >>
 class method. See L<Net::DNS::RR> for details.
 
@@ -451,7 +451,7 @@ class method. See L<Net::DNS::RR> for details.
 
     my @sorted = rrsort( $rrtype, $attribute, @rr_array );
 
-rrsort() selects all RRs from the input array that are of the type defined
+C<rrsort()> selects all RRs from the input array that are of the type defined
 by the first argument. Those RRs are sorted based on the attribute that is
 specified as second argument.
 
@@ -470,13 +470,13 @@ value is performed.
 
     my @portsorted = rrsort( "SRV", "port", @rr_array );
 
-If the attribute is not defined then either the default_sort() function or
+If the attribute is not defined then either the C<default_sort()> function or
 "canonical sorting" (as defined by DNSSEC) will be used.
 
-rrsort() returns a sorted array containing only elements of the specified
+C<rrsort()> returns a sorted array containing only elements of the specified
 RR type.  Any other RR types are silently discarded.
 
-rrsort() returns an empty list when arguments are incorrect.
+C<rrsort()> returns an empty list when arguments are incorrect.
 
 
 =head1 EXAMPLES
