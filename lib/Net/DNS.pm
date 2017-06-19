@@ -441,11 +441,11 @@ date information to remain useful.
 =head1 Sorting of RR arrays
 
 C<rrsort()> provides functionality to help you sort RR arrays. In most cases
-C<rrsort()> will give you the answer that you want, but you can specify your
+this will give you the answer that you want, but you can specify your
 own sorting method by using the C<< Net::DNS::RR::FOO->set_rrsort_func() >>
 class method. See L<Net::DNS::RR> for details.
 
-=head2 rrsort()
+=head2 rrsort
 
     use Net::DNS;
 

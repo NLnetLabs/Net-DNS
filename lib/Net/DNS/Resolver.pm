@@ -97,8 +97,6 @@ IP address of a name server that the resolver should query.
 B<domain> localdomain
 
 The domain suffix to be appended to a short non-absolute name.
-If no domain entry is present, the domain is determined from
-the local hostname.
 
 B<search> domain ...
 
@@ -116,6 +114,7 @@ variables may contain configuration information; see L</ENVIRONMENT>.
 
 Note that the domain and searchlist keywords are mutually exclusive.
 If both are present, the resulting behaviour is unspecified.
+If neither is present, the domain is determined from the local hostname.
 
 On Windows systems, an attempt is made to determine the system defaults
 using the registry.  Systems with many dynamically configured network
@@ -596,7 +595,7 @@ but the L<Net::DNS::SEC> library has not been installed.
 Gets or sets the AD bit for dnssec queries.  This bit indicates that
 the caller is interested in the returned AD (authentic data) bit but
 does not require any dnssec RRs to be included in the response.
-The default value is 0.
+The default value is false.
 
 
 =head2 cdflag
@@ -609,7 +608,7 @@ Gets or sets the CD bit for dnssec queries.  This bit indicates that
 authentication by upstream nameservers should be suppressed.
 Any dnssec RRs required to execute the authentication procedure
 should be included in the response.
-The default value is 0.
+The default value is false.
 
 
 =head2 tsig
