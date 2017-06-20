@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.11 [unreleased]
 
+Fix rt.cpan.org #122138
+
+	Send a UDP query with udppacketsize=512
+
 Feature
 	Extract default resolver configuration from OS/390 MVS datasets.
 	Thanks to Sandra Carroll and Yaroslav Kuzmin for their assistance.

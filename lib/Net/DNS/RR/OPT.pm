@@ -119,7 +119,7 @@ sub size {
 	for ( $self->{size} ) {
 		my $UDP_size = 0;
 		( $UDP_size, $_ ) = ( shift || 0 ) if scalar @_;
-		return $UDP_size > 512 ? ( $_ = $UDP_size ) : 512 unless $_;
+		return $UDP_size < 512 ? 512 : ( $_ = $UDP_size ) unless $_;
 		return $_ > 512 ? $_ : 512;
 	}
 }
