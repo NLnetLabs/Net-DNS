@@ -39,11 +39,9 @@ sub _format_rdata {			## format rdata portion of RR string.
 sub algorithm {
 	my ( $self, $arg ) = @_;
 
-	return $self->{algorithm} unless defined $arg;
-	return Net::DNS::RR::DNSKEY::_algbyval( $self->{algorithm} ) if uc($arg) eq 'MNEMONIC';
-	my $val = Net::DNS::RR::DNSKEY::_algbyname($arg);
-	@{$self}{qw(flags protocol keybin)} = ( 0, 3, '' ) unless $val;
-	return $self->{algorithm} = $val;
+	return $self->SUPER::algorithm($arg) if $arg;
+	@{$self}{qw(flags protocol algorithm keybin)} = ( 0, 3, 0, '' ) if defined $arg;
+	return $self->SUPER::algorithm();
 }
 
 
