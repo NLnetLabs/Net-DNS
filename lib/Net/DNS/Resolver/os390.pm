@@ -17,19 +17,10 @@ use strict;
 use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
-use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
-use constant TAINT => UNCND || eval '${^TAINT}';
 
-
-my $sysname = eval {
-	local $ENV{PATH} = TAINT ? '/bin:/usr/bin' : $ENV{PATH};
-	local *HANDLE;
-	open( HANDLE, 'sysvar SYSNAME |' ) or die "sysvar $!";
-	local $_ = <HANDLE>;
-	close(HANDLE) or die "$? $!";
-	chomp;
-	return $_;
-} || '';
+local $ENV{PATH} = '/bin:/usr/bin';
+my $sysname = eval {`sysvar SYSNAME 2>/dev/null`} || '';
+chomp $sysname;
 
 
 my %RESOLVER_SETUP;			## placeholders for unimplemented search list elements
@@ -63,14 +54,12 @@ my %option = (				## map MVS config option names
 sub _init {
 	my $defaults = shift->_defaults;
 	my %stop;
-	local $ENV{PATH} = TAINT ? '/bin:/usr/bin' : $ENV{PATH};
+	local $ENV{PATH} = '/bin:/usr/bin';
 
 	foreach my $dataset ( Net::DNS::Resolver::Base::_untaint( grep defined, @dataset ) ) {
 		eval {
 			local *FILE;				# "cat" able to read MVS dataset
 			open( FILE, qq[cat "$dataset" 2>/dev/null |] ) or die "$dataset: $!";
-
-			my $qual = $dataset =~ m!^//[']?\w+[.]\w+!;
 
 			my @nameserver;
 			my @searchlist;
@@ -81,42 +70,43 @@ sub _init {
 				s/^\s+//;			# strip leading white space
 				next unless $_;			# skip empty line
 
-				next if $qual && m/^\w+:\w+/ && !m/^$sysname:/oi;
+				next if m/^\w+:/ && !m/^$sysname:/oi;
+				s/^\w+:\s*//;			# discard qualifier
 
 
-				m/^(\w+:)?(NSINTERADDR|nameserver)/i && do {
+				m/^(NSINTERADDR|nameserver)/i && do {
 					my ( $keyword, @ip ) = grep defined, split;
 					push @nameserver, @ip;
 					next;
 				};
 
 
-				m/^(\w+:)?(DOMAINORIGIN|domain)/i && do {
+				m/^(DOMAINORIGIN|domain)/i && do {
 					my ( $keyword, @domain ) = grep defined, split;
-					$defaults->domain(@domain) unless $stop{search}++;
+					$defaults->domain(@domain) unless $stop{domain}++;
 					next;
 				};
 
 
-				m/^(\w+:)?search/i && do {
+				m/^search/i && do {
 					my ( $keyword, @domain ) = grep defined, split;
 					push @searchlist, @domain;
 					next;
 				};
 
 
-				m/^(\w+:)?option/i && do {
+				m/^option/i && do {
 					my ( $keyword, @option ) = grep defined, split;
 					foreach (@option) {
 						my ( $attribute, @value ) = split m/:/;
 						$defaults->_option( $attribute, @value )
-							unless $stop{$attribute}++;
+								unless $stop{$attribute}++;
 					}
 					next;
 				};
 
 
-				m/^(\w+:)?RESOLVEVIA/i && do {
+				m/^RESOLVEVIA/i && do {
 					my ( $keyword, $value ) = grep defined, split;
 					$defaults->_option( 'usevc', $value eq 'TCP' )
 							unless $stop{usevc}++;
@@ -124,9 +114,9 @@ sub _init {
 				};
 
 
-				m/^(\w+:)?(\w+)\s/ && do {
-					my $attribute = $option{uc $2} || next;
+				m/^\w+\s*/ && do {
 					my ( $keyword, @value ) = grep defined, split;
+					my $attribute = $option{uc $keyword} || next;
 					$defaults->_option( $attribute, @value )
 							unless $stop{$attribute}++;
 				};
