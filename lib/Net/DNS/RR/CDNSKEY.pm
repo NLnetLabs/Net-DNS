@@ -20,19 +20,20 @@ Net::DNS::RR::CDNSKEY - DNS CDNSKEY resource record
 use integer;
 
 
-sub _encode_rdata {			## encode rdata as wire-format octet string
-	my $self = shift;
-
-	return $self->SUPER::_encode_rdata() if $self->{algorithm};
-	return defined $self->{algorithm} ? pack( 'xxH*x', '03' ) : '';
-}
-
-
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return $self->SUPER::_format_rdata() if $self->{algorithm};
-	return defined $self->{algorithm} ? '0 3 0 0' : '';
+	return defined $self->{algorithm} ? '0 3 0 0' : '';	# RFC8078 mandated notation
+}
+
+
+sub _parse_rdata {			## populate RR from rdata in argument list
+	my $self = shift;
+
+	return $self->SUPER::_parse_rdata(@_) if $_[2];
+	die 'invalid RDATA (DNSKEY delete)'   if "@_" !~ m/^0 3 0/;    # ignore key
+	$self->algorithm(0);
 }
 
 
@@ -40,8 +41,8 @@ sub algorithm {
 	my ( $self, $arg ) = @_;
 
 	return $self->SUPER::algorithm($arg) if $arg;
-	@{$self}{qw(flags protocol algorithm keybin)} = ( 0, 3, 0, '' ) if defined $arg;
-	return $self->SUPER::algorithm();
+	return $self->SUPER::algorithm() unless defined $arg;
+	@{$self}{qw(flags protocol algorithm keybin)} = ( 0, 3, 0, '' );
 }
 
 
@@ -104,6 +105,6 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>, RFC7344, RFC8087
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>, RFC7344, RFC8078
 
 =cut

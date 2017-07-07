@@ -648,9 +648,8 @@ sub bgisready {				## historical
 
 
 sub bgread {
-	my ( $self, $handle ) = @_;
 	while (&bgbusy) {					# side effect: TCP retry
-		IO::Select->new($handle)->can_read(0.02);	# cut CPU by 3 orders of magnitude
+		IO::Select->new( $_[1] )->can_read(0.02);	# use 3 orders of magnitude less CPU
 	}
 	&_bgread;
 }
@@ -674,6 +673,7 @@ sub _bgread {
 	$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
 	my $reply = $self->_decode_reply( \$buffer, $query ) || return;
+	$reply->answerfrom($peer);
 
 	return $reply unless $self->{tsig_rr} && !$reply->verify($query);
 	$self->errorstring( $reply->verifyerr );

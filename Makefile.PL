@@ -61,7 +61,7 @@ my %optional = (
 	'Digest::BubbleBabble' => 0.01,
 	'Digest::GOST'	       => 0.06,
 	'IO::Socket::INET6'    => 2.51,
-	'IO::Socket::IP'       => 0.32,
+	'IO::Socket::IP'       => 0.38,
 	'Net::LibIDN'	       => 0.12,
 	'Scalar::Util'	       => 1.25,
 	);
@@ -223,14 +223,14 @@ sub install {
 	my %install_type = qw(perl INSTALLPRIVLIB site INSTALLSITELIB vendor INSTALLVENDORLIB);
 	my $install_site = join '', '$(DESTDIR)$(', $install_type{$self->{INSTALLDIRS}}, ')';
 	for ($install_site) {
-		s/\$\(([A-Z_]+)\)/$self->{$1}/g while /\$\(/;	# expand Makefile macros
+		s/\$\(([A-Z_]+)\)/$self->{$1}/eg while /\$\(/;	# expand Makefile macros
 		s|([/])[/]+|$1|g;				# remove gratuitous //s
 	}
 
-	eval { require Net::DNS };
+	eval 'require Net::DNS';
 
 	my $nameregex = '\W+Net\WDNS.pm$';
-	my @installed = grep $_ =~ m/$nameregex/i, values %INC;
+	my @installed = grep m/$nameregex/io, values %INC;
 	my %noinstall;
 
 	foreach (@installed) {

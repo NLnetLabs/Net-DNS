@@ -39,7 +39,7 @@ my %digest = (
 #
 {
 	my @algbyname = (
-		'DELETE'	     => 0,			# [RFC4034][RFC4398][RFC8087]
+		'DELETE'	     => 0,			# [RFC4034][RFC4398][RFC8078]
 		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
 		'DH'		     => 2,			# [RFC2539]
 		'DSA'		     => 3,			# [RFC3755][RFC2536]
@@ -132,7 +132,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless $self->{algorithm};
+	return '' unless defined $self->{algorithm};
 	pack 'n C2 a*', @{$self}{qw(keytag algorithm digtype digestbin)};
 }
 
@@ -140,7 +140,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless $self->{algorithm};
+	return '' unless defined $self->{algorithm};
 	$self->_annotation( $self->babble ) if BABBLE;
 	my @digest = split /(\S{64})/, $self->digest;
 	my @rdata = ( @{$self}{qw(keytag algorithm digtype)}, @digest );
@@ -151,7 +151,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->keytag(shift);
-	return unless $self->algorithm(shift);
+	$self->algorithm(shift);
 	$self->digtype(shift);
 	$self->digest(@_);
 }

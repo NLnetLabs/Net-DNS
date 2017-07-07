@@ -388,6 +388,14 @@ names that are not fully qualified.
 The default is true.
 
 
+=head2 domain
+
+    $domain = $resolver->domain;
+    $resolver->domain( 'domain.example' );
+
+Gets or sets the resolver default domain.
+
+
 =head2 igntc
 
     print 'igntc flag: ', $resolver->igntc, "\n";

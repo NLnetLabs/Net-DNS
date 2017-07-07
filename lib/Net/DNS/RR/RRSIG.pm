@@ -91,7 +91,7 @@ sub _defaults {				## specify RR attribute default values
 #
 {
 	my @algbyname = (
-		'DELETE'	     => 0,			# [RFC4034][RFC4398][RFC8087]
+		'DELETE'	     => 0,			# [RFC4034][RFC4398][RFC8078]
 		'RSAMD5'	     => 1,			# [RFC3110][RFC4034]
 		'DH'		     => 2,			# [RFC2539]
 		'DSA'		     => 3,			# [RFC3755][RFC2536]

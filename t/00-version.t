@@ -35,28 +35,26 @@ foreach my $file ( sort @files ) {				# reconcile files with MANIFEST
 }
 
 
-END {
+eval {
 	my %macro;						# extract Makefile macros
 	open MAKEFILE, 'Makefile' or die $!;
 	while (<MAKEFILE>) {
-		next if /^#/;
-		next unless /^([A-Z_]+)\s+=\s+(.*)$/;
-		$macro{$1} = $2;
+		$macro{$1} = $2 if /^([A-Z_]+)\s+=\s+(.*)$/;
 	}
 	close MAKEFILE;
 
 	my %install_type = qw(perl INSTALLPRIVLIB site INSTALLSITELIB vendor INSTALLVENDORLIB);
 	my $install_site = join '', '$(DESTDIR)$(', $install_type{$macro{INSTALLDIRS}}, ')';
 	for ($install_site) {
-		s/\$\(([A-Z_]+)\)/$macro{$1}/g while /\$\(/;	# expand Makefile macros
+		s/\$\(([A-Z_]+)\)/$macro{$1}/eg while /\$\(/;	# expand Makefile macros
 		s|([/])[/]+|$1|g;				# remove gratuitous //s
 	}
 
-	local @INC = grep $_ !~ m/\bblib\W(arch|lib)$/i, @INC;
-	eval { require Net::DNS };
+	local @INC = grep !m/\bblib\W(arch|lib)$/i, @INC;
+	eval 'require Net::DNS';
 
 	my $nameregex = '\W+Net\WDNS.pm$';
-	my @installed = grep $_ =~ m/$nameregex/i, values %INC;
+	my @installed = grep m/$nameregex/io, values %INC;
 	my %noinstall;
 
 	foreach (@installed) {

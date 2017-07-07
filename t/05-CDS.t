@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 29;
+use Test::More tests => 30;
 
 
 use Net::DNS;
@@ -91,6 +91,13 @@ my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 	my $rdata = $rr->rdata();
 	is( unpack( 'H*', $rdata ), '00000000', 'DS delete: rdata wire-format' );
+}
+
+
+{
+	my $rr = eval { new Net::DNS::RR("$name. $type 12345 0 0 0") };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "invalid DS delete\t[$exception]" );
 }
 
 

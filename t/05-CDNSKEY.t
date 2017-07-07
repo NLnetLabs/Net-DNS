@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 33;
+plan tests => 34;
 
 
 my $name = 'CDNSKEY.example';
@@ -111,6 +111,13 @@ my $wire = join '', qw( 010003050103D22A6CA77F35B893206FD35E4C506D8378843709B97E
 
 	my $rdata = $rr->rdata();
 	is( unpack( 'H*', $rdata ), '00000300', 'DNSKEY delete: rdata wire-format' );
+}
+
+
+{
+	my $rr = eval { new Net::DNS::RR("$name. $type 256 3 0 0") };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "invalid DNSKEY delete\t[$exception]" );
 }
 
 
