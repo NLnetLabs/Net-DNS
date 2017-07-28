@@ -23,7 +23,8 @@ use integer;
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return $self->SUPER::_format_rdata() if $self->{algorithm};
+	return $self->SUPER::_format_rdata()
+			if scalar grep $_, @{$self}{qw(flags algorithm)};
 	return defined $self->{algorithm} ? '0 3 0 0' : '';	# RFC8078 mandated notation
 }
 

@@ -307,9 +307,6 @@ the C<bgbusy()> and C<bgread()> methods.
 Errors are indicated by returning C<undef> in which case
 the reason for failure may be determined using C<errorstring()>.
 
-The program may determine when the handle is ready for reading by
-calling C<bgbusy()>.
-
 The response L<Net::DNS::Packet> object is obtained by calling C<bgread()>.
 
 B<BEWARE>:
@@ -319,13 +316,14 @@ returned by C<bgsend()> which should be used strictly as described here.
 
 =head2 bgread
 
+    $handle = $resolver->bgsend( 'www.example.com' );
     $packet = $resolver->bgread($handle);
 
 Reads the answer from a background query.
 The argument is the handle returned by C<bgsend()>.
 
 Returns a L<Net::DNS::Packet> object or C<undef> if no response was
-received or timeout occurred. 
+received before the timeout interval expired. 
 
 
 =head2 bgbusy

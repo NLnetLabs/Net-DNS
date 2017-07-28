@@ -94,7 +94,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{algorithm};
-	$self->_annotation( 'Key ID =', $self->keytag );
+	$self->_annotation( 'Key ID =', $self->keytag ) if $self->{algorithm};
 	return $self->SUPER::_format_rdata() unless BASE64;
 	my @base64 = split /\s+/, MIME::Base64::encode( $self->{keybin} );
 	my @rdata = ( @{$self}{qw(flags protocol algorithm)}, @base64 );

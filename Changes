@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.12 [unreleased]
 
+Fix rt.cpan.org #122586
+
+	Persistent UDP reports false timeouts
+
 Fix rt.cpan.org #122352
 
 	bgsend(): TCP retry can stall for IO::Socket::IP before 0.38
