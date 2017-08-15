@@ -461,7 +461,8 @@ sub _send_tcp {
 		return $reply if $rcode eq 'NXDOMAIN';
 	}
 
-	$self->errorstring( $lastanswer->header->rcode ) if $lastanswer;
+	$self->{errorstring} = $lastanswer->header->rcode if $lastanswer;
+	$self->errorstring('query timed out') unless $self->{errorstring};
 	return $lastanswer;
 }
 
@@ -515,9 +516,10 @@ NAMESERVER: foreach my $ns (@ns) {
 				my $buffer = _read_udp( $socket, $self->_packetsz );
 				$self->_diag( "answer from [$peer]", length($buffer), 'bytes' );
 
-				$reply = Net::DNS::Packet->decode( \$buffer, $self->{debug} );
+				my $packet = Net::DNS::Packet->decode( \$buffer, $self->{debug} );
 				$self->errorstring($@);
-				next unless $self->_accept_reply( $reply, $query );
+				next unless $self->_accept_reply( $packet, $query );
+				$reply = $packet;
 				$reply->answerfrom($peer);
 				last;
 			}					#SELECT LOOP
@@ -542,7 +544,7 @@ NAMESERVER: foreach my $ns (@ns) {
 		$timeout += $timeout;
 	}							#RETRY LOOP
 
-	$self->errorstring( $lastanswer->header->rcode ) if $lastanswer;
+	$self->{errorstring} = $lastanswer->header->rcode if $lastanswer;
 	$self->errorstring('query timed out') unless $self->{errorstring};
 	return $lastanswer;
 }
@@ -688,8 +690,8 @@ sub _accept_reply {
 	my $header = $reply->header;
 	return unless $header->qr;
 
-	return $reply unless $query;				# SpamAssassin 3.4.1 workaround
-	return ( $header->id != $query->header->id ) ? undef : $reply;
+	return 1 unless $query;					# SpamAssassin 3.4.1 workaround
+	return $header->id == $query->header->id;
 }
 
 

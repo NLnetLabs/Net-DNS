@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 30;
+use Test::More tests => 31;
 
 
 use Net::DNS;
@@ -82,22 +82,31 @@ my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
-	my $rr = new Net::DNS::RR("$name. $type 0 0 0 0");
-	is( $rr->rdstring(),  '0 0 0 0', "DS delete: $name. $type  0 0 0 0" );
-	is( $rr->keytag(),    0,	 'DS delete: keytag 0' );
-	is( $rr->algorithm(), 0,	 'DS delete: algorithm 0' );
-	is( $rr->digtype(),   0,	 'DS delete: digtype 0' );
-	is( $rr->digest(),    '',	 'DS delete: digest empty' );
+	my @arg = qw(0 0 0 00);					# per RFC8078(4), erratum 5049
+	my $rr	= new Net::DNS::RR("$name. $type @arg");
+	ok( ref($rr), "DS delete: $name. $type @arg" );
+	is( $rr->keytag(),    0, 'DS delete: keytag 0' );
+	is( $rr->algorithm(), 0, 'DS delete: algorithm 0' );
+	is( $rr->digtype(),   0, 'DS delete: digtype 0' );
 
-	my $rdata = $rr->rdata();
-	is( unpack( 'H*', $rdata ), '00000000', 'DS delete: rdata wire-format' );
+	is( $rr->string(), "$name.\tIN\t$type\t@arg", 'DS delete: presentation format' );
+
+	my $rdata = unpack 'H*', $rr->rdata();
+	is( $rdata, '0000000000', 'DS delete: rdata wire-format' );
 }
 
 
 {
-	my $rr = eval { new Net::DNS::RR("$name. $type 12345 0 0 0") };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "invalid DS delete\t[$exception]" );
+	my @arg = qw(0 0 0 0);					# per RFC8078(4) as published
+	my $rr	= new Net::DNS::RR("$name. $type @arg");
+	is( $rr->rdstring(), '0 0 0 00', 'DS delete: accept old format' );
+}
+
+
+{
+	my @arg = qw(0 0 0 -);					# unexpected empty field
+	my $rr	= new Net::DNS::RR("$name. $type @arg");
+	is( $rr->rdstring(), '0 0 0 -', 'DS delete: represent empty digest' );
 }
 
 

@@ -65,7 +65,7 @@ my %digest = (
 
 	my %algbyval = reverse @algbyname;
 
-	my @algrehash = map /^\d/ ? ($_) x 3 : do { s/[\W]//g; uc($_) }, @algbyname;
+	my @algrehash = map /^\d/ ? ($_) x 3 : do { s/[\W_]//g; uc($_) }, @algbyname;
 	my %algbyname = @algrehash;    # work around broken cperl
 
 	sub _algbyname {
@@ -101,8 +101,8 @@ my %digest = (
 
 	my %digestbyval = reverse @digestbyname;
 
-	my @digestrehash = map /^\d/ ? ($_) x 3 : do { s/[\W]//g; uc($_) }, @digestbyname, @digestalias;
-	my %digestbyname = @digestrehash;			# work around broken cperl
+	my @digestrehash = map /^\d/ ? ($_) x 3 : do { s/[\W_]//g; uc($_) }, @digestbyname;
+	my %digestbyname = ( @digestalias, @digestrehash );	# work around broken cperl
 
 	sub _digestbyname {
 		my $arg = shift;
@@ -124,8 +124,9 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
 	my ( $data, $offset ) = @_;
 
-	my $length = $self->{rdlength} - 4;
-	@{$self}{qw(keytag algorithm digtype digestbin)} = unpack "\@$offset n C2 a$length", $$data;
+	my $rdata = substr $$data, $offset, $self->{rdlength};
+	$self->{digestbin} = unpack '@4 a*', $rdata;
+	@{$self}{qw(keytag algorithm digtype)} = unpack 'n C*', $rdata;
 }
 
 
@@ -141,8 +142,8 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	return '' unless defined $self->{algorithm};
-	$self->_annotation( $self->babble ) if BABBLE;
-	my @digest = split /(\S{64})/, $self->digest;
+	$self->_annotation( $self->babble ) if BABBLE && $self->{algorithm};
+	my @digest = split /(\S{64})/, $self->digest || '-';
 	my @rdata = ( @{$self}{qw(keytag algorithm digtype)}, @digest );
 }
 
@@ -150,8 +151,9 @@ sub _format_rdata {			## format rdata portion of RR string.
 sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
-	$self->keytag(shift);
+	my $keytag = shift;		## avoid destruction by CDS algorithm(0)
 	$self->algorithm(shift);
+	$self->keytag($keytag);
 	$self->digtype(shift);
 	$self->digest(@_);
 }
@@ -195,10 +197,8 @@ sub digtype {
 
 sub digest {
 	my $self = shift;
-	my @args = map { /[^0-9A-Fa-f]/ ? croak "corrupt hexadecimal" : $_ } @_;
-
-	$self->digestbin( pack "H*", join "", @args ) if scalar @args;
-	unpack "H*", $self->digestbin() if defined wantarray;
+	return unpack "H*", $self->digestbin() unless scalar @_;
+	$self->digestbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
 }
 
 

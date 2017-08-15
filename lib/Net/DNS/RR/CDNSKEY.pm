@@ -20,30 +20,18 @@ Net::DNS::RR::CDNSKEY - DNS CDNSKEY resource record
 use integer;
 
 
-sub _format_rdata {			## format rdata portion of RR string.
-	my $self = shift;
-
-	return $self->SUPER::_format_rdata()
-			if scalar grep $_, @{$self}{qw(flags algorithm)};
-	return defined $self->{algorithm} ? '0 3 0 0' : '';	# RFC8078 mandated notation
-}
-
-
-sub _parse_rdata {			## populate RR from rdata in argument list
-	my $self = shift;
-
-	return $self->SUPER::_parse_rdata(@_) if $_[2];
-	die 'invalid RDATA (DNSKEY delete)'   if "@_" !~ m/^0 3 0/;    # ignore key
-	$self->algorithm(0);
-}
-
-
 sub algorithm {
 	my ( $self, $arg ) = @_;
-
 	return $self->SUPER::algorithm($arg) if $arg;
 	return $self->SUPER::algorithm() unless defined $arg;
-	@{$self}{qw(flags protocol algorithm keybin)} = ( 0, 3, 0, '' );
+	@{$self}{qw(flags protocol algorithm)} = ( 0, 3, 0 );
+}
+
+
+sub key {
+	my $self = shift;
+	return $self->SUPER::key(@_) unless defined( $_[0] ) && length( $_[0] ) < 2;
+	return $self->SUPER::keybin( $_[0] ? '' : chr(0) );
 }
 
 
@@ -106,6 +94,6 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>, RFC7344, RFC8078
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>, RFC7344, RFC8078(erratum 5049)
 
 =cut
