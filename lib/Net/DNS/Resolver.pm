@@ -530,7 +530,7 @@ The default is 30 seconds.
     $resolver->udppacketsize(2048);
 
 Get or set the UDP packet size.
-If set to a value greater than the default DNS packet size,
+If set to a value not less than the default DNS packet size,
 an EDNS extension will be added indicating support for
 large UDP datagram.
 

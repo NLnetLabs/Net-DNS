@@ -957,20 +957,14 @@ my $hints6 = {
 	}
 		if USE_SOCKET_IP;
 
-BEGIN {
-	import Socket6 qw(AI_NUMERICHOST) if USE_SOCKET_INET6;
-}
-
-my @inet6 = ( AF_INET6, SOCK_DGRAM, 0, AI_NUMERICHOST ) if USE_SOCKET_INET6;
+my $inet6 = [AF_INET6, SOCK_DGRAM, 0, Socket6::AI_NUMERICHOST()] if USE_SOCKET_INET6;
 
 sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 	my ( $self, $ip, $port ) = @_;
 
 	unless (USE_SOCKET_IP) {
-		return ( Socket6::getaddrinfo( $ip, $port, @inet6 ) )[3]
-				if USE_SOCKET_INET6 && _ipv6($ip);
-
-		return sockaddr_in( $port, inet_aton($ip) );	# NB: errors raised in socket->send
+		return sockaddr_in( $port, inet_aton($ip) ) unless _ipv6($ip);
+		return ( Socket6::getaddrinfo( $ip, $port, @$inet6 ) )[3] if USE_SOCKET_INET6;
 	}
 
 	( Socket::getaddrinfo( $ip, $port, _ipv6($ip) ? $hints6 : $hints4 ) )[1]->{addr}
@@ -982,15 +976,17 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 
 sub _ipv4 {
 	for (shift) {
-		return /^[0-9.]+\.[0-9]+$/;			# dotted digits
+		return if m/[^.0-9]/;				# dots and digits only
+		return m/\.\d+\./;				# dots separated by digits
 	}
 }
 
 sub _ipv6 {
 	for (shift) {
-		return 1 if /^[:0-9a-f]+:[0-9a-f]*$/i;		# mixed : and hexdigits
-		return 1 if /^[:0-9a-f]+:[0-9.]+$/i;		# prefix + dotted digits
-		return /^[:0-9a-f]+:[0-9a-f]*[%].+$/i;		# RFC4007 scoped address
+		return	 unless m/:.*:/;			# must contain two colons
+		return 1 unless m/[^:0-9A-Fa-f]/;		# colons and hexdigits only
+		return 1 if m/^[:.0-9A-Fa-f]+\%.+$/;		# RFC4007 scoped address
+		return m/^[:0-9A-Fa-f]+:[.0-9]+$/;		# prefix : dotted digits
 	}
 }
 
