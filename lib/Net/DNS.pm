@@ -5,7 +5,7 @@ package Net::DNS;
 #
 require 5.006;
 our $VERSION;
-$VERSION = '1.11_04';
+$VERSION = '1.12';
 $VERSION = eval $VERSION;
 our $SVNVERSION = (qw$LastChangedRevision$)[1];
 
