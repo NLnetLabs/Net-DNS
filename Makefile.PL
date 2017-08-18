@@ -84,6 +84,16 @@ use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
 
 delete $optional{'IO::Socket::INET6'} if USE_SOCKET_IP;		# exclude redundant dependency
 
+print <<EOT if !USE_SOCKET_IP && USE_SOCKET_INET6;
+#
+#	This Net::DNS installation uses the IO::Socket::INET6 package
+#	which has been superseded by IO::Socket::IP.
+#
+#	IPv6 support using IO::Socket::INET6 will be discontinued in
+#	a future release.
+#
+EOT
+
 
 # clean up existing makefile
 unlink('Makefile');
