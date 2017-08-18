@@ -554,14 +554,6 @@ Returns the IP address from which the most recent packet was
 received in response to a query.
 
 
-=head2 answersize
-
-    print 'size of last answer: ', $resolver->answersize, "\n";
-
-Returns the size in bytes of the most recent packet received in
-response to a query.
-
-
 =head2 errorstring
 
     print 'query status: ', $resolver->errorstring, "\n";
