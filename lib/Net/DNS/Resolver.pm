@@ -532,7 +532,7 @@ The default is 30 seconds.
 Get or set the UDP packet size.
 If set to a value not less than the default DNS packet size,
 an EDNS extension will be added indicating support for
-large UDP datagram.
+large UDP datagrams.
 
 
 =head2 usevc
@@ -558,8 +558,10 @@ received in response to a query.
 
     print 'query status: ', $resolver->errorstring, "\n";
 
-Returns a string containing error information from the most recent method call.
-C<errorstring()> is meaningful only when interrogated immediately after an error.
+Returns a string containing error information from the most recent
+DNS protocol interaction.
+C<errorstring()> is meaningful only when interrogated immediately
+after the corresponding method call.
 
 
 =head2 dnssec
@@ -693,8 +695,7 @@ take values are specified as C<option:value>.
 =head1 IPv6 TRANSPORT
 
 The Net::DNS::Resolver library will enable IPv6 transport if the
-appropriate library (L<IO::Socket::IP> or L<IO::Socket::INET6>) is
-available and the destination nameserver has an IPv6 address.
+L<IO::Socket::IP> library package is available.
 
 The C<force_v4()>, C<force_v6()>, C<prefer_v4()>, and C<prefer_v6()> methods
 with non-zero argument may be used to configure transport selection.
@@ -769,7 +770,7 @@ DEALINGS IN THE SOFTWARE.
 
 L<perl>, L<Net::DNS>, L<Net::DNS::Packet>, L<Net::DNS::Update>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-L<resolver(5)>, RFC 1034, RFC 1035
+L<resolv.conf(5)>, RFC 1034, RFC 1035
 
 =cut
 

@@ -10,7 +10,8 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 #  Implementation notes wrt IPv6 support when using perl before 5.20.0.
 #
 #  In general we try to be gracious to those stacks that do not have IPv6 support.
-#  We test that by means of the availability of IO::Socket::INET6 or IO::Socket::IP
+#  The socket code is conditionally compiled depending upon the availability of
+#  IO::Socket::IP or the deprecated IO::Socket::INET6 package.
 #
 #  We have chosen not to use mapped IPv4 addresses, there seem to be issues
 #  with this; as a result we use separate sockets for each family type.
@@ -25,7 +26,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 # [Revised March 2016]
 
 
-use constant USE_SOCKET_IP => defined eval 'use Socket 1.98; use IO::Socket::IP 0.32; 1;';
+use constant USE_SOCKET_IP => defined eval 'use Socket 1.97; use IO::Socket::IP 0.32; 1;';
 
 use constant USE_SOCKET_INET => defined eval 'require IO::Socket::INET';
 
@@ -662,7 +663,10 @@ sub _bgread {
 	my ( $expire, $query, $read ) = @$appendix;
 	return shift(@$read) if ref($read);
 
-	return unless IO::Select->new($handle)->can_read(0);
+	unless ( IO::Select->new($handle)->can_read(0) ) {
+		$self->errorstring('timed out');
+		return;
+	}
 
 	my $peer = $handle->peerhost;
 	$self->answerfrom($peer);
@@ -941,7 +945,7 @@ sub _create_udp_socket {
 }
 
 
-my $hints4 = {
+my $ip4 = {
 	family	 => AF_INET,
 	flags	 => Socket::AI_NUMERICHOST,
 	protocol => Socket::IPPROTO_UDP,
@@ -949,7 +953,7 @@ my $hints4 = {
 	}
 		if USE_SOCKET_IP;
 
-my $hints6 = {
+my $ip6 = {
 	family	 => AF_INET6,
 	flags	 => Socket::AI_NUMERICHOST,
 	protocol => Socket::IPPROTO_UDP,
@@ -967,7 +971,7 @@ sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 		return ( Socket6::getaddrinfo( $ip, $port, @$inet6 ) )[3] if USE_SOCKET_INET6;
 	}
 
-	( Socket::getaddrinfo( $ip, $port, _ipv6($ip) ? $hints6 : $hints4 ) )[1]->{addr}
+	( grep ref, Socket::getaddrinfo( $ip, $port, _ipv6($ip) ? $ip6 : $ip4 ), {} )[0]->{addr}
 			if USE_SOCKET_IP;			# NB: errors raised in socket->send
 }
 

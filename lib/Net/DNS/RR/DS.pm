@@ -242,6 +242,7 @@ sub create {
 	my $data = pack 'a* a*', $owner, $keyrr->_encode_rdata;
 
 	my $arglist = $digest{$self->digtype};
+	croak join ' ', 'digtype', $self->digtype('MNEMONIC'), 'not supported' unless $arglist;
 	my ( $object, @argument ) = @$arglist;
 	my $hash = $object->new(@argument);
 	$hash->add($data);
