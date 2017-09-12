@@ -62,6 +62,7 @@ my %optional = (
 	'IO::Socket::INET6'    => 2.51,
 	'IO::Socket::IP'       => 0.38,
 	'Net::LibIDN'	       => 0.12,
+	'Net::LibIDN2'	       => 0.03,
 	'Scalar::Util'	       => 1.25,
 	);
 

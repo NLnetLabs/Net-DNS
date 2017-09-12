@@ -50,7 +50,10 @@ use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
 	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
 };
 
-use constant LIBIDN => defined eval { require Net::LibIDN; };
+use constant LIBIDN  => defined eval 'require Net::LibIDN';
+use constant LIBIDN2 => defined eval 'require Net::LibIDN2';
+
+use constant IDN2UTF8 => LIBIDN2 && ref Net::LibIDN2->can('idn2_to_unicode_u8');
 
 
 # perlcc: address of encoding objects must be determined at runtime
@@ -179,12 +182,20 @@ encoded as Punycode A-labels.
 Domain names containing Unicode characters are supported if the
 Net::LibIDN module is installed.
 
+The underlying conversion is not supported by Net::LibIDN2.
 =cut
 
 sub xname {
 	my $name = &name;
 
-	if ( LIBIDN && UTF8 && $name =~ /xn--/ ) {
+	if ( IDN2UTF8 && UTF8 && $name =~ /xn--/i ) {
+		my $self = shift;
+		return $self->{xname} if defined $self->{xname};
+		my $u8 = Net::LibIDN2::idn2_to_unicode_u8($name);
+		return $self->{xname} = $utf8->decode($u8);
+	}
+
+	if ( !IDN2UTF8 && LIBIDN && UTF8 && $name =~ /xn--/i ) {
 		my $self = shift;
 		return $self->{xname} if defined $self->{xname};
 		return $self->{xname} = $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' );
@@ -267,7 +278,7 @@ sub origin {
 sub _decode_ascii {			## translate ASCII to perl string
 	my $s = shift;
 
-	# partial transliteration for non-ASCII character encodings
+	# partial transliteration for other single-octet character encodings
 	$s =~ tr
 	[\040-\176\000-\377]
 	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
@@ -282,13 +293,20 @@ sub _encode_ascii {			## translate perl string to ASCII
 
 	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
 
-	if ( LIBIDN && UTF8 && $s =~ /[^\000-\177]/ ) {
+	if ( LIBIDN2 && UTF8 && $s =~ /[^\000-\177]/ ) {
+		my $rc = 0;
+		my $xn = Net::LibIDN2::idn2_lookup_u8( $s, 9, $rc );
+		croak Net::LibIDN2::idn2_strerror($rc) unless $xn;
+		return pack "a* x$z", $xn;
+	}
+
+	if ( !LIBIDN2 && LIBIDN && UTF8 && $s =~ /[^\000-\177]/ ) {
 		my $xn = Net::LibIDN::idn_to_ascii( $s, 'utf-8' );
 		croak 'invalid name' unless $xn;
 		return pack "a* x$z", $xn;
 	}
 
-	# partial transliteration for non-ASCII character encodings
+	# partial transliteration for other single-octet character encodings
 	$s =~ tr
 	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
 	[\040-\176\077] unless ASCII;

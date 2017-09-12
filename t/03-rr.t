@@ -1,12 +1,10 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 105;
+use Test::More tests => 100;
 
-
-BEGIN {
-	use_ok('Net::DNS::RR');
-}
+use Net::DNS::RR;
+local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 
 {				## check exception raised for unparsable argument
@@ -116,14 +114,6 @@ BEGIN {
 }
 
 
-{				## check parsing of known but unimplemented RR type
-	my $expected = join "\t", qw( example.com. 3600 IN ATMA ),   q(\# 4 c0000201);
-	my $testcase = join "\t", qw( example.com. 3600 IN TYPE34 ), q(\# 4 c0000201);
-	my $rr	     = new Net::DNS::RR("$testcase");
-	is( $rr->string, $expected, "new Net::DNS::RR( $testcase )" );
-}
-
-
 {				## check for exception if RFC3597 format hexadecimal data inconsistent
 	foreach my $testcase ( '\# 0 c0 00 02 01', '\# 3 c0 00 02 01', '\# 5 c0 00 02 01' ) {
 		eval { new Net::DNS::RR("example.com 3600 IN A $testcase") };
@@ -140,7 +130,7 @@ BEGIN {
 		[ type => 'A', rdata => 'addr' ],
 		) {
 		my $rr = new Net::DNS::RR(@$testcase);
-		is( length( $rr->rdata ), 4, "new Net::DNS::RR([ @$testcase ])" );
+		is( length( $rr->rdata ), 4, "new Net::DNS::RR( @$testcase )" );
 	}
 
 	foreach my $testcase (
@@ -149,29 +139,25 @@ BEGIN {
 		[ type => 'MX', class => 'IN', ttl => 123 ],
 		) {
 		my $rr = new Net::DNS::RR(@$testcase);
-		is( length( $rr->rdata ), 0, "new Net::DNS::RR([ @$testcase ])" );
+		is( length( $rr->rdata ), 0, "new Net::DNS::RR( @$testcase )" );
 	}
 }
 
 
 {				## check for exception for nonexistent attribute
 	my $method = 'bogus';
-	for my $basedir ( undef, 'invalid' ) {
-		local $Net::DNS::Parameters::DNSEXTLANG = $basedir;
-		foreach my $testcase (
-			[ type => 'A' ],
-			[ type => 'ATMA' ],
-			[ type => 'ATMA', nonexistent => 'x' ],
-			) {
-			eval { new Net::DNS::RR( @$testcase )->$method('x') };
-			my $exception = $1 if $@ =~ /^(.+)\n/;
-			ok( $exception ||= '', "unknown method:\t[$exception]" );
-		}
-		$method = 'nonexistent';
+	foreach my $testcase (
+		[ type => 'A' ],
+		[ type => 'ATMA' ],
+		[ type => 'ATMA', unimplemented => 'x' ],
+		) {
+		eval { new Net::DNS::RR( @$testcase )->$method('x') };
+		my $exception = $1 if $@ =~ /^(.+)\n/;
+		ok( $exception ||= '', "unknown method:\t[$exception]" );
 	}
 	my $rr = new Net::DNS::RR( type => 'A' );
-        is( $rr->nonexistent, undef, 'suppress repeated unknown method exception' );
-        is( $rr->DESTROY,     undef, 'DESTROY() exists to defeat pre-5.18 AUTOLOAD' );
+        is( $rr->$method, undef, 'suppress repeated unknown method exception' );
+        is( $rr->DESTROY, undef, 'DESTROY() exists to defeat pre-5.18 AUTOLOAD' );
 }
 
 

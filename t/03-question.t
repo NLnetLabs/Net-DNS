@@ -4,6 +4,7 @@ use strict;
 
 use Net::DNS::Question;
 use Net::DNS::Parameters;
+local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 use Test::More tests => 121 + keys(%classbyname) + keys(%typebyname);
 

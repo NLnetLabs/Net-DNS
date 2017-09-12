@@ -117,7 +117,7 @@ my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
-	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', key => 'Z29iYmxlZGVnb29r' );
+	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', keybin => '' );
 	eval { create Net::DNS::RR::DS( $keyrr, ( 'digtype' => 255 ) ); };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "create: wrong digtype\t[$exception]" );

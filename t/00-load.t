@@ -23,6 +23,7 @@ my @module = qw(
 	IO::Socket::IP
 	MIME::Base64
 	Net::LibIDN
+	Net::LibIDN2
 	PerlIO
 	Scalar::Util
 	Socket

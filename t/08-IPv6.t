@@ -83,7 +83,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 91;
+plan tests => 92;
 
 NonFatalBegin();
 
@@ -587,6 +587,11 @@ NonFatalBegin();
 	$socket->recv( $discarded, $size - 2 ) if $size;
 
 	ok( !$resolver->_bgread($socket), '_read_tcp()	corrupt data' );
+}
+
+
+{					## exercise Net::DNS::Extlang query
+	ok( Net::DNS::RR->new('. MD'), 'Net::DNS::Extlang query' );
 }
 
 

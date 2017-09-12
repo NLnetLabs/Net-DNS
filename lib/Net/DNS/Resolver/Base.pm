@@ -879,7 +879,7 @@ sub _create_tcp_socket {
 	unless (USE_SOCKET_IP) {
 		$socket = IO::Socket::INET6->new(
 			LocalAddr => $self->{srcaddr6},
-			LocalPort => ( $self->{srcport} || undef ),
+			LocalPort => $self->{srcport},
 			PeerAddr  => $ip,
 			PeerPort  => $self->{port},
 			Proto	  => 'tcp',
@@ -889,13 +889,13 @@ sub _create_tcp_socket {
 
 		$socket = IO::Socket::INET->new(
 			LocalAddr => $self->{srcaddr4},
-			LocalPort => ( $self->{srcport} || undef ),
+			LocalPort => $self->{srcport},
 			PeerAddr  => $ip,
 			PeerPort  => $self->{port},
 			Proto	  => 'tcp',
 			Timeout	  => $self->{tcp_timeout},
 			)
-				unless USE_SOCKET_INET6 && $ip6_addr;
+				unless $ip6_addr;
 	}
 
 	$self->errorstring("no socket $sock_key $!") unless $socket;
@@ -924,7 +924,7 @@ sub _create_udp_socket {
 	unless (USE_SOCKET_IP) {
 		$socket = IO::Socket::INET6->new(
 			LocalAddr => $self->{srcaddr6},
-			LocalPort => ( $self->{srcport} || undef ),
+			LocalPort => $self->{srcport},
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM
 			)
@@ -932,11 +932,11 @@ sub _create_udp_socket {
 
 		$socket = IO::Socket::INET->new(
 			LocalAddr => $self->{srcaddr4},
-			LocalPort => ( $self->{srcport} || undef ),
+			LocalPort => $self->{srcport},
 			Proto	  => 'udp',
 			Type	  => SOCK_DGRAM
 			)
-				unless USE_SOCKET_INET6 && $ip6_addr;
+				unless $ip6_addr;
 	}
 
 	$self->errorstring("no socket $sock_key $!") unless $socket;
@@ -945,23 +945,17 @@ sub _create_udp_socket {
 }
 
 
-my $ip4 = {
-	family	 => AF_INET,
+my @udp = (
 	flags	 => Socket::AI_NUMERICHOST,
 	protocol => Socket::IPPROTO_UDP,
 	socktype => SOCK_DGRAM
-	}
+	)
 		if USE_SOCKET_IP;
 
-my $ip6 = {
-	family	 => AF_INET6,
-	flags	 => Socket::AI_NUMERICHOST,
-	protocol => Socket::IPPROTO_UDP,
-	socktype => SOCK_DGRAM
-	}
-		if USE_SOCKET_IP;
+my $ip4 = USE_SOCKET_IP ? {family => AF_INET,  @udp} : {};
+my $ip6 = USE_SOCKET_IP ? {family => AF_INET6, @udp} : {};
 
-my $inet6 = [AF_INET6, SOCK_DGRAM, 0, Socket6::AI_NUMERICHOST()] if USE_SOCKET_INET6;
+my $inet6 = USE_SOCKET_INET6 ? [AF_INET6, SOCK_DGRAM, 0, Socket6::AI_NUMERICHOST()] : [];
 
 sub _create_dst_sockaddr {		## create UDP destination sockaddr structure
 	my ( $self, $ip, $port ) = @_;

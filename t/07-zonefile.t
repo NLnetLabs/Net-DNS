@@ -5,17 +5,29 @@ use IO::File;
 
 use Test::More tests => 91;
 
+					## vvv	verbatim from Domain.pm
+use constant ASCII => ref eval {
+	require Encode;
+	Encode::find_encoding('ascii');
+};
 
 use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
-	require Encode;
 	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
 };
 
-use constant LIBIDN => defined eval { require Net::LibIDN; };
+use constant LIBIDN  => defined eval 'require Net::LibIDN';
+use constant LIBIDN2 => defined eval 'require Net::LibIDN2';
+					## ^^^	verbatim from Domain.pm
+
 
 use constant LIBIDNOK => LIBIDN && scalar eval {
 	my $cn = pack( 'U*', 20013, 22269 );
 	Net::LibIDN::idn_to_ascii( $cn, 'utf-8' ) eq 'xn--fiqs8s';
+};
+
+use constant LIBIDN2OK => LIBIDN2 && scalar eval {
+	my $cn = pack( 'U*', 20013, 22269 );
+	Net::LibIDN2::idn2_lookup_u8( $cn, 9 ) eq 'xn--fiqs8s';
 };
 
 
@@ -487,8 +499,7 @@ SKIP: {					## Non-ASCII zone content
 	is( length($rdata), 12, 'Unicode/UTF-8 TXT rdata' );
 	is( scalar(@rdata), 1,	'Unicode/UTF-8 TXT contiguous' );
 
-	skip( 'Non-ASCII domain - Net::LibIDN not available', 1 ) unless LIBIDN;
-	skip( 'Non-ASCII domain - Net::LibIDN not working',   1 ) unless LIBIDNOK;
+	skip( 'Non-ASCII domain - IDNA not supported', 1 ) unless LIBIDNOK || LIBIDN2OK;
 
 	my $kanji = <DATA>;
 	my $zone3 = source($kanji);

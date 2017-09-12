@@ -192,11 +192,12 @@ sub _new_hash {
 	$self->class($class) if defined $class;			# specify CLASS
 	$self->ttl($ttl)     if defined $ttl;			# specify TTL
 
-	die "type $type not implemented" if $populated && ref($self) eq __PACKAGE__;
-
-	while ( my ( $attribute, $value ) = each %attribute ) {
-		$self->$attribute( ref($value) eq 'ARRAY' ? @$value : $value );
-	}
+	eval {
+		while ( my ( $attribute, $value ) = each %attribute ) {
+			$self->$attribute( ref($value) eq 'ARRAY' ? @$value : $value );
+		}
+	};
+	die ref($self) eq __PACKAGE__ ? "type $type not implemented" : () if $@;
 
 	return $self;
 }
@@ -456,8 +457,8 @@ Resource record class.
 
 sub class {
 	my $self = shift;
-	$self->{class} = classbyname(shift) if scalar @_;
-	classbyval( $self->{class} || 1 ) if defined wantarray;
+	return $self->{class} = classbyname(shift) if scalar @_;
+	defined $self->{class} ? classbyval( $self->{class} ) : 'IN';
 }
 
 
@@ -760,7 +761,7 @@ sub AUTOLOAD {				## Default method
 
 	my $string = $self->string;
 	my @object = grep defined($_), $oref, $oref->VERSION;
-	my $module = join '::', __PACKAGE__, typebyval( $self->{type} );
+	my $module = join '::', __PACKAGE__, $self->type;
 	eval("require $module") if $oref eq __PACKAGE__;
 
 	@_ = ( <<"END", $@, "@object" );

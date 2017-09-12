@@ -5,6 +5,7 @@ use strict;
 use Test::More;
 use Net::DNS;
 use Net::DNS::Parameters;
+local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 my @prerequisite = qw(
 		Net::DNS::RR::NSEC
