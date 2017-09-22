@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 100;
+use Test::More tests => 108;
 
 use Net::DNS::RR;
 local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
@@ -43,7 +43,7 @@ local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
         is( $rr->class,	   $class, 'expected value returned by $rr->class' );
         is( $rr->ttl,	   $ttl,   'expected value returned by $rr->ttl' );
         is( $rr->rdstring, $rdata, 'expected value returned by $rr->rdstring' );
-        is( $rr->rdlength, $rdlen, 'expected value returned by $rr->length' );
+        is( $rr->rdlength, $rdlen, 'expected value returned by $rr->rdlength' );
 }
 
 
@@ -127,7 +127,6 @@ local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 	foreach my $testcase (
 		[ type => 'A', address => '192.0.2.1' ],
 		[ type => 'A', address => ['192.0.2.1'] ],
-		[ type => 'A', rdata => 'addr' ],
 		) {
 		my $rr = new Net::DNS::RR(@$testcase);
 		is( length( $rr->rdata ), 4, "new Net::DNS::RR( @$testcase )" );
@@ -231,7 +230,6 @@ local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 		'example.com	IN 123 A',
 		'example.com	123 A',
 		'example.com	123 IN A',
-		'example.com	A \\# 0',
 		'example.com	A 192.0.2.1',
 		) {
 		my $rr = new Net::DNS::RR("$testcase");
@@ -276,20 +274,25 @@ local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 }
 
 
-{					## check plain format and long RR strings
+{					## check plain and generic formats
 	my @testcase = (
-		'example.com.	IN	NS	a.iana-servers.net.',
-		'example.com.	IN	SOA	(
+		[owner => 'example.com.', type => 'A'],
+		[owner => 'example.com.', type => 'A', rdata => ''],
+		['example.com.	IN	NS	a.iana-servers.net.'],
+		['example.com.	IN	SOA	(
 				sns.dns.icann.org. noc.dns.icann.org.
 				2015082417	;serial
 				7200		;refresh
 				3600		;retry
 				1209600		;expire
 				3600		;minimum
-		)',
-		);
+			)'],
+		[owner => 'example.com.', type => 'ATMA'],	# unimplemented
+		[owner => 'example.com.', type => 'ATMA', rdata => ''],
+		[owner => 'example.com.', type => 'ATMA', rdata => 'octets'],
+	);
 	foreach my $testcase (@testcase) {
-		my $rr = new Net::DNS::RR($testcase);
+		my $rr = new Net::DNS::RR(@$testcase);
 		my $type = $rr->type;
 		my $plain = new Net::DNS::RR( $rr->plain );
 		is( $plain->string, $rr->string, "parse rr->plain format $type" );

@@ -133,7 +133,6 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{algorithm};
 	pack 'n C2 a*', @{$self}{qw(keytag algorithm digtype digestbin)};
 }
 
@@ -141,7 +140,6 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{algorithm};
 	$self->_annotation( $self->babble ) if BABBLE && $self->{algorithm};
 	my @digest = split /(\S{64})/, $self->digest || '-';
 	my @rdata = ( @{$self}{qw(keytag algorithm digtype)}, @digest );

@@ -36,7 +36,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $target = $self->{target} || return '';
+	my $target = $self->{target};
 	pack 'n2 a*', @{$self}{qw(priority weight)}, $target->raw;
 }
 
@@ -44,7 +44,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $target = $self->{target} || return '';
+	my $target = $self->{target};
 	my @rdata = ( $self->priority, $self->weight, $target->string );
 }
 

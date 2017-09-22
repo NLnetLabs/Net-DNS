@@ -34,7 +34,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $address = $self->{address} || return '';
+	my $address = $self->{address};
 	join '', $address->encode, $self->{sa}->encode;
 }
 
@@ -42,7 +42,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $address = $self->{address} || return '';
+	my $address = $self->{address};
 	join ' ', $address->string, $self->{sa}->string;
 }
 

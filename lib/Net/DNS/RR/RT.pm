@@ -35,16 +35,14 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	my $intermediate = $self->{intermediate} || return '';
-	pack 'n a*', $self->preference, $intermediate->encode( $offset + 2, @opaque );
+	pack 'n a*', $self->preference, $self->{intermediate}->encode( $offset + 2, @opaque );
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $intermediate = $self->{intermediate} || return '';
-	join ' ', $self->preference, $intermediate->string;
+	join ' ', $self->preference, $self->{intermediate}->string;
 }
 
 

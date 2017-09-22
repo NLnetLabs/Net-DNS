@@ -46,7 +46,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
 	my @rdata;
-	my $aplist = $self->{aplist} || [];
+	my $aplist = $self->{aplist};
 	foreach (@$aplist) {
 		my $address = $_->{address};
 		$address =~ s/[\000]+$//;			# strip trailing null octets
@@ -60,7 +60,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $aplist = $self->{aplist} || [];
+	my $aplist = $self->{aplist};
 	my @rdata = map $_->string, @$aplist;
 }
 

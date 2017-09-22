@@ -32,7 +32,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $nsdname = $self->{nsdname} || return '';
+	my $nsdname = $self->{nsdname};
 	$nsdname->encode(@_);
 }
 
@@ -40,7 +40,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $nsdname = $self->{nsdname} || return '';
+	my $nsdname = $self->{nsdname};
 	$nsdname->string;
 }
 

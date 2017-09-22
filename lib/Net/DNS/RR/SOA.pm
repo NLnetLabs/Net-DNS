@@ -37,7 +37,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	my $rname = $self->{rname} || return '';
+	my $rname = $self->{rname};
 	my $rdata = $self->{mname}->encode(@_);
 	$rdata .= $rname->encode( $offset + length($rdata), @opaque );
 	$rdata .= pack 'N5', $self->serial, @{$self}{qw(refresh retry expire minimum)};
@@ -47,7 +47,6 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{rname};
 	my $mname  = $self->{mname}->string;
 	my $rname  = $self->{rname}->string;
 	my $serial = $self->serial;

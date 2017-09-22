@@ -1,6 +1,14 @@
 $Id$                       -*-text-*-
 
 
+**** 1.13 [unreleased]
+
+Feature IDN query support
+
+	Queries for domain names containing non-ASCII characters are
+	now possible on Unicode platforms using CPAN Net::LibIDN2
+
+
 **** 1.12 Aug 18, 2017
 
 Fix rt.cpan.org #122586

@@ -34,7 +34,6 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{longitude};
 	pack 'C4N3', @{$self}{qw(version size hp vp latitude longitude altitude)};
 }
 
@@ -42,7 +41,6 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{longitude};
 	my ( $altitude, @precision ) = map $self->$_() . 'm', qw(altitude size hp vp);
 	my $precision = join ' ', @precision;
 	for ($precision) {

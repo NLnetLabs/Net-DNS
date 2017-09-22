@@ -64,7 +64,6 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{algorithm};
 	my $gatetype   = $self->gatetype;
 	my $gateway    = $self->{gateway};
 	my $precedence = $self->precedence;
@@ -91,7 +90,6 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	return '' unless defined $self->{algorithm};
 	my @params = map $self->$_, qw(precedence gatetype algorithm);
 	my @base64 = split /\s+/, encode_base64( $self->keybin );
 	my @rdata = ( @params, $self->gateway, @base64 );
@@ -170,9 +168,8 @@ sub gateway {
 
 sub key {
 	my $self = shift;
-
-	$self->keybin( MIME::Base64::decode( join "", @_ ) ) if scalar @_;
-	MIME::Base64::encode( $self->keybin(), "" ) if defined wantarray;
+	return MIME::Base64::encode( $self->keybin(), "" ) unless scalar @_;
+	$self->keybin( MIME::Base64::decode( join "", @_ ) );
 }
 
 

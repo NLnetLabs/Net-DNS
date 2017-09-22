@@ -36,7 +36,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 	my ( $offset, @opaque ) = @_;
 
-	my $txtdname = $self->{txtdname} || return '';
+	my $txtdname = $self->{txtdname};
 	my $rdata = $self->{mbox}->encode( $offset, @opaque );
 	$rdata .= $txtdname->encode( $offset + length($rdata), @opaque );
 }
@@ -45,8 +45,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $txtdname = $self->{txtdname} || return '';
-	my @rdata = ( $self->{mbox}->string, $txtdname->string );
+	my @rdata = ( $self->{mbox}->string, $self->{txtdname}->string );
 }
 
 

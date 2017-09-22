@@ -44,7 +44,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $txtdata = $self->{txtdata} || [];
+	my $txtdata = $self->{txtdata};
 	join '', map $_->encode, @$txtdata;
 }
 
@@ -52,7 +52,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $txtdata = $self->{txtdata} || [];
+	my $txtdata = $self->{txtdata};
 	my @txtdata = map $_->string, @$txtdata;
 }
 

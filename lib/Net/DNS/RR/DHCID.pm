@@ -34,7 +34,6 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	return '' unless defined $self->{digest};
 	pack 'nC a*', map $self->$_, qw(identifiertype digesttype digest);
 }
 

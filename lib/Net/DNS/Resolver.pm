@@ -44,7 +44,7 @@ __END__
 
     # Send a prebuilt query packet
     $query = new Net::DNS::Packet( ... );
-    $reply = $resolver->send( $packet );
+    $reply = $resolver->send( $query );
 
 =head1 DESCRIPTION
 
@@ -202,19 +202,20 @@ any answers or not, use the C<send()> method instead.
 
 =head2 send
 
-    $packet = $resolver->send( $packet );
+    $packet = $resolver->send( $query );
 
     $packet = $resolver->send( 'mailhost.example.com' );
     $packet = $resolver->query( '192.0.2.1' );
     $packet = $resolver->send( 'example.com', 'MX' );
     $packet = $resolver->send( 'annotation.example.com', 'TXT', 'IN' );
 
-Performs a DNS query for the given name.  Neither the searchlist
-nor the default domain will be appended.
+Performs a DNS query for the given name.
+Neither the searchlist nor the default domain will be appended.
 
-The argument list can be either a L<Net::DNS::Packet> object or a list
-of strings.  The record type and class can be omitted; they default to
-A and IN.  If the name looks like an IP address (IPv4 or IPv6),
+The argument list can be either a pre-built query L<Net::DNS::Packet>
+or a list of strings.
+The record type and class can be omitted; they default to A and IN.
+If the name looks like an IP address (IPv4 or IPv6),
 then a query within in-addr.arpa or ip6.arpa will be performed.
 
 Returns a L<Net::DNS::Packet> object whether there were any answers or not.
@@ -339,7 +340,7 @@ received before the timeout interval expired.
 Returns true while awaiting the response or for the transaction to time out.
 The argument is the handle returned by C<bgsend()>.
 
-Truncated UDP packets will be retried over TCP transparently while
+Truncated UDP packets will be retried transparently using TCP while
 continuing to assert busy to the caller.
 
 
