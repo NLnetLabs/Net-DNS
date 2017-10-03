@@ -349,7 +349,7 @@ sub _typespec {				## draft-levine-dnsextlang
 		my $extobj = new Net::DNS::Extlang();
 		my $recipe = $extobj->xlstorerecord( $identifier, @attribute );
 		my @source = split /\n/, $extobj->compilerr($recipe);
-		return sub { $_ = shift @source; return defined $_; };
+		return sub { defined( $_ = shift @source ) };
 	}
 	return;
 END

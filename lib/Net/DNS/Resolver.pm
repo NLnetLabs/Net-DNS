@@ -771,7 +771,7 @@ DEALINGS IN THE SOFTWARE.
 
 L<perl>, L<Net::DNS>, L<Net::DNS::Packet>, L<Net::DNS::Update>,
 L<Net::DNS::Header>, L<Net::DNS::Question>, L<Net::DNS::RR>,
-L<resolv.conf(5)>, RFC 1034, RFC 1035
+L<resolver(5)>, RFC 1034, RFC 1035
 
 =cut
 
