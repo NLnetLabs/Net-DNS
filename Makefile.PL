@@ -62,7 +62,7 @@ my %optional = (
 	'IO::Socket::INET6'    => 2.51,
 	'IO::Socket::IP'       => 0.38,
 	'Net::LibIDN'	       => 0.12,
-	'Net::LibIDN2'	       => 0.03,
+	'Net::LibIDN2'	       => 1.00,
 	'Scalar::Util'	       => 1.25,
 	);
 
@@ -83,6 +83,8 @@ use constant USE_SOCKET_IP => defined eval 'use Socket 1.97; use IO::Socket::IP 
 use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
 
 delete $optional{'IO::Socket::INET6'} if USE_SOCKET_IP;		# exclude redundant dependency
+delete $optional{'Net::LibIDN'} if eval 'require Net::LibIDN2';
+
 
 print <<EOT if !USE_SOCKET_IP && USE_SOCKET_INET6;
 #

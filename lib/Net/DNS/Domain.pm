@@ -51,10 +51,7 @@ use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
 };
 
 use constant LIBIDN  => defined eval 'require Net::LibIDN';
-use constant LIBIDN2 => defined eval 'require Net::LibIDN2';
-
-use constant IDN2UTF8 => LIBIDN2 && ref Net::LibIDN2->can('idn2_to_unicode_u8');
-
+use constant LIBIDN2 => ref eval 'require Net::LibIDN2; Net::LibIDN2->can("idn2_to_ascii_8")';
 
 # perlcc: address of encoding objects must be determined at runtime
 my $ascii = ASCII ? Encode::find_encoding('ascii') : undef;	# Osborn's Law:
@@ -86,6 +83,9 @@ by the Perl compiler.
 The character string presentation format follows the conventions
 for zone files described in RFC1035.
 
+Users should be aware that non-ASCII domain names will be transcoded
+to NFC before encoding, which is an irreversible process.
+
 =cut
 
 my ( %escape, %unescape );		## precalculated ASCII escape tables
@@ -105,12 +105,7 @@ sub new {
 
 	my $self = bless {}, $class;
 
-	local $_ = _encode_ascii($s);
-
-	s/\134\134/\134\060\071\062/g;				# disguise escaped escape
-	s/\134\056/\134\060\064\066/g;				# disguise escaped dot
-
-	my $label = $self->{label} = $_ eq "\100" ? [] : [split /\056/];
+	my $label = $self->{label} = ( $s eq '@' ) ? [] : [split /\056/, _encode_ascii($s)];
 
 	foreach (@$label) {
 		s/\134([\060-\071]{3})/$unescape{$1}/eg;	# numeric escape
@@ -123,7 +118,7 @@ sub new {
 
 	$$cache1{$k} = $self;					# cache object reference
 
-	return $self if /\056$/;				# fully qualified name
+	return $self if $s =~ /\.$/;				# fully qualified name
 	$self->{origin} = $ORIGIN || return $self;		# dynamically scoped $ORIGIN
 	return $self;
 }
@@ -179,23 +174,21 @@ sub fqdn {
 Interprets an extended name containing Unicode domain name labels
 encoded as Punycode A-labels.
 
-Domain names containing Unicode characters are supported if the
-Net::LibIDN module is installed.
+If decoding is not possible, the ACE encoded name is returned.
 
-The underlying conversion is not supported by Net::LibIDN2.
 =cut
 
 sub xname {
 	my $name = &name;
 
-	if ( IDN2UTF8 && UTF8 && $name =~ /xn--/i ) {
+	if ( LIBIDN2 && UTF8 && $name =~ /xn--/i ) {
 		my $self = shift;
 		return $self->{xname} if defined $self->{xname};
-		my $u8 = Net::LibIDN2::idn2_to_unicode_u8($name);
-		return $self->{xname} = $utf8->decode($u8);
+		my $u8 = Net::LibIDN2::idn2_to_unicode_88($name);
+		return $self->{xname} = $u8 ? $utf8->decode($u8) : $name;
 	}
 
-	if ( !IDN2UTF8 && LIBIDN && UTF8 && $name =~ /xn--/i ) {
+	if ( !LIBIDN2 && LIBIDN && UTF8 && $name =~ /xn--/i ) {
 		my $self = shift;
 		return $self->{xname} if defined $self->{xname};
 		return $self->{xname} = $utf8->decode( Net::LibIDN::idn_to_unicode $name, 'utf-8' );
@@ -283,35 +276,38 @@ sub _decode_ascii {			## translate ASCII to perl string
 	[\040-\176\000-\377]
 	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
-	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
-	return ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
+	my $z = length($s) - length($s);			# pre-5.18 taint workaround
+	ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
 }
 
 
 sub _encode_ascii {			## translate perl string to ASCII
-	my $s = shift;
+	local $_ = shift;
 
-	my $z = length substr $s, 0, 0;				# pre-5.18 taint workaround
+	my $z = length($_) - length($_);			# pre-5.18 taint workaround
 
-	if ( LIBIDN2 && UTF8 && $s =~ /[^\000-\177]/ ) {
+	s/\\\\/\\092/g;						# disguise escaped escape
+	s/\\\./\\046/g;						# disguise escaped dot
+
+	if ( LIBIDN2 && UTF8 && /[^\000-\177]/ ) {
 		my $rc = 0;
-		my $xn = Net::LibIDN2::idn2_lookup_u8( $s, 9, $rc );
+		my $xn = Net::LibIDN2::idn2_to_ascii_8( $_, 41, $rc );
 		croak Net::LibIDN2::idn2_strerror($rc) unless $xn;
 		return pack "a* x$z", $xn;
 	}
 
-	if ( !LIBIDN2 && LIBIDN && UTF8 && $s =~ /[^\000-\177]/ ) {
-		my $xn = Net::LibIDN::idn_to_ascii( $s, 'utf-8' );
+	if ( !LIBIDN2 && LIBIDN && UTF8 && /[^\000-\177]/ ) {
+		my $xn = Net::LibIDN::idn_to_ascii( $_, 'utf-8' );
 		croak 'invalid name' unless $xn;
 		return pack "a* x$z", $xn;
 	}
 
 	# partial transliteration for other single-octet character encodings
-	$s =~ tr
+	tr
 	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
 	[\040-\176\077] unless ASCII;
 
-	return ASCII ? pack( "a* x$z", $ascii->encode($s) ) : $s;
+	ASCII ? pack( "a* x$z", $ascii->encode($_) ) : $_;
 }
 
 
