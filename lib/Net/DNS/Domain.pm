@@ -53,6 +53,8 @@ use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
 use constant LIBIDN  => defined eval 'require Net::LibIDN';
 use constant LIBIDN2 => ref eval 'require Net::LibIDN2; Net::LibIDN2->can("idn2_to_ascii_8")';
 
+use constant IDN2FLAG => eval 'Net::LibIDN2::IDN2_NFC_INPUT + Net::LibIDN2::IDN2_NONTRANSITIONAL';
+
 # perlcc: address of encoding objects must be determined at runtime
 my $ascii = ASCII ? Encode::find_encoding('ascii') : undef;	# Osborn's Law:
 my $utf8  = UTF8  ? Encode::find_encoding('utf8')  : undef;	# Variables won't; constants aren't.
@@ -105,9 +107,26 @@ sub new {
 
 	my $self = bless {}, $class;
 
-	my $label = $self->{label} = ( $s eq '@' ) ? [] : [split /\056/, _encode_ascii($s)];
+	$s =~ s/\\\\/\\092/g;					# disguise escaped escape
+	$s =~ s/\\\./\\046/g;					# disguise escaped dot
+
+	my $label = $self->{label} = ( $s eq '@' ) ? [] : [split /\056/, _encode_utf8($s)];
 
 	foreach (@$label) {
+
+		if ( LIBIDN2 && UTF8 && /[^\000-\177]/ ) {
+			my $rc = 0;
+			$_ = "\357\277\275" if /\134\d+/;	# disallow numeric escape
+			$_ = Net::LibIDN2::idn2_to_ascii_8( $_, IDN2FLAG, $rc );
+			croak Net::LibIDN2::idn2_strerror($rc) unless $_;
+		}
+
+		if ( !LIBIDN2 && LIBIDN && UTF8 && /[^\000-\177]/ ) {
+			$_ = "\357\277\275" if /\134\d+/;	# disallow numeric escape
+			$_ = Net::LibIDN::idn_to_ascii( $_, 'utf-8' );
+			croak 'invalid name' unless $_;
+		}
+
 		s/\134([\060-\071]{3})/$unescape{$1}/eg;	# numeric escape
 		s/\134(.)/$1/g;					# character escape
 		croak 'empty domain label' unless length;
@@ -268,46 +287,29 @@ sub origin {
 
 ########################################
 
-sub _decode_ascii {			## translate ASCII to perl string
-	my $s = shift;
+sub _decode_ascii {			## ASCII to perl internal encoding
+	local $_ = shift;
 
-	# partial transliteration for other single-octet character encodings
-	$s =~ tr
+	# partial transliteration for non-ASCII character encodings
+	tr
 	[\040-\176\000-\377]
 	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~?] unless ASCII;
 
-	my $z = length($s) - length($s);			# pre-5.18 taint workaround
-	ASCII ? pack( "a* x$z", $ascii->decode($s) ) : $s;
+	my $z = length($_) - length($_);			# pre-5.18 taint workaround
+	ASCII ? substr( $ascii->decode($_), $z ) : $_;
 }
 
 
-sub _encode_ascii {			## translate perl string to ASCII
+sub _encode_utf8 {			## perl internal encoding to ASCII
 	local $_ = shift;
 
-	my $z = length($_) - length($_);			# pre-5.18 taint workaround
-
-	s/\\\\/\\092/g;						# disguise escaped escape
-	s/\\\./\\046/g;						# disguise escaped dot
-
-	if ( LIBIDN2 && UTF8 && /[^\000-\177]/ ) {
-		my $rc = 0;
-		my $xn = Net::LibIDN2::idn2_to_ascii_8( $_, 41, $rc );
-		croak Net::LibIDN2::idn2_strerror($rc) unless $xn;
-		return pack "a* x$z", $xn;
-	}
-
-	if ( !LIBIDN2 && LIBIDN && UTF8 && /[^\000-\177]/ ) {
-		my $xn = Net::LibIDN::idn_to_ascii( $_, 'utf-8' );
-		croak 'invalid name' unless $xn;
-		return pack "a* x$z", $xn;
-	}
-
-	# partial transliteration for other single-octet character encodings
+	# partial transliteration for non-ASCII character encodings
 	tr
 	[ !"#$%&'()*+,\-./0-9:;<=>?@A-Z\[\\\]^_`a-z{|}~\000-\377]
 	[\040-\176\077] unless ASCII;
 
-	ASCII ? pack( "a* x$z", $ascii->encode($_) ) : $_;
+	my $z = length($_) - length($_);			# pre-5.18 taint workaround
+	ASCII ? substr( ( UTF8 ? $utf8 : $ascii )->encode($_), $z ) : $_;
 }
 
 

@@ -77,7 +77,7 @@ is( new Net::DNS::Domain($u_label)->xname, $u_label, 'IDN cached domain->xname' 
 is( new Net::DNS::Domain('xn--')->xname, 'xn--', 'IDN bogus domain->xname' );
 
 
-eval { new Net::DNS::Domain( pack 'H*', 'C200' ); };
+eval { new Net::DNS::Domain( pack 'U*', 65533, 92, 48, 65533 ); };
 my $exception = $1 if $@ =~ /^(.+)\n/;
 ok( $exception ||= '', "invalid name\t[$exception]" );
 

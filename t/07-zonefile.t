@@ -16,7 +16,7 @@ use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
 };
 
 use constant LIBIDN  => defined eval 'require Net::LibIDN';
-use constant LIBIDN2 => defined eval 'require Net::LibIDN2';
+use constant LIBIDN2 => ref eval 'require Net::LibIDN2; Net::LibIDN2->can("idn2_to_ascii_8")';
 					## ^^^	verbatim from Domain.pm
 
 
@@ -27,7 +27,7 @@ use constant LIBIDNOK => LIBIDN && scalar eval {
 
 use constant LIBIDN2OK => LIBIDN2 && scalar eval {
 	my $cn = pack( 'U*', 20013, 22269 );
-	Net::LibIDN2::idn2_lookup_u8( $cn, 9 ) eq 'xn--fiqs8s';
+	Net::LibIDN2::idn2_to_ascii_8( $cn, 9 ) eq 'xn--fiqs8s';
 };
 
 
@@ -489,7 +489,7 @@ SKIP: {					## Non-ASCII zone content
 	is( $txtgr->txtdata, $text, 'ISO8859-7 TXT rdata' );
 
 	eval { binmode(DATA) };					# suppress encoding layer
-	my $jptxt = <DATA>;
+	my $jptxt = join "\n", <DATA>;
 	my $file2 = source($jptxt);
 	my $fh2	  = new IO::File( $file2->name, '<:utf8' );	# UTF-8 character encoding
 	my $zone2 = new Net::DNS::ZoneFile($fh2);
@@ -501,10 +501,8 @@ SKIP: {					## Non-ASCII zone content
 
 	skip( 'Non-ASCII domain - IDNA not supported', 1 ) unless LIBIDNOK || LIBIDN2OK;
 
-	my $kanji = <DATA>;
-	my $zone3 = source($kanji);
-	my $nextr = $zone3->read;				# NULL RR with kanji owner name
-	is( $nextr->name, 'xn--wgv71a', 'Unicode/UTF-8 domain name' );
+	my $jpnull = $zone2->read;				# NULL RR with kanji owner name
+	is( $jpnull->name, 'xn--wgv71a', 'Unicode/UTF-8 domain name' );
 }
 
 
