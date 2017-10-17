@@ -42,10 +42,10 @@ our @EXPORT = qw(SEQUENTIAL UNIXTIME YYYYMMDDxx
 
 
 local $SIG{__DIE__};
-require Net::DNS::RR;
-require Net::DNS::Packet;
-require Net::DNS::Update;
 require Net::DNS::Resolver;
+require Net::DNS::Packet;
+require Net::DNS::RR;
+require Net::DNS::Update;
 
 
 sub version { $VERSION; }

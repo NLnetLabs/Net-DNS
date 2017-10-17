@@ -116,15 +116,15 @@ sub new {
 
 		if ( LIBIDN2 && UTF8 && /[^\000-\177]/ ) {
 			my $rc = 0;
-			$_ = "\357\277\275" if /\134\d+/;	# disallow numeric escape
+			s/\134/\357\277\275/;			# disallow escapes
 			$_ = Net::LibIDN2::idn2_to_ascii_8( $_, IDN2FLAG, $rc );
 			croak Net::LibIDN2::idn2_strerror($rc) unless $_;
 		}
 
 		if ( !LIBIDN2 && LIBIDN && UTF8 && /[^\000-\177]/ ) {
-			$_ = "\357\277\275" if /\134\d+/;	# disallow numeric escape
+			s/\134/\357\277\275/;			# disallow escapes
 			$_ = Net::LibIDN::idn_to_ascii( $_, 'utf-8' );
-			croak 'invalid name' unless $_;
+			croak 'name contains disallowed character' unless $_;
 		}
 
 		s/\134([\060-\071]{3})/$unescape{$1}/eg;	# numeric escape
@@ -300,7 +300,7 @@ sub _decode_ascii {			## ASCII to perl internal encoding
 }
 
 
-sub _encode_utf8 {			## perl internal encoding to ASCII
+sub _encode_utf8 {			## perl internal encoding to UTF8
 	local $_ = shift;
 
 	# partial transliteration for non-ASCII character encodings

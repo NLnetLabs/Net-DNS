@@ -524,7 +524,7 @@ NonFatalBegin();
 		my $select = new IO::Select($socket);
 		while ( $resolver->bgbusy($socket) ) { sleep 1 }
 		my $discarded = '';	## [size][id][status]	[qdcount]...
-		$socket->recv( $discarded, 6 );
+		$socket->recv( $discarded, 6 ) if $socket;
 		eval { $resolver->_axfr_next($select); };
 		my $exception = $1 if $@ =~ /^(.+)\n/;
 		ok( $exception ||= '', "corrupt data\t[$exception]" );
@@ -574,11 +574,10 @@ NonFatalBegin();
 
 	my $packet = $resolver->_make_query_packet(qw(net-dns.org SOA));
 	my $socket = $resolver->_bgsend_tcp( $packet, $packet->data );
-	my $select = new IO::Select($socket);
 	while ( $resolver->bgbusy($socket) ) { sleep 1 }
 
 	my $size_buf = '';
-	$socket->recv( $size_buf, 2 );
+	$socket->recv( $size_buf, 2 ) if $socket;
 	my ($size) = unpack 'n*', $size_buf;
 	my $discarded = '';		## data dependent: last 16 bits must not all be zero
 	$socket->recv( $discarded, $size - 2 ) if $size;
