@@ -399,7 +399,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::LibIDN>, L<Net::DNS>, RFC1034, RFC1035, RFC5891,
+L<perl>, L<Net::LibIDN2>, L<Net::DNS>, RFC1034, RFC1035, RFC5891,
 Unicode Technical Report #16
 
 =cut

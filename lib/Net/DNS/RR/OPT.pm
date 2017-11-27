@@ -230,10 +230,10 @@ sub _image { &_decompose; }
 
 
 package Net::DNS::RR::OPT::DHU;					# RFC6975
-use base qw(Net::DNS::RR::OPT::DAU);
+our @ISA = qw(Net::DNS::RR::OPT::DAU);
 
 package Net::DNS::RR::OPT::N3U;					# RFC6975
-use base qw(Net::DNS::RR::OPT::DAU);
+our @ISA = qw(Net::DNS::RR::OPT::DAU);
 
 
 package Net::DNS::RR::OPT::CLIENT_SUBNET;			# RFC7871

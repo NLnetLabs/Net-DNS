@@ -92,7 +92,7 @@ sub new {
 	}
 
 	$self->{filename} = $file ||= '';
-	$self->{handle} = new IO::File($file) or croak qq($! "$file");
+	$self->{handle} = new IO::File($file) or croak "$! $file";
 	$self->{fileopen}{$file}++;
 	return $self;
 }
@@ -524,7 +524,7 @@ sub _include {				## open $INCLUDE file
 	croak qq(recursive \$INCLUDE $file) if $opened->{$file}++;
 
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{handle} ) : ();
-	my $handle = new IO::File( $file, @discipline ) or croak qq($! "$file");
+	my $handle = new IO::File( $file, @discipline ) or croak "$! $file";
 
 	delete $self->{latest};					# forget previous owner
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link

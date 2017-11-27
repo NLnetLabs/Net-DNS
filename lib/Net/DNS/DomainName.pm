@@ -155,7 +155,7 @@ sub _wire {				## Generate list of wire-format labels
 ########################################
 
 package Net::DNS::DomainName1035;
-use base qw(Net::DNS::DomainName);
+our @ISA = qw(Net::DNS::DomainName);
 
 =head1 Net::DNS::DomainName1035
 
@@ -217,7 +217,7 @@ sub encode {
 ########################################
 
 package Net::DNS::DomainName2535;
-use base qw(Net::DNS::DomainName);
+our @ISA = qw(Net::DNS::DomainName);
 
 =head1 Net::DNS::DomainName2535
 

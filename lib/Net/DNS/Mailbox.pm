@@ -107,15 +107,13 @@ canonicalisation.
 =cut
 
 package Net::DNS::Mailbox1035;
-
-use base qw(Net::DNS::Mailbox);
+our @ISA = qw(Net::DNS::Mailbox);
 
 sub encode { &Net::DNS::DomainName1035::encode; }
 
 
 package Net::DNS::Mailbox2535;
-
-use base qw(Net::DNS::Mailbox);
+our @ISA = qw(Net::DNS::Mailbox);
 
 sub encode { &Net::DNS::DomainName2535::encode; }
 

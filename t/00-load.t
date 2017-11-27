@@ -35,12 +35,10 @@ my @module = qw(
 
 diag("\n\nThese tests were run using:\n");
 foreach my $module (@module) {
-	my $loaded = eval("require $module") || next;
-	my $revnum = $loaded ? $module->VERSION : "\t\tn/a";
-	diag sprintf "\t%-25s  %s", $module, $revnum || '?';
+	eval "require $module";
+	my $revnum = eval { $module->VERSION || '?' };
+	diag sprintf "\t%-25s  %s", $module, $revnum || next;
 }
-
-diag("set environment variable NET_DNS_DEBUG to get all versions\n\n");
 
 
 plan tests => 20 + scalar(@Net::DNS::EXPORT);
@@ -89,4 +87,6 @@ foreach my $rr (@rrs) {
 
 
 exit;
+
+__END__
 

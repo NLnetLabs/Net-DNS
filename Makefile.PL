@@ -240,9 +240,10 @@ sub install {
 	}
 
 	eval 'require Net::DNS';
+	my @version = grep $_, ( 'version', $Net::DNS::VERSION );
 
 	my $nameregex = '\W+Net\WDNS.pm$';
-	my @installed = grep m/$nameregex/io, values %INC;
+	my @installed = grep $_ && m/$nameregex/io, values %INC;
 	my %noinstall;
 
 	foreach (@installed) {
@@ -262,7 +263,7 @@ sub install {
 	warn <<"AMEN";
 ##
 ##	The install location for this version of Net::DNS differs
-##	from the existing version $Net::DNS::VERSION in your perl library.
+##	from the existing @version in your perl library.
 ##	@installed
 ##
 ##	The installation will be rendered ineffective because the
