@@ -36,7 +36,7 @@ use warnings;
 use integer;
 use Carp;
 
-use constant LIB => grep !ref($_), @INC;
+use constant LIB => grep $_ ne '.', grep !ref($_), @INC;
 
 use Net::DNS::Parameters;
 use Net::DNS::Domain;
@@ -546,10 +546,9 @@ sub rdata {
 
 	return eval { $self->_empty ? '' : $self->_encode_rdata( 0x4000, {} ); } || '' unless @_;
 
-	my $rdata = shift || '';
-	my $rdlen = $self->{rdlength} = length $rdata;
-	my $hash  = {};
-	$self->_decode_rdata( \$rdata, 0, $hash ) if $rdlen;
+	my $data = shift || '';
+	my $hash = {};
+	$self->_decode_rdata( \$data, 0, $hash ) if ( $self->{rdlength} = length $data );
 	croak 'unexpected compression pointer in rdata' if keys %$hash;
 }
 

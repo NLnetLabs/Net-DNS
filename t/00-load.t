@@ -36,8 +36,8 @@ my @module = qw(
 diag("\n\nThese tests were run using:\n");
 foreach my $module (@module) {
 	eval "require $module";
-	my $revnum = eval { $module->VERSION || '?' };
-	diag sprintf "\t%-25s  %s", $module, $revnum || next;
+	my $version = eval { $module->VERSION } || next;
+	diag sprintf "\t%-25s  %s", $module, $version;
 }
 
 
@@ -46,7 +46,7 @@ plan tests => 20 + scalar(@Net::DNS::EXPORT);
 
 use_ok('Net::DNS');
 
-is( Net::DNS->version, $Net::DNS::VERSION, 'Net::DNS->version');
+is( Net::DNS->version, $Net::DNS::VERSION, 'Net::DNS->version' );
 
 
 #

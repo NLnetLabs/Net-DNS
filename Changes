@@ -1,6 +1,18 @@
 $Id$                       -*-text-*-
 
 
+**** 1.14 [unreleased]
+
+Fix rt.cpan.org #123702
+
+	'use base' should not be used in packages with several
+	subpackages defined
+
+Fix rt.cpan.org #123676
+
+	Net::DNS::Nameserver malformed message on big axfr
+
+
 **** 1.13 Oct 18, 2017
 
 Feature IDN query support
