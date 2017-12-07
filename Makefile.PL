@@ -78,7 +78,7 @@ my @debris = qw(
 delete $optional{'Net::DNS::SEC'};	## Note: MUST NOT be installed automatically
 
 
-use constant USE_SOCKET_IP => defined eval 'use Socket 1.97; use IO::Socket::IP 0.32; 1;';
+use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1;';
 
 use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
 

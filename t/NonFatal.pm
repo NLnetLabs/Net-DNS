@@ -23,6 +23,15 @@ use Test::More;
 
 use constant NONFATAL => eval { -e 't/online.nonfatal' };
 
+my @failed;
+
+END {
+	my $n = scalar(@failed);
+	my $s = $n > 1 ? 's' : '';
+	diag( join "\n\t", "\tDisregarding $n failed sub-test$s", @failed ) if $n;
+}
+
+
 {
 	package Test::NonFatal;
 
@@ -31,11 +40,12 @@ use constant NONFATAL => eval { -e 't/online.nonfatal' };
 	sub ok {
 		my ( $self, $test, $name ) = ( @_, '' );
 
-		$name = "NOT OK, but tolerating failure, $name" unless $test;
+		return $self->SUPER::ok( 1, $name ) if $test;
 
-		$self->SUPER::ok( 1, $name );
+		$self->SUPER::ok( 1, "NOT OK, but tolerating failure, $name" );
 
-		return $test ? 1 : 0;
+		push @failed, $name;
+		return $test;
 	}
 }
 
