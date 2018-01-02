@@ -113,6 +113,7 @@ sub new {
 	my $label = $self->{label} = ( $s eq '@' ) ? [] : [split /\056/, _encode_utf8($s)];
 
 	foreach (@$label) {
+		croak 'empty domain label' unless length;
 
 		if ( LIBIDN2 && UTF8 && /[^\000-\177]/ ) {
 			my $rc = 0;
@@ -129,10 +130,7 @@ sub new {
 
 		s/\134([\060-\071]{3})/$unescape{$1}/eg;	# numeric escape
 		s/\134(.)/$1/g;					# character escape
-		croak 'empty domain label' unless length;
-		next unless length > 63;
-		substr( $_, 63 ) = '';
-		carp 'domain label truncated';
+		croak 'long domain label' if length > 63;
 	}
 
 	$$cache1{$k} = $self;					# cache object reference

@@ -78,11 +78,9 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $signame = $self->{signame};
 
 	if ( DNSSEC && !$self->{sigbin} ) {
-		my $private = $self->{private} || die 'missing key reference';
-		delete $self->{private};			# one shot is all you get
-
+		my $private = delete $self->{private};		# one shot is all you get
 		my $sigdata = $self->_CreateSigData($packet);
-		$self->_CreateSig( $sigdata, $private );
+		$self->_CreateSig( $sigdata, $private || die 'missing key reference' );
 	}
 
 	pack 'n C2 N3 n a* a*', @{$self}{@field}, $signame->encode, $self->sigbin;
@@ -502,8 +500,7 @@ sub _CreateSigData {
 			local $message->{additional} = \@unsigned;    # remake header image
 			my @part = qw(question answer authority additional);
 			my @size = map scalar( @{$message->{$_}} ), @part;
-			my $rref = $self->{rawref};
-			delete $self->{rawref};
+			my $rref = delete $self->{rawref};
 			my $data = $rref ? $$rref : $message->data;
 			my ( $id, $status ) = unpack 'n2', $data;
 			my $hbin = pack 'n6 a*', $id, $status, @size;

@@ -164,13 +164,10 @@ use constant ESC => '\\';
 
 
 {
-	my @warnings;
-	local $SIG{__WARN__} = sub { push( @warnings, "@_" ); };
 	my $name      = 'LO-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-O-NG!';
-	my $domain    = new Net::DNS::Domain("$name");
-	my ($warning) = @warnings;
-	chomp $warning;
-	ok( $warning, "long domain label\t[$warning]" );
+	my $domain    = eval { new Net::DNS::Domain("$name") };
+	my $exception = $1 if $@ =~ /^(.+)\n/;
+	ok( $exception ||= '', "long domain label\t[$exception]" );
 }
 
 

@@ -119,7 +119,7 @@ my $wire =
 {
 	my $rr = new Net::DNS::RR(". $type @data");
 	$rr->{gatetype} = 255;
-	$rr->encode;
+	eval { $rr->encode };
 	my $exception = $1 if $@ =~ /^(.+)\n/;
 	ok( $exception ||= '', "exception raised in encode\t[$exception]" );
 }

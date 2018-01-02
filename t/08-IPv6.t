@@ -29,6 +29,14 @@ my @hints = qw(
 		2001:dc3::35
 		);
 
+my $NOIP = qw(::);
+
+my @nsdname = qw(
+		ns.net-dns.org
+		mcvax.nlnet.nl
+		ns.nlnetlabs.nl
+		);
+
 
 exit( plan skip_all => 'Online tests disabled.' ) if -e 't/online.disabled';
 exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
@@ -67,16 +75,12 @@ eval {
 
 
 my $IP = eval {
-	my @nsdname  = qw(ns.net-dns.org mcvax.nlnet.nl ns.nlnetlabs.nl);
 	my $resolver = new Net::DNS::Resolver();
 	$resolver->nameservers(@nsdname);
 	$resolver->force_v6(1);
-
-	my @ip = $resolver->nameservers();
-	scalar(@ip) ? [@ip] : undef;
-} || exit( plan skip_all => 'Unable to resolve nameserver name' );
-
-my $NOIP = '::';
+	[$resolver->nameservers()];
+};
+exit( plan skip_all => 'Unable to resolve nameserver name' ) unless scalar @$IP;
 
 diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 

@@ -211,8 +211,9 @@ END
 	$packet->sign_sig0($keyfile);
 	my $signed = $packet->data;				# signing occurs in SIG->encode
 	$packet->sigrr->sigbin('');				# signature destroyed
-	my $unsigned = $packet->data;				# unable to regenerate SIG0
-	ok( length($unsigned) < length($signed), 'handled exception: missing key reference' );
+	my $unsigned = eval { $packet->data };			# unable to regenerate SIG0
+	my $exception = $1 if $@ =~ /^(.*)\n*/;
+	ok( defined $exception, "missing key\t[$exception]" );
 }
 
 
