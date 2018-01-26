@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2017-08-30)
+##	(last updated 2018-01-08)
 ##
 ################################################
 
@@ -37,7 +37,7 @@ my @classbyname = (
 	NONE => 254,						# RFC2136
 	ANY  => 255,						# RFC1035
 	);
-our %classbyval = reverse @classbyname, ( CLASS0 => 0 );
+our %classbyval = reverse( CLASS0 => 0, @classbyname );
 push @classbyname, map /^\d/ ? $_ : lc($_), @classbyname;
 our %classbyname = ( '*' => 255, @classbyname );
 
@@ -130,7 +130,7 @@ my @typebyname = (
 	TA	   => 32768,					# http://cameo.library.cmu.edu/ http://www.watson.org/~weiler/INI1999-19.pdf
 	DLV	   => 32769,					# RFC4431
 	);
-our %typebyval = reverse @typebyname, ( TYPE0 => 0 );
+our %typebyval = reverse( TYPE0 => 0, @typebyname );
 push @typebyname, map /^\d/ ? $_ : lc($_), @typebyname;
 our %typebyname = ( '*' => 255, @typebyname );
 

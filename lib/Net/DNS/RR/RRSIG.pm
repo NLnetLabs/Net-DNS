@@ -36,7 +36,7 @@ use constant RSA => defined eval 'require Net::DNS::SEC::RSA';
 
 use constant ECDSA => defined eval 'require Net::DNS::SEC::ECDSA';
 use constant EdDSA => defined eval 'require Net::DNS::SEC::EdDSA';
-use constant GOST  => defined eval 'require Net::DNS::SEC::ECCGOST';
+use constant GOST  => defined eval 'require Digest::GOST; require Net::DNS::SEC::ECCGOST';
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA || ECDSA || EdDSA );
 

@@ -91,7 +91,7 @@ sub send {
 	$original = $question unless ref($original);		# to preserve original request
 
 	my ( $head, @tail ) = $question->{qname}->label;
-	my $domain = lc join( '.', @tail ) || '.';
+	my $domain = lc( join( '.', @tail ) || '.' );
 	my $nslist = $res->{persistent}->{$domain} ||= [];
 	unless ( defined $head ) {
 		my $defres = new Net::DNS::Resolver();

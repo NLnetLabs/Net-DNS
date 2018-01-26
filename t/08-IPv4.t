@@ -84,7 +84,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 92;
+plan tests => 94;
 
 NonFatalBegin();
 
@@ -226,15 +226,28 @@ NonFatalBegin();
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->srcaddr($NOIP);
-	$resolver->srcport(2345);
 
 	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $udp, '$resolver->bgsend(...)	specify UDP local address & port' );
+	ok( $udp, '$resolver->bgsend(...)	specify UDP local address' );
 
 	$resolver->usevc(1);
 
 	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $tcp, '$resolver->bgsend(...)	specify TCP local address & port' );
+	ok( $tcp, '$resolver->bgsend(...)	specify TCP local address' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	$resolver->srcport(2345);
+
+	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $udp, '$resolver->bgsend(...)	specify UDP source port' );
+
+	$resolver->usevc(1);
+
+	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
+	ok( $tcp, '$resolver->bgsend(...)	specify TCP source port' );
 }
 
 
