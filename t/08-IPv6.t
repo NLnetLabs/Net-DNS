@@ -256,29 +256,31 @@ NonFatalBegin();
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->srcport(-1);
+	my $badport = -1;
+	$resolver->srcport($badport);
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
-	ok( !$udp, '$resolver->send(...)	specify bad UDP source port' );
+	ok( !$udp, "\$resolver->send(...)	reject UDP source port $badport" );
 
 	$resolver->usevc(1);
 
 	my $tcp = $resolver->send(qw(net-dns.org SOA IN));
-	ok( !$tcp, '$resolver->send(...)	specify bad TCP source port' );
+	ok( !$tcp, "\$resolver->send(...)	reject TCP source port $badport" );
 }
 
 
 {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->srcport(-1);
+	my $badport = -1;
+	$resolver->srcport($badport);
 
 	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( !$udp, '$resolver->bgsend(...)	specify bad UDP source port' );
+	ok( !$udp, "\$resolver->bgsend(...)	reject UDP source port $badport" );
 
 	$resolver->usevc(1);
 
 	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( !$tcp, '$resolver->bgsend(...)	specify bad TCP source port' );
+	ok( !$tcp, "\$resolver->bgsend(...)	reject TCP source port $badport" );
 }
 
 
