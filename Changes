@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.15 [unreleased]
+**** 1.15 Feb 9, 2018
 
 	GOST R 34.11-94 hash algorithm: end of life 1st Jan 2018
 	per sunset clause in successor standard GOST R 34.11-2012.
