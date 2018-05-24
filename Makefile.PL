@@ -233,6 +233,10 @@ EOT
 
 package MY;				## customise generated Makefile
 
+sub special_targets {
+	return join "\n\n", '.NOTPARALLEL:', shift->SUPER::special_targets();
+}
+
 sub install {
 	my $self = shift;
 

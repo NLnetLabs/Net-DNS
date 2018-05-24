@@ -46,7 +46,7 @@ See http://www.net-dns.org/blog/ for announcements about Net::DNS.
 You can get the latest version of Net::DNS from the Comprehensive Perl
 Archive Network (CPAN) or from the module's homepage:
 
-	http://search.cpan.org/dist/Net-DNS/
+	https://metacpan.org/release/Net-DNS
 
 or through
 

@@ -75,6 +75,24 @@ sub typelist {
 }
 
 
+sub covered {
+	my $self = shift;
+
+	my $name = lc join '.', reverse Net::DNS::DomainName->new(shift)->_wire;
+	my $this = lc join '.', reverse $self->{owner}->_wire;
+	my $next = lc join '.', reverse $self->{nxtdname}->_wire;
+
+	return ( $name cmp $this ) + ( $next cmp $name ) == 2;
+}
+
+
+sub match {
+	my $self = shift;
+	my $name = new Net::DNS::DomainName(shift);
+	return $name->canonical eq $self->{owner}->canonical;
+}
+
+
 ########################################
 
 sub _type2bm {
@@ -143,7 +161,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name NSEC nxtdname typelist');
+    $rr = new Net::DNS::RR( 'name NSEC nxtdname typelist' );
 
 =head1 DESCRIPTION
 
@@ -177,10 +195,27 @@ The Type List identifies the RRset types that exist at the NSEC RR
 owner name.  When called in scalar context, the list is interpolated
 into a string.
 
+=head2 covered
+
+    print "covered" if $rr->covered( 'example.foo' );
+
+covered() returns a Boolean true value if the canonical form of the name,
+or any of its descendents, falls between the owner name and the nxtdname
+field of the NSEC record.
+
+=head2 match
+
+    print "matched" if $rr->match( 'example.foo' );
+
+match() returns a Boolean true value if the canonical owner name of the
+NSEC RR is the same as the canonical form of the specified name.
+
 
 =head1 COPYRIGHT
 
 Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman
+
+Portions Copyright (c)2018 Dick Franks
 
 All rights reserved.
 

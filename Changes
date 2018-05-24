@@ -1,6 +1,16 @@
 $Id$                       -*-text-*-
 
 
+**** 1.16 [unreleased]
+
+Feature
+	Add covered() and match() instance methods with similar
+	semantics to those in NSEC3.
+
+Feature
+	Wildcard expansion processing added to NSEC3 covered().
+
+
 **** 1.15 Feb 9, 2018
 
 	GOST R 34.11-94 hash algorithm: end of life 1st Jan 2018

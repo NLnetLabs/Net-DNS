@@ -10,8 +10,6 @@ my @prerequisite = qw(
 		Net::DNS::RR::SIG
 		Net::DNS::SEC
 		Net::DNS::SEC::RSA
-		Crypt::OpenSSL::Bignum
-		Crypt::OpenSSL::RSA
 		);
 
 foreach my $package (@prerequisite) {

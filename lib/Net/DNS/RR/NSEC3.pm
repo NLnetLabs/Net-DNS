@@ -70,6 +70,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	$self->{hnxtname} = unpack "\@$offset x a$hsize", $$data;
 	$offset += 1 + $hsize;
 	$self->{typebm} = substr $$data, $offset, ( $limit - $offset );
+	$self->{hash} = _hash( @{$self}{qw(algorithm iterations saltbin)} );
 }
 
 
@@ -105,6 +106,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	$self->salt($salt) unless $salt eq '-';
 	$self->hnxtname(shift);
 	$self->typelist(@_);
+	$self->{hash} = _hash( @{$self}{qw(algorithm iterations saltbin)} );
 }
 
 
@@ -181,22 +183,30 @@ sub covered {
 	my $self = shift;
 	my $name = shift;
 
-	# first test if the domain name is in the NSEC3 zone.
-	my ( $owner, @zonelabels ) = $self->{owner}->_wire;
-	my @labels = new Net::DNS::DomainName( lc $name )->_wire;
-	foreach ( reverse @zonelabels ) {
-		tr /\101-\132/\141-\172/;
-		return 0 unless $_ eq ( pop(@labels) || '' );
+	my ( $owner, @zone ) = $self->{owner}->_wire;
+	my $ownerhash = _decode_base32hex($owner);
+	my $nexthash  = $self->{hnxtname};
+
+	my @name = new Net::DNS::DomainName($name)->_wire;
+	my @tier = @name;
+	foreach (@zone) { pop(@tier) }				# strip zone labels
+	return unless lc($name) eq lc( join '.', @tier, @zone );
+
+	my $hashfn = $self->{hash};
+
+	my @cmp;
+	foreach ( @tier, '@' ) {				# precalculate result for each NSEC3 use case:
+		my $hash = &$hashfn( join '.', @name );
+		my $cmp1 = $hash cmp $ownerhash;
+		last unless $cmp1;				# (1) match closest provable encloser
+		push @cmp, $cmp1 + ( $nexthash cmp $hash );	# (2) denial of (potential) "next closer" name
+		shift @name;
+		my $wild = &$hashfn( join '.', '*', @name );	# (3) denial of wildcard at (potential) closest encloser
+		push @cmp, ( $wild cmp $ownerhash ) + ( $nexthash cmp $wild );
 	}
 
-	my $ownerhash = _decode_base32hex($owner);
-	my $nexthash  = "$self->{hnxtname}";
-
-	my $namehash = _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
-
-	my $c1 = $namehash cmp $ownerhash;
-	my $c2 = $nexthash cmp $namehash;
-	return ( $c1 + $c2 ) == 2;
+	my ($cmp) = grep $_ == 2, @cmp;				# hit, if any, explains this NSEC3 without prior
+	return $cmp;						# knowledge of particular use case.
 }
 
 
@@ -207,7 +217,8 @@ sub match {
 	my ($owner) = $self->{owner}->_wire;
 	my $ownerhash = _decode_base32hex($owner);
 
-	$ownerhash eq _hash( $self->algorithm, $name, $self->iterations, $self->saltbin );
+	my $hash = $self->{hash};
+	$ownerhash eq &$hash($name);
 }
 
 
@@ -239,31 +250,38 @@ sub _encode_base32hex {
 
 sub _hash {
 	my $hashalg    = shift;
-	my $name       = shift;
 	my $iterations = shift;
 	my $salt       = shift || '';
 
 	my $arglist = $digest{$hashalg};
-	my ( $object, @argument ) = @$arglist;
-	my $hash = $object->new(@argument);
+	my ( $class, @argument ) = @$arglist;
+	my $instance = $class->new(@argument);
 
-	my $wirename = new Net::DNS::DomainName($name)->canonical;
-	$iterations++;
-
-	while ( $iterations-- ) {
-		$hash->add($wirename);
-		$hash->add($salt);
-		$wirename = $hash->digest;
-	}
-
-	return $wirename;
+	return sub {
+		my $hash = new Net::DNS::DomainName(shift)->canonical;
+		my $iter = $iterations;
+		$iter++;
+		$instance->reset;
+		while ( $iter-- ) {
+			$instance->add($hash);
+			$instance->add($salt);
+			$hash = $instance->digest;
+		}
+		return $hash;
+	};
 }
 
 
-sub name2hash { _encode_base32hex(&_hash); }			# uncoverable pod
-
-
 sub hashalgo { &algorithm; }					# uncoverable pod
+
+sub name2hash {							# uncoverable pod
+	my $hashalg    = shift;
+	my $name       = shift;
+	my $iterations = shift;
+	my $salt       = pack 'H*', shift || '';
+	my $hash       = _hash( $hashalg, $iterations, $salt );
+	_encode_base32hex( &$hash($name) );
+}
 
 
 1;
@@ -375,9 +393,9 @@ interpolated into a string.
 
 =head2 covered, match
 
-    print "covered" if $rr->covered{'example.foo'}
+    print "covered" if $rr->covered( 'example.foo' );
 
-covered() returns a nonzero value when the the domain name provided as argument
+covered() returns a Boolean true value when the the domain name provided as argument
 is covered as defined in the NSEC3 specification:
 
    To cover:  An NSEC3 RR is said to "cover" a name if the hash of the
@@ -387,7 +405,7 @@ is covered as defined in the NSEC3 specification:
       nonexistence of an ancestor of the name.
 
 
-Similarly matched() returns a nonzero value when the domainname in the argument
+Similarly match() returns a Boolean true value when the domainname in the argument
 matches as defined in the NSEC3 specification:
 
    To match: An NSEC3 RR is said to "match" a name if the owner name
@@ -397,7 +415,7 @@ matches as defined in the NSEC3 specification:
 
 =head1 COPYRIGHT
 
-Copyright (c)2017 Dick Franks
+Copyright (c)2017,2018 Dick Franks
 
 Portions Copyright (c)2007,2008 NLnet Labs.  Author Olaf M. Kolkman
 
