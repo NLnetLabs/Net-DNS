@@ -50,7 +50,7 @@ ok( !Net::DNS::RR->new("b4um86eghhds6nea196smvmlo4ors995.example. NSEC3 1 1 12 a
 	'B.1(2):	NSEC3 matches closest encloser (x.w.example.)' );
 
 ok( Net::DNS::RR->new("35mthgpgcu1qg68fab165klnsnk3dpvl.example. NSEC3 1 1 12 aabbccdd (
-	b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )")->covered('a.c.x.w.example'),
+	b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )")->covered('*.x.w.example'),
 	'B.1(3):	NSEC3 covers wildcard at closest encloser (*.x.w.example.)' );
 
 
@@ -86,8 +86,8 @@ ok( Net::DNS::RR->new("q04jkcevqvmu85r014c7dkba38o0ji5r.example. NSEC3 1 1 12 aa
 	'B.5(2):	NSEC3 covers "next closer" name (z.w.example.)' );
 
 ok( !Net::DNS::RR->new("r53bq7cc2uvmubfu5ocmm6pers9tk9en.example. NSEC3 1 1 12 aabbccdd (
-	t644ebqk9bibcna874givr6joj62mlhv MX RRSIG )")->covered('a.z.w.example'),
-	'B.5(3):	NSEC3 matches wildcard at closest encloser' );
+	t644ebqk9bibcna874givr6joj62mlhv MX RRSIG )")->covered('*.w.example'),
+	'B.5(3):	NSEC3 matches wildcard at closest encloser (*.w.example)' );
 
 
 ok( !Net::DNS::RR->new("0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. NSEC3 1 1 12 aabbccdd (

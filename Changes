@@ -8,7 +8,7 @@ Feature
 	semantics to those in NSEC3.
 
 Feature
-	Wildcard expansion processing added to NSEC3 covered().
+	New NSEC3 encloser() method searches for closest encloser.
 
 
 **** 1.15 Feb 9, 2018

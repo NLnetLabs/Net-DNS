@@ -180,33 +180,27 @@ sub hnxtname {
 
 
 sub covered {
-	my ( $self, $qname ) = @_;
+	my ( $self, $name ) = @_;
 
 	my ( $owner, @zone ) = $self->{owner}->_wire;
 	my $ownerhash = _decode_base32hex($owner);
 	my $nexthash  = $self->{hnxtname};
 
-	my @label = new Net::DNS::DomainName($qname)->_wire;
+	my @label = new Net::DNS::DomainName($name)->_wire;
 	my @close = @label;
 	foreach (@zone) { pop(@close) }				# strip zone labels
-	return unless lc($qname) eq lc( join '.', @close, @zone );
+	return if lc($name) ne lc( join '.', @close, @zone );	# out of zone
 
 	my $hashfn = $self->{hashfn};
 
-	my @cmp;
 	foreach (@close) {
-		my $hash = &$hashfn( join '.', @label );	# precalculate result for each NSEC3 use case:
+		my $hash = &$hashfn( join '.', @label );
 		my $cmp1 = $hash cmp $ownerhash;
-		last unless $cmp1;				# (1) match closest provable encloser
-		push @cmp, $cmp1 + ( $nexthash cmp $hash );	# (2) denial of (potential) "next closer" name
+		last unless $cmp1;				# stop at provable encloser
+		return 1 if ( $cmp1 + ( $nexthash cmp $hash ) ) == 2;
 		shift @label;
-		my $wild = &$hashfn( join '.', '*', @label );	# (3) denial of wildcard at (potential) closest encloser
-		last if $wild eq $ownerhash;
-		push @cmp, ( $wild cmp $ownerhash ) + ( $nexthash cmp $wild );
 	}
-
-	return scalar( grep $_ == 2, @cmp );			# hit, if any, explains this NSEC3 without prior
-								# contextual knowledge to determine the use case.
+	return;
 }
 
 
@@ -219,6 +213,37 @@ sub match {
 	my $hashfn = $self->{hashfn};
 	$ownerhash eq &$hashfn($name);
 }
+
+
+sub encloser {
+	my ( $self, $qname ) = @_;
+
+	my ( $owner, @zone ) = $self->{owner}->_wire;
+	my $ownerhash = _decode_base32hex($owner);
+	my $nexthash  = $self->{hnxtname};
+
+	my @label = new Net::DNS::DomainName($qname)->_wire;
+	my @close = @label;
+	foreach (@zone) { pop(@close) }				# strip zone labels
+	return if lc($qname) ne lc( join '.', @close, @zone );	# out of zone
+
+	my $hashfn = $self->{hashfn};
+
+	my $encloser = $qname;
+	shift @label;
+	foreach (@close) {
+		my $nextcloser = $encloser;
+		my $hash = &$hashfn( $encloser = join '.', @label );
+		shift @label;
+		next if $hash ne $ownerhash;
+		$self->{nextcloser} = $nextcloser;		# next closer name
+		return $encloser;				# closest provable encloser
+	}
+	return;
+}
+
+
+sub nextcloser { return shift->{nextcloser} }
 
 
 ########################################
@@ -250,7 +275,6 @@ sub _encode_base32hex {
 my ( $cache1, $cache2, $limit ) = ( {}, {}, 10 );
 
 sub _hashfn {
-	my $parameters = join '', @_;
 	my $hashalg    = shift;
 	my $iterations = shift;
 	my $salt       = shift || '';
@@ -259,17 +283,19 @@ sub _hashfn {
 	my ( $class, @argument ) = @$arglist;
 	my $instance = $class->new(@argument);
 
+	$iterations++;
+	my $key_adjunct = pack 'Cna*', $hashalg, $iterations, $salt;
+
 	return sub {
 		my $name  = new Net::DNS::DomainName(shift)->canonical;
-		my $key	  = join '', $name, $parameters;
+		my $key	  = join '', $name, $key_adjunct;
 		my $cache = $$cache1{$key} ||= $$cache2{$key};	# two layer cache
 		return $cache if defined $cache;
 		( $cache1, $cache2, $limit ) = ( {}, $cache1, 50 ) unless $limit--;    # recycle cache
 
-		my $iter = $iterations;
-		$iter++;
-		$instance->reset;
 		my $hash = $name;
+		my $iter = $iterations;
+		$instance->reset;
 		while ( $iter-- ) {
 			$instance->add($hash);
 			$instance->add($salt);
@@ -403,22 +429,25 @@ interpolated into a string.
 
     print "covered" if $rr->covered( 'example.foo' );
 
-covered() returns a Boolean true value when the the query name provided as argument
-is covered as defined in the NSEC3 specification:
+covered() returns a Boolean true value if the hash of the domain name
+argument, or ancestor of that name, falls between the owner name and
+the next hashed owner name of the NSEC3 RR.
 
-   To cover:  An NSEC3 RR is said to "cover" a name if the hash of the
-      name or "next closer" name falls between the owner name and the
-      next hashed owner name of the NSEC3.  In other words, if it proves
-      the nonexistence of the name, either directly or by proving the
-      nonexistence of an ancestor of the name.
+Similarly match() returns a Boolean true value if the hash of the
+domain name argument matches the owner name of the NSEC3 RR.
 
+=head2 encloser, nextcloser
 
-Similarly match() returns a Boolean true value when the domain name argument
-matches as defined in the NSEC3 specification:
+    $encloser = $rr->encloser( 'example.foo' );
+    print "encloser: $encloser\n" if $encloser;
 
-   To match: An NSEC3 RR is said to "match" a name if the owner name
-      of the NSEC3 RR is the same as the hashed owner name of that
-      name.
+encloser() returns the name of the closest provable encloser of the
+query name argument if obtainable from the specified NSEC3 RRi, and
+otherwise undefined.
+
+nextcloser() returns the next closer name, which is one label longer
+than the closest encloser.  This is only valid after encloser() has
+returned a valid domain name.
 
 
 =head1 COPYRIGHT
