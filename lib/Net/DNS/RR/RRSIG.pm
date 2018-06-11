@@ -40,6 +40,13 @@ use constant GOST  => defined eval 'require Digest::GOST; require Net::DNS::SEC:
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA || ECDSA || EdDSA );
 
+my $DSA = DSA ? 'Net::DNS::SEC::DSA' : 0;
+my $RSA = RSA ? 'Net::DNS::SEC::RSA' : 0;
+
+my $ECDSA = ECDSA ? 'Net::DNS::SEC::ECDSA'   : 0;
+my $EdDSA = EdDSA ? 'Net::DNS::SEC::EdDSA'   : 0;
+my $GOST  = GOST  ? 'Net::DNS::SEC::ECCGOST' : 0;
+
 my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 
 
@@ -136,24 +143,23 @@ sub _defaults {				## specify RR attribute default values
 }
 
 
-my $RSA	  = RSA	  ? 'Net::DNS::SEC::RSA'     : 0;
-my $DSA	  = DSA	  ? 'Net::DNS::SEC::DSA'     : 0;
-my $ECDSA = ECDSA ? 'Net::DNS::SEC::ECDSA'   : 0;
-my $EdDSA = EdDSA ? 'Net::DNS::SEC::EdDSA'   : 0;
-my $GOST  = GOST  ? 'Net::DNS::SEC::ECCGOST' : 0;
-
-my %SEC = (
-	3  => $DSA,
+my %DNSSEC_sign = (
 	5  => $RSA,
-	6  => $DSA,
 	7  => $RSA,
 	8  => $RSA,
 	10 => $RSA,
-	12 => $GOST,
 	13 => $ECDSA,
 	14 => $ECDSA,
 	15 => $EdDSA,
 	16 => $EdDSA,
+	);
+
+my %DNSSEC_verify = (
+	1  => $RSA,
+	3  => $DSA,
+	6  => $DSA,
+	12 => $GOST,
+	%DNSSEC_sign,
 	);
 
 
@@ -548,7 +554,7 @@ sub _CreateSig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class     = $SEC{$algorithm};
+		my $class     = $DNSSEC_sign{$algorithm};
 
 		eval {
 			die "algorithm $algorithm not supported" unless $class;
@@ -563,7 +569,7 @@ sub _VerifySig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class     = $SEC{$algorithm};
+		my $class     = $DNSSEC_verify{$algorithm};
 
 		my $retval = eval {
 			die "algorithm $algorithm not supported" unless $class;
@@ -811,17 +817,20 @@ The code is not optimised for speed.
 It is probably not suitable to be used for signing large zones.
 
 If this code is still around in 2100 (not a leap year) you will
-need to check for proper handling of times ...
+need to check for proper handling of times after 28th February.
 
 =head1 ACKNOWLEDGMENTS
 
-Andy Vaskys (Network Associates Laboratories) supplied the code for
-handling RSA with SHA1 (Algorithm 5).
+Although their original code may have disappeared following redesign of
+Net::DNS, Net::DNS::SEC and the OpenSSL API, the following individual
+contributors deserve to be recognised for their significant influence
+on the development of the RRSIG package.
 
-T.J. Mather, the Crypt::OpenSSL::DSA maintainer, for his quick
-responses to bug report and feature requests.
+Andy Vaskys (Network Associates Laboratories) supplied code for RSA.
 
-Dick Franks added support for elliptic curve signatures.
+T.J. Mather provided support for the DSA algorithm.
+
+Dick Franks added support for elliptic curve and Edwards curve algorithms.
 
 Mike McCauley created the Crypt::OpenSSL::ECDSA perl extension module
 specifically for this development.

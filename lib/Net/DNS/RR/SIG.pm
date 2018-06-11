@@ -51,6 +51,9 @@ use constant RSA => defined eval 'require Net::DNS::SEC::RSA';
 
 use constant DNSSEC => PRIVATE && ( RSA || DSA );
 
+my $DSA = DSA ? 'Net::DNS::SEC::DSA' : 0;
+my $RSA = RSA ? 'Net::DNS::SEC::RSA' : 0;
+
 my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 
 
@@ -166,23 +169,26 @@ sub _defaults {				## specify RR attribute default values
 }
 
 
-my $DSA = DSA ? 'Net::DNS::SEC::DSA' : 0;
-my $RSA = RSA ? 'Net::DNS::SEC::RSA' : 0;
-
-my %SEC = (
-	1 => $RSA,
-	3 => $DSA,
-	5 => $RSA,
-	6 => $DSA,
-	7 => $RSA,
+my %DNSSEC_sign = (
+	1  => $RSA,
+	3  => $DSA,
+	5  => $RSA,
+	6  => $DSA,
+	7  => $RSA,
+	8  => $RSA,
+	10 => $RSA,
 	);
 
+my %DNSSEC_verify = %DNSSEC_sign;
+
 my %siglen = (
-	1 => 128,
-	3 => 41,
-	5 => 256,
-	6 => 41,
-	7 => 256,
+	1  => 128,
+	3  => 41,
+	5  => 256,
+	6  => 41,
+	7  => 256,
+	8  => 256,
+	10 => 256,
 	);
 
 
@@ -523,7 +529,7 @@ sub _CreateSig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class     = $SEC{$algorithm};
+		my $class     = $DNSSEC_sign{$algorithm};
 
 		eval {
 			die "algorithm $algorithm not supported" unless $class;
@@ -538,7 +544,7 @@ sub _VerifySig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class     = $SEC{$algorithm};
+		my $class     = $DNSSEC_verify{$algorithm};
 
 		my $retval = eval {
 			die "algorithm $algorithm not supported" unless $class;
@@ -752,15 +758,18 @@ Returns false on error and sets $sig->vrfyerrstr
 The code is not optimised for speed.
 
 If this code is still around in 2100 (not a leap year) you will
-need to check for proper handling of times ...
+need to check for proper handling of times after 28th February.
 
 =head1 ACKNOWLEDGMENTS
 
-Andy Vaskys (Network Associates Laboratories) supplied the code for
-handling RSA with SHA1 (Algorithm 5).
+Although their original code may have disappeared following redesign of
+Net::DNS, Net::DNS::SEC and the OpenSSL API, the following individual
+contributors deserve to be recognised for their significant influence
+on the development of the SIG package.
 
-T.J. Mather, the Crypt::OpenSSL::DSA maintainer, for his quick
-responses to bug report and feature requests.
+Andy Vaskys (Network Associates Laboratories) supplied code for RSA.
+
+T.J. Mather provided support for the DSA algorithm.
 
 
 =head1 COPYRIGHT

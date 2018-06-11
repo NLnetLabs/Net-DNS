@@ -251,22 +251,14 @@ sub nextcloser { return shift->{nextcloser} }
 sub _decode_base32hex {
 	local $_ = shift || '';
 	tr [0-9A-Va-v\060-\071\101-\126\141-\166] [\000-\037\012-\037\000-\037\012-\037];
-	$_ = unpack 'B*', $_;
-	s/000(.....)/$1/g;
-	my $l = length;
-	$_ = substr $_, 0, $l & ~7 if $l & 7;
-	pack 'B*', $_;
+	my $l = ( 5 * length ) & ~7;
+	pack "B$l", join '', map unpack( 'x3a5', unpack 'B8', $_ ), split //;
 }
 
 
 sub _encode_base32hex {
-	local $_ = unpack 'B*', shift;
-	s/(.....)/000$1/g;
-	my $l = length;
-	my $x = substr $_, $l & ~7;
-	my $n = length $x;
-	substr( $_, $l & ~7 ) = join '', '000', $x, '0' x ( 5 - $n ) if $n;
-	$_ = pack( 'B*', $_ );
+	my @split = grep length, split /(\S{5})/, unpack 'B*', shift;
+	local $_ = join '', map pack( 'B*', "000$_" ), @split;
 	tr [\000-\037] [0-9a-v];
 	return $_;
 }
