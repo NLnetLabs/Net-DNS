@@ -4,12 +4,12 @@
 use strict;
 use Test::More;
 use Net::DNS;
+use Net::DNS::Text;
 use Net::DNS::Parameters;
 local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 my @prerequisite = qw(
 		Net::DNS::RR::NSEC3
-		Net::DNS::Text
 		);
 
 foreach my $package (@prerequisite) {
@@ -18,7 +18,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 79;
+plan tests => 78;
 
 
 my $rr = new Net::DNS::RR(
@@ -46,20 +46,14 @@ foreach my $rrtype ( 0, 7, 8, 15, 16, 23, 24, 31, 32, 39 ) {
 	is( $l, 1 + ( $rrtype >> 3 ), "expected map length for $type" );
 }
 
-foreach my $rrtype ( 0 .. 40, 42 .. 64 ) {
+foreach my $rrtype ( 1 .. 40, 42 .. 64 ) {
 	my $type = typebyval($rrtype);
 	$rr->typelist($type);
-	my $rdata = $rr->rdata;
-	my ( $text, $offset ) = decode Net::DNS::Text( \$rdata, 4 );
-	( $text, $offset ) = decode Net::DNS::Text( \$rdata, $offset );
-	my ( $w, $l, $bitmap ) = unpack "\@$offset CCa*", $rdata;
-	my $last = unpack 'C', reverse $bitmap;
-	is( $last, ( 0x80 >> ( $rrtype % 8 ) ), "expected map bit for $type" );
+	is( $rr->typecovered($type), 1, "expected map bit for $type" );
 }
 
 
 exit;
 
 __END__
-
 

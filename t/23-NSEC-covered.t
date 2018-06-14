@@ -15,7 +15,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 24;
+plan tests => 27;
 
 
 my @cover = (
@@ -40,6 +40,10 @@ my @cover = (
 	[qw( example.			\001.z.example.		*.z.example. )],
 	[qw( example.			*.z.example.		\200.z.example. )],
 	[qw( example.			\200.z.example.		zzzzzz.example. )],
+
+	# testing zone boundary conditions
+	[qw( example.			orphan.example.		example. )],	       # empty zone
+	[qw( aft.example.		after.example.		example. )],
 	);
 
 
@@ -47,7 +51,8 @@ my @nocover = (
 	[qw(	example.	example.	z.example. )],
 	[qw(	example.	z.example.	z.example. )],
 	[qw(	example.	zz.example.	z.example. )],
-	[qw(	example.	reject.tld.	z.example. )],
+	[qw(	example.	other.tld.	z.example. )],
+	[qw(	z.example.	other.tld.	example. )],
 	[qw(	.		tld.		tld.	)],				     # no labels in owner name
 	[qw(	tld.		.		tld.	)],				     # no labels in argument
 	[qw(	tld.		tld.		.	)],				     # no labels in nxtdname

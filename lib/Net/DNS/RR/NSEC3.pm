@@ -417,6 +417,13 @@ The Type List identifies the RRset types that exist at the domain name
 matched by the NSEC3 RR.  When called in scalar context, the list is
 interpolated into a string.
 
+=head2 typecovered
+
+    $typecovered = $rr->typecovered($rrtype);
+
+typecovered() returns a Boolean true value if the specified RRtype occurs
+in the typelist of the NSEC3 record.
+
 =head2 covered, match
 
     print "covered" if $rr->covered( 'example.foo' );

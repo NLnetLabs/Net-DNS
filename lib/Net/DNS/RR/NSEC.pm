@@ -75,6 +75,27 @@ sub typelist {
 }
 
 
+sub typecovered {
+	my $self = shift;
+
+	my $number = typebyname(shift);
+	my $window = $number >> 8;
+	my $bitnum = $number & 255;
+
+	my $typebm = $self->{typebm} || return;
+	my @bitmap;
+	my $index = 0;
+	while ( $index < length $typebm ) {
+		my ( $block, $size ) = unpack "\@$index C2", $typebm;
+		$bitmap[$block] = unpack "\@$index xxa$size", $typebm;
+		$index += $size + 2;
+	}
+
+	my @bit = split //, unpack 'B*', ( $bitmap[$window] || return );
+	return $bit[$bitnum];
+}
+
+
 sub covered {
 	my $self = shift;
 
@@ -82,6 +103,7 @@ sub covered {
 	my $this = lc join '.', reverse $self->{owner}->_wire;
 	my $next = lc join '.', reverse $self->{nxtdname}->_wire;
 
+	return ( $name cmp $this ) + ( "$next.\200" cmp $name ) == 2 unless $next gt $this;
 	return ( $name cmp $this ) + ( $next cmp $name ) == 2;
 }
 
@@ -195,12 +217,19 @@ The Type List identifies the RRset types that exist at the NSEC RR
 owner name.  When called in scalar context, the list is interpolated
 into a string.
 
+=head2 typecovered
+
+    $typecovered = $rr->typecovered($rrtype);
+
+typecovered() returns a Boolean true value if the specified RRtype occurs
+in the typelist of the NSEC record.
+
 =head2 covered
 
     print "covered" if $rr->covered( 'example.foo' );
 
 covered() returns a Boolean true value if the canonical form of the name,
-or any of its descendents, falls between the owner name and the nxtdname
+or one of its ancestors, falls between the owner name and the nxtdname
 field of the NSEC record.
 
 =head2 match
