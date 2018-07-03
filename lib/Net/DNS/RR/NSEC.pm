@@ -75,7 +75,7 @@ sub typelist {
 }
 
 
-sub typecovered {
+sub typemap {
 	my $self = shift;
 
 	my $number = typebyname(shift);
@@ -96,22 +96,15 @@ sub typecovered {
 }
 
 
-sub covered {
+sub covers {
 	my $self = shift;
+	my $name = join chr(0), reverse Net::DNS::DomainName->new(shift)->_wire;
+	my $this = join chr(0), reverse $self->{owner}->_wire;
+	my $next = join chr(0), reverse $self->{nxtdname}->_wire;
+	foreach ( $name, $this, $next ) {tr /\101-\132/\141-\172/}
 
-	my $name = lc join '.', reverse Net::DNS::DomainName->new(shift)->_wire;
-	my $this = lc join '.', reverse $self->{owner}->_wire;
-	my $next = lc join '.', reverse $self->{nxtdname}->_wire;
-
-	return ( $name cmp $this ) + ( "$next.\200" cmp $name ) == 2 unless $next gt $this;
+	return ( $name cmp $this ) + ( "$next\001" cmp $name ) == 2 unless $next gt $this;
 	return ( $name cmp $this ) + ( $next cmp $name ) == 2;
-}
-
-
-sub match {
-	my $self = shift;
-	my $name = new Net::DNS::DomainName(shift);
-	return $name->canonical eq $self->{owner}->canonical;
 }
 
 
@@ -217,27 +210,20 @@ The Type List identifies the RRset types that exist at the NSEC RR
 owner name.  When called in scalar context, the list is interpolated
 into a string.
 
-=head2 typecovered
+=head2 typemap
 
-    $typecovered = $rr->typecovered($rrtype);
+    $exists = $rr->typemap($rrtype);
 
-typecovered() returns a Boolean true value if the specified RRtype occurs
+typemap() returns a Boolean true value if the specified RRtype occurs
 in the typelist of the NSEC record.
 
-=head2 covered
+=head2 covers
 
-    print "covered" if $rr->covered( 'example.foo' );
+    $covered = $rr->covers( 'example.foo' );
 
-covered() returns a Boolean true value if the canonical form of the name,
+covers() returns a Boolean true value if the canonical form of the name,
 or one of its ancestors, falls between the owner name and the nxtdname
 field of the NSEC record.
-
-=head2 match
-
-    print "matched" if $rr->match( 'example.foo' );
-
-match() returns a Boolean true value if the canonical owner name of the
-NSEC RR is the same as the canonical form of the specified name.
 
 
 =head1 COPYRIGHT

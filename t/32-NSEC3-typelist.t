@@ -49,7 +49,7 @@ foreach my $rrtype ( 0, 7, 8, 15, 16, 23, 24, 31, 32, 39 ) {
 foreach my $rrtype ( 1 .. 40, 42 .. 64 ) {
 	my $type = typebyval($rrtype);
 	$rr->typelist($type);
-	is( $rr->typecovered($type), 1, "expected map bit for $type" );
+	is( $rr->typemap($type), 1, "expected map bit for $type" );
 }
 
 

@@ -4,15 +4,15 @@ $Id$                       -*-text-*-
 **** 1.16 [unreleased]
 
 Feature
-	New NSEC3 encloser() and nextcloser() methods return closest
-	encloser and "next closer" name respectively..
+	New NSEC3 encloser(), nextcloser() and wildcard() instance
+	methods return closest encloser, "next closer" and putative
+	wildcard names respectively.
 
 Feature
-	Add covered() and match() NSEC instance methods with similar
-	semantics to those in NSEC3.
+	Add new NSEC covers() instance method.
 
 Feature
-	New NSEC and NSEC3 typecovered() method interrogates type list.
+	New NSEC typemap() instance method interrogates type list.
 
 
 **** 1.15 Feb 9, 2018

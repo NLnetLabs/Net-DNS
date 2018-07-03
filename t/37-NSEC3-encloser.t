@@ -3,7 +3,8 @@
 
 use strict;
 use Test::More;
-use Net::DNS::RR;
+use Net::DNS;
+use Net::DNS::ZoneFile;
 
 my @prerequisite = qw(
 		Digest::SHA
@@ -16,37 +17,38 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 3;
+plan tests => 4;
 
 
 ## Based on examples from RFC5155, Appendix B
 
-my @nsec3;
+my @nsec3 = parse Net::DNS::ZoneFile <<'END';
+0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example.	IN	NSEC3	( 1 1 12 aabbccdd
+	2t7b4g4vsa5smi47k61mv5bv1a22bojr NS SOA MX RRSIG DNSKEY NSEC3PARAM )
 
-push @nsec3, new Net::DNS::RR("0p9mhaveqvm6t7vbl5lop2u3t2rp3tom.example. NSEC3 1 1 12 aabbccdd (
-	2t7b4g4vsa5smi47k61mv5bv1a22bojr MX DNSKEY NS SOA NSEC3PARAM RRSIG )");
+b4um86eghhds6nea196smvmlo4ors995.example.	IN	NSEC3	( 1 1 12 aabbccdd
+	gjeqe526plbf1g8mklp59enfd789njgi MX RRSIG )
 
-
-push @nsec3, new Net::DNS::RR("b4um86eghhds6nea196smvmlo4ors995.example. NSEC3 1 1 12 aabbccdd (
-	gjeqe526plbf1g8mklp59enfd789njgi MX RRSIG )");
-
-
-push @nsec3, new Net::DNS::RR("35mthgpgcu1qg68fab165klnsnk3dpvl.example. NSEC3 1 1 12 aabbccdd (
-	b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )");
+35mthgpgcu1qg68fab165klnsnk3dpvl.example.	IN	NSEC3	( 1 1 12 aabbccdd
+	b4um86eghhds6nea196smvmlo4ors995 NS DS RRSIG )
+END
 
 
 my $encloser;
 my $nextcloser;
+my $wildcard;
 foreach my $nsec3 (@nsec3) {
 	for ( $nsec3->encloser('a.c.x.w.example') ) {
-		next unless length() > length($encloser);
-		$encloser = $_;
+		next if length($encloser) > length;
+		$encloser   = $_;
 		$nextcloser = $nsec3->nextcloser;
+		$wildcard   = $nsec3->wildcard;
 	}
 }
 
 is( $encloser,	 'x.w.example',	  'closest (provable) encloser' );
 is( $nextcloser, 'c.x.w.example', 'next closer name' );
+is( $wildcard,	 '*.x.w.example', 'wildcard at closest encloser' );
 
 is( $nsec3[0]->encloser('a.n.other'), undef, 'reject name out of zone' );
 

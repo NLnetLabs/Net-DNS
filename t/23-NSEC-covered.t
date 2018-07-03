@@ -15,12 +15,12 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 27;
+plan tests => 28;
 
 
 my @cover = (
 
-	# testing owner vv argument comparison
+	# testing owner v argument comparison
 	[qw(	.			example.		zzzzzz.example. )],
 	[qw( example.			a.example.		zzzzzz.example. )],
 	[qw( a.example.			yljkjljk.a.example.	zzzzzz.example. )],
@@ -31,7 +31,7 @@ my @cover = (
 	[qw( \001.z.example.		*.z.example.		zzzzzz.example. )],
 	[qw( *.z.example.		\200.z.example.		zzzzzz.example. )],
 
-	# testing nxtdname vv argument comparison
+	# testing nxtdname v argument comparison
 	[qw( example.			a.example.		yljkjljk.a.example. )],
 	[qw( example.			yljkjljk.a.example.	Z.a.example. )],
 	[qw( example.			Z.a.example.		zABC.a.example. )],
@@ -43,6 +43,7 @@ my @cover = (
 
 	# testing zone boundary conditions
 	[qw( example.			orphan.example.		example. )],	       # empty zone
+	[qw( aft.example.		*.aft.example.		example. )],
 	[qw( aft.example.		after.example.		example. )],
 	);
 
@@ -63,7 +64,7 @@ foreach my $vector (@cover) {
 	my ( $owner, $argument, $nxtdname ) = @$vector;
 	my $test = join ' ', pad($owner), 'NSEC (', pad($nxtdname), 'A )';
 	my $nsec = new Net::DNS::RR($test);
-	ok( $nsec->covered($argument), "$test\t covered('$argument')" );
+	ok( $nsec->covers($argument), "$test\t covers('$argument')" );
 }
 
 
@@ -71,7 +72,7 @@ foreach my $vector (@nocover) {
 	my ( $owner, $argument, $nxtdname ) = @$vector;
 	my $test = join ' ', pad($owner), 'NSEC (', pad($nxtdname), 'A )';
 	my $nsec = new Net::DNS::RR($test);
-	ok( !$nsec->covered($argument), "$test\t!covered('$argument')" );
+	ok( !$nsec->covers($argument), "$test\t!covers('$argument')" );
 }
 
 

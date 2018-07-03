@@ -2,7 +2,7 @@
 #
 
 use strict;
-use Test::More tests => 26;
+use Test::More tests => 29;
 use Net::DNS;
 
 
@@ -98,9 +98,13 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 
 {
 	my $rr = new Net::DNS::RR("$name $type @data");
+	is( $rr->covered('example.'), undef, "historical 'covered()'" );
+	is( $rr->match('example.'),   1,     "historical 'match()'" );
+	$rr->typebm('');
+	is( $rr->typebm(), '', "historical 'typebm'" );
+
 	$rr->print;
 }
 
 exit;
-
 

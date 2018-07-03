@@ -26,9 +26,9 @@ my $rr = new Net::DNS::RR(
 	nxtdname => 'irrelevant',
 	);
 
-is( $rr->typecovered(0), undef, "typecovered() undefined for empty map" );
+is( $rr->typemap(0), undef, 'typemap($type) undefined for empty map' );
 $rr->typelist(1);
-is( $rr->typecovered(256), undef, "typecovered() undefined for empty map block" );
+is( $rr->typemap(256), undef, 'typemap($type) undefined for empty map block' );
 
 foreach my $rrtype ( 0, 256, 512, 768, 1024 ) {
 	my $type = typebyval($rrtype);
@@ -51,7 +51,7 @@ foreach my $rrtype ( 0, 7, 8, 15, 16, 23, 24, 31, 32, 39 ) {
 foreach my $rrtype ( 1 .. 40, 42 .. 64 ) {
 	my $type = typebyval($rrtype);
 	$rr->typelist($type);
-	is( $rr->typecovered($type), 1, "expected map bit for $type" );
+	is( $rr->typemap($type), 1, "expected map bit for $type" );
 }
 
 

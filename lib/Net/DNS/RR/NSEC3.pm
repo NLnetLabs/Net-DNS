@@ -179,7 +179,7 @@ sub hnxtname {
 }
 
 
-sub covered {
+sub covers {
 	my ( $self, $name ) = @_;
 
 	my ( $owner, @zone ) = $self->{owner}->_wire;
@@ -204,8 +204,12 @@ sub covered {
 }
 
 
-sub match {
-	my ( $self, $name ) = @_;
+sub covered {				## historical
+	&covers;						# uncoverable pod
+}
+
+sub match {				## historical
+	my ( $self, $name ) = @_;				# uncoverable pod
 
 	my ($owner) = $self->{owner}->_wire;
 	my $ownerhash = _decode_base32hex($owner);
@@ -237,13 +241,16 @@ sub encloser {
 		shift @label;
 		next if $hash ne $ownerhash;
 		$self->{nextcloser} = $nextcloser;		# next closer name
-		return $encloser;				# closest provable encloser
+		$self->{wildcard} = join '.', '*', $encloser;	# wildcard at provable encloser
+		return $encloser;				# provable encloser
 	}
 	return;
 }
 
 
-sub nextcloser { return shift->{nextcloser} }
+sub nextcloser { return shift->{nextcloser}; }
+
+sub wildcard { return shift->{wildcard}; }
 
 
 ########################################
@@ -417,36 +424,36 @@ The Type List identifies the RRset types that exist at the domain name
 matched by the NSEC3 RR.  When called in scalar context, the list is
 interpolated into a string.
 
-=head2 typecovered
+=head2 typemap
 
-    $typecovered = $rr->typecovered($rrtype);
+    $exists = $rr->typemap($rrtype);
 
-typecovered() returns a Boolean true value if the specified RRtype occurs
-in the typelist of the NSEC3 record.
+typemap() returns a Boolean true value if the specified RRtype occurs
+in the type bitmap of the NSEC3 record.
 
-=head2 covered, match
+=head2 covers
 
-    print "covered" if $rr->covered( 'example.foo' );
+    $covered = $rr->covers( 'example.foo' );
 
-covered() returns a Boolean true value if the hash of the domain name
+covers() returns a Boolean true value if the hash of the domain name
 argument, or ancestor of that name, falls between the owner name and
 the next hashed owner name of the NSEC3 RR.
 
-Similarly match() returns a Boolean true value if the hash of the
-domain name argument matches the owner name of the NSEC3 RR.
-
-=head2 encloser, nextcloser
+=head2 encloser, nextcloser, wildcard
 
     $encloser = $rr->encloser( 'example.foo' );
     print "encloser: $encloser\n" if $encloser;
 
-encloser() returns the name of the closest provable encloser of the
-query name argument if obtainable from the specified NSEC3 RRi, and
-otherwise undefined.
+encloser() returns the name of a provable encloser of the query name
+argument obtained from the NSEC3 RR.
 
 nextcloser() returns the next closer name, which is one label longer
-than the closest encloser.  This is only valid after encloser() has
-returned a valid domain name.
+than the closest encloser.
+This is only valid after encloser() has returned a valid domain name.
+
+wildcard() returns the unexpanded wildcard name from which the next
+closer name was possibly synthesised.
+This is only valid after encloser() has returned a valid domain name.
 
 
 =head1 COPYRIGHT

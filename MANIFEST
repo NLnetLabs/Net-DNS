@@ -181,13 +181,11 @@ t/08-IPv4.t
 t/08-IPv6.t
 t/08-recurse.t
 t/21-NSEC-typelist.t
-t/22-NSEC-match.t
 t/23-NSEC-covered.t
 t/31-NSEC3-base32.t
 t/32-NSEC3-typelist.t
 t/33-NSEC3-hash.t
 t/34-NSEC3-flags.t
-t/35-NSEC3-match.t
 t/36-NSEC3-covered.t
 t/37-NSEC3-encloser.t
 t/41-DNSKEY-keytag.t
