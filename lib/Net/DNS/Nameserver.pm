@@ -41,13 +41,6 @@ See L</EXAMPLE> for an example.
 
 use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1;';
 
-use constant USE_SOCKET_INET => defined eval 'require IO::Socket::INET';
-
-use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
-
-use constant IPv6 => USE_SOCKET_IP || USE_SOCKET_INET6;
-
-
 use strict;
 use warnings;
 use integer;
@@ -230,14 +223,8 @@ sub ReplyHandler {
 #------------------------------------------------------------------------------
 
 sub inet_new {
-	return new IO::Socket::INET(@_) unless IPv6;
-
 	return new IO::Socket::IP(@_) if USE_SOCKET_IP;
-
-	my %param = @_;
-
-	return new IO::Socket::INET6(@_) if $param{LocalAddr} =~ /:/;
-	return new IO::Socket::INET(@_);
+	return new IO::Socket::INET(@_) unless USE_SOCKET_IP;
 }
 
 #------------------------------------------------------------------------------

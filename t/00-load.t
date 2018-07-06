@@ -19,7 +19,6 @@ my @module = qw(
 	IO::Select
 	IO::Socket
 	IO::Socket::INET
-	IO::Socket::INET6
 	IO::Socket::IP
 	MIME::Base64
 	Net::LibIDN

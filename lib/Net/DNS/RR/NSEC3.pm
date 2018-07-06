@@ -365,8 +365,8 @@ to perform mnemonic and numeric code translation.
     $flags = $rr->flags;
     $rr->flags( $flags );
 
-The Flags field is represented as an unsigned decimal integer.
-The value has a maximum value of 255. 
+The Flags field is an unsigned decimal integer
+interpreted as eight concatenated Boolean values. 
 
 =over 4
 
@@ -420,7 +420,7 @@ authoritative data or contains a delegation point NS RRset.
     $typelist = $rr->typelist;
     $rr->typelist( @typelist );
 
-The Type List identifies the RRset types that exist at the domain name
+typelist() identifies the RRset types that exist at the domain name
 matched by the NSEC3 RR.  When called in scalar context, the list is
 interpolated into a string.
 

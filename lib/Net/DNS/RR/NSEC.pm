@@ -206,7 +206,7 @@ or contains a delegation point NS RRset.
     @typelist = $rr->typelist;
     $typelist = $rr->typelist;
 
-The Type List identifies the RRset types that exist at the NSEC RR
+typelist() identifies the RRset types that exist at the NSEC RR
 owner name.  When called in scalar context, the list is interpolated
 into a string.
 
@@ -215,7 +215,7 @@ into a string.
     $exists = $rr->typemap($rrtype);
 
 typemap() returns a Boolean true value if the specified RRtype occurs
-in the typelist of the NSEC record.
+in the type bitmap of the NSEC record.
 
 =head2 covers
 

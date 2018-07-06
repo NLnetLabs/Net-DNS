@@ -63,9 +63,7 @@ my %prerequisite = (
 my %optional = (
 	'Net::DNS::SEC'	       => 1.01,	## For information only
 	'Digest::BubbleBabble' => 0.01,
-	'IO::Socket::INET6'    => 2.51,
 	'IO::Socket::IP'       => 0.38,
-	'Net::LibIDN'	       => 0.12,
 	'Net::LibIDN2'	       => 1.00,
 	'Scalar::Util'	       => 1.25,
 	);
@@ -83,22 +81,6 @@ delete $optional{'Net::DNS::SEC'};	## Note: MUST NOT be installed automatically
 
 
 use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1;';
-
-use constant USE_SOCKET_INET6 => defined eval 'require IO::Socket::INET6';
-
-delete $optional{'IO::Socket::INET6'} if USE_SOCKET_IP;		# exclude redundant dependency
-delete $optional{'Net::LibIDN'} if eval 'require Net::LibIDN2';
-
-
-print <<EOT if !USE_SOCKET_IP && USE_SOCKET_INET6;
-#
-#	This Net::DNS installation uses the IO::Socket::INET6 package
-#	which has been superseded by IO::Socket::IP.
-#
-#	IPv6 support using IO::Socket::INET6 will be discontinued in
-#	a future release.
-#
-EOT
 
 
 # clean up existing makefile
@@ -179,7 +161,7 @@ if ($online_tests) {
 
 	my $socket = $class->new(
 		PeerAddr => "www.google.com:80",
-		Timeout	 => 10
+		Timeout	 => 20
 		);
 
 	unless ($socket) {
@@ -209,13 +191,11 @@ if ($online_tests) {
 	}
 
 	$IPv6_tests = 1 unless defined $IPv6_tests;
-	if ( USE_SOCKET_IP || USE_SOCKET_INET6 ) {
-		if ($IPv6_tests) {
-			my $enable = 't/IPv6.enabled';
-			print "\nActivating IPv6 Tests...\n";
-			open( ENABLED, ">$enable" ) || die "Can't touch $enable $!";
-			close(ENABLED) || die "Can't touch $enable $!";
-		}
+	if ( USE_SOCKET_IP && $IPv6_tests ) {
+		my $enable = 't/IPv6.enabled';
+		print "\nActivating IPv6 Tests...\n";
+		open( ENABLED, ">$enable" ) || die "Can't touch $enable $!";
+		close(ENABLED) || die "Can't touch $enable $!";
 	}
 
 	print <<EOT;

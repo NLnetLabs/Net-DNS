@@ -80,11 +80,9 @@ time. These are the core packages that need to be available:
 The availability of these optional packages is tested at runtime:
 
 	Digest::BubbleBabble
-	Digest::GOST
-	IO::Socket::INET6
 	IO::Socket::IP
 	Net::DNS::SEC
-	Net::LibIDN
+	Net::LibIDN2
 
 You can obtain the latest version of Perl from:
 
