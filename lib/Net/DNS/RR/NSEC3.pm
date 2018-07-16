@@ -275,17 +275,20 @@ my ( $cache1, $cache2, $limit ) = ( {}, {}, 10 );
 
 sub _hashfn {
 	my $hashalg    = shift;
-	my $iterations = shift;
+	my $iterations = shift || 0;
 	my $salt       = shift || '';
 
-	my $arglist = $digest{$hashalg};
-	my ( $class, @argument ) = @$arglist;
-	my $instance = $class->new(@argument);
-
-	$iterations++;
 	my $key_adjunct = pack 'Cna*', $hashalg, $iterations, $salt;
+	$iterations++;
 
-	return sub {
+	my $instance = eval {
+		my $arglist = $digest{$hashalg};
+		my ( $class, @argument ) = @$arglist;
+		$class->new(@argument);
+	};
+	my $exception = $@;
+
+	return $exception ? sub { croak $exception } : sub {
 		my $name  = new Net::DNS::DomainName(shift)->canonical;
 		my $key	  = join '', $name, $key_adjunct;
 		my $cache = $$cache1{$key} ||= $$cache2{$key};	# two layer cache

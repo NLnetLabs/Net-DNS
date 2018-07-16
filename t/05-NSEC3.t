@@ -2,7 +2,7 @@
 #
 
 use strict;
-use Test::More tests => 29;
+use Test::More tests => 26;
 use Net::DNS;
 
 
@@ -98,10 +98,10 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 
 {
 	my $rr = new Net::DNS::RR("$name $type @data");
-	is( $rr->covered('example.'), undef, "historical 'covered()'" );
-	is( $rr->match('example.'),   1,     "historical 'match()'" );
-	$rr->typebm('');
-	is( $rr->typebm(), '', "historical 'typebm'" );
+	eval { Net::DNS::RR::NSEC3::name2hash( 0, 1, '' ) };	# invalid algorithm
+	eval { $rr->covered('example.') };			# historical
+	eval { $rr->match('example.') };			# historical
+	eval { $rr->typebm('') };				# historical
 
 	$rr->print;
 }

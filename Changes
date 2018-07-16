@@ -17,6 +17,9 @@ Feature
 	IO::Socket::INET6 removed from recommended module metadata.
 	IPv6 requires IO::Socket::IP which is now a core package.
 
+	No requirement to escape @ in unquoted contiguous string.
+
+
 **** 1.15 Feb 9, 2018
 
 	GOST R 34.11-94 hash algorithm: end of life 1st Jan 2018

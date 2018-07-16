@@ -268,11 +268,9 @@ sub encode {
 	my ( $offset, @opaque ) = scalar(@_) ? @_ : ( 0x4000, {} );
 
 	my $owner = $self->{owner}->encode( $offset, @opaque );
-	my $type  = $self->{type};
-	my $class = $self->{class} || 1;
-	my $index = $offset + length($owner) + RRFIXEDSZ;
-	my $rdata = $self->_empty ? '' : $self->_encode_rdata( $index, @opaque );
-	return pack 'a* n2 N n a*', $owner, $type, $class, $self->ttl, length $rdata, $rdata;
+	my ( $type, $class, $ttl ) = @{$self}{qw(type class ttl)};
+	my $rdata = $self->_empty ? '' : $self->_encode_rdata( RRFIXEDSZ + length $owner, @opaque );
+	pack 'a* n2 N n a*', $owner, $type, $class || 1, $ttl || 0, length $rdata, $rdata;
 }
 
 
@@ -293,11 +291,9 @@ sub canonical {
 	my $self = shift;
 
 	my $owner = $self->{owner}->canonical;
-	my $type  = $self->{type};
-	my $class = $self->{class} || 1;
-	my $index = RRFIXEDSZ + length $owner;
-	my $rdata = $self->_empty ? '' : $self->_encode_rdata($index);
-	pack 'a* n2 N n a*', $owner, $type, $class, $self->ttl, length $rdata, $rdata;
+	my ( $type, $class, $ttl ) = @{$self}{qw(type class ttl)};
+	my $rdata = $self->_empty ? '' : $self->_encode_rdata( RRFIXEDSZ + length $owner );
+	pack 'a* n2 N n a*', $owner, $type, $class || 1, $ttl || 0, length $rdata, $rdata;
 }
 
 

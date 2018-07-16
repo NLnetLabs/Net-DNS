@@ -47,15 +47,16 @@ my $platform = $platform{$^O} || {};
 
 
 my %prerequisite = (
-	'Digest::HMAC' => 1.03,
-	'Digest::MD5'  => 2.13,
-	'Digest::SHA'  => 5.23,
-	'File::Spec'   => 0.86,
-	'IO::File'     => 1.08,
-	'IO::Socket'   => 1.16,
-	'MIME::Base64' => 2.11,
-	'Time::Local'  => 1.19,
-	'Test::More'   => 0.52,
+	'Digest::HMAC'	 => 1.03,
+	'Digest::MD5'	 => 2.13,
+	'Digest::SHA'	 => 5.23,
+	'File::Spec'	 => 0.86,
+	'IO::File'	 => 1.08,
+	'IO::Socket'	 => 1.16,
+	'IO::Socket::IP' => 0.38,
+	'MIME::Base64'	 => 2.11,
+	'Time::Local'	 => 1.19,
+	'Test::More'	 => 0.52,
 	%$platform
 	);
 
@@ -63,7 +64,6 @@ my %prerequisite = (
 my %optional = (
 	'Net::DNS::SEC'	       => 1.01,	## For information only
 	'Digest::BubbleBabble' => 0.01,
-	'IO::Socket::IP'       => 0.38,
 	'Net::LibIDN2'	       => 1.00,
 	'Scalar::Util'	       => 1.25,
 	);
