@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.16 [unreleased]
+**** 1.16 Jul 15, 2018
 
 Feature
 	New NSEC3 encloser(), nextcloser() and wildcard() instance
