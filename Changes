@@ -1,6 +1,21 @@
 $Id$                       -*-text-*-
 
 
+**** 1.17 [unreleased]
+
+Fix rt.cpan.org #125890
+
+	AXFR: 1 record per packet responses.
+
+Fix rt.cpan.org #125889
+
+	New NSEC3 for empty non-terminal leaves type bitmap undefined.
+
+Fix rt.cpan.org #125882
+
+	RDATA name compression pointer calculated incorrectly.
+
+
 **** 1.16 Jul 15, 2018
 
 Feature

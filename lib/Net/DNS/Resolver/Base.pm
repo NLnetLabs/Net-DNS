@@ -705,10 +705,12 @@ sub axfr {				## zone transfer
 			my $rr = shift(@rr);
 
 			if ( ref($rr) eq 'Net::DNS::RR::SOA' ) {
-				return $soa = $rr unless $soa;
-				$select = undef;
-				return if $rr->encode eq $soa->encode;
-				croak $self->errorstring('mismatched final SOA');
+				if ($soa) {
+					$select = undef;
+					return if $rr->encode eq $soa->encode;
+					croak $self->errorstring('mismatched final SOA');
+				}
+				$soa = $rr;
 			}
 
 			return $rr if scalar @rr;

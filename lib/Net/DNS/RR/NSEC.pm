@@ -57,6 +57,13 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 }
 
 
+sub _defaults {				## specify RR attribute default values
+	my $self = shift;
+
+	$self->_parse_rdata('.');
+}
+
+
 sub nxtdname {
 	my $self = shift;
 
@@ -68,9 +75,12 @@ sub nxtdname {
 sub typelist {
 	my $self = shift;
 
-	$self->{typebm} = &_type2bm if scalar @_;
+	if ( scalar(@_) || !defined(wantarray) ) {
+		$self->{typebm} = &_type2bm;
+		return;
+	}
 
-	my @type = defined wantarray ? &_bm2type( $self->{typebm} ) : ();
+	my @type = &_bm2type( $self->{typebm} );
 	return wantarray ? (@type) : "@type";
 }
 
