@@ -713,11 +713,12 @@ sub axfr {				## zone transfer
 				$soa = $rr;
 			}
 
-			return $rr if scalar @rr;
+			unless ( scalar @rr ) {
+				my $reply;			# refill @rr
+				( $reply, $verify ) = $self->_axfr_next( $select, $verify );
+				@rr = $reply->answer;
+			}
 
-			my $reply;
-			( $reply, $verify ) = $self->_axfr_next( $select, $verify );
-			@rr = $reply->answer;
 			return $rr;
 		};
 

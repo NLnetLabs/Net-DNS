@@ -258,15 +258,24 @@ sub install {
 ##	library search finds the existing version before reaching
 ##	$install_site
 ##
-##	Makefile has been generated to support build and test only.
+##	The generated Makefile supports build and test only.
 ##
 AMEN
 
-	return <<'END';
+	return <<"END";
 install :
-	$(NOECHO) $(ECHO) "##	Makefile supports test build only"
-	$(NOECHO) $(ECHO) "##	(see message from Makefile.PL)"
-	$(NOECHO) $(FALSE)
+	\$(NOECHO) \$(ECHO) "## Makefile supports build and test only"
+	\$(NOECHO) \$(ECHO) "## (see message from Makefile.PL)"
+	\$(NOECHO) \$(FALSE)
+
+test :: \$(TEST_TYPE)
+	\$(NOECHO) \$(ECHO) "##"
+	\$(NOECHO) \$(ECHO) "##	Net::DNS @version installed in your perl library"
+	\$(NOECHO) \$(ECHO) "##	@installed"
+	\$(NOECHO) \$(ECHO) "##	which the library search finds before reaching"
+	\$(NOECHO) \$(ECHO) "##	$install_site"
+	\$(NOECHO) \$(ECHO) "##"
+	\$(NOECHO) \$(NOOP)
 END
 }
 

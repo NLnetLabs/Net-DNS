@@ -46,7 +46,7 @@ use constant ASCII => ref eval {
 	Encode::find_encoding('ascii');
 };
 
-use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see UTR#16 3.6]
+use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see Unicode TR#16 3.6]
 	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
 };
 
@@ -397,8 +397,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::LibIDN2>, L<Net::DNS>, RFC1034, RFC1035, RFC5891,
-Unicode Technical Report #16
+L<perl>, L<Net::DNS>, L<Net::LibIDN2>, RFC1034, RFC1035, RFC5891, Unicode TR#16
 
 =cut
 
