@@ -9,7 +9,6 @@ my @prerequisite = qw(
 		Time::Local
 		Net::DNS::RR::SIG
 		Net::DNS::SEC
-		Net::DNS::SEC::RSA
 		);
 
 foreach my $package (@prerequisite) {

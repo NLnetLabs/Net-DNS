@@ -3,6 +3,13 @@
 use strict;
 use Test::More tests => 27;
 
+use Net::DNS::Resolver;
+
+local $ENV{'RES_NAMESERVERS'};
+local $ENV{'RES_SEARCHLIST'};
+local $ENV{'LOCALDOMAIN'};
+local $ENV{'RES_OPTIONS'};
+
 
 BEGIN {
 	eval {
@@ -10,9 +17,6 @@ BEGIN {
 		close(TOUCH);
 	};
 }
-
-
-use Net::DNS;
 
 
 my $resolver = Net::DNS::Resolver->new();

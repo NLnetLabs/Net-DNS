@@ -2,21 +2,9 @@
 # $Id$	-*-perl-*-
 #
 
-
-BEGIN {
-	die <<RIP if $] < 5.006;
-
-This version of Net::DNS has not been tested against perl $]
-and now requires version 5.6 or later.
-
-RIP
-}
-
-
 use strict;
 use warnings;
 use Getopt::Long;
-use IO::Socket;
 use ExtUtils::MakeMaker;
 use constant MM => eval $ExtUtils::MakeMaker::VERSION;
 
@@ -52,9 +40,11 @@ my %prerequisite = (
 	'Digest::SHA'	 => 5.23,
 	'File::Spec'	 => 0.86,
 	'IO::File'	 => 1.08,
-	'IO::Socket'	 => 1.16,
+	'IO::Select'	 => 1.14,
 	'IO::Socket::IP' => 0.38,
 	'MIME::Base64'	 => 2.11,
+	'PerlIO'	 => 1.05,
+	'Scalar::Util'	 => 1.25,
 	'Time::Local'	 => 1.19,
 	'Test::More'	 => 0.52,
 	%$platform
@@ -65,7 +55,6 @@ my %optional = (
 	'Net::DNS::SEC'	       => 1.01,	## For information only
 	'Digest::BubbleBabble' => 0.01,
 	'Net::LibIDN2'	       => 1.00,
-	'Scalar::Util'	       => 1.25,
 	);
 
 
@@ -81,6 +70,7 @@ delete $optional{'Net::DNS::SEC'};	## Note: MUST NOT be installed automatically
 
 
 use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1;';
+use constant INET_FALLBACK => !USE_SOCKET_IP && eval 'require IO::Socket::INET';
 
 
 # clean up existing makefile
@@ -217,6 +207,7 @@ sub special_targets {
 	return join "\n\n", '.NOTPARALLEL:', shift->SUPER::special_targets();
 }
 
+
 sub install {
 	my $self = shift;
 
@@ -248,10 +239,11 @@ sub install {
 
 	return $self->SUPER::install(@_) unless $noinstall{$install_site};
 
-	warn <<"AMEN";
+	my $message;
+	warn $message = <<"AMEN";
 ##
 ##	The install location for this version of Net::DNS differs
-##	from the existing @version in your perl library.
+##	from the existing @version in your perl library at
 ##	@installed
 ##
 ##	The installation will be rendered ineffective because the
@@ -261,28 +253,23 @@ sub install {
 ##	The generated Makefile supports build and test only.
 ##
 AMEN
+	my $echo = '	$(NOECHO) $(ECHO) "##"';
+	$message =~ s/##/$echo/eg;
 
-	return <<"END";
+	return join '', <<'END', $message;
 install :
-	\$(NOECHO) \$(ECHO) "## Makefile supports build and test only"
-	\$(NOECHO) \$(ECHO) "## (see message from Makefile.PL)"
-	\$(NOECHO) \$(FALSE)
+	$(NOECHO) $(ECHO) "##	Makefile supports build and test only"
+	$(NOECHO) $(ECHO) "##	(see message from Makefile.PL)"
+	$(NOECHO) $(FALSE)
 
-test :: \$(TEST_TYPE)
-	\$(NOECHO) \$(ECHO) "##"
-	\$(NOECHO) \$(ECHO) "##	Net::DNS @version installed in your perl library"
-	\$(NOECHO) \$(ECHO) "##	@installed"
-	\$(NOECHO) \$(ECHO) "##	which the library search finds before reaching"
-	\$(NOECHO) \$(ECHO) "##	$install_site"
-	\$(NOECHO) \$(ECHO) "##"
-	\$(NOECHO) \$(NOOP)
+test :: $(TEST_TYPE)
 END
 }
 
 
 sub postamble {
 	return <<'END';
-test_cover : pure_all
+test_cover :
 	cover -delete
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
 	cover -summary

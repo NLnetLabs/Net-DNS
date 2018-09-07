@@ -34,7 +34,7 @@ eval {
 	exit plan skip_all => "No nameservers" unless $resolver->nameservers;
 
 	my $reply = $resolver->send(qw(. NS IN)) || die;
-	my $from = $reply->answerfrom();
+	my $from = $reply->from();
 
 	my @ns = grep $_->type eq 'NS', $reply->answer;
 	exit plan skip_all => "No NS RRs in response from $from" unless scalar @ns;
@@ -105,7 +105,7 @@ SKIP: {
 	my $reply = $res->send( ".", "NS" );
 	ok( $reply, 'got response to priming query' );
 	skip( 'no response to priming query', 3 ) unless $reply;
-	my $from = $reply->answerfrom();
+	my $from = $reply->from();
 
 	ok( $reply->header->aa, "authoritative response from $from" );
 

@@ -320,7 +320,7 @@ returned by C<bgsend()> which should be used strictly as described here.
     $handle = $resolver->bgsend( 'www.example.com' );
     $packet = $resolver->bgread($handle);
 
-Reads the answer from a background query.
+Reads the response following a background query.
 The argument is the handle returned by C<bgsend()>.
 
 Returns a L<Net::DNS::Packet> object or C<undef> if no response was
@@ -410,6 +410,7 @@ The default is false.
 
     @nameservers = $resolver->nameservers();
     $resolver->nameservers( '192.0.2.1', '192.0.2.2', '2001:DB8::3' );
+    $resolver->nameservers( 'ns.domain.example.' );
 
 Gets or sets the nameservers to be queried.
 
@@ -547,9 +548,9 @@ instead of datagrams (UDP).
 The default is false.
 
 
-=head2 answerfrom
+=head2 replyfrom
 
-    print 'last answer was from: ', $resolver->answerfrom, "\n";
+    print 'last response was from: ', $resolver->replyfrom, "\n";
 
 Returns the IP address from which the most recent packet was
 received in response to a query.

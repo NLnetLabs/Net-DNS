@@ -63,8 +63,8 @@ sub rr {
 	my ($arg1) = @_;
 	my $res = ref($arg1) ? shift : new Net::DNS::Resolver();
 
-	my $ans = $res->query(@_);
-	my @list = $ans ? $ans->answer : ();
+	my $reply = $res->query(@_);
+	my @list = $reply ? $reply->answer : ();
 }
 
 
@@ -441,7 +441,7 @@ date information to remain useful.
 =head1 Sorting of RR arrays
 
 C<rrsort()> provides functionality to help you sort RR arrays. In most cases
-this will give you the answer that you want, but you can specify your
+this will give you the result that you expect, but you can specify your
 own sorting method by using the C<< Net::DNS::RR::FOO->set_rrsort_func() >>
 class method. See L<Net::DNS::RR> for details.
 
@@ -574,7 +574,7 @@ See L<Net::DNS::Update> for an example of performing dynamic updates.
     my $socket = $res->bgsend("host.example.com");
 
     while ( $res->bgbusy($socket) ) {
-	# do some work here while waiting for the answer
+	# do some work here while waiting for the response
 	# ...and some more here
     }
 

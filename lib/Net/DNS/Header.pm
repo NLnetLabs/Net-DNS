@@ -193,7 +193,7 @@ sub qr {
 
 =head2 aa
 
-    print "answer is ", $packet->header->aa ? "" : "non-", "authoritative\n";
+    print "response is ", $packet->header->aa ? "" : "non-", "authoritative\n";
     $packet->header->aa(0);
 
 Gets or sets the authoritative answer flag.
@@ -260,11 +260,11 @@ sub z {
 
 =head2 ad
 
-    print "The result has ", $packet->header->ad ? "" : "not", "been verified\n";
+    print "The response has ", $packet->header->ad ? "" : "not", "been verified\n";
 
 Relevant in DNSSEC context.
 
-(The AD bit is only set on answers where signatures have been
+(The AD bit is only set on a response where signatures have been
 cryptographically verified or the server is authoritative for the data
 and is allowed to set the bit by policy.)
 

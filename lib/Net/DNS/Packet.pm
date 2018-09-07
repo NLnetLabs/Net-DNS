@@ -130,7 +130,7 @@ sub decode {
 			answer	   => [],
 			authority  => [],
 			additional => [],
-			answersize => length $$data
+			replysize  => length $$data
 			}, $class;
 
 		# question/zone section
@@ -383,9 +383,9 @@ sub string {
 	my $header = $self->header;
 	my $update = $header->opcode eq 'UPDATE';
 
-	my $server = $self->{answerfrom};
-	my $length = $self->{answersize};
-	my $string = $server ? ";; Answer received from $server ($length bytes)\n" : "";
+	my $server = $self->{replyfrom};
+	my $length = $self->{replysize};
+	my $string = $server ? ";; Response received from $server ($length bytes)\n" : "";
 
 	$string .= ";; HEADER SECTION\n" . $header->string;
 
@@ -416,26 +416,28 @@ sub string {
 }
 
 
-=head2 answerfrom
+=head2 from
 
-    print "packet received from ", $packet->answerfrom, "\n";
+    print "packet received from ", $packet->from, "\n";
 
 Returns the IP address from which this packet was received.
 User-created packets will return undef for this method.
 
 =cut
 
-sub answerfrom {
+sub from {
 	my $self = shift;
 
-	$self->{answerfrom} = shift if scalar @_;
-	$self->{answerfrom};
+	$self->{replyfrom} = shift if scalar @_;
+	$self->{replyfrom};
 }
 
+sub answerfrom { &from; }					# uncoverable pod
 
-=head2 answersize
 
-    print "packet size: ", $packet->answersize, " bytes\n";
+=head2 size
+
+    print "packet size: ", $packet->size, " bytes\n";
 
 Returns the size of the packet in bytes as it was received from a
 nameserver.  User-created packets will return undef for this method
@@ -443,9 +445,11 @@ nameserver.  User-created packets will return undef for this method
 
 =cut
 
-sub answersize {
-	shift->{answersize};
+sub size {
+	shift->{replysize};
 }
+
+sub answersize { &size; }					# uncoverable pod
 
 
 =head2 push

@@ -3,7 +3,12 @@
 use strict;
 use Test::More tests => 23;
 
-use Net::DNS;
+use Net::DNS::Resolver;
+
+local $ENV{'RES_NAMESERVERS'};
+local $ENV{'RES_SEARCHLIST'};
+local $ENV{'LOCALDOMAIN'};
+local $ENV{'RES_OPTIONS'};
 
 
 my $res = Net::DNS::Resolver->new();

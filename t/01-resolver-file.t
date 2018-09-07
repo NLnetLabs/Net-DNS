@@ -4,13 +4,13 @@ use strict;
 use File::Spec;
 use Test::More tests => 16;
 
-use Net::DNS;
-
+use Net::DNS::Resolver;
 
 local $ENV{'RES_NAMESERVERS'};
 local $ENV{'RES_SEARCHLIST'};
 local $ENV{'LOCALDOMAIN'};
 local $ENV{'RES_OPTIONS'};
+
 
 my $class = 'Net::DNS::Resolver';
 

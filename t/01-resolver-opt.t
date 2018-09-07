@@ -3,7 +3,12 @@
 use strict;
 use Test::More tests => 30;
 
-use Net::DNS;
+use Net::DNS::Resolver;
+
+local $ENV{'RES_NAMESERVERS'};
+local $ENV{'RES_SEARCHLIST'};
+local $ENV{'LOCALDOMAIN'};
+local $ENV{'RES_OPTIONS'};
 
 
 #
@@ -53,13 +58,13 @@ foreach my $test (qw(nameservers searchlist)) {
 
 my %bad_input = (
 	errorstring => 'set',
-	answerfrom  => 'set',
-	answersize  => 'set',
+	replyfrom   => 'set',
+	answerfrom  => 'set',		## historical
 	);
 
 while ( my ( $key, $value ) = each %bad_input ) {
 	my $res = Net::DNS::Resolver->new( $key => $value );
-	isnt( $res->{$key}, 'set', "$key is not set" );
+	isnt( $res->$key, 'set', "$key is not set" );
 }
 
 
