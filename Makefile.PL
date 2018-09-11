@@ -207,7 +207,7 @@ sub test {
 	return join '', shift->SUPER::test(), <<'END';
 
 # suppress parallel test execution
-FULLPERLRUN = HARNESS_OPTIONS=j1:c $(FULLPERL)
+FULLPERLRUN = $(FULLPERL) "-e" "delete @ENV{qw(HARNESS_OPTIONS)};"
 END
 }
 
