@@ -203,8 +203,21 @@ EOT
 
 package MY;				## customise generated Makefile
 
-sub special_targets {
-	return join "\n\n", '.NOTPARALLEL:', shift->SUPER::special_targets();
+sub test {
+	return join '', shift->SUPER::test(), <<'END';
+
+# suppress parallel test execution
+FULLPERLRUN = HARNESS_OPTIONS=j1:c $(FULLPERL)
+END
+}
+
+
+sub dist {
+	return join '', shift->SUPER::dist(), <<'END';
+
+# $(PERM_RWX) raises security issues downstream
+PREOP =	$(NOECHO) $(CHMOD) $(PERM_RW) contrib$(DFSEP)* demo$(DFSEP)*
+END
 }
 
 
