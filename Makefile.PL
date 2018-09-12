@@ -204,10 +204,11 @@ EOT
 package MY;				## customise generated Makefile
 
 sub test {
-	return join '', shift->SUPER::test(), <<'END';
+	return shift->SUPER::test() if $^O =~ /cygwin|MSWin/i;
 
+	join '', shift->SUPER::test(), <<'END';
 # suppress parallel test execution
-FULLPERLRUN = $(FULLPERL) "-e" "delete @ENV{qw(HARNESS_OPTIONS)};"
+FULLPERLRUN = HARNESS_OPTIONS=c $(FULLPERL)
 END
 }
 
