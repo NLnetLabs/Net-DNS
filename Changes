@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.18 [unreleased]
+**** 1.18 Sep 21, 2018
 
 	Documentation revised to remove ambigous use of "answer" which
 	has been used to refer to both the answer section of a packet
