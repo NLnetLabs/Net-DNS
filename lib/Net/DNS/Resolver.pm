@@ -49,7 +49,7 @@ __END__
 =head1 DESCRIPTION
 
 Instances of the Net::DNS::Resolver class represent resolver objects.
-A program can have multiple resolver objects, each maintaining its
+A program may have multiple resolver objects, each maintaining its
 own state information such as the nameservers to be queried, whether
 recursion is desired, etc.
 

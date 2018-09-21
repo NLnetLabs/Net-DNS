@@ -361,8 +361,8 @@ sub additional {
 
     $packet->print;
 
-Prints the packet data on the standard output in an ASCII format
-similar to that used in DNS zone files.
+Prints the entire packet to the currently selected output filehandle
+using the master file format mandated by RFC1035.
 
 =cut
 
@@ -385,7 +385,7 @@ sub string {
 
 	my $server = $self->{replyfrom};
 	my $length = $self->{replysize};
-	my $string = $server ? ";; Response received from $server ($length bytes)\n" : "";
+	my $string = $server ? ";; Response received from $server ($length octets)\n" : "";
 
 	$string .= ";; HEADER SECTION\n" . $header->string;
 
@@ -421,7 +421,7 @@ sub string {
     print "packet received from ", $packet->from, "\n";
 
 Returns the IP address from which this packet was received.
-User-created packets will return undef for this method.
+This method will return undef for user-created packets.
 
 =cut
 
@@ -437,10 +437,10 @@ sub answerfrom { &from; }					# uncoverable pod
 
 =head2 size
 
-    print "packet size: ", $packet->size, " bytes\n";
+    print "packet size: ", $packet->size, " octets\n";
 
-Returns the size of the packet in bytes as it was received from a
-nameserver.  User-created packets will return undef for this method
+Returns the size of the packet in octets as it was received from a
+nameserver.  This method will return undef for user-created packets
 (use length($packet->data) instead).
 
 =cut

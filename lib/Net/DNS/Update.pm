@@ -52,8 +52,8 @@ dynamic update.	 Specifically, it creates a packet with the header
 opcode set to UPDATE and the zone record type to SOA (per RFC 2136,
 Section 2.3).
 
-Programs must use the push() method to add RRs to the prerequisite,
-update, and additional sections before performing the update.
+Programs must use the push() method to add RRs to the prerequisite
+and update sections before performing the update.
 
 Arguments are the zone name and the class.  The zone and class may
 be undefined or omitted and default to the default domain from the

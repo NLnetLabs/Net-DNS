@@ -202,7 +202,7 @@ sub name {
     $qname = $question->qname;
     $zname = $question->zname;
 
-Canonical ASCII domain name as required for the query subject
+Fully qualified domain name in the form required for a query
 transmitted to a nameserver.  In dynamic update packets, this
 attribute is known as zname() and refers to the zone name.
 

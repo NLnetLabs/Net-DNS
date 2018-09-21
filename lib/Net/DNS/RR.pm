@@ -301,8 +301,8 @@ sub canonical {
 
     $rr->print;
 
-Prints the record to the standard output.  Calls the string method
-to get the formatted RR representation.
+Prints the resource record to the currently selected output filehandle.
+Calls the string method to get the formatted RR representation.
 
 =cut
 
@@ -315,10 +315,10 @@ sub print {
 
     print $rr->string, "\n";
 
-Returns a string representation of the RR using the zone file format
-described in RFC1035.  All domain names are fully qualified with
-trailing dot.  This differs from RR attribute methods, which omit
-the trailing dot.
+Returns a string representation of the RR using the master file format
+mandated by RFC1035.
+All domain names are fully qualified with trailing dot.
+This differs from RR attribute methods, which omit the trailing dot.
 
 =cut
 
@@ -349,9 +349,9 @@ sub string {
 
     $plain = $rr->plain;
 
-Returns a simplified single line representation of the RR using the
-zone file format defined in RFC1035.  This facilitates interaction
-with programs like nsupdate which have rudimentary RR parsers.
+Returns a simplified single-line representation of the RR.
+This facilitates interaction with programs like nsupdate
+which have rudimentary parsers.
 
 =cut
 

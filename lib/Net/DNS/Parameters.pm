@@ -362,7 +362,7 @@ __END__
 
 =head1 NAME
 
-    Net::DNS::Parameters - DNS parameter assignments
+Net::DNS::Parameters - DNS parameter assignments
 
 
 =head1 SYNOPSIS
