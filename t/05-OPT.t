@@ -166,7 +166,7 @@ foreach my $method (qw(class ttl)) {
 
 
 	$edns->option( CHAIN => ( 'TRUST-POINT' => '' ) );
-	is( length( $edns->option(13) ), 0, "option CHAIN => ''" );
+	is( length( $edns->option(13) ), 1, "option CHAIN => ''" );
 
 	my $option13 = $edns->option( CHAIN => ( 'TRUST-POINT' => 'com.' ) );
 	is( scalar( $edns->option(13) ), $option13, "option CHAIN => ('TRUST-POINT' => 'com.')" );

@@ -80,6 +80,40 @@ NonFatalBegin();
 
 
 {
+	my $resolver = Net::DNS::Resolver->new( defnames => 1, ndots => 1 );
+	my @query = (qw(. SOA IN));
+
+	ok( $resolver->query( undef, qw(SOA IN) ), '$resolver->query( undef, ... ) defaults to "."' );
+
+	$resolver->defnames(0);
+	ok( $resolver->query(@query), '$resolver->query() without defnames' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( dnsrch => 1, ndots => 1 );
+	my @query = (qw(. SOA IN));
+
+	ok( $resolver->search( undef, qw(SOA IN) ), '$resolver->search( undef, ... ) defaults to "."' );
+
+	$resolver->ndots(2);
+	ok( $resolver->search(@query), '$resolver->search() with ndots > 1' );
+
+	$resolver->dnsrch(0);
+	ok( $resolver->search(@query), '$resolver->search() without dnsrch' );
+}
+
+
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP, dnsrch => 1, ndots => 2 );
+	$resolver->searchlist(qw(nx.net-dns.org net-dns.org));
+
+	ok( $resolver->search('ns'),	      '$resolver->search( simple name, ... )' );
+	ok( $resolver->search('net-dns.org'), '$resolver->search( dotted name, ... )' );
+}
+
+
+{
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
@@ -319,38 +353,6 @@ SKIP: {
 
 
 {
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->retrans(0);
-	$resolver->retry(0);
-
-	my @query = ( undef, qw(SOA IN) );
-	ok( $resolver->query(@query),  '$resolver->query( undef, ... ) defaults to "." ' );
-	ok( $resolver->search(@query), '$resolver->search( undef, ... ) defaults to "." ' );
-
-	$resolver->defnames(0);
-	$resolver->dnsrch(0);
-	ok( $resolver->search(@query), '$resolver->search() without dnsrch & defnames' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new();
-	my @query = (qw(us SOA IN));
-
-	$resolver->searchlist('net');
-	ok( $resolver->query(@query),  '$resolver->query( name, ... )' );
-
-	$resolver->searchlist('example.com', 'net');
-	ok( $resolver->search(@query), '$resolver->search( name, ... )' );
-
-	$resolver->defnames(0);
-	$resolver->dnsrch(0);
-	ok( $resolver->query(@query),  '$resolver->query() without defnames' );
-	ok( $resolver->search(@query), '$resolver->search() without dnsrch' );
-}
-
-
-{
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
 	my $udp = $resolver->query(qw(bogus.net-dns.org A IN));
@@ -379,11 +381,11 @@ SKIP: {
 	$resolver->tcp_timeout(0);
 
 	my @query = (qw(:: SOA IN));
-	my $query = new Net::DNS::Packet(@query);
 	ok( !$resolver->query(@query),	'$resolver->query() failure' );
 	ok( !$resolver->search(@query), '$resolver->search() failure' );
 
-	$query->edns->option( 65001, pack 'x500' );		# pad to force TCP
+	my $query = new Net::DNS::Packet(@query);
+	$query->edns->option( PADDING => ( 'OPTION-LENGTH' => 500 ) );    # force TCP
 	ok( !$resolver->send($query),	'$resolver->send() failure' );
 	ok( !$resolver->bgsend($query), '$resolver->bgsend() failure' );
 }

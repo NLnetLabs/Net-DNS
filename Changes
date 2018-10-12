@@ -1,6 +1,15 @@
 $Id$                       -*-text-*-
 
 
+**** 1.19 [unreleased]
+
+	Show structure of EDNS options using Perl-like syntax.
+
+Fix rt.cpan.org #127128
+
+	Incorrect logic can cause DNS search to emit fruitless queries.
+
+
 **** 1.18 Sep 21, 2018
 
 	Documentation revised to remove ambigous use of "answer" which

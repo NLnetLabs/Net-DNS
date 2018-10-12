@@ -165,9 +165,9 @@ sub _untaint {
 sub _read_env {				## read resolver config environment variables
 	my $self = shift;
 
-	$self->nameservers( map split, $ENV{RES_NAMESERVERS} ) if defined $ENV{RES_NAMESERVERS};
+	$self->searchlist( map split, $ENV{LOCALDOMAIN} ) if defined $ENV{LOCALDOMAIN};
 
-	$self->domain( $ENV{LOCALDOMAIN} ) if defined $ENV{LOCALDOMAIN};
+	$self->nameservers( map split, $ENV{RES_NAMESERVERS} ) if defined $ENV{RES_NAMESERVERS};
 
 	$self->searchlist( map split, $ENV{RES_SEARCHLIST} ) if defined $ENV{RES_SEARCHLIST};
 
@@ -363,11 +363,7 @@ sub query {
 	my $self = shift;
 	my $name = shift || '.';
 
-	my @sfix;
-
-	if ( $self->{defnames} && ( ( $name =~ tr/././ ) < $self->{ndots} ) ) {
-		@sfix = $self->domain unless $name =~ m/:|\.\d*$/;
-	}
+	my @sfix = $self->{defnames} && ( $name !~ m/[.:]/ ) ? $self->domain : ();
 
 	my $fqdn = join '.', $name, @sfix;
 	$self->_diag( 'query(', $fqdn, @_, ')' );
@@ -382,11 +378,12 @@ sub search {
 	return $self->query(@_) unless $self->{dnsrch};
 
 	my $name = shift || '.';
+	my $dots = $name =~ tr/././;
 
-	my @sfix = ( $name =~ m/:|\.\d*$/ ) ? () : @{$self->{searchlist}};
-	my ( $domain, @etc ) = ( $name =~ tr/././ ) < $self->{ndots} ? (@sfix) : ( undef, @sfix );
+	my @sfix = ( $dots < $self->{ndots} ) ? @{$self->{searchlist}} : ();
+	my ( $one, @more ) = ( $name =~ m/:|\.\d*$/ ) ? () : ( $dots ? ( undef, @sfix ) : @sfix );
 
-	foreach my $suffix ( $domain, @etc ) {
+	foreach my $suffix ( $one, @more ) {
 		my $fqname = $suffix ? join( '.', $name, $suffix ) : $name;
 		$self->_diag( 'search(', $fqname, @_, ')' );
 		my $packet = $self->send( $fqname, @_ ) || next;
