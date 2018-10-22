@@ -5,7 +5,7 @@ $Id$                       -*-text-*-
 
 	Show structure of EDNS options using Perl-like syntax.
 
-Fix rt.cpan.org #127128
+Fix rt.cpan.org #127182
 
 	Incorrect logic can cause DNS search to emit fruitless queries.
 

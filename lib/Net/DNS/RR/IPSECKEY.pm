@@ -149,7 +149,7 @@ sub gateway {
 			$self->{gateway}  = new Net::DNS::DomainName($_);
 			last;
 		};
-		croak "unrecognised gateway type";
+		croak 'unrecognised gateway type';
 	}
 
 	if ( defined wantarray ) {

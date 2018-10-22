@@ -367,7 +367,7 @@ sub create {
 				);
 		}
 
-		croak "Usage:	create $class(keyfile)\n\tcreate $class(keyname, key)"
+		croak "Usage:	create $class(keyfile)\n\tcreate $class(keyname, key)";
 
 	} elsif ( scalar(@_) == 1 ) {
 		my $key = shift;				# ( keyname, key )
@@ -388,7 +388,7 @@ sub create {
 		}
 
 		my ( $vol, $dir, $file ) = File::Spec->splitpath( $keyfile->name );
-		croak "misnamed private key" unless $file =~ /^K([^+]+)+.+private$/;
+		croak 'misnamed private key' unless $file =~ /^K([^+]+)+.+private$/;
 		my $kname = $1;
 		return new Net::DNS::RR(
 			name	  => $kname,

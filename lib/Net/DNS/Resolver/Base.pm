@@ -399,6 +399,8 @@ sub send {
 	my $packet	= $self->_make_query_packet(@_);
 	my $packet_data = $packet->data;
 
+	$self->_reset_errorstring;
+
 	return $self->_send_tcp( $packet, $packet_data )
 			if $self->{usevc} || length $packet_data > $self->_packetsz;
 
@@ -414,8 +416,6 @@ sub send {
 
 sub _send_tcp {
 	my ( $self, $query, $query_data ) = @_;
-
-	$self->_reset_errorstring;
 
 	my $tcp_packet = pack 'n a*', length($query_data), $query_data;
 	my @ns = $self->nameservers();
@@ -461,8 +461,6 @@ sub _send_tcp {
 
 sub _send_udp {
 	my ( $self, $query, $query_data ) = @_;
-
-	$self->_reset_errorstring;
 
 	my @ns	    = $self->nameservers;
 	my $port    = $self->{port};
@@ -545,6 +543,8 @@ sub bgsend {
 	my $packet	= $self->_make_query_packet(@_);
 	my $packet_data = $packet->data;
 
+	$self->_reset_errorstring;
+
 	return $self->_bgsend_tcp( $packet, $packet_data )
 			if $self->{usevc} || length $packet_data > $self->_packetsz;
 
@@ -554,8 +554,6 @@ sub bgsend {
 
 sub _bgsend_tcp {
 	my ( $self, $packet, $packet_data ) = @_;
-
-	$self->_reset_errorstring;
 
 	my $tcp_packet = pack 'n a*', length($packet_data), $packet_data;
 
@@ -579,8 +577,6 @@ sub _bgsend_tcp {
 
 sub _bgsend_udp {
 	my ( $self, $packet, $packet_data ) = @_;
-
-	$self->_reset_errorstring;
 
 	my $port = $self->{port};
 
@@ -682,9 +678,8 @@ sub _accept_reply {
 	my $header = $reply->header;
 	return unless $header->qr;
 
-	return 1 unless $query;					# SpamAssassin 3.4.1 workaround
+	return if $query && $header->id != $query->header->id;
 
-	return unless $header->id == $query->header->id;
 	$self->errorstring( $header->rcode );			# historical quirk
 }
 
@@ -1120,7 +1115,7 @@ sub AUTOLOAD {				## Default method
 
 	my $name = $AUTOLOAD;
 	$name =~ s/.*://;
-	croak "$name: no such method" unless $public_attr{$name};
+	croak qq[unknown method "$name"] unless $public_attr{$name};
 
 	no strict q/refs/;
 	*{$AUTOLOAD} = sub {
