@@ -26,7 +26,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 # [Revised March 2016, June 2018]
 
 
-use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1;';
+use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1';
 
 use constant IPv6 => USE_SOCKET_IP;
 
@@ -181,14 +181,14 @@ sub _read_config_file {			## read resolver config file
 	my $self = shift;
 	my $file = shift;
 
-	local *FILE;
-	open( FILE, $file ) or croak "$file: $!";
+	my $filehandle;
+	open( $filehandle, '<', $file ) or croak "$file: $!";
 
 	my @nameserver;
 	my @searchlist;
 
 	local $_;
-	while (<FILE>) {
+	while (<$filehandle>) {
 		s/[;#].*$//;					# strip comments
 
 		/^nameserver/ && do {
@@ -217,7 +217,7 @@ sub _read_config_file {			## read resolver config file
 		};
 	}
 
-	close(FILE);
+	close($filehandle);
 
 	$self->nameservers(@nameserver) if @nameserver;
 	$self->searchlist(@searchlist)	if @searchlist;

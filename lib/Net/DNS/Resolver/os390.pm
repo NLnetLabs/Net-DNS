@@ -58,14 +58,14 @@ sub _init {
 
 	foreach my $dataset ( Net::DNS::Resolver::Base::_untaint( grep defined, @dataset ) ) {
 		eval {
-			local *FILE;				# "cat" able to read MVS dataset
-			open( FILE, qq[cat "$dataset" 2>/dev/null |] ) or die "$dataset: $!";
+			my $filehandle;				# "cat" able to read MVS dataset
+			open( $filehandle, '-|', qq[cat "$dataset" 2>/dev/null] ) or die "$dataset: $!";
 
 			my @nameserver;
 			my @searchlist;
 			local $_;
 
-			while (<FILE>) {
+			while (<$filehandle>) {
 				s/[;#].*$//;			# strip comment
 				s/^\s+//;			# strip leading white space
 				next unless $_;			# skip empty line
@@ -122,7 +122,7 @@ sub _init {
 				};
 			}
 
-			close(FILE);
+			close($filehandle);
 
 			$defaults->nameserver(@nameserver) if @nameserver && !$stop{nameserver}++;
 			$defaults->searchlist(@searchlist) if @searchlist && !$stop{search}++;
