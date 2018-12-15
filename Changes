@@ -1,6 +1,19 @@
 $Id$                       -*-text-*-
 
 
+**** 1.20 [unreleased]
+
+	Revise documentation examples to use AAAA instead of A records.
+
+	TSIG MAC representation changed to Base64 (align with BIND).
+
+Fix rt.cpan.org #127307
+
+	Provide a more informative exception report if application code
+	has no "use Net::DNS::SEC" declaration but nevertheless attempts
+	to invoke the DNSSEC sign or verify features.
+
+
 **** 1.19 Nov 14, 2018
 
 	Show structure of EDNS options using Perl-like syntax.

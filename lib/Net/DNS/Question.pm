@@ -14,7 +14,7 @@ Net::DNS::Question - DNS question record
 
     use Net::DNS::Question;
 
-    $question = new Net::DNS::Question('example.com', 'A', 'IN');
+    $question = new Net::DNS::Question('example.com', 'AAAA', 'IN');
 
 =head1 DESCRIPTION
 
@@ -38,11 +38,12 @@ use Net::DNS::DomainName;
 
 =head2 new
 
+    $question = new Net::DNS::Question('example.com', 'AAAA', 'IN');
     $question = new Net::DNS::Question('example.com', 'A', 'IN');
     $question = new Net::DNS::Question('example.com');
 
-    $question = new Net::DNS::Question('192.0.32.10', 'PTR', 'IN');
-    $question = new Net::DNS::Question('192.0.32.10');
+    $question = new Net::DNS::Question('2001::DB8::dead:beef', 'PTR', 'IN');
+    $question = new Net::DNS::Question('2001::DB8::dead:beef');
 
 Creates a question object from the domain, type, and class passed as
 arguments. One or both type and class arguments may be omitted and

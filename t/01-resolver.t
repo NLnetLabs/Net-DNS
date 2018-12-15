@@ -1,105 +1,40 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 27;
+use Test::More tests => 12;
 
 use Net::DNS::Resolver;
-
-local $ENV{'RES_NAMESERVERS'};
-local $ENV{'RES_SEARCHLIST'};
-local $ENV{'LOCALDOMAIN'};
-local $ENV{'RES_OPTIONS'};
-
-
-BEGIN {
-	eval {
-		open( TOUCH, '>.resolv.conf' ) || die $!;	# owned by effective UID
-		close(TOUCH);
-	};
-}
-
 
 my $resolver = Net::DNS::Resolver->new();
 my $class    = ref($resolver);
 
-for (@Net::DNS::Resolver::ISA) {
-	diag $_ unless /[:]UNIX$/;
-}
 
-ok( $resolver->isa('Net::DNS::Resolver'), 'new() created object' );
+{					## exercise error paths in _accept_reply()
+	my $query = new Net::DNS::Packet(qw(net-dns.org SOA IN));
+	my $reply = new Net::DNS::Packet(qw(net-dns.org SOA IN));
+	$reply->header->qr(1);
 
-ok( $resolver->print, '$resolver->print' );
+	ok( !$resolver->_accept_reply(undef), '_accept_reply()	no reply' );
 
-ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' );
+	ok( !$resolver->_accept_reply($query), '_accept_reply()	qr not set' );
 
+	ok( !$resolver->_accept_reply( $reply, $query ), '_accept_reply()	id mismatch' );
 
-{					## check class methods
-	$class->nameservers(qw(127.0.0.1 ::1));
-	ok( scalar( $class->nameservers ), '$class->nameservers' );
-	$class->searchlist(qw(sub1.example.com sub2.example.com));
-	ok( scalar( $class->searchlist ), '$class->searchlist' );
-	$class->domain('example.com');
-	ok( $class->domain,	   '$class->domain' );
-	ok( $class->srcport(1234), '$class->srcport' );
-	ok( $class->string(),	   '$class->string' );
+	ok( $resolver->_accept_reply( $reply, $reply ), '_accept_reply()	id match' );
+	ok( $resolver->_accept_reply( $reply, undef ),	'_accept_reply()	query absent/undefined' );
 }
 
 
-{					## check instance methods
-	ok( $resolver->domain('example.com'),	  '$resolver->domain' );
-	ok( $resolver->searchlist('example.com'), '$resolver->searchlist' );
-	$resolver->nameservers(qw(127.0.0.1 ::1));
-	ok( scalar( $resolver->nameservers() ), '$resolver->nameservers' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw(127.0.0.1 ::1 ::ffff:127.0.0.1 fe80::1234%1));
-	$resolver->force_v4(0);					# set by default if no IPv6
-	$resolver->prefer_v6(1);
-	my ($address) = $resolver->nameserver();
-	is( $address, '::1', '$resolver->prefer_v6(1)' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers(qw(127.0.0.1 ::1));
-	$resolver->force_v6(0);
-	$resolver->prefer_v4(1);
-	my ($address) = $resolver->nameserver();
-	is( $address, '127.0.0.1', '$resolver->prefer_v4(1)' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->force_v6(1);
-	ok( !$resolver->nameservers(qw(127.0.0.1)), '$resolver->force_v6(1)' );
-	like( $resolver->errorstring, '/IPv4.+disabled/', 'errorstring: IPv4 disabled' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new();
-	$resolver->force_v4(1);
-	ok( !$resolver->nameservers(qw(::)), '$resolver->force_v4(1)' );
-	like( $resolver->errorstring, '/IPv6.+disabled/', 'errorstring: IPv6 disabled' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new();
-	foreach my $ip (qw(127.0.0.1 ::1)) {
-		is( $resolver->srcaddr($ip), $ip, "\$resolver->srcaddr($ip)" );
-	}
+{					## exercise error path in _cname_addr()
+	is( scalar( Net::DNS::Resolver::Base::_cname_addr( undef, undef ) ), 0, '_cname_addr()  no reply packet' );
 }
 
 
 {					## exercise possibly unused socket code
 					## check for smoke and flames only
-	my $resolver = Net::DNS::Resolver->new( tcp_timeout => 1 );
+	$resolver->persistent_udp(1);
+	$resolver->persistent_tcp(1);
+	$resolver->tcp_timeout(1);
 	foreach my $ip (qw(127.0.0.1 ::1)) {
 		eval { $resolver->_create_udp_socket($ip) };
 		is( $@, '', "\$resolver->_create_udp_socket($ip)" );
@@ -108,15 +43,6 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 		eval { $resolver->_create_tcp_socket($ip) };
 		is( $@, '', "\$resolver->_create_tcp_socket($ip)" );
 	}
-}
-
-
-{					## check for exception on bogus AUTOLOAD method
-	eval { $resolver->bogus(); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unknown method:\t[$exception]" );
-
-	is( $resolver->DESTROY, undef, 'DESTROY() exists to defeat pre-5.18 AUTOLOAD' );
 }
 
 

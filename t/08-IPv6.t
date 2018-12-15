@@ -74,27 +74,20 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 91;
+plan tests => 83;
 
 NonFatalBegin();
 
 
 {
 	my $resolver = Net::DNS::Resolver->new( defnames => 1, ndots => 1 );
-	my @query = (qw(. SOA IN));
-
-	ok( $resolver->query( undef, qw(SOA IN) ), '$resolver->query( undef, ... ) defaults to "."' );
+	my @query = ( '', 'SOA' );				# name defaults to '.'
+	ok( $resolver->query(@query), '$resolver->query() with defnames' );
 
 	$resolver->defnames(0);
 	ok( $resolver->query(@query), '$resolver->query() without defnames' );
-}
 
-
-{
-	my $resolver = Net::DNS::Resolver->new( dnsrch => 1, ndots => 1 );
-	my @query = (qw(. SOA IN));
-
-	ok( $resolver->search( undef, qw(SOA IN) ), '$resolver->search( undef, ... ) defaults to "."' );
+	ok( $resolver->search(@query), '$resolver->search() with ndots = 1' );
 
 	$resolver->ndots(2);
 	ok( $resolver->search(@query), '$resolver->search() with ndots > 1' );
@@ -233,34 +226,6 @@ NonFatalBegin();
 }
 
 
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->srcaddr($NOIP);
-
-	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $udp, '$resolver->bgsend(...)	specify UDP local address' );
-
-	$resolver->usevc(1);
-
-	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $tcp, '$resolver->bgsend(...)	specify TCP local address' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
-	$resolver->srcport(2345);
-
-	my $udp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $udp, '$resolver->bgsend(...)	specify UDP source port' );
-
-	$resolver->usevc(1);
-
-	my $tcp = $resolver->bgsend(qw(net-dns.org SOA IN));
-	ok( $tcp, '$resolver->bgsend(...)	specify TCP source port' );
-}
-
-
 SKIP: {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
@@ -342,19 +307,6 @@ SKIP: {
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP, srcport => -1 );
-	$resolver->tcp_timeout(0);
-
-	my $query = new Net::DNS::Packet(qw(:: SOA IN));
-	ok( !$resolver->send($query),	'$resolver->send() no UDP socket' );
-	ok( !$resolver->bgsend($query), '$resolver->bgsend() no UDP socket' );
-	$resolver->usevc(1);
-	ok( !$resolver->send($query),	'$resolver->send() no TCP socket' );
-	ok( !$resolver->bgsend($query), '$resolver->bgsend() no TCP socket' );
-}
-
-
-{
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
 	my $mx = 'mx2.t.net-dns.org';
@@ -414,14 +366,6 @@ SKIP: {
 	my $axfr_start = $resolver->axfr_start('net-dns.org');
 	ok( $axfr_start, '$resolver->axfr_start()	(historical)' );
 	ok( eval { $resolver->axfr_next() }, '$resolver->axfr_next()	(historical)' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP, srcport => -1 );
-	my @nosocket = $resolver->axfr();
-	my $nosocket = $resolver->errorstring;
-	ok( !scalar(@nosocket), "no AXFR socket\t[$nosocket]" );
 }
 
 
@@ -488,6 +432,24 @@ SKIP: {
 }
 
 
+{
+	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
+	$resolver->srcport(-1);
+	$resolver->tcp_timeout(0);
+
+	my $query = new Net::DNS::Packet(qw(:: SOA IN));
+	ok( !$resolver->send($query),	'$resolver->send() no UDP socket' );
+	ok( !$resolver->bgsend($query), '$resolver->bgsend() no UDP socket' );
+	$resolver->usevc(1);
+	ok( !$resolver->send($query),	'$resolver->send() no TCP socket' );
+	ok( !$resolver->bgsend($query), '$resolver->bgsend() no TCP socket' );
+
+	my @nosocket = $resolver->axfr();
+	my $nosocket = $resolver->errorstring;
+	ok( !scalar(@nosocket), "no AXFR socket\t[$nosocket]" );
+}
+
+
 {					## exercise exceptions in _axfr_next()
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
@@ -502,7 +464,7 @@ SKIP: {
 	}
 
 	{
-		my $packet = $resolver->_make_query_packet(qw(net-dns.org SOA));
+		my $packet = new Net::DNS::Packet(qw(net-dns.org SOA));
 		my $socket = $resolver->_bgsend_tcp( $packet, $packet->data );
 		my $select = new IO::Select($socket);
 		while ( $resolver->bgbusy($socket) ) { sleep 1 }
@@ -529,26 +491,11 @@ SKIP: {
 
 {					## exercise error paths in _send_???()
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP, retry => 1 );
-	my $packet = $resolver->_make_query_packet(qw(net-dns.org SOA));
+	my $packet = new Net::DNS::Packet(qw(net-dns.org SOA));
 
-	my $mismatch = $resolver->_make_query_packet(qw(net-dns.org SOA));
+	my $mismatch = new Net::DNS::Packet(qw(net-dns.org SOA));
 	ok( !$resolver->_send_tcp( $mismatch, $packet->data ), '_send_tcp()	id mismatch' );
 	ok( !$resolver->_send_udp( $mismatch, $packet->data ), '_send_udp()	id mismatch' );
-}
-
-
-{					## exercise error paths in _accept_reply()
-	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
-
-	my $query = new Net::DNS::Packet(qw(net-dns.org SOA IN));
-	my $reply = new Net::DNS::Packet(qw(net-dns.org SOA IN));
-	$reply->header->qr(1);
-
-	ok( !$resolver->_accept_reply(undef), '_accept_reply()	no reply' );
-
-	ok( !$resolver->_accept_reply($query), '_accept_reply()	qr not set' );
-
-	ok( !$resolver->_accept_reply( $reply, $query ), '_accept_reply()	id mismatch' );
 }
 
 
@@ -567,11 +514,6 @@ SKIP: {
 	ok( $resolver->bgread($socket), '_bgbusy()	SpamAssassin workaround' );
 
 	ok( !$resolver->bgread( ref($socket)->new ), '_bgread()	timeout' );
-}
-
-
-{					## exercise error path in _cname_addr()
-	is( scalar( Net::DNS::Resolver::Base::_cname_addr( undef, undef ) ), 0, '_cname_addr()	no reply packet' );
 }
 
 

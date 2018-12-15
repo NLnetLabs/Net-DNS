@@ -112,7 +112,7 @@ sub send {
 		return $packet if $packet->header->aa && grep $_->name eq $original->qname, @answer;
 
 		my @auth = grep $_->type eq 'NS', $packet->answer, $packet->authority;
-		my %auth = map { lc $_->nsdname => lc $_->name } @auth;
+		my %auth = map( ( lc $_->nsdname => lc $_->name ), @auth );
 		my %glue;
 		my @glue = grep $_->can('address'), $packet->additional;
 		foreach ( grep $auth{lc $_->name}, @glue ) {
@@ -135,23 +135,19 @@ sub send {
 	$res = bless {%$res}, qw(Net::DNS::Resolver) if $nslist eq $root;
 	$res->udppacketsize(1024);
 	$res->recurse(0);
+	$res->retry(0);
 
 	splice @$nslist, 0, 0, splice( @$nslist, int( rand scalar @$nslist ) );	   # cut deck
 
 	foreach my $ns (@$nslist) {
 		if ( ref $ns ) {
-			my @ip = map @$_, grep ref($_), @$nslist;
-			$res->nameservers(@ip);			# cached IP list
+			$res->nameservers(@$ns);		# cached IP list
 		} else {
 			$self->_diag("find missing glue for $ns");
-			my $name = $ns;				# suppress deep recursion by
-			$ns = [];				# inserting placeholder in cache
-			$ns = [$res->nameservers($name)];	# substitute IP list in situ
+			$ns = [$res->nameservers($ns)];		# substitute IP list in situ
 		}
 
-		my $reply = $res->send($query);
-		next unless $reply;
-
+		my $reply = $res->send($query) || next;
 		$self->_callback($reply);
 		return $reply;
 	}

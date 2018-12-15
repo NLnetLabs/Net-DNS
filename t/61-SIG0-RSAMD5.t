@@ -4,16 +4,16 @@
 use strict;
 use Test::More;
 
-my @prerequisite = qw(
-		MIME::Base64
-		Time::Local
-		Net::DNS::RR::SIG
-		Net::DNS::SEC
-		);
+my %prerequisite = (
+	'MIME::Base64'	=> 2.13,
+	'Net::DNS::SEC' => 1.01,
+	'Time::Local'	=> 1.19,
+	);
 
-foreach my $package (@prerequisite) {
-	next if eval "require $package";
-	plan skip_all => "$package not installed";
+foreach my $package ( sort keys %prerequisite ) {
+	my @revision = grep $_, $prerequisite{$package};
+	next if eval "use $package @revision; 1;";
+	plan skip_all => "missing prerequisite $package @revision";
 	exit;
 }
 

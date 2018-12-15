@@ -18,7 +18,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 68;
+plan tests => 65;
 
 
 sub mysign {
@@ -104,14 +104,10 @@ my $hash = {};
 
 
 {
-	my $correct = '123456789ABCDEF';
-	my $corrupt = '123456789XBCDEF';
+	my $mac = 'kpRyejY4uxwT9I74FYv8nQ==';
 	foreach my $method (qw(mac request_mac prior_mac)) {
-		my $rr = new Net::DNS::RR( type => 'TSIG', $method => $correct );
-		ok( $rr->$method($correct), "correct hex $method" );
-		eval { $rr->$method($corrupt); };
-		my $exception = $1 if $@ =~ /^(.+)\n/;
-		ok( $exception ||= '', "corrupt hex $method\t[$exception]" );
+		my $rr = new Net::DNS::RR( type => 'TSIG', $method => $mac );
+		is( $rr->$method(), $mac, "correct $method" );
 	}
 }
 
