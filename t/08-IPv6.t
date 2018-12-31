@@ -74,35 +74,19 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 83;
+plan tests => 72;
 
 NonFatalBegin();
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( defnames => 1, ndots => 1 );
-	my @query = ( '', 'SOA' );				# name defaults to '.'
-	ok( $resolver->query(@query), '$resolver->query() with defnames' );
-
-	$resolver->defnames(0);
-	ok( $resolver->query(@query), '$resolver->query() without defnames' );
-
-	ok( $resolver->search(@query), '$resolver->search() with ndots = 1' );
-
-	$resolver->ndots(2);
-	ok( $resolver->search(@query), '$resolver->search() with ndots > 1' );
-
-	$resolver->dnsrch(0);
-	ok( $resolver->search(@query), '$resolver->search() without dnsrch' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $IP, dnsrch => 1, ndots => 2 );
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP, defnames => 1, dnsrch => 1, ndots => 2 );
 	$resolver->searchlist(qw(nx.net-dns.org net-dns.org));
 
-	ok( $resolver->search('ns'),	      '$resolver->search( simple name, ... )' );
-	ok( $resolver->search('net-dns.org'), '$resolver->search( dotted name, ... )' );
+	ok( !$resolver->query('ns'),		'$resolver->query( simple name, ... )' );
+	ok( $resolver->query('ns.net-dns.org'), '$resolver->query( dotted name, ... )' );
+	ok( $resolver->search('ns'),		'$resolver->search( simple name, ... )' );
+	ok( $resolver->search('net-dns.org'),	'$resolver->search( dotted name, ... )' );
 }
 
 
@@ -187,8 +171,7 @@ NonFatalBegin();
 	$resolver->igntc(0);
 
 	my $handle = $resolver->bgsend(qw(net-dns.org DNSKEY IN));
-	$resolver->nameserver($NOIP);
-	$resolver->srcport(-1);
+	$resolver->nameserver();				# no nameservers
 	my $packet = $resolver->bgread($handle);
 	ok( $packet && $packet->header->tc, '$resolver->bgread($udp)	background TCP fail' );
 }
@@ -296,17 +279,6 @@ SKIP: {
 
 
 {
-	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
-	$resolver->retrans(0);
-	$resolver->retry(0);
-
-	my @query = (qw(:: SOA IN));
-	ok( !$resolver->query(@query),	'$resolver->query() failure' );
-	ok( !$resolver->search(@query), '$resolver->search() failure' );
-}
-
-
-{
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 
 	my $mx = 'mx2.t.net-dns.org';
@@ -407,13 +379,6 @@ SKIP: {
 
 {
 	my $resolver = Net::DNS::Resolver->new();
-	$resolver->nameservers();
-	ok( !$resolver->send(qw(. NS)), 'no nameservers' );
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new();
 	$resolver->nameserver('cname.t.net-dns.org');
 	ok( scalar( $resolver->nameservers ), 'resolve nameserver cname' );
 }
@@ -429,24 +394,6 @@ SKIP: {
 	my ($warning) = split /\n/, "@warnings\n";
 	ok( $warning, "unresolved nameserver warning\t[$warning]" )
 			|| diag "\tnon-existent '$ns' resolved: @ip";
-}
-
-
-{
-	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
-	$resolver->srcport(-1);
-	$resolver->tcp_timeout(0);
-
-	my $query = new Net::DNS::Packet(qw(:: SOA IN));
-	ok( !$resolver->send($query),	'$resolver->send() no UDP socket' );
-	ok( !$resolver->bgsend($query), '$resolver->bgsend() no UDP socket' );
-	$resolver->usevc(1);
-	ok( !$resolver->send($query),	'$resolver->send() no TCP socket' );
-	ok( !$resolver->bgsend($query), '$resolver->bgsend() no TCP socket' );
-
-	my @nosocket = $resolver->axfr();
-	my $nosocket = $resolver->errorstring;
-	ok( !scalar(@nosocket), "no AXFR socket\t[$nosocket]" );
 }
 
 

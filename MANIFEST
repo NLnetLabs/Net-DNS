@@ -115,6 +115,7 @@ t/02-IDN.t
 t/02-mailbox.t
 t/02-text.t
 t/03-header.t
+t/03-parameters.t
 t/03-question.t
 t/03-rr.t
 t/04-packet.t
