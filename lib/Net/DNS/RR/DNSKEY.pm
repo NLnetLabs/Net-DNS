@@ -63,7 +63,7 @@ use constant BASE64 => defined eval 'require MIME::Base64';
 		$key =~ s/[\W_]//g;				# strip non-alphanumerics
 		my $val = $algbyname{$key};
 		return $val if defined $val;
-		return $key =~ /^\d/ ? $arg : croak "unknown algorithm $arg";
+		return $key =~ /^\d/ ? $arg : croak qq[unknown algorithm "$arg"];
 	}
 
 	sub _algbyval {

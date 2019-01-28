@@ -107,8 +107,8 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 
 {					## check for exception on bogus AUTOLOAD method
 	eval { $resolver->bogus(); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unknown method:\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unknown method:\t[$exception]" );
 
 	is( $resolver->DESTROY, undef, 'DESTROY() exists to defeat pre-5.18 AUTOLOAD' );
 }

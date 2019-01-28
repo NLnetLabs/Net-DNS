@@ -58,8 +58,8 @@ my $config = File::Spec->catfile(qw(t custom.txt));		# .txt to run on Windows
 
 {								# file presumed not to exist
 	eval { new $class( config_file => 'nonexist.txt' ); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "new( config_file => ?\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "new( config_file => ?\t[$exception]" );
 }
 
 

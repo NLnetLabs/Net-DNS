@@ -123,16 +123,13 @@ sub send {
 		foreach my $zone ( keys %zone ) {
 			my @nsname = grep $auth{$_} eq $zone, keys %auth;
 			my @list = map $glue{$_} ? $glue{$_} : $_, @nsname;
-			@{$res->{persistent}->{$zone}} = @list;
-			return $packet if length($zone) > length($domain);
 			$self->_diag("cache nameservers for $zone");
-			@$nslist = @list;
+			$nslist = $res->{persistent}->{$zone} = \@list;
 		}
 	}
 
 	my $query = new Net::DNS::Packet();
 	$query->{question} = [$original];
-	$res = bless {%$res}, qw(Net::DNS::Resolver) if $nslist eq $root;
 	$res->udppacketsize(1024);
 	$res->recurse(0);
 	$res->retry(0);

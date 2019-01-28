@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2018-12-12)
+##	(last updated 2019-01-17)
 ##
 ################################################
 
@@ -124,7 +124,7 @@ my @typebyname = (
 	AXFR	   => 252,					# RFC1035 RFC5936
 	MAILB	   => 253,					# RFC1035
 	MAILA	   => 254,					# RFC1035
-	ANY	   => 255,					# RFC1035 RFC6895 RFC-ietf-dnsop-refuse-any-07
+	ANY	   => 255,					# RFC1035 RFC6895 RFC8482
 	URI	   => 256,					# RFC7553
 	CAA	   => 257,					# RFC6844
 	AVC	   => 258,					#

@@ -44,10 +44,10 @@ use constant DEBUG => 0;
 
 use constant UTIL => defined eval 'use Scalar::Util 1.25; 1;';
 
-# IMPORTANT: Distros MUST NOT create dependencies on Net::DNS::SEC	(Prohibited in many territories)
+# IMPORTANT: Distros MUST NOT create dependencies on Net::DNS::SEC	(strong crypto prohibited in many territories)
 use constant EXISTS => join '', qw(r e q u i r e);		# Defeat static analysers and grep
 use constant DNSSEC => defined( eval join ' ', EXISTS, 'Net::DNS::SEC::Private' );
-use constant ACTIVE => DNSSEC && $INC{'Net/DNS/SEC.pm'};	# Discover how we got here
+use constant ACTIVE => DNSSEC && $INC{'Net/DNS/SEC.pm'};	# Discover how we got here, without loading libcrypto
 
 my ($RSA) = grep ACTIVE && defined( eval join ' ', EXISTS, $_ ), 'Net::DNS::SEC::RSA';
 my ($DSA) = grep ACTIVE && defined( eval join ' ', EXISTS, $_ ), 'Net::DNS::SEC::DSA';
@@ -316,8 +316,6 @@ sub create {
 		$self->{sigexpiration} = $self->{siginception} + $self->{sigval}
 				unless $self->{sigexpiration};
 
-		croak 'No "use Net::DNS::SEC" declaration in application code' unless ACTIVE;
-
 		$self->_CreateSig( $self->_CreateSigData($data), $private ) if $data;
 
 		$self->{private} = $private unless $data;	# mark packet for SIG0 generation
@@ -343,8 +341,8 @@ sub verify {
 
 		if ( my $isa = ref($dataref) ) {
 			print '$dataref argument is ', $isa, "\n" if DEBUG;
-			croak '$dataref can not be ', $isa unless $isa =~ /^Net::DNS::/;
-			croak '$dataref can not be ', $isa unless $dataref->isa('Net::DNS::Packet');
+			croak '$dataref must be scalar or a Net::DNS::Packet'
+					unless $isa =~ /Net::DNS/ && $dataref->isa('Net::DNS::Packet');
 		}
 
 		print '$keyref argument is of class ', ref($keyref), "\n" if DEBUG;
@@ -399,8 +397,6 @@ sub verify {
 
 		# The data that is to be verified
 		my $sigdata = $self->_CreateSigData($dataref);
-
-		croak 'No "use Net::DNS::SEC" declaration in application code' unless ACTIVE;
 
 		my $verified = $self->_VerifySig( $sigdata, $keyref ) || return 0;
 
@@ -532,8 +528,9 @@ sub _CreateSig {
 		my $class     = $DNSSEC_sign{$algorithm};
 
 		eval {
-			die "algorithm $algorithm not supported" unless $class;
-			$self->sigbin( $class->sign(@_) );
+			return $self->sigbin( $class->sign(@_) ) if $class;
+			die qq[algorithm $algorithm not supported\n] if ACTIVE;
+			die qq[No "use Net::DNS::SEC" declaration in application code\n];
 		} || croak "${@}signature generation failed";
 	}
 }
@@ -547,8 +544,9 @@ sub _VerifySig {
 		my $class     = $DNSSEC_verify{$algorithm};
 
 		my $retval = eval {
-			die "algorithm $algorithm not supported" unless $class;
-			$class->verify( @_, $self->sigbin );
+			return $class->verify( @_, $self->sigbin ) if $class;
+			die qq[algorithm $algorithm not supported\n] if ACTIVE;
+			die qq[No "use Net::DNS::SEC" declaration in application code\n];
 		};
 
 		unless ($retval) {
@@ -704,8 +702,8 @@ that comes with the ISC BIND distribution.
 The optional remaining arguments consist of ( name => value ) pairs
 as follows:
 
-	sigin  => 20181201010101,	# signature inception
-	sigex  => 20181201011101,	# signature expiration
+	sigin  => 20191201010101,	# signature inception
+	sigex  => 20191201011101,	# signature expiration
 	sigval => 10,			# validity window (minutes)
 
 The sigin and sigex values may be specified as Perl time values or as

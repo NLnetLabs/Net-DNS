@@ -13,8 +13,6 @@ use Net::DNS::Resolver::Recurse;
 
 my @hints = new Net::DNS::Resolver()->_hints;
 
-my @NOIP = qw(:: 0.0.0.0);
-
 
 exit( plan skip_all => 'Online tests disabled.' ) if -e 't/online.disabled';
 exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
@@ -49,7 +47,7 @@ eval {
 } || exit( plan skip_all => 'Unable to reach global root nameservers' );
 
 
-plan tests => 13;
+plan tests => 10;
 
 NonFatalBegin();
 
@@ -61,8 +59,6 @@ NonFatalBegin();
 
 	my $reply = $res->query_dorecursion( 'www.net-dns.org', 'A' );
 	is( ref($reply), 'Net::DNS::Packet', 'query returned a packet' );
-	skip( 'no response to query', 1 ) unless $reply;
-	ok( scalar( $reply->answer ), 'answer section has RRs' );
 }
 
 
@@ -111,22 +107,6 @@ SKIP: {
 
 	my @ar = grep $_->can('address'), $reply->additional;
 	ok( scalar(@ar), "address RRs in response from $from" );
-}
-
-
-{
-	my $res = Net::DNS::Resolver::Recurse->new( nameserver => [@NOIP], srcport => -1 );
-
-	ok( !$res->send( 'www.net-dns.org', 'A' ), 'fail if no reachable server' );
-}
-
-
-{
-	Net::DNS::Resolver::Recurse->retry(0);
-	my $res = Net::DNS::Resolver::Recurse->new();
-	$res->hints(@NOIP);
-
-	ok( !$res->send( 'www.net-dns.org', 'A' ), 'fail if no usable hint' );
 }
 
 

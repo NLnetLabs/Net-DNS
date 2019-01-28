@@ -1,9 +1,12 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 19;
+use Test::More tests => 22;
 
 use Net::DNS::Resolver;
+use Net::DNS::Resolver::Recurse;
+
+my @NOIP = qw(:: 0.0.0.0);
 
 {					## sabotage socket code
 
@@ -56,9 +59,8 @@ is( scalar( Net::DNS::Resolver::Base::_cname_addr( undef, undef ) ), 0, '_cname_
 $resolver->nameservers();		## exercise UDP failure path
 ok( !$resolver->send('.'), 'no UDP nameservers' );
 
-my @NOIP = qw(:: 0.0.0.0);
 $resolver->nameservers(@NOIP);
-ok( !$resolver->send('.'),   '$resolver->send   UDP socket error' );
+ok( !$resolver->send('.'),   '$resolver->send	UDP socket error' );
 ok( !$resolver->bgsend('.'), '$resolver->bgsend UDP socket error' );
 
 
@@ -70,6 +72,21 @@ $resolver->nameservers(@NOIP);
 ok( !$resolver->send('.'),	  '$resolver->send   TCP socket error' );
 ok( !$resolver->bgsend('.'),	  '$resolver->bgsend TCP socket error' );
 ok( !scalar( $resolver->axfr() ), '$resolver->axfr   TCP socket error' );
+
+
+my $res = Net::DNS::Resolver::Recurse->new();
+$res->hints(@NOIP);
+ok( !$res->send( 'www.net-dns.org', 'A' ), 'fail if no usable hint' );
+
+$res->nameservers(@NOIP);
+ok( !$res->send( 'www.net-dns.org', 'A' ), 'fail if no reachable server' );
+
+
+my $warning;
+local $SIG{__WARN__} = sub { ($warning) = split /\n/, "@_\n" };
+
+$resolver->nameserver('bogus.example.com.');
+ok( $warning, "unresolved nameserver warning\t[$warning]" );
 
 
 eval {					## exercise warning for make_query_packet()

@@ -71,7 +71,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 72;
+plan tests => 71;
 
 NonFatalBegin();
 
@@ -381,19 +381,6 @@ SKIP: {
 }
 
 
-{
-	my $resolver = Net::DNS::Resolver->new();
-	my @warnings;
-	local $SIG{__WARN__} = sub { push( @warnings, "@_" ); };
-	my $ns = 'bogus.example.com.';
-	my @ip = $resolver->nameserver($ns);
-
-	my ($warning) = split /\n/, "@warnings\n";
-	ok( $warning, "unresolved nameserver warning\t[$warning]" )
-			|| diag "\tnon-existent '$ns' resolved: @ip";
-}
-
-
 {					## exercise exceptions in _axfr_next()
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
@@ -403,8 +390,8 @@ SKIP: {
 	{
 		my $select = new IO::Select();
 		eval { $resolver->_axfr_next($select); };
-		my $exception = $1 if $@ =~ /^(.+)\n/;
-		ok( $exception ||= '', "TCP time out\t[$exception]" );
+		my ($exception) = split /\n/, "$@\n";
+		ok( $exception, "TCP time out\t[$exception]" );
 	}
 
 	{
@@ -415,8 +402,8 @@ SKIP: {
 		my $discarded = '';	## [size][id][status]	[qdcount]...
 		$socket->recv( $discarded, 6 ) if $socket;
 		eval { $resolver->_axfr_next($select); };
-		my $exception = $1 if $@ =~ /^(.+)\n/;
-		ok( $exception ||= '', "corrupt data\t[$exception]" );
+		my ($exception) = split /\n/, "$@\n";
+		ok( $exception, "corrupt data\t[$exception]" );
 	}
 
 SKIP: {
@@ -427,8 +414,8 @@ SKIP: {
 
 		my $select = new IO::Select($socket);
 		eval { $resolver->_axfr_next( $select, $tsigrr ); };
-		my $exception = $1 if $@ =~ /^(.+)\n/;
-		ok( $exception ||= '', "verify fail\t[$exception]" );
+		my ($exception) = split /\n/, "$@\n";
+		ok( $exception, "verify fail\t[$exception]" );
 	}
 }
 

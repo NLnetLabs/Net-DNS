@@ -77,7 +77,7 @@ my %certtype = (
 		$key =~ s/[\W_]//g;				# strip non-alphanumerics
 		my $val = $algbyname{$key};
 		return $val if defined $val;
-		return $key =~ /^\d/ ? $arg : croak "unknown algorithm $arg";
+		return $key =~ /^\d/ ? $arg : croak qq[unknown algorithm "$arg"];
 	}
 
 	sub _algbyval {
@@ -130,7 +130,7 @@ sub certtype {
 	return $self->{certtype} = $certtype unless $certtype =~ /\D/;
 
 	my $typenum = $certtype{$certtype};
-	$typenum || croak "unknown certtype $certtype";
+	$typenum || croak qq[unknown certtype "$certtype"];
 	$self->{certtype} = $typenum;
 }
 
