@@ -68,11 +68,11 @@ NonFatalBegin();
 
 	my $count = 0;
 
-	$res->recursion_callback( sub { $count++ if ref(shift) } );
+	$res->recursion_callback( sub { $count++ } );
 
-	$res->query_dorecursion( 'a.t.net-dns.org', 'A' );
+	$res->send( 'a.t.net-dns.org', 'A' );
 
-	ok( $count >= 3, "Lookup took $count queries which is at least 3" );
+	ok( $count >= 3, "Lookup took $count queries" );
 }
 
 
@@ -81,16 +81,16 @@ NonFatalBegin();
 
 	my $count = 0;
 
-	$res->recursion_callback( sub { $count++ if ref(shift) } );
+	$res->recursion_callback( sub { $count++ } );
 
-	$res->query_dorecursion( '2a04:b900:0:0:8:0:0:60', 'PTR' );
+	$res->send( '2a04:b900:0:0:8:0:0:60', 'PTR' );
 
 	ok( $count >= 3, "Reverse lookup took $count queries" );
 }
 
 
 SKIP: {
-	my $res	  = Net::DNS::Resolver::Recurse->new();
+	my $res = Net::DNS::Resolver::Recurse->new();
 	is( scalar( $res->hints() ), 0, 'hints() initially empty' );
 	$res->hints(@hints);
 	is( scalar( $res->hints ), scalar(@hints), 'hints() set' );

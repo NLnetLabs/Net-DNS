@@ -13,7 +13,7 @@ my %prerequisite = (
 foreach my $package ( sort keys %prerequisite ) {
 	my @revision = grep $_, $prerequisite{$package};
 	next if eval "use $package @revision; 1;";
-	plan skip_all => "missing prerequisite $package @revision";
+	plan skip_all => "$package not installed";
 	exit;
 }
 

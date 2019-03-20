@@ -438,13 +438,14 @@ SKIP: {
 	my $packet = $resolver->_make_query_packet(qw(net-dns.org SOA));
 	my $second = $resolver->_make_query_packet(qw(net-dns.org SOA));
 	my $handle = $resolver->_bgsend_udp( $packet, $second->data );
-	ok( !$resolver->bgread($handle), '_bgbusy()	no reply' );
+	ok( !$resolver->bgread($handle), '_bgread()	no reply' );
 
-	my $socket = $resolver->bgsend($packet);
+	ok( !$resolver->bgread( ref($handle)->new ), '_bgread()	timeout' );
+
+	my $socket = $resolver->_bgsend_udp( $packet, $second->data );
 	delete ${*$socket}{net_dns_bg};
-	ok( $resolver->bgread($socket), '_bgbusy()	SpamAssassin workaround' );
-
-	ok( !$resolver->bgread( ref($socket)->new ), '_bgread()	timeout' );
+	while ( $resolver->bgbusy($socket) ) { sleep 1 }
+	ok( !$resolver->bgbusy($socket), 'bgbusy()	SpamAssassin workaround' );
 }
 
 
