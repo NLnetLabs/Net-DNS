@@ -94,6 +94,7 @@ lib/Net/DNS/RR/TSIG.pm
 lib/Net/DNS/RR/TXT.pm
 lib/Net/DNS/RR/URI.pm
 lib/Net/DNS/RR/X25.pm
+lib/Net/DNS/RR/ZONEMD.pm
 lib/Net/DNS/Text.pm
 lib/Net/DNS/Update.pm
 lib/Net/DNS/ZoneFile.pm

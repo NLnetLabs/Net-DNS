@@ -648,7 +648,8 @@ sub _bgread {
 	my ( $expire, $query, $read ) = @$appendix;
 	return shift(@$read) if ref($read);
 
-	unless ( IO::Select->new($handle)->can_read(0) ) {
+	my $select = IO::Select->new($handle);
+	unless ( $select->can_read(0) ) {
 		$self->errorstring('timed out');
 		return;
 	}
@@ -807,22 +808,18 @@ sub _axfr_next {
 sub _read_tcp {
 	my $socket = shift;
 
-	my ( $s1, $s2 );
+	my ( $buffer, $s1, $s2 );
+	$socket->blocking(1);
 	$socket->recv( $s1, 2 );				# one lump
 	$socket->recv( $s2, 2 - length $s1 );			# or two?
 	my $size = unpack 'n', pack( 'a*a*@2', $s1, $s2 );
 
-	my $buffer = '';
-	while ( ( my $read = length $buffer ) < $size ) {
+	$socket->recv( $buffer, $size );			# initial read
 
-		# During some of my tests recv() returned undef even
-		# though there was no error.  Checking the amount
-		# of data read appears to work around that problem.
-
-		my $recv_buf;
-		$socket->recv( $recv_buf, $size - $read );
-
-		$buffer .= $recv_buf || last;
+	while ( length($buffer) < $size ) {
+		my $fragment;
+		$socket->recv( $fragment, $size - length($buffer) );
+		$buffer .= $fragment || last;
 	}
 	return $buffer;
 }

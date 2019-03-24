@@ -110,6 +110,7 @@ sub _recurse {
 	$self->_diag("using cached nameservers for $apex");
 	my $nslist = $self->{persistent}->{$apex};
 	$self->nameservers(@$nslist);
+	$query->header->id(undef);
 	my $reply = $self->SUPER::send($query);
 	$self->_callback($reply);
 	return unless $reply;
