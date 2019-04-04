@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2019-03-22)
+##	(last updated 2019-03-26)
 ##
 ################################################
 
@@ -197,6 +197,9 @@ my @ednsoptionbyname = (
 	PADDING		=> 12,					# RFC7830
 	CHAIN		=> 13,					# RFC7901
 	'KEY-TAG'	=> 14,					# RFC8145
+	'CLIENT-TAG'	=> 16,					# draft-bellis-dnsop-edns-tags
+	'SERVER-TAG'	=> 17,					# draft-bellis-dnsop-edns-tags
+
 	DEVICEID	=> 26946,				# https://docs.umbrella.com/developer/networkdevices-api/identifying-dns-traffic2
 	);
 our %ednsoptionbyval = reverse @ednsoptionbyname;

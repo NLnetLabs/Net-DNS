@@ -387,6 +387,7 @@ sub parse {
 		}
 
 		s/\$/$instant/eg;				# interpolate $
+		s/\\036/\$/g;					# reinstate escaped $
 		return $_;
 	}
 

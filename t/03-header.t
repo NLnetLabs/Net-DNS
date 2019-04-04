@@ -75,19 +75,13 @@ is( $header->adcount, $header->arcount, 'adcount value matches arcount' );
 
 foreach my $method (qw(qdcount ancount nscount arcount)) {
 	local $Net::DNS::Header::warned;
-	eval {
-		local $SIG{__WARN__} = sub { die @_ };
-		$header->$method(1);
-	};
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "$method read-only:\t[$exception]" );
+	my @warning;
+	local $SIG{__WARN__} = sub { ($warning[0]) = split /\n/, "@_\n"; };
+	$header->$method(1);
+	ok( $_, "$method method:\t[$_]" ) for shift(@warning);
 
-	eval {
-		local $SIG{__WARN__} = sub { die @_ };
-		$header->$method(1);
-	};
-	my $repeated = $1 if $@ =~ /^(.+)\n/;
-	ok( !$repeated, "$method exception not repeated" );
+	$header->$method(1);
+	ok( !$_, "$method method warning not repeated: [$_]" ) for shift(@warning);
 }
 
 

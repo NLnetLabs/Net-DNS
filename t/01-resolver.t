@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 22;
+use Test::More tests => 28;
 
 use Net::DNS::Resolver;
 use Net::DNS::Resolver::Recurse;
@@ -19,6 +19,8 @@ my @NOIP = qw(:: 0.0.0.0);
 
 
 my $resolver = Net::DNS::Resolver->new( retrans => 0, retry => 0 );
+
+my $recursive = Net::DNS::Resolver::Recurse->new( retrans => 0, retry => 0 );
 
 
 $resolver->defnames(0);			## exercise query()
@@ -74,30 +76,37 @@ ok( !$resolver->bgsend('.'),	  '$resolver->bgsend TCP socket error' );
 ok( !scalar( $resolver->axfr() ), '$resolver->axfr   TCP socket error' );
 
 
-my $res = Net::DNS::Resolver::Recurse->new();
-$res->hints(@NOIP);
-ok( !$res->send( 'www.net-dns.org', 'A' ), 'fail if no usable hint' );
+$recursive->hints(@NOIP);
+ok( !$recursive->send( 'www.net-dns.org', 'A' ), 'fail if no usable hint' );
 
-$res->nameservers(@NOIP);
-ok( !$res->send( 'www.net-dns.org', 'A' ), 'fail if no reachable server' );
+$recursive->nameservers(@NOIP);
+ok( !$recursive->send( 'www.net-dns.org', 'A' ), 'fail if no reachable server' );
 
 
-my $warning;
-local $SIG{__WARN__} = sub { ($warning) = split /\n/, "@_\n" };
+my @warning;
+local $SIG{__WARN__} = sub { ($warning[0]) = split /\n/, "@_\n"; };
 
 $resolver->nameserver('bogus.example.com.');
-ok( $warning, "unresolved nameserver warning\t[$warning]" );
+ok( $_, "unresolved nameserver warning\t[$_]" ) for shift(@warning);
 
 
-eval {					## exercise warning for make_query_packet()
-	local *STDERR;
-	my $filename = '01-resolver.tmp';
-	open( STDERR, ">$filename" ) || die "Could not open $filename for writing";
-	$resolver->make_query_packet('example.com');		# carp
-	$resolver->make_query_packet('example.com');		# silent
-	close(STDERR);
-	unlink($filename);
-};
+$resolver->make_query_packet('example.com');
+ok( $_, "deprecated make_query_packet()\t[$_]" ) for shift(@warning);
+
+$resolver->bgisready(undef);
+ok( !$_, "deprecated bgisready() method\t[$_]" ) for shift(@warning);
+
+$resolver->axfr_start('net-dns.org');
+ok( !$_, "deprecated axfr_start()\t[$_]" ) for shift(@warning);
+
+eval{ $resolver->axfr_next() };
+ok( !$_, "deprecated axfr_next()\t[$_]" ) for shift(@warning);
+
+$recursive->query_dorecursion( 'www.net-dns.org', 'A' );
+ok( !$_, "deprecated query_dorecursion()\t[$_]" ) for shift(@warning);
+
+$recursive->recursion_callback( sub {} );
+ok( !$_, "deprecated recursion_callback()\t[$_]" ) for shift(@warning);
 
 
 exit;

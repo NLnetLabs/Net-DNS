@@ -9,12 +9,10 @@ contrib/README
 demo/axfr
 demo/check_soa
 demo/check_zone
-demo/example_recurse.pl
 demo/mresolv
 demo/mx
 demo/perldig
 demo/README
-demo/trace_dns.pl
 lib/Net/DNS.pm
 lib/Net/DNS/Domain.pm
 lib/Net/DNS/DomainName.pm
@@ -176,6 +174,7 @@ t/05-TSIG.t
 t/05-TXT.t
 t/05-URI.t
 t/05-X25.t
+t/05-ZONEMD.t
 t/06-packet-unique-push.t
 t/06-update.t
 t/07-rrsort.t
@@ -184,7 +183,9 @@ t/08-IPv4.t
 t/08-IPv6.t
 t/08-recurse.t
 t/21-NSEC-typelist.t
+t/22-NSEC-match.t
 t/23-NSEC-covered.t
+t/24-NSEC-encloser.t
 t/31-NSEC3-base32.t
 t/32-NSEC3-typelist.t
 t/33-NSEC3-hash.t

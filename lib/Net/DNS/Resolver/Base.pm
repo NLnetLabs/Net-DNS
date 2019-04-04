@@ -96,6 +96,18 @@ use constant PACKETSZ => 512;
 }
 
 
+my $warned;
+
+sub _deprecated {
+	carp join ' ', grep !ref($_), 'deprecated method;', @_ unless $warned++;
+}
+
+
+sub _untaint {
+	return TAINT ? map ref($_) ? [_untaint(@$_)] : do { /^(.*)$/; $1 }, @_ : @_;
+}
+
+
 # These are the attributes that the user may specify in the new() constructor.
 my %public_attr = (
 	map( ( $_ => $_ ), keys %{&_defaults}, qw(domain nameserver srcaddr) ),
@@ -154,11 +166,6 @@ sub _option {
 	my $attribute = $res_option{lc $name} || return;
 	push @value, 1 unless scalar @value;
 	$self->$attribute(@value);
-}
-
-
-sub _untaint {
-	return TAINT ? map ref($_) ? [_untaint(@$_)] : do { /^(.*)$/; $1 }, @_ : @_;
 }
 
 
@@ -565,6 +572,7 @@ sub _bgsend_tcp {
 		$socket->blocking(0);
 		$socket->send($tcp_packet);
 		$self->errorstring($!);
+		$socket->blocking(1);
 
 		my $expire = time() + $self->{tcp_timeout};
 		${*$socket}{net_dns_bg} = [$expire, $packet];
@@ -628,7 +636,8 @@ sub bgbusy {
 
 
 sub bgisready {				## historical
-	!&bgbusy;						# uncoverable pod
+	_deprecated 'prefer bgbusy()';				# uncoverable pod
+	!&bgbusy;
 }
 
 
@@ -726,13 +735,15 @@ sub axfr {				## zone transfer
 
 
 sub axfr_start {			## historical
-	my $self = shift;					# uncoverable pod
+	_deprecated 'prefer  $iterator = $self->axfr(...)';	# uncoverable pod
+	my $self = shift;
 	defined( $self->{axfr_iter} = $self->axfr(@_) );
 }
 
 
 sub axfr_next {				## historical
-	shift->{axfr_iter}->();					# uncoverable pod
+	_deprecated 'prefer  $iterator->()';			# uncoverable pod
+	shift->{axfr_iter}->();
 }
 
 
@@ -809,7 +820,6 @@ sub _read_tcp {
 	my $socket = shift;
 
 	my ( $buffer, $s1, $s2 );
-	$socket->blocking(1);
 	$socket->recv( $s1, 2 );				# one lump
 	$socket->recv( $s2, 2 - length $s1 );			# or two?
 	my $size = unpack 'n', pack( 'a*a*@2', $s1, $s2 );
@@ -1057,13 +1067,8 @@ sub udppacketsize {
 #
 # Keep this method around. Folk depend on it although it is neither documented nor exported.
 #
-my $warned;
-
 sub make_query_packet {			## historical
-	unless ( $warned++ ) {					# uncoverable pod
-		local $SIG{__WARN__};
-		carp 'deprecated method; see RT#37104';
-	}
+	_deprecated 'see RT#37104';				# uncoverable pod
 	&_make_query_packet;
 }
 

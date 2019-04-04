@@ -180,6 +180,16 @@ sub hnxtname {
 }
 
 
+sub match {
+	my ( $self, $name ) = @_;
+
+	my ($owner) = $self->{owner}->_wire;
+	my $ownerhash = _decode_base32hex($owner);
+
+	my $hashfn = $self->{hashfn};
+	$ownerhash eq &$hashfn($name);
+}
+
 sub covers {
 	my ( $self, $name ) = @_;
 
@@ -207,16 +217,6 @@ sub covers {
 
 sub covered {				## historical
 	&covers;						# uncoverable pod
-}
-
-sub match {				## historical
-	my ( $self, $name ) = @_;				# uncoverable pod
-
-	my ($owner) = $self->{owner}->_wire;
-	my $ownerhash = _decode_base32hex($owner);
-
-	my $hashfn = $self->{hashfn};
-	$ownerhash eq &$hashfn($name);
 }
 
 
@@ -434,6 +434,13 @@ interpolated into a string.
 
 typemap() returns a Boolean true value if the specified RRtype occurs
 in the type bitmap of the NSEC3 record.
+
+=head2 match
+
+    $matched = $rr->match( 'example.foo' );
+
+match() returns a Boolean true value if the hash of the domain name
+argument matches the hashed owner name of the NSEC3 RR.
 
 =head2 covers
 

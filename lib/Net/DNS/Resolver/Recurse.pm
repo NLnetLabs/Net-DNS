@@ -15,11 +15,12 @@ Net::DNS::Resolver::Recurse - DNS recursive resolver
 
     use Net::DNS::Resolver::Recurse;
 
-    $resolver = new Net::DNS::Resolver::Recurse();
+    my $resolver = new Net::DNS::Resolver::Recurse();
+    $resolver->debug(1);
 
-    $packet = $resolver->query ( 'www.example.com', 'A' );
-    $packet = $resolver->search( 'www.example.com', 'A' );
-    $packet = $resolver->send  ( 'www.example.com', 'A' );
+    $resolver->hints('198.41.0.4');	# A.ROOT-SERVER.NET.
+
+    my $packet = $resolver->send( 'www.rob.com.au.', 'A' );
 
 
 =head1 DESCRIPTION
@@ -85,7 +86,11 @@ sub send {
 }
 
 
-sub query_dorecursion { &send; }				# uncoverable pod
+sub query_dorecursion {			## historical
+	my ($self) = @_;					# uncoverable pod
+	$self->_deprecated('prefer  $resolver->send(...);');
+	&send;
+}
 
 
 sub _send {
@@ -115,8 +120,8 @@ sub _recurse {
 	$self->_callback($reply);
 	return unless $reply;
 	my $qname = lc( ( $query->question )[0]->qname );
-	return $reply if grep lc( $_->owner ) eq $qname, $reply->answer;
 	my $zone = $self->_referral($reply) || return $reply;
+	return $reply if grep lc( $_->owner ) eq $qname, $reply->answer;
 	$self->_recurse( $query, $zone );
 }
 
@@ -176,7 +181,11 @@ sub _callback {
 	$callback->(@_) if $callback;
 }
 
-sub recursion_callback { &callback; }				# uncoverable pod
+sub recursion_callback {		## historical
+	my ($self) = @_;					# uncoverable pod
+	$self->_deprecated('prefer  $resolver->send(...);');
+	&callback;
+}
 
 
 1;

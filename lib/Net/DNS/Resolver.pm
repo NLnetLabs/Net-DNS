@@ -343,16 +343,6 @@ Truncated UDP packets will be retried transparently using TCP while
 continuing to assert busy to the caller.
 
 
-=head2 bgisready
-
-    until ($resolver->bgisready($handle)) {
-	...
-    }
-
-C<bgisready()> is the logical complement of C<bgbusy()> which is retained
-for backward compatibility.
-
-
 =head2 debug
 
     print 'debug flag: ', $resolver->debug, "\n";

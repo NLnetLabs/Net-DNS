@@ -41,7 +41,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @digest = split /(\S{64})/, $self->digest || '-';
+	my @digest = split /(\S{64})/, $self->digest || qq("");
 	my @rdata = ( @{$self}{qw(serial digtype reserved)}, @digest );
 }
 
@@ -51,7 +51,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 
 	$self->serial(shift);
 	$self->digtype(shift);
-	shift;
+	$self->reserved(shift);
 	$self->digest(@_);
 }
 
@@ -79,10 +79,13 @@ sub digtype {
 }
 
 
+sub reserved {0}						# uncoverable pod
+
+
 sub digest {
 	my $self = shift;
 	return unpack "H*", $self->digestbin() unless scalar @_;
-	$self->digestbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
+	$self->digestbin( pack "H*", join "", map { /^"*([\dA-Fa-f]*)"*$/ || croak("corrupt hex"); $1 } @_ );
 }
 
 
