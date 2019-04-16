@@ -74,11 +74,9 @@ sub flags {
 
 
 sub critical {
-	my $bit = 0x0080;
 	for ( shift->{flags} ) {
-		my $set = $bit | ( $_ ||= 0 );
-		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
-		return $_ & $bit;
+		$_ = ( shift() ? 0 : 0x0080 ) ^ ( 0x0080 | ( $_ || 0 ) ) if scalar @_;
+		return 0x0080 & ( $_ || 0 );
 	}
 }
 

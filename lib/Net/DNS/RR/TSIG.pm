@@ -35,8 +35,8 @@ use constant TSIG => typebyname qw(TSIG);
 {
 	# source: http://www.iana.org/assignments/tsig-algorithm-names
 	my @algbyname = (
-		'HMAC-MD5.SIG-ALG.REG.INT' => 157,
-		'HMAC-SHA1'		   => 161,
+		'HMAC-MD5.SIG-ALG.REG.INT' => 157,		# numbers are from ISC BIND keygen
+		'HMAC-SHA1'		   => 161,		# and not blessed by IANA
 		'HMAC-SHA224'		   => 162,
 		'HMAC-SHA256'		   => 163,
 		'HMAC-SHA384'		   => 164,

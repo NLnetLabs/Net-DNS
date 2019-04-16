@@ -77,7 +77,7 @@ sub fptype {
 sub fp {
 	my $self = shift;
 	return unpack "H*", $self->fpbin() unless scalar @_;
-	$self->fpbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
+	$self->fpbin( pack "H*", join "", map { /^"*([\dA-Fa-f]*)"*$/ || croak("corrupt hex"); $1 } @_ );
 }
 
 

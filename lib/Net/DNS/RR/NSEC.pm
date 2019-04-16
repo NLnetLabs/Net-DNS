@@ -129,7 +129,8 @@ sub encloser {
 	my $self  = shift;
 	my @qname = new Net::DNS::Domain(shift)->label;
 
-	my $depth = scalar( $self->{owner}->_wire );
+	my @owner = $self->{owner}->label;
+	my $depth = scalar(@owner);
 	my $next;
 	while ( scalar(@qname) > $depth ) {
 		$next = shift @qname;
@@ -137,12 +138,12 @@ sub encloser {
 
 	return unless defined $next;
 
-	my $owner = lc( $self->owner );
-	return unless $owner eq lc( join '.', @qname );
+	my $nextcloser = join( '.', $next, @qname );
+	return if lc($nextcloser) ne lc( join '.', $next, @owner );
 
-	$self->{nextcloser} = join( '.', $next, $owner );
-	$self->{wildcard}   = join( '.', '*',	$owner );
-	return $owner;
+	$self->{nextcloser} = $nextcloser;
+	$self->{wildcard} = join( '.', '*', @qname );
+	return $self->owner;
 }
 
 

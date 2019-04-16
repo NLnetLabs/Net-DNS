@@ -141,11 +141,9 @@ sub flags {
 
 
 sub optout {
-	my $bit = 0x01;
 	for ( shift->{flags} ) {
-		my $set = $bit | ( $_ ||= 0 );
-		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
-		return $_ & $bit;
+		$_ = ( shift() ? 0 : 0x01 ) ^ ( 0x01 | ( $_ || 0 ) ) if scalar @_;
+		return 0x01 & ( $_ || 0 );
 	}
 }
 
@@ -161,7 +159,7 @@ sub iterations {
 sub salt {
 	my $self = shift;
 	return unpack "H*", $self->saltbin() unless scalar @_;
-	$self->saltbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
+	$self->saltbin( pack "H*", join "", map { /^"*([\dA-Fa-f]*)"*$/ || croak("corrupt hex"); $1 } @_ );
 }
 
 
@@ -288,8 +286,10 @@ sub _hashfn {
 		$class->new(@argument);
 	};
 	my $exception = $@;
+	return sub { croak $exception }
+			if $exception;
 
-	return $exception ? sub { croak $exception } : sub {
+	return sub {
 		my $name  = new Net::DNS::DomainName(shift)->canonical;
 		my $key	  = join '', $name, $key_adjunct;
 		my $cache = $$cache1{$key} ||= $$cache2{$key};	# two layer cache

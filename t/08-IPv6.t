@@ -458,7 +458,7 @@ SKIP: {
 	my $discard = '';
 	$socket->recv( $discard, 1 ) if $socket;		# discard first octet
 	$socket->blocking(0);
-	ok( !$resolver->_bgread($socket), '_read_tcp()	corrupt data' );
+	ok( !$resolver->_bgread($socket), '_read_tcp()	incomplete data' );
 }
 
 

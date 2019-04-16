@@ -81,7 +81,7 @@ sub pkalgorithm {
 sub hit {
 	my $self = shift;
 	return unpack "H*", $self->hitbin() unless scalar @_;
-	$self->hitbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
+	$self->hitbin( pack "H*", join "", map { /^"*([\dA-Fa-f]*)"*$/ || croak("corrupt hex"); $1 } @_ );
 }
 
 

@@ -89,7 +89,7 @@ sub matchingtype {
 sub cert {
 	my $self = shift;
 	return unpack "H*", $self->certbin() unless scalar @_;
-	$self->certbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
+	$self->certbin( pack "H*", join "", map { /^"*([\dA-Fa-f]*)"*$/ || croak("corrupt hex"); $1 } @_ );
 }
 
 

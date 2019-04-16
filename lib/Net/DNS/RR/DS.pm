@@ -195,7 +195,7 @@ sub digtype {
 sub digest {
 	my $self = shift;
 	return unpack "H*", $self->digestbin() unless scalar @_;
-	$self->digestbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
+	$self->digestbin( pack "H*", join "", map { /^"*([\dA-Fa-f]*)"*$/ || croak("corrupt hex"); $1 } @_ );
 }
 
 

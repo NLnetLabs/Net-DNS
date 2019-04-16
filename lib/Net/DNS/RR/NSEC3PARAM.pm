@@ -84,7 +84,7 @@ sub iterations {
 sub salt {
 	my $self = shift;
 	return unpack "H*", $self->saltbin() unless scalar @_;
-	$self->saltbin( pack "H*", map /[^\dA-F]/i ? croak "corrupt hex" : $_, join "", @_ );
+	$self->saltbin( pack "H*", join "", map { /^"*([\dA-Fa-f]*)"*$/ || croak("corrupt hex"); $1 } @_ );
 }
 
 

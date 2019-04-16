@@ -469,7 +469,8 @@ sub _getline {				## get line from current source
 		if (/^\$INCLUDE/) {				# directive
 			my ( $keyword, @argument ) = split;
 			die '$INCLUDE incomplete' unless @argument;
-			$fh = $self->_include(@argument);
+ 			my $context = $self->{context};
+			$fh = &$context( sub { $self->_include(@argument); } );
 
 		} elsif (/^\$GENERATE/) {			# directive
 			my ( $keyword, $range, @template ) = split;

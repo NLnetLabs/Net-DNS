@@ -112,11 +112,9 @@ my %family = qw(1 Net::DNS::RR::A	2 Net::DNS::RR::AAAA);
 
 
 sub negate {
-	my $bit = 0x80;
 	for ( shift->{negate} ) {
-		my $set = $bit | ( $_ ||= 0 );
-		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
-		return $_ & $bit;
+		$_ = shift if scalar @_;
+		return !( !$_ );
 	}
 }
 

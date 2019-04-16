@@ -130,31 +130,25 @@ sub flags {
 
 
 sub zone {
-	my $bit = 0x0100;
 	for ( shift->{flags} ) {
-		my $set = $bit | ( $_ ||= 0 );
-		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
-		return $_ & $bit;
+		$_ = ( shift() ? 0 : 0x0100 ) ^ ( 0x0100 | ( $_ || 0 ) ) if scalar @_;
+		return 0x0100 & ( $_ || 0 );
 	}
 }
 
 
 sub revoke {
-	my $bit = 0x0080;
 	for ( shift->{flags} ) {
-		my $set = $bit | ( $_ ||= 0 );
-		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
-		return $_ & $bit;
+		$_ = ( shift() ? 0 : 0x0080 ) ^ ( 0x0080 | ( $_ || 0 ) ) if scalar @_;
+		return 0x0080 & ( $_ || 0 );
 	}
 }
 
 
 sub sep {
-	my $bit = 0x0001;
 	for ( shift->{flags} ) {
-		my $set = $bit | ( $_ ||= 0 );
-		$_ = (shift) ? $set : ( $set ^ $bit ) if scalar @_;
-		return $_ & $bit;
+		$_ = ( shift() ? 0 : 0x0001 ) ^ ( 0x0001 | ( $_ || 0 ) ) if scalar @_;
+		return 0x0001 & ( $_ || 0 );
 	}
 }
 
