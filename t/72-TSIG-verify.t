@@ -118,7 +118,7 @@ close KEY;
 	my $packet = new Net::DNS::Packet('query.example');
 	$packet->sign_tsig( $privatekey, fudge => 0 );
 	my $encoded = $packet->data;
-	sleep 1;
+	sleep 2;						# guarantee one complete second delay
 
 	my $query = new Net::DNS::Packet( \$encoded );
 	$query->verify();

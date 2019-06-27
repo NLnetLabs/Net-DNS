@@ -685,13 +685,13 @@ sub sign_sig0 {
 
 	eval {
 		local $SIG{__DIE__};
-		require Net::DNS::RR::SIG;
 
 		my $sig0;
 		if ( ref($karg) eq 'Net::DNS::RR::SIG' ) {
 			$sig0 = $karg;
 
 		} else {
+			require Net::DNS::RR::SIG;
 			$sig0 = Net::DNS::RR::SIG->create( '', $karg );
 		}
 

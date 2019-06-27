@@ -9,6 +9,7 @@ use Net::DNS::Resolver::Recurse;
 my @NOIP = qw(:: 0.0.0.0);
 
 {					## sabotage socket code
+	no warnings;
 
 	package IO::Socket::INET;
 	sub new { }			## stub
@@ -84,29 +85,37 @@ ok( !$recursive->send( 'www.net-dns.org', 'A' ), 'fail if no reachable server' )
 
 
 my @warning;
-local $SIG{__WARN__} = sub { ($warning[0]) = split /\n/, "@_\n"; };
+local $SIG{__WARN__} = sub { ( $warning[0] ) = split /\n/, "@_\n"; };
 
 $resolver->nameserver('bogus.example.com.');
-ok( $_, "unresolved nameserver warning\t[$_]" ) for shift(@warning);
+ok( "@warning", "unresolved nameserver warning\t[@warning]" );
+shift(@warning);
 
 
 $resolver->make_query_packet('example.com');
-ok( $_, "deprecated make_query_packet()\t[$_]" ) for shift(@warning);
+ok( "@warning", "deprecated make_query_packet()\t[@warning]" );
+shift(@warning);
 
 $resolver->bgisready(undef);
-ok( !$_, "deprecated bgisready() method\t[$_]" ) for shift(@warning);
+ok( !"@warning", "deprecated bgisready() method\t[@warning]" );
+shift(@warning);
 
 $resolver->axfr_start('net-dns.org');
-ok( !$_, "deprecated axfr_start()\t[$_]" ) for shift(@warning);
+ok( !"@warning", "deprecated axfr_start()\t[@warning]" );
+shift(@warning);
 
-eval{ $resolver->axfr_next() };
-ok( !$_, "deprecated axfr_next()\t[$_]" ) for shift(@warning);
+$resolver->{axfr_iter} = sub { };
+$resolver->axfr_next();
+ok( !"@warning", "deprecated axfr_next()\t[@warning]" );
+shift(@warning);
 
 $recursive->query_dorecursion( 'www.net-dns.org', 'A' );
-ok( !$_, "deprecated query_dorecursion()\t[$_]" ) for shift(@warning);
+ok( !"@warning", "deprecated query_dorecursion()\t[@warning]" );
+shift(@warning);
 
-$recursive->recursion_callback( sub {} );
-ok( !$_, "deprecated recursion_callback()\t[$_]" ) for shift(@warning);
+$recursive->recursion_callback( sub { } );
+ok( !"@warning", "deprecated recursion_callback()\t[@warning]" );
+shift(@warning);
 
 
 exit;

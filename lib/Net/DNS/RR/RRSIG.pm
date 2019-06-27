@@ -29,17 +29,26 @@ use constant DEBUG => 0;
 
 use constant UTIL => defined eval 'use Scalar::Util 1.25; 1;';
 
-# IMPORTANT: Distros MUST NOT create dependencies on Net::DNS::SEC	(strong crypto prohibited in many territories)
-use constant EXISTS => join '', qw(r e q u i r e);		# Defeat static analysers and grep
-use constant DNSSEC => defined( eval join ' ', EXISTS, 'Net::DNS::SEC::Private' );
-use constant ACTIVE => DNSSEC && $INC{'Net/DNS/SEC.pm'};	# Discover how we got here, without loading libcrypto
+# IMPORTANT: Downstream distros MUST NOT create dependencies on Net::DNS::SEC	(strong crypto prohibited in many territories)
+use constant ACTIVE => defined $INC{'Net/DNS/SEC.pm'};		# Discover how we got here, without exposing any crypto
+								# Discourage static code analysers and casual greppers
+use constant DNSSEC => ACTIVE && defined eval join '', qw(r e q u i r e), ' Net::DNS', qw(:: SEC :: Private);
 
-my ($RSA) = grep ACTIVE && defined( eval join ' ', EXISTS, $_ ), 'Net::DNS::SEC::RSA';
-my ($DSA) = grep ACTIVE && defined( eval join ' ', EXISTS, $_ ), 'Net::DNS::SEC::DSA';
+my @index;
+if (DNSSEC) {
+	my $key = new Net::DNS::RR( type => 'DNSKEY' );
+	my @arg = ( '', $key, '' );				# Grotesquely inefficient; but API not changing anytime soon
+	foreach my $class ( map "Net::DNS::SEC::$_", qw(RSA DSA ECCGOST ECDSA EdDSA) ) {
+		push @index, map eval { $key->algorithm($_); $class->verify(@arg); ( $_ => $class ) }, ( 1 .. 25 )
+				if eval join '', qw(r e q u i r e), " $class";
+	}
+}
 
-my ($ECDSA)   = grep ACTIVE && defined( eval join ' ', EXISTS, $_ ), 'Net::DNS::SEC::ECDSA';
-my ($EdDSA)   = grep ACTIVE && defined( eval join ' ', EXISTS, $_ ), 'Net::DNS::SEC::EdDSA';
-my ($ECCGOST) = grep ACTIVE && defined( eval join ' ', EXISTS, $_ ), 'Net::DNS::SEC::ECCGOST';
+my %DNSSEC_verify = @index;
+my %DNSSEC_siggen = @index;
+
+my @deprecated = ( 1, 3, 6, 12 );				# RFC8624
+delete @DNSSEC_siggen{@deprecated};
 
 my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 
@@ -119,7 +128,7 @@ sub _defaults {				## specify RR attribute default values
 	my %algbyval = reverse @algbyname;
 
 	my @algrehash = map /^\d/ ? ($_) x 3 : do { s/[\W_]//g; uc($_) }, @algbyname;
-	my %algbyname = @algrehash;    # work around broken cperl
+	my %algbyname = @algrehash;				# work around broken cperl
 
 	sub _algbyname {
 		my $arg = shift;
@@ -135,30 +144,6 @@ sub _defaults {				## specify RR attribute default values
 		$algbyval{$value} || return $value;
 	}
 }
-
-
-my %DNSSEC_verify = (
-	1  => $RSA,
-	3  => $DSA,
-	5  => $RSA,
-	6  => $DSA,
-	7  => $RSA,
-	8  => $RSA,
-	10 => $RSA,
-	12 => $ECCGOST,
-	13 => $ECDSA,
-	14 => $ECDSA,
-	15 => $EdDSA,
-	16 => $EdDSA,
-	);
-
-my %DNSSEC_sign = (
-	%DNSSEC_verify,
-	1  => 0,			## deprecated ##
-	3  => 0,			## deprecated ##
-	6  => 0,			## deprecated ##
-	12 => 0,			## deprecated ##
-	);
 
 
 sub typecovered {
@@ -262,7 +247,7 @@ sub signature { &sig; }
 
 sub create {
 	unless (DNSSEC) {
-		croak 'Net::DNS::SEC support not available';
+		croak qq[No "use Net::DNS::SEC" declaration in application code];
 	} else {
 		my ( $class, $rrsetref, $priv_key, %etc ) = @_;
 
@@ -272,8 +257,7 @@ sub create {
 
 		# All the TTLs need to be the same in the data RRset.
 		my $ttl = $RR->ttl;
-		my @ttl = grep $_->ttl != $ttl, @$rrsetref;
-		croak 'RRs in RRset do not have same TTL' if scalar @ttl;
+		croak 'RRs in RRset do not have same TTL' if grep $_->ttl != $ttl, @$rrsetref;
 
 		my $private = ref($priv_key) ? $priv_key : Net::DNS::SEC::Private->new($priv_key);
 		croak 'unable to parse private key' unless ref($private) eq 'Net::DNS::SEC::Private';
@@ -313,11 +297,10 @@ sub verify {
 
 	# $rrsetref must be a reference to an array of RR objects.
 
-	# $keyref is either a key object or a reference to an array
-	# of key objects.
+	# $keyref is either a key object or a reference to an array of key objects.
 
 	unless (DNSSEC) {
-		croak 'Net::DNS::SEC support not available';
+		croak qq[No "use Net::DNS::SEC" declaration in application code];
 	} else {
 		my ( $self, $rrsetref, $keyref ) = @_;
 
@@ -487,9 +470,6 @@ sub _CreateSigData {
 
 		print "_CreateSigData\n" if DEBUG;
 
-		croak 'SIG0 using RRSIG not permitted' unless ref($rrsetref);
-
-		my @field = qw(typecovered algorithm labels orgttl sigexpiration siginception keytag);
 		my $sigdata = pack 'n C2 N3 n a*', @{$self}{@field}, $self->{signame}->canonical;
 		print "\npreamble\t", unpack( 'H*', $sigdata ), "\n" if DEBUG;
 
@@ -497,16 +477,16 @@ sub _CreateSigData {
 		my $limit = $self->{labels};
 		my @label = $owner->_wire;
 		shift @label while scalar @label > $limit;
-		my $wild = bless {label => \@label}, ref($owner);    # DIY to avoid wrecking name cache
+		my $wild   = bless {label => \@label}, ref($owner);    # DIY to avoid wrecking name cache
 		my $suffix = $wild->canonical;
 		unshift @label, chr(42);			# asterisk
 
-		my @RR	  = map bless( {%$_}, ref($_) ), @$rrsetref; # shallow RR clone
-		my $RR	  = $RR[0];
-		my $class = $RR->class;
-		my $type  = $RR->type;
+		my @RR	  = map bless( {%$_}, ref($_) ), @$rrsetref;   # shallow RR clone
+		my $rr	  = $RR[0];
+		my $class = $rr->class;
+		my $type  = $rr->type;
+		my $ttl	  = $self->orgttl;
 
-		my $ttl = $self->orgttl;
 		my %table;
 		foreach my $RR (@RR) {
 			my $ident = $RR->{owner}->canonical;
@@ -551,12 +531,11 @@ sub _CreateSig {
 		my $self = shift;
 
 		my $algorithm = $self->algorithm;
-		my $class     = $DNSSEC_sign{$algorithm};
+		my $class     = $DNSSEC_siggen{$algorithm};
 
 		eval {
 			return $self->sigbin( $class->sign(@_) ) if $class;
-			die qq[algorithm $algorithm not supported\n] if ACTIVE;
-			die qq[No "use Net::DNS::SEC" declaration in application code\n];
+			die "algorithm $algorithm not supported\n";
 		} || croak "${@}signature generation failed";
 	}
 }
@@ -571,8 +550,7 @@ sub _VerifySig {
 
 		my $retval = eval {
 			return $class->verify( @_, $self->sigbin ) if $class;
-			die qq[algorithm $algorithm not supported\n] if ACTIVE;
-			die qq[No "use Net::DNS::SEC" declaration in application code\n];
+			die "algorithm $algorithm not supported\n";
 		};
 
 		unless ($retval) {
@@ -582,7 +560,7 @@ sub _VerifySig {
 		}
 
 		# uncoverable branch true	# bug in Net::DNS::SEC or dependencies
-		croak 'unknown error in $class->verify' unless $retval == 1;
+		croak "unknown error in $class->verify" unless $retval == 1;
 		print "\nalgorithm $algorithm verification successful\n" if DEBUG;
 		return 1;
 	}
