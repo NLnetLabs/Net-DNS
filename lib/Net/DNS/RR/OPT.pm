@@ -91,16 +91,15 @@ QQ
 }
 
 
-my ( $class, $ttl );
-
 sub class {				## overide RR method
-	carp qq[Usage: OPT has no "class" attribute, please use "size()"] unless $class++;
-	&size;
+	my $self = shift;
+	$self->_deprecate(qq[please use "size()"]);
+	$self->size(@_);
 }
 
 sub ttl {				## overide RR method
 	my $self = shift;
-	carp qq[Usage: OPT has no "ttl" attribute, please use "flags()" or "rcode()"] unless $ttl++;
+	$self->_deprecate(qq[please use "flags()" or "rcode()"]);
 	my @rcode = map unpack( 'C',   pack 'N', $_ ), @_;
 	my @flags = map unpack( 'x2n', pack 'N', $_ ), @_;
 	pack 'C2n', $self->rcode(@rcode), $self->version, $self->flags(@flags);
@@ -165,7 +164,7 @@ sub _format_option {
 	my $defined = length($payload) && $package->can('_image');
 	my @element = $defined ? eval { $package->_image($payload) } : unpack 'H*', $payload;
 	my $protect = pop(@element);
-	Net::DNS::RR::_wrap( "$option\t=> (", map( "$_,", @element ), $protect, ')' );
+	Net::DNS::RR::_wrap( "$option\t=> (", map( "$_,", @element ), "$protect )" );
 }
 
 
@@ -190,13 +189,13 @@ sub _set_option {
 	delete $options->{$number};
 	return unless defined $value;
 	if ( ref($value) || scalar(@etc) ) {
-		my $option = ednsoptionbyval($number);
 		my @arg = ( $value, @etc );
 		@arg = @$value if ref($value) eq 'ARRAY';
 		@arg = %$value if ref($value) eq 'HASH';
 		if ( $arg[0] eq 'OPTION-DATA' ) {
 			$value = $arg[1];
 		} else {
+			my $option  = ednsoptionbyval($number);
 			my $package = join '::', __PACKAGE__, $option;
 			$package =~ s/-/_/g;
 			croak "unable to compose option $option" unless $package->can('_compose');
@@ -242,26 +241,26 @@ use Net::DNS::RR::A;
 use Net::DNS::RR::AAAA;
 
 my %family = qw(1 Net::DNS::RR::A	2 Net::DNS::RR::AAAA);
-my @field  = qw(FAMILY SOURCE-PREFIX-LENGTH SCOPE-PREFIX-LENGTH ADDRESS);
+my @field8 = qw(FAMILY SOURCE-PREFIX-LENGTH SCOPE-PREFIX-LENGTH ADDRESS);
 
 sub _compose {
 	my ( $class, %argument ) = @_;
 	my $address = bless( {}, $family{$argument{FAMILY}} )->address( $argument{ADDRESS} );
-	my $preamble = pack 'nC2', map $_ ||= 0, @argument{@field};
-	my $bitmask = $argument{'SOURCE-PREFIX-LENGTH'};
+	my $preamble = pack 'nC2', map $_ ||= 0, @argument{@field8};
+	my $bitmask  = $argument{'SOURCE-PREFIX-LENGTH'};
 	pack "a* B$bitmask", $preamble, unpack 'B*', $address;
 }
 
 sub _decompose {
 	my %hash;
-	@hash{@field} = unpack 'nC2a*', $_[1];
+	@hash{@field8} = unpack 'nC2a*', $_[1];
 	$hash{ADDRESS} = bless( {address => $hash{ADDRESS}}, $family{$hash{FAMILY}} )->address;
-	my @payload = map { ( $_ => $hash{$_} ) } @field;
+	my @payload = map { ( $_ => $hash{$_} ) } @field8;
 }
 
 sub _image {
-	my %hash = &_decompose;
-	my @image = map "$_ => $hash{$_}", @field;
+	my %hash  = &_decompose;
+	my @image = map "$_ => $hash{$_}", @field8;
 }
 
 
@@ -281,22 +280,22 @@ sub _image { join ' => ', &_decompose; }
 
 package Net::DNS::RR::OPT::COOKIE;				# RFC7873
 
-my @key = qw(CLIENT-COOKIE SERVER-COOKIE);
+my @field10 = qw(CLIENT-COOKIE SERVER-COOKIE);
 
 sub _compose {
 	my ( $class, %argument ) = @_;
-	pack 'a8 a*', map $_ || '', @argument{@key};
+	pack 'a8 a*', map $_ || '', @argument{@field10};
 }
 
 sub _decompose {
 	my %hash;
-	@hash{@key} = unpack 'a8 a*', $_[1];
-	my @payload = map { ( $_ => $hash{$_} ) } @key;
+	@hash{@field10} = unpack 'a8 a*', $_[1];
+	my @payload = map { ( $_ => $hash{$_} ) } @field10;
 }
 
 sub _image {
-	my %hash = &_decompose;
-	my @image = map join( ' => ', $_, unpack 'H*', $hash{$_} ), @key;
+	my %hash  = &_decompose;
+	my @image = map join( ' => ', $_, unpack 'H*', $hash{$_} ), @field10;
 }
 
 
@@ -340,7 +339,7 @@ sub _compose {
 
 sub _decompose {
 	my ( $class, $payload ) = @_;
-	my $fqdn = Net::DNS::DomainName->decode( \$payload )->string;
+	my $fqdn    = Net::DNS::DomainName->decode( \$payload )->string;
 	my @payload = ( 'CLOSEST-TRUST-POINT' => $fqdn );
 }
 
@@ -494,7 +493,7 @@ Similar forms of array syntax may be used to construct the option value:
 
 Copyright (c)2001,2002 RIPE NCC.  Author Olaf M. Kolkman.
 
-Portions Copyright (c)2012,2017 Dick Franks.
+Portions Copyright (c)2012,2017-2019 Dick Franks.
 
 All rights reserved.
 

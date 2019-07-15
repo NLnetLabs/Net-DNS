@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.21 [unreleased]
 
+	Fix error report for non-existent or recursive zone file $INCLUDE.
+
+	Remove obsolete Net::DNS::RR::DLV package.
+
 	Add Net::DNS::RR::ZONEMD package.
 
 Fix rt.cpan.org #128901

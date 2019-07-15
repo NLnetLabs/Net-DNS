@@ -94,7 +94,7 @@ sub new {
 		croak 'argument not a file handle';
 	}
 
-	$self->{filename} = $file ||= '';
+	$self->{filename}   = $file ||= '';
 	$self->{filehandle} = new IO::File($file) or croak "$! $file";
 	$self->{fileopen}{$file}++;
 	return $self;
@@ -426,7 +426,7 @@ sub _generate {				## expand $GENERATE into input stream
 	my $handle = new Net::DNS::ZoneFile::Generator( $range, $template, $self->line );
 
 	delete $self->{latest};					# forget previous owner
-	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
+	$self->{parent}	    = bless {%$self}, ref($self);	# save state, create link
 	$self->{filehandle} = $handle;
 }
 
@@ -450,12 +450,12 @@ sub _getline {				## get line from current source
 			my @token = grep defined && length, split /$LEX_REGEX/o;
 			if ( grep( $_ eq '(', @token ) && !grep( $_ eq ')', @token ) ) {
 				while (<$fh>) {
-					$_ = pop(@token) . $_;	# splice fragmented string
 					s/\\\\/\\092/g;		# disguise escaped escape
 					s/\\"/\\034/g;		# disguise escaped quote
 					s/\\\(/\\040/g;		# disguise escaped bracket
 					s/\\\)/\\041/g;		# disguise escaped bracket
 					s/\\;/\\059/g;		# disguise escaped semicolon
+					$_ = pop(@token) . $_;	# splice fragmented string
 					my @part = grep defined && length, split /$LEX_REGEX/o;
 					push @token, @part;
 					last if grep $_ eq ')', @part;
@@ -469,8 +469,7 @@ sub _getline {				## get line from current source
 		if (/^\$INCLUDE/) {				# directive
 			my ( $keyword, @argument ) = split;
 			die '$INCLUDE incomplete' unless @argument;
- 			my $context = $self->{context};
-			$fh = &$context( sub { $self->_include(@argument); } );
+			$fh = $self->_include(@argument);
 
 		} elsif (/^\$GENERATE/) {			# directive
 			my ( $keyword, $range, @template ) = split;
@@ -480,8 +479,7 @@ sub _getline {				## get line from current source
 		} elsif (/^\$ORIGIN/) {				# directive
 			my ( $keyword, $origin, @etc ) = split;
 			die '$ORIGIN incomplete' unless $origin;
-			my $context = $self->{context};
-			&$context( sub { $self->_origin($origin); } );
+			$self->_origin($origin);
 
 		} elsif (/^\$TTL/) {				# directive
 			my ( $keyword, $ttl, @etc ) = split;
@@ -490,7 +488,7 @@ sub _getline {				## get line from current source
 
 		} else {					# unrecognised
 			my ($keyword) = split;
-			die "unknown '$keyword' directive";
+			die qq[unknown "$keyword" directive];
 		}
 	}
 
@@ -512,7 +510,7 @@ sub _getRR {				## get RR from current source
 
 	# construct RR object with context specific dynamically scoped $ORIGIN
 	my $context = $self->{context};
-	my $rr = &$context( sub { Net::DNS::RR->_new_string($_) } );
+	my $rr	    = &$context( sub { Net::DNS::RR->_new_string($_) } );
 
 	my $latest = $self->{latest};				# overwrite placeholder
 	$rr->{owner} = $latest->{owner} if $noname && $latest;
@@ -533,23 +531,25 @@ sub _include {				## open $INCLUDE file
 	my $root = shift;
 
 	my $opened = {%{$self->{fileopen}}};
-	croak qq(recursive \$INCLUDE $file) if $opened->{$file}++;
+	die qq(\$INCLUDE $file: Unexpected recursion) if $opened->{$file}++;
 
 	my @discipline = PERLIO ? ( join ':', '<', PerlIO::get_layers $self->{filehandle} ) : ();
-	my $handle = new IO::File( $file, @discipline ) or croak "$! $file";
+	my $filehandle = new IO::File( $file, @discipline ) or die qq(\$INCLUDE $file: $!);
 
 	delete $self->{latest};					# forget previous owner
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
-	$self->{context}  = origin Net::DNS::Domain($root) if $root;
+	$self->_origin($root) if $root;
 	$self->{filename} = $file;
 	$self->{fileopen} = $opened;
-	return $self->{filehandle} = $handle;
+	return $self->{filehandle} = $filehandle;
 }
 
 
 sub _origin {				## change $ORIGIN (scope: current file)
-	my $self = shift;
-	$self->{context} = origin Net::DNS::Domain(shift);
+	my ( $self, $name ) = @_;
+	my $context = $self->{context};
+	$context = Net::DNS::Domain->origin(undef) unless $context;
+	$self->{context} = &$context( sub { Net::DNS::Domain->origin($name) } );
 	delete $self->{latest};					# forget previous owner
 }
 

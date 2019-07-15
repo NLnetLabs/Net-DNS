@@ -44,7 +44,6 @@ lib/Net/DNS/RR/CERT.pm
 lib/Net/DNS/RR/CNAME.pm
 lib/Net/DNS/RR/CSYNC.pm
 lib/Net/DNS/RR/DHCID.pm
-lib/Net/DNS/RR/DLV.pm
 lib/Net/DNS/RR/DNAME.pm
 lib/Net/DNS/RR/DNSKEY.pm
 lib/Net/DNS/RR/DS.pm
@@ -130,7 +129,6 @@ t/05-CERT.t
 t/05-CNAME.t
 t/05-CSYNC.t
 t/05-DHCID.t
-t/05-DLV.t
 t/05-DNAME.t
 t/05-DNSKEY.t
 t/05-DS.t

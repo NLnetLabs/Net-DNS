@@ -196,8 +196,8 @@ close KEY;
 
 	my $null = new Net::DNS::RR( type => 'NULL' );
 	eval { $packet->sigrr->verify($null); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unexpected argument\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unexpected argument\t[$exception]" );
 }
 
 
@@ -207,8 +207,8 @@ close KEY;
 
 	my $null = new Net::DNS::RR( type => 'NULL' );
 	eval { $packet->sigrr->verify( $packet, $null ); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unexpected argument\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unexpected argument\t[$exception]" );
 }
 
 

@@ -98,8 +98,8 @@ use constant PACKETSZ => 512;
 
 my $warned;
 
-sub _deprecated {
-	carp join ' ', grep !ref($_), 'deprecated method;', @_ unless $warned++;
+sub _deprecate {
+	carp join ' ', 'deprecated method;', pop(@_) unless $warned++;
 }
 
 
@@ -636,7 +636,7 @@ sub bgbusy {
 
 
 sub bgisready {				## historical
-	_deprecated 'prefer bgbusy()';				# uncoverable pod
+	_deprecate('prefer bgbusy()');				# uncoverable pod
 	!&bgbusy;
 }
 
@@ -735,14 +735,14 @@ sub axfr {				## zone transfer
 
 
 sub axfr_start {			## historical
-	_deprecated 'prefer  $iterator = $self->axfr(...)';	# uncoverable pod
+	_deprecate('prefer  $iterator = $self->axfr(...)');	# uncoverable pod
 	my $self = shift;
 	defined( $self->{axfr_iter} = $self->axfr(@_) );
 }
 
 
 sub axfr_next {				## historical
-	_deprecated 'prefer  $iterator->()';			# uncoverable pod
+	_deprecate('prefer  $iterator->()');			# uncoverable pod
 	shift->{axfr_iter}->();
 }
 
@@ -1068,7 +1068,7 @@ sub udppacketsize {
 # Keep this method around. Folk depend on it although it is neither documented nor exported.
 #
 sub make_query_packet {			## historical
-	_deprecated 'see RT#37104';				# uncoverable pod
+	_deprecate('see RT#37104');				# uncoverable pod
 	&_make_query_packet;
 }
 

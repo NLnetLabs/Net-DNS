@@ -88,7 +88,7 @@ sub send {
 
 sub query_dorecursion {			## historical
 	my ($self) = @_;					# uncoverable pod
-	$self->_deprecated('prefer  $resolver->send(...);');
+	$self->_deprecate('prefer  $resolver->send(...)');
 	&send;
 }
 
@@ -183,7 +183,7 @@ sub _callback {
 
 sub recursion_callback {		## historical
 	my ($self) = @_;					# uncoverable pod
-	$self->_deprecated('prefer  $resolver->send(...);');
+	$self->_deprecate('prefer  $resolver->callback(...)');
 	&callback;
 }
 

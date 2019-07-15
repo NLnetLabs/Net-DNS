@@ -89,31 +89,31 @@ close KEY;
 
 {
 	eval { create $class(); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "empty argument list\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "empty argument list\t[$exception]" );
 }
 
 
 {
 	eval { create $class(undef); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "argument undefined\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "argument undefined\t[$exception]" );
 }
 
 
 {
 	my $null = new Net::DNS::RR( type => 'NULL' );
 	eval { create $class($null); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unexpected argument\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unexpected argument\t[$exception]" );
 }
 
 
 {
 	my $packet = new Net::DNS::Packet('query.example');
 	eval { create $class($packet); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "no TSIG in packet\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "no TSIG in packet\t[$exception]" );
 }
 
 
@@ -130,8 +130,8 @@ close KEY;
 
 {
 	eval { create $class($badprivatekey); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "misnamed private key\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "misnamed private key\t[$exception]" );
 }
 
 
@@ -146,8 +146,8 @@ close KEY;
 
 {
 	eval { create $class($dnskey); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unrecognised public key\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unrecognised public key\t[$exception]" );
 }
 
 

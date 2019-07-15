@@ -58,8 +58,8 @@ my $rdata  = "10.1.2.3";
 {
 	Net::DNS::Resolver->domain('');				# overides config files
 	my $packet = eval { new Net::DNS::Update(undef); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "argument undefined\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "argument undefined\t[$exception]" );
 }
 
 
@@ -131,7 +131,7 @@ my $rdata  = "10.1.2.3";
 
 {
 	my @arg = ( name => $name );
-	my $rr = yxdomain(@arg);
+	my $rr	= yxdomain(@arg);
 
 	ok( $rr, "yxdomain(@arg)" );
 	is( $rr->name,	$name, 'yxdomain - right name' );
@@ -160,7 +160,7 @@ my $rdata  = "10.1.2.3";
 
 {
 	my @arg = ( name => $name );
-	my $rr = nxdomain(@arg);
+	my $rr	= nxdomain(@arg);
 
 	ok( $rr, "nxdomain(@arg)" );
 	is( $rr->name,	$name,	'nxdomain - right name' );

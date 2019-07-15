@@ -711,6 +711,13 @@ sub _annotation {
 }
 
 
+my $warned;
+
+sub _deprecate {
+	carp join ' ', 'deprecated method;', pop(@_) unless $warned++;
+}
+
+
 my %ignore = map( ( $_ => 1 ), @core, 'annotation', '#' );
 
 sub _empty {

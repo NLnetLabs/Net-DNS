@@ -68,19 +68,15 @@ my $wire = '0000290500000080000000';
 
 foreach my $method (qw(class ttl)) {
 	my $rr = new Net::DNS::RR( name => '.', type => $type );
-	eval {
-		local $SIG{__WARN__} = sub { die @_ };
-		$rr->$method(1);
-	};
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "$method method:\t[$exception]" );
+	local $SIG{__WARN__} = sub { die @_ };
 
-	eval {
-		local $SIG{__WARN__} = sub { die @_ };
-		$rr->$method(0);
-	};
-	my $repeated = $1 if $@ =~ /^(.+)\n/;
-	ok( !$repeated, "$method exception not repeated $@" );
+	eval { $rr->$method(512) };
+	my ($warning) = split /\n/, "$@\n";
+	ok( 1, "deprecated $method method:\t[$warning]" );	# warning may, or may not, be first
+
+	eval { $rr->$method(512) };
+	my ($repeated) = split /\n/, "$@\n";
+	ok( !$repeated, "warning not repeated\t[$repeated]" );
 }
 
 
@@ -142,9 +138,9 @@ foreach my $method (qw(class ttl)) {
 	is( length( $edns->option(8) ), 6, "option CLIENT-SUBNET => {'SOURCE-PREFIX-LENGTH' => 15, ...}" );
 
 
-	my $timer = 604800;
-	my $option9 = $edns->option( EXPIRE => ( 'EXPIRE-TIMER' => $timer ) );
-	is( scalar( $edns->option(9) ), $option9, "option EXPIRE => ('EXPIRE-TIMER' => $timer)" );
+	my $expire  = 604800;
+	my $option9 = $edns->option( EXPIRE => ( 'EXPIRE-TIMER' => $expire ) );
+	is( scalar( $edns->option(9) ), $option9, "option EXPIRE => ('EXPIRE-TIMER' => $expire)" );
 
 
 	my $client = $edns->option( COOKIE => ( 'CLIENT-COOKIE' => 'rawbytes' ) );
@@ -155,9 +151,9 @@ foreach my $method (qw(class ttl)) {
 	is( length( $edns->option(10) ), 19, "option COOKIE => {'SERVER-COOKIE' => ... }" );
 
 
-	my $t = 200;
-	my $option11 = $edns->option( 'TCP-KEEPALIVE' => ( TIMEOUT => $t ) );
-	is( scalar( $edns->option(11) ), $option11, "option TCP-KEEPALIVE => (TIMEOUT => $t)" );
+	my $timeout  = 200;
+	my $option11 = $edns->option( 'TCP-KEEPALIVE' => ( TIMEOUT => $timeout ) );
+	is( scalar( $edns->option(11) ), $option11, "option TCP-KEEPALIVE => (TIMEOUT => $timeout)" );
 
 
 	$edns->option( PADDING => ( 'OPTION-LENGTH' => 100 ) );
