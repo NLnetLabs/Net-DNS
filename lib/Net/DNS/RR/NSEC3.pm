@@ -181,7 +181,7 @@ sub hnxtname {
 sub match {
 	my ( $self, $name ) = @_;
 
-	my ($owner) = $self->{owner}->_wire;
+	my ($owner) = $self->{owner}->label;
 	my $ownerhash = _decode_base32hex($owner);
 
 	my $hashfn = $self->{hashfn};
@@ -191,11 +191,11 @@ sub match {
 sub covers {
 	my ( $self, $name ) = @_;
 
-	my ( $owner, @zone ) = $self->{owner}->_wire;
+	my ( $owner, @zone ) = $self->{owner}->label;
 	my $ownerhash = _decode_base32hex($owner);
 	my $nexthash  = $self->{hnxtname};
 
-	my @label = new Net::DNS::DomainName($name)->_wire;
+	my @label = new Net::DNS::DomainName($name)->label;
 	my @close = @label;
 	foreach (@zone) { pop(@close) }				# strip zone labels
 	return if lc($name) ne lc( join '.', @close, @zone );	# out of zone
@@ -213,19 +213,14 @@ sub covers {
 }
 
 
-sub covered {				## historical
-	&covers;						# uncoverable pod
-}
-
-
 sub encloser {
 	my ( $self, $qname ) = @_;
 
-	my ( $owner, @zone ) = $self->{owner}->_wire;
+	my ( $owner, @zone ) = $self->{owner}->label;
 	my $ownerhash = _decode_base32hex($owner);
 	my $nexthash  = $self->{hnxtname};
 
-	my @label = new Net::DNS::DomainName($qname)->_wire;
+	my @label = new Net::DNS::DomainName($qname)->label;
 	my @close = @label;
 	foreach (@zone) { pop(@close) }				# strip zone labels
 	return if lc($qname) ne lc( join '.', @close, @zone );	# out of zone
@@ -233,14 +228,13 @@ sub encloser {
 	my $hashfn = $self->{hashfn};
 
 	my $encloser = $qname;
-	shift @label;
 	foreach (@close) {
 		my $nextcloser = $encloser;
-		my $hash = &$hashfn( $encloser = join '.', @label );
 		shift @label;
+		my $hash = &$hashfn( $encloser = join '.', @label );
 		next if $hash ne $ownerhash;
 		$self->{nextcloser} = $nextcloser;		# next closer name
-		$self->{wildcard} = join '.', '*', $encloser;	# wildcard at provable encloser
+		$self->{wildcard}   = "*.$encloser";		# wildcard at provable encloser
 		return $encloser;				# provable encloser
 	}
 	return;

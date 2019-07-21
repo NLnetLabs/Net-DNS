@@ -66,8 +66,8 @@ my $wire = qw( 010101d2abde240d7cd3ee6b4b28c54df034b97983a1d16e8a410e4561cb10661
 {
 	my $rr = new Net::DNS::RR(". $type @data");
 	eval { $rr->certificate('123456789XBCDEF'); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "corrupt hexadecimal\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "corrupt hexadecimal\t[$exception]" );
 }
 
 

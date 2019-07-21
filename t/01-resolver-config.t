@@ -110,7 +110,7 @@ ok( $class->new( debug => 1 )->_diag(@Net::DNS::Resolver::ISA), 'debug message' 
 	my ($exception) = split /\n/, "$@\n";
 	ok( $exception, "unknown method:\t[$exception]" );
 
-	is( $resolver->DESTROY, undef, 'DESTROY() exists to defeat pre-5.18 AUTOLOAD' );
+	is( $resolver->DESTROY, undef, 'DESTROY() exists to placate pre-5.18 AUTOLOAD' );
 }
 
 

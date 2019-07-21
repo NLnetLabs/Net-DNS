@@ -69,8 +69,8 @@ my $wire = '0201123456789abcdef67890123456789abcdef67890';
 {
 	my $rr = new Net::DNS::RR(". $type @data");
 	eval { $rr->fp('123456789XBCDEF'); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "corrupt hexadecimal\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "corrupt hexadecimal\t[$exception]" );
 }
 
 

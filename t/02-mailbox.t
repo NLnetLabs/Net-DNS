@@ -18,15 +18,15 @@ BEGIN {
 
 {
 	my $mailbox = eval { new Net::DNS::Mailbox(); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "empty argument list\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "empty argument list\t[$exception]" );
 }
 
 
 {
 	my $mailbox = eval { new Net::DNS::Mailbox(undef); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "argument undefined\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "argument undefined\t[$exception]" );
 }
 
 

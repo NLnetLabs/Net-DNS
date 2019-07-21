@@ -134,8 +134,8 @@ sub _defaults {				## specify RR attribute default values
 
 
 sub _size {				## estimate encoded size
-	my $self = shift;
-	my $clone = bless {%$self}, ref($self);			   # shallow clone
+	my $self  = shift;
+	my $clone = bless {%$self}, ref($self);			# shallow clone
 	length $clone->encode( 0, undef, new Net::DNS::Packet() );
 }
 
@@ -449,8 +449,8 @@ sub verify {
 	my $maclen = length $macbin;
 	my $minlen = length($tsigmac) >> 1;			# per RFC4635, 3.1
 	$self->error(16) if $macbin ne substr $tsigmac, 0, $maclen;			     # BADSIG
-	$self->error(18) if abs( time() - $self->time_signed ) > $self->fudge;		     # BADTIME
 	$self->error(22) if $maclen < $minlen or $maclen < 10 or $maclen > length $tsigmac;  # BADTRUNC
+	$self->error(18) if abs( time() - $self->time_signed ) > $self->fudge;		     # BADTIME
 
 	return $self->{error} ? undef : $tsig;
 }
@@ -511,8 +511,8 @@ sub vrfyerrstr {
 	sub _keybin {			## install key in key table
 		my $self = shift;
 		croak 'Unauthorised access to TSIG key material denied' unless scalar @_;
-		my $keyref = $keytable{$self->{owner}->canonical} ||= {};
-		my $private = shift;	# closure keeps private key private
+		my $keyref  = $keytable{$self->{owner}->canonical} ||= {};
+		my $private = shift;				# closure keeps private key private
 		$keyref->{key} = sub {
 			my $function = $keyref->{digest};
 			return &$function( $private, @_ );

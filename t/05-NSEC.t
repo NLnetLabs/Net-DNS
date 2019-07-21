@@ -1,7 +1,7 @@
 # $Id$	-*-perl-*-
 
 use strict;
-use Test::More tests => 16;
+use Test::More tests => 15;
 
 
 use Net::DNS;
@@ -87,9 +87,13 @@ my $wire = '04686f7374076578616d706c6503636f6d000006620000000003';
 
 
 {
-	my $rr = new Net::DNS::RR(". $type");
-	$rr->typebm('');
-	is( $rr->typebm(), '', "historical 'typebm'" );
+	my $rr = new Net::DNS::RR("$name $type @data");
+	local $SIG{__WARN__} = sub { };				# suppress deprecation warning
+	eval { $rr->covered('example.') };			# historical
+	eval { $rr->typebm('') };				# historical
+	eval { $rr->typebm() };					# historical
+
+	$rr->print;
 }
 
 

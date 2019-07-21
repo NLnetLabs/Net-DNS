@@ -45,7 +45,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $nxtdname = $self->{nxtdname};
-	my @rdata = ( $nxtdname->string(), $self->typelist );
+	my @rdata    = ( $nxtdname->string(), $self->typelist );
 }
 
 
@@ -142,7 +142,7 @@ sub encloser {
 	return if lc($nextcloser) ne lc( join '.', $next, @owner );
 
 	$self->{nextcloser} = $nextcloser;
-	$self->{wildcard} = join( '.', '*', @qname );
+	$self->{wildcard}   = join( '.', '*', @qname );
 	return $self->owner;
 }
 
@@ -209,7 +209,13 @@ sub _bm2type {
 sub typebm {				## historical
 	my $self = shift;					# uncoverable pod
 	$self->{typebm} = shift if scalar @_;
+	$self->_deprecate('prefer $rr->typelist() or $rr->typemap()');
 	return $self->{typebm};
+}
+
+sub covered {				## historical
+	my $self = shift;					# uncoverable pod
+	$self->covers(@_);
 }
 
 

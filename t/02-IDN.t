@@ -78,8 +78,8 @@ is( new Net::DNS::Domain('xn--')->xname, 'xn--', 'IDN bogus domain->xname' );
 
 
 eval { new Net::DNS::Domain( pack 'U*', 65533, 92, 48, 65533 ); };
-my $exception = $1 if $@ =~ /^(.+)\n/;
-ok( $exception ||= '', "invalid name\t[$exception]" );
+my ($exception) = split /\n/, "$@\n";
+ok( $exception, "invalid name\t[$exception]" );
 
 
 exit;

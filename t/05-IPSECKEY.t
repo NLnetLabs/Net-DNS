@@ -104,15 +104,15 @@ my $wire =
 
 {
 	my $rr = eval { new Net::DNS::RR( type => $type, gateway => 'X' ); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unrecognised gateway type\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unrecognised gateway type\t[$exception]" );
 }
 
 
 {
 	my $rr = eval { new Net::DNS::RR(". $type \\# 3 01ff05"); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "exception raised in decode\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "exception raised in decode\t[$exception]" );
 }
 
 
@@ -120,8 +120,8 @@ my $wire =
 	my $rr = new Net::DNS::RR(". $type @data");
 	$rr->{gatetype} = 255;
 	eval { $rr->encode };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "exception raised in encode\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "exception raised in encode\t[$exception]" );
 }
 
 
@@ -129,8 +129,8 @@ my $wire =
 	my $rr = new Net::DNS::RR(". $type @data");
 	$rr->{gatetype} = 255;
 	eval { my $gateway = $rr->gateway; };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "exception raised in gateway\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "exception raised in gateway\t[$exception]" );
 }
 
 

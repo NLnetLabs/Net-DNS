@@ -78,8 +78,8 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 	is( $class->algorithm(255),	255,	 "class method algorithm(255)" );
 
 	eval { $rr->algorithm('X'); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "unknown mnemonic\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unknown mnemonic\t[$exception]" );
 }
 
 
@@ -91,17 +91,16 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 	is( unpack( 'H*', $rr->saltbin ), '', 'null salt binary value' );
 
 	eval { $rr->salt('123456789XBCDEF'); };
-	my $exception = $1 if $@ =~ /^(.+)\n/;
-	ok( $exception ||= '', "corrupt hexadecimal\t[$exception]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "corrupt hexadecimal\t[$exception]" );
 }
 
 
 {
 	my $rr = new Net::DNS::RR("$name $type @data");
+	local $SIG{__WARN__} = sub { };				# suppress deprecation warning
 	eval { Net::DNS::RR::NSEC3::name2hash( 0, 1, '' ) };	# invalid algorithm
-	eval { $rr->covered('example.') };			# historical
 	eval { $rr->match('example.') };			# historical
-	eval { $rr->typebm('') };				# historical
 
 	$rr->print;
 }
