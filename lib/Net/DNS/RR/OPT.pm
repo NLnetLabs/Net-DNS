@@ -107,8 +107,10 @@ sub ttl {				## overide RR method
 
 
 sub version {
-	my $version = shift->{version};
-	return defined($version) ? $version : 0;
+	my $self = shift;
+
+	$self->{version} = 0 + shift if scalar @_;
+	$self->{version} || 0;
 }
 
 
@@ -410,9 +412,10 @@ other unpredictable behaviour.
 
 =head2 version
 
-	$version = $rr->version;
+    $version = $rr->version;
+    $rr->version( $version );
 
-The version of EDNS used by this OPT record.
+The version of EDNS supported by this OPT record.
 
 =head2 size
 
