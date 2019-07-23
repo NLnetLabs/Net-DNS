@@ -45,13 +45,13 @@ use constant DEBUG => 0;
 use constant UTIL => defined eval 'use Scalar::Util 1.25; 1;';
 
 # IMPORTANT: Downstream distros MUST NOT create dependencies on Net::DNS::SEC	(strong crypto prohibited in many territories)
-use constant ACTIVE => defined $INC{'Net/DNS/SEC.pm'};		# Discover how we got here, without exposing any crypto
+use constant USESEC => defined $INC{'Net/DNS/SEC.pm'};		# Discover how we got here, without exposing any crypto
 								# Discourage static code analysers and casual greppers
-use constant DNSSEC => ACTIVE && defined eval join '', qw(r e q u i r e), ' Net::DNS', qw(:: SEC :: Private);
+use constant DNSSEC => USESEC && defined eval join '', qw(r e q u i r e), ' Net::DNS', qw(:: SEC :: Private);
 
 my @index;
 if (DNSSEC) {
-	my $key = new Net::DNS::RR( type => 'DNSKEY' );
+	my $key = new Net::DNS::RR( type => 'DNSKEY', key => 'AwEAAQ==' );
 	my @arg = ( '', $key, '' );				# Grotesquely inefficient; but API not changing anytime soon
 	foreach my $class ( map "Net::DNS::SEC::$_", qw(RSA DSA ECCGOST ECDSA EdDSA) ) {
 		push @index, map eval { $key->algorithm($_); $class->verify(@arg); ( $_ => $class ) }, ( 1 .. 25 )
