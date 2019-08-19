@@ -35,9 +35,10 @@ my @module = qw(
 my @diag;
 foreach my $module (@module) {
 	eval "require $module";
-	my $version = eval { $module->VERSION } || next;
-	$version =~ s/(\.\d)$/${1}0/;
-	push @diag, sprintf "%-25s  %s", $module, $version;
+	for ( grep $_, eval { $module->VERSION } ) {
+		s/^(\d+\.\d)$/${1}0/;
+		push @diag, sprintf "%-25s  %s", $module, $_;
+	}
 }
 diag join "\n\t", "\nThese tests were run using:", @diag;
 

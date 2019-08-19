@@ -5,6 +5,10 @@ $Id$                       -*-text-*-
 
 	Fix error report for non-existent or recursive zone file $INCLUDE.
 
+	Emit one deprecation warning on invocation of obsolete method.
+
+	Rework OPT.pm EDNS0 option construction.
+
 	Remove obsolete Net::DNS::RR::DLV package.
 
 	Add Net::DNS::RR::ZONEMD package.

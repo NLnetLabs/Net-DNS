@@ -7,7 +7,7 @@ use Net::DNS;
 use Net::DNS::Parameters;
 
 
-plan tests => 41 + scalar( keys %Net::DNS::Parameters::ednsoptionbyval );
+plan tests => 33 + scalar( keys %Net::DNS::Parameters::ednsoptionbyval );
 
 
 my $name = '.';
@@ -117,7 +117,7 @@ foreach my $method (qw(class ttl)) {
 	is( scalar( $edns->options ), 0, 'delete EDNS option' );
 
 
-	foreach my $option ( sort { $a <=> $b } keys %Net::DNS::Parameters::ednsoptionbyval ) {
+	foreach my $option ( keys %Net::DNS::Parameters::ednsoptionbyval ) {
 		$edns->option( $option => 'rawbytes' );
 	}
 
@@ -125,46 +125,32 @@ foreach my $method (qw(class ttl)) {
 	$edns->option( 4 => '' );
 	is( length( $edns->option(4) ), 0, "option 4 => ''" );
 
+	$edns->option( DAU => [5, 7, 8, 10] );
+	is( length( $edns->option(5) ), 4, "option DAU => [5, 7, 8, 10]" );
 
-	$edns->option( DAU => [1, 2, 3, 4] );
-	is( length( $edns->option(5) ), 4, 'option DAU => (1, 2, 3, 4)' );
-
-
-	$edns->option( 8 => ( pack 'H*', '000120007b7b7b7b' ) );
-	my %option8 = $edns->option(8);
-	$edns->option( 'CLIENT-SUBNET' => (%option8) );
-	is( length( $edns->option(8) ), 8, "option CLIENT-SUBNET => (%option8)" );
-	$edns->option( 'CLIENT-SUBNET' => {%option8, 'SOURCE-PREFIX-LENGTH' => 15} );
-	is( length( $edns->option(8) ), 6, "option CLIENT-SUBNET => {'SOURCE-PREFIX-LENGTH' => 15, ...}" );
+	$edns->option( 10 => {'CLIENT-COOKIE' => 'rawbytes'} );
+	is( length( $edns->option(10) ), 8, "option 10 => {CLIENT-COOKIE => ... }" );
 
 
-	my $expire  = 604800;
-	my $option9 = $edns->option( EXPIRE => ( 'EXPIRE-TIMER' => $expire ) );
-	is( scalar( $edns->option(9) ), $option9, "option EXPIRE => ('EXPIRE-TIMER' => $expire)" );
+	$edns->option( 5 => pack 'H*', '0507080A0D0E0F10' );
 
+	$edns->option( 6 => pack 'H*', '010204' );
 
-	my $client = $edns->option( COOKIE => ( 'CLIENT-COOKIE' => 'rawbytes' ) );
-	is( length( $edns->option(10) ), 8, "option COOKIE => ('CLIENT-COOKIE' => ... )" );
+	$edns->option( 7 => pack 'H*', '01' );
 
-	my %option10 = $edns->option(10);
-	$edns->option( COOKIE => {%option10, 'SERVER-COOKIE' => 'cookedbytes'} );
-	is( length( $edns->option(10) ), 19, "option COOKIE => {'SERVER-COOKIE' => ... }" );
+	$edns->option( 8 => ( pack 'H*', '000117007b7b7a' ) );
 
+	$edns->option( 9 => pack 'H*', '00093A80' );
 
-	my $timeout  = 200;
-	my $option11 = $edns->option( 'TCP-KEEPALIVE' => ( TIMEOUT => $timeout ) );
-	is( scalar( $edns->option(11) ), $option11, "option TCP-KEEPALIVE => (TIMEOUT => $timeout)" );
+	$edns->option( 10 => pack 'H*', '7261776279746573636f6f6b65646279746573' );
 
+	$edns->option( 11 => pack 'H*', '00C8' );
 
-	$edns->option( PADDING => ( 'OPTION-LENGTH' => 100 ) );
-	is( length( $edns->option(12) ), 100, "option PADDING => ('OPTION-LENGTH' => 100)" );
+	$edns->option( 12 => pack 'x100' );
 
+	$edns->option( 13 => pack 'H*', '03636F6D00' );
 
-	$edns->option( CHAIN => ( 'TRUST-POINT' => '' ) );
-	is( length( $edns->option(13) ), 1, "option CHAIN => ''" );
-
-	my $option13 = $edns->option( CHAIN => ( 'TRUST-POINT' => 'com.' ) );
-	is( scalar( $edns->option(13) ), $option13, "option CHAIN => ('TRUST-POINT' => 'com.')" );
+	$edns->option( 15 => pack 'H*', '007B' );
 
 
 	foreach my $option ( sort { $a <=> $b } keys %Net::DNS::Parameters::ednsoptionbyval ) {
@@ -179,8 +165,8 @@ foreach my $method (qw(class ttl)) {
 
 
 	eval { $edns->option( 65001 => ( '', '' ) ) };
-	chomp $@;
-	ok( $@, "unable to compose option:\t[$@]" );
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "unable to compose option:\t[$exception]" );
 
 
 	my $options = $edns->options;

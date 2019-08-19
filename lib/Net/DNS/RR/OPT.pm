@@ -190,7 +190,7 @@ sub _set_option {
 	my $options = $self->{option} ||= {};
 	delete $options->{$number};
 	return unless defined $value;
-	if ( ref($value) || scalar(@etc) ) {
+	if ( ref($value) || scalar(@etc) || $value !~ /\D/ ) {
 		my @arg = ( $value, @etc );
 		@arg = @$value if ref($value) eq 'ARRAY';
 		@arg = %$value if ref($value) eq 'HASH';
@@ -200,8 +200,11 @@ sub _set_option {
 			my $option  = ednsoptionbyval($number);
 			my $package = join '::', __PACKAGE__, $option;
 			$package =~ s/-/_/g;
-			croak "unable to compose option $option" unless $package->can('_compose');
-			$value = $package->_compose(@arg);
+			if ( $package->can('_compose') ) {
+				$value = $package->_compose(@arg);
+			} elsif ( scalar(@etc) ) {
+				croak "unable to compose option $option";
+			}
 		}
 	}
 	$options->{$number} = $value;
@@ -248,7 +251,7 @@ my @field8 = qw(FAMILY SOURCE-PREFIX-LENGTH SCOPE-PREFIX-LENGTH ADDRESS);
 sub _compose {
 	my ( $class, %argument ) = @_;
 	my $address = bless( {}, $family{$argument{FAMILY}} )->address( $argument{ADDRESS} );
-	my $preamble = pack 'nC2', map $_ ||= 0, @argument{@field8};
+	my $preamble = pack 'nC2', map $_ || 0, @argument{@field8};
 	my $bitmask  = $argument{'SOURCE-PREFIX-LENGTH'};
 	pack "a* B$bitmask", $preamble, unpack 'B*', $address;
 }
@@ -483,13 +486,12 @@ For some options, an array is more appropriate:
 	@algorithms = $packet->edns->option(6);
 
 
-Similar forms of array syntax may be used to construct the option value:
+Similar forms of array or hash syntax may be used to construct the
+option value:
 
 	$packet->edns->option( DHU => [1, 2, 4] );
-	$packet->edns->option( 6   => (1, 2, 4) );
 
 	$packet->edns->option( COOKIE => {'CLIENT-COOKIE' => $cookie} );
-	$packet->edns->option( 10     => ('CLIENT-COOKIE' => $cookie) );
 
 
 =head1 COPYRIGHT

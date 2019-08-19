@@ -37,10 +37,11 @@ use constant DNSSEC => USESEC && defined eval join '', qw(r e q u i r e), ' Net:
 my @index;
 if (DNSSEC) {
 	my $key = new Net::DNS::RR( type => 'DNSKEY', key => 'AwEAAQ==' );
-	my @arg = ( '', $key, '' );				# Grotesquely inefficient; but API not changing anytime soon
 	foreach my $class ( map "Net::DNS::SEC::$_", qw(RSA DSA ECCGOST ECDSA EdDSA) ) {
-		push @index, map eval { $key->algorithm($_); $class->verify(@arg); ( $_ => $class ) }, ( 1 .. 25 )
-				if eval join '', qw(r e q u i r e), " $class";
+		my @algorithms = eval join '', qw(r e q u i r e), " $class; $class->_index";	# 1.14 API
+		@algorithms = grep eval { $key->algorithm($_); $class->verify( '', $key, '' ); 1 }, ( 1 .. 16 )
+				unless scalar(@algorithms);	# Grotesquely inefficient; but need to support older API
+		push @index, map( ( $_ => $class ), @algorithms );
 	}
 }
 
@@ -285,7 +286,8 @@ sub create {
 		$self->{sigexpiration} = $self->{siginception} + $self->{sigval}
 				unless $self->{sigexpiration};
 
-		$self->_CreateSig( $self->_CreateSigData($rrsetref), $private );
+		my $sigdata = $self->_CreateSigData($rrsetref);
+		$self->_CreateSig( $sigdata, $private );
 		return $self;
 	}
 }
@@ -359,7 +361,8 @@ sub verify {
 			return 0;
 		}
 
-		$self->_VerifySig( $self->_CreateSigData($rrsetref), $keyref ) || return 0;
+		my $sigdata = $self->_CreateSigData($rrsetref);
+		$self->_VerifySig( $sigdata, $keyref ) || return 0;
 
 		# time to do some time checking.
 		my $t = time;
