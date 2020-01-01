@@ -431,7 +431,7 @@ SKIP: {
 	ok( !$resolver->bgread(undef), '_bgread()	undefined handle' );
 
 	my $packet = $resolver->_make_query_packet(qw(net-dns.org SOA));
-	my $second = $resolver->_make_query_packet(qw(net-dns.org SOA));
+	my $second = bless {%$packet, id => -1}, ref($packet);
 	my $handle = $resolver->_bgsend_udp( $packet, $second->data );
 	ok( !$resolver->bgread($handle), '_bgread()	no reply' );
 

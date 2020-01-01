@@ -1,6 +1,12 @@
 $Id$                       -*-text-*-
 
 
+**** 1.22 [unreleased]
+
+Feature
+	Provide rudimentary decode and print for DSO packet.
+
+
 **** 1.21 Aug 30, 2019
 
 	Fix error report for non-existent or recursive zone file $INCLUDE.
@@ -30,7 +36,7 @@ Fix rt.cpan.org #128901
 
 Fix rt.cpan.org #128081
 
-	Recurse.pm fails to resolve domain “kickboxingireland.ie”
+	Recurse.pm fails to resolve domain "kickboxingireland.ie"
 
 Fix rt.cpan.org #127307
 

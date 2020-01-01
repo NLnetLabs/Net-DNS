@@ -82,6 +82,7 @@ sub new {
 	# local server addresses must also be accepted by a resolver
 	my $LocalAddr = $self{LocalAddr} || [DEFAULT_ADDR];
 	my $resolver = new Net::DNS::Resolver( nameservers => $LocalAddr );
+	$resolver->force_v4(1) unless USE_SOCKET_IP;
 	$resolver->force_v4(1) if FORCE_IPv4;
 	my @localaddresses = $resolver->nameservers;
 
