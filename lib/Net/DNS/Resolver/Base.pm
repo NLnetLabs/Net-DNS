@@ -636,14 +636,14 @@ sub bgbusy {
 
 
 sub bgisready {				## historical
-	_deprecate('prefer bgbusy()');				# uncoverable pod
+	_deprecate('prefer  ! bgbusy(...)');			# uncoverable pod
 	!&bgbusy;
 }
 
 
 sub bgread {
 	while (&bgbusy) {					# side effect: TCP retry
-		IO::Select->new( $_[1] )->can_read(0.02);	# use 3 orders of magnitude less CPU
+		IO::Select->new( $_[1] )->can_read(0.02);	# reduce my CPU usage by 3 orders of magnitude
 	}
 	&_bgread;
 }

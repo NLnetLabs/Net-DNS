@@ -340,7 +340,7 @@ sub string {
 	my $last = pop(@line);					# last or only line
 	$last = join $tab, @core, "@rdata" unless scalar(@line);
 
-	return join "\n\t", @line, _wrap( $last, map "; $_", $self->_annotation );
+	join "\n\t", @line, _wrap( $last, map "; $_", $self->_annotation );
 }
 
 
@@ -355,7 +355,10 @@ which have rudimentary parsers.
 =cut
 
 sub plain {
-	join ' ', shift->token;
+	my $string = join ' ', shift->token;
+	$string =~ s/\\034/\\"/g;				# unescape "
+	$string =~ s/\\092/\\\\/g;				# unescape escape
+	return $string;
 }
 
 
@@ -376,7 +379,7 @@ sub token {
 	my @rdata = $self->_empty ? () : eval { $self->_format_rdata };
 
 	# parse into quoted strings, contiguous non-whitespace and (discarded) comments
-	my @parse = map { s/\\\\/\\092/g; s/\\"/\\034/g; split /$PARSE_REGEX/o; } @rdata;
+	my @parse = map split( /$PARSE_REGEX/o, $_ ), @rdata;
 	my @token = ( @core, grep defined && length, @parse );
 }
 
@@ -732,6 +735,8 @@ sub _wrap {
 
 	my ( @line, @fill );
 	foreach (@text) {
+		s/\\034/\\"/g;					# unescape "
+		s/\\092/\\\\/g;					# unescape escape
 		if ( ( $coln += 1 + length ) > $cols ) {	# start new line
 			push @line, join ' ', @fill if scalar @fill;
 			$coln = length;

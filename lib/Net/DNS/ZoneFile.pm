@@ -95,7 +95,7 @@ sub new {
 	}
 
 	$self->{filename}   = $file ||= '';
-	$self->{filehandle} = new IO::File($file) or croak "$! $file";
+	$self->{filehandle} = new IO::File( $file, 'r' ) or croak "$! $file";
 	$self->{fileopen}{$file}++;
 	return $self;
 }

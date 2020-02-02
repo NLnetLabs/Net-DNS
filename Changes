@@ -3,6 +3,10 @@ $Id$                       -*-text-*-
 
 **** 1.22 [unreleased]
 
+Fix rt.cpan.org #131579
+
+	Parse issue in Net::DNS::RR->token
+
 Feature
 	Provide rudimentary decode and print for DSO packet.
 
