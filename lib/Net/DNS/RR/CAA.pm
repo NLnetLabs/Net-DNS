@@ -36,16 +36,14 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my $tag = $self->{tag};
-	pack 'C a* a*', $self->flags, $tag->encode, $self->{value}->raw;
+	pack 'C a* a*', $self->flags, $self->{tag}->encode, $self->{value}->raw;
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my $tag = $self->{tag};
-	my @rdata = ( $self->flags, $tag->string, $self->{value}->string );
+	my @rdata = ( $self->flags, $self->{tag}->string, $self->{value}->string );
 }
 
 
@@ -53,7 +51,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	my $self = shift;
 
 	$self->flags(shift);
-	$self->tag(shift);
+	$self->tag( lc shift );
 	$self->value(shift);
 }
 
@@ -148,7 +146,7 @@ Issuer critical flag.
 
 The property identifier, a sequence of ASCII characters.
 
-Tag values may contain ASCII characters a-z, A-Z, and 0-9.
+Tag values may contain ASCII characters a-z, hyphen and 0-9.
 Tag values should not contain any other characters.
 Matching of tag values is not case sensitive.
 
@@ -192,6 +190,6 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC6844
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC8659
 
 =cut

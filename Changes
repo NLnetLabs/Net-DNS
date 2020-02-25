@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.23 [unreleased]
+
+Fix rt.cpan.org #131906
+
+	Undefined errorstring/warning when axfr fails
+
+
 **** 1.22 Feb 13, 2020
 
 Fix rt.cpan.org #131579
