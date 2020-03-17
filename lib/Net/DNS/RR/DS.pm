@@ -66,7 +66,7 @@ my %digest = (
 	my %algbyval = reverse @algbyname;
 
 	my @algrehash = map /^\d/ ? ($_) x 3 : do { s/[\W_]//g; uc($_) }, @algbyname;
-	my %algbyname = @algrehash;    # work around broken cperl
+	my %algbyname = @algrehash;				# work around broken cperl
 
 	sub _algbyname {
 		my $arg = shift;
@@ -140,8 +140,8 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	$self->_annotation( $self->babble ) if BABBLE && $self->{algorithm};
-	my @digest = split /(\S{64})/, $self->digest || '-';
-	my @rdata = ( @{$self}{qw(keytag algorithm digtype)}, @digest );
+	my @param = @{$self}{qw(keytag algorithm digtype)};
+	my @rdata = ( @param, split /(\S{64})/, $self->digest || '-' );
 }
 
 
@@ -235,14 +235,12 @@ sub create {
 		%args
 		);
 
-	my $owner = $self->{owner}->encode();
-	my $data = pack 'a* a*', $owner, $keyrr->_encode_rdata;
-
 	my $arglist = $digest{$self->digtype};
 	croak join ' ', 'digtype', $self->digtype('MNEMONIC'), 'not supported' unless $arglist;
 	my ( $object, @argument ) = @$arglist;
 	my $hash = $object->new(@argument);
-	$hash->add($data);
+	$hash->add( $keyrr->{owner}->canonical );
+	$hash->add( $keyrr->_encode_rdata );
 	$self->digestbin( $hash->digest );
 
 	return $self;

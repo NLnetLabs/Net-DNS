@@ -69,7 +69,7 @@ my %certtype = (
 	my %algbyval = reverse @algbyname;
 
 	my @algrehash = map /^\d/ ? ($_) x 3 : do { s/[\W_]//g; uc($_) }, @algbyname;
-	my %algbyname = @algrehash;    # work around broken cperl
+	my %algbyname = @algrehash;				# work around broken cperl
 
 	sub _algbyname {
 		my $arg = shift;
@@ -106,8 +106,8 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my @base64 = split /\s+/, encode_base64( $self->{certbin} );
-	my @rdata = ( $self->certtype, $self->keytag, $self->algorithm, @base64 );
+	my @param = ( $self->certtype, $self->keytag, $self->algorithm );
+	my @rdata = ( @param, split /\s+/, encode_base64( $self->{certbin} ) );
 }
 
 

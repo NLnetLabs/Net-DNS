@@ -455,9 +455,8 @@ SKIP: {
 	my $socket = $resolver->_bgsend_tcp( $packet, $packet->data );
 	while ( $resolver->bgbusy($socket) ) { sleep 1 }
 
-	my $discard = '';
-	$socket->recv( $discard, 1 ) if $socket;		# discard first octet
-	$socket->blocking(0);
+	my $discarded = '';		## [size][id][status][qd	count]...
+	$socket->recv( $discarded, 7 ) if $socket;
 	ok( !$resolver->_bgread($socket), '_read_tcp()	incomplete data' );
 }
 
