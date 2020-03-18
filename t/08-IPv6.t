@@ -208,10 +208,19 @@ NonFatalBegin();
 }
 
 
-SKIP: {
+my $tsig_key = eval {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
-	eval { $resolver->tsig( $resolver->query(qw(tsig-md5 KEY))->answer ) };
+	my @answer = $resolver->query(qw(tsig-md5 KEY))->answer;
+	shift @answer;
+};
+
+my $bad_key = new Net::DNS::RR('MD5.example KEY 512 3 157 MD5keyMD5keyMD5keyMD5keyMD5=');
+
+
+SKIP: {
+	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
+	eval { $resolver->tsig($tsig_key) };
 	skip( 'automatic TSIG tests', 3 ) if $@;
 
 	$resolver->igntc(1);
@@ -238,7 +247,7 @@ SKIP: {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->igntc(1);
 
-	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
+	eval { $resolver->tsig($bad_key) };
 	skip( 'failed TSIG tests', 3 ) if $@;
 
 	my $udp = $resolver->send(qw(net-dns.org SOA IN));
@@ -339,7 +348,7 @@ SKIP: {
 SKIP: {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
-	eval { $resolver->tsig( $resolver->query(qw(tsig-md5 KEY))->answer ) };
+	eval { $resolver->tsig($tsig_key) };
 	skip( 'TSIG AXFR tests', 4 ) if $@;
 	$resolver->tcp_timeout(10);
 
@@ -350,7 +359,8 @@ SKIP: {
 	my $notauth = $resolver->errorstring;
 	ok( !scalar(@notauth), "mismatched zone\t[$notauth]" );
 
-	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
+	eval { $resolver->tsig($bad_key) };
+	skip( 'failed AXFR tests', 3 ) if $@;
 	my @unverifiable = $resolver->axfr();
 	my $errorstring	 = $resolver->errorstring;
 	ok( !scalar(@unverifiable), "mismatched key\t[$errorstring]" );
@@ -363,8 +373,8 @@ SKIP: {
 
 SKIP: {
 	my $resolver = Net::DNS::Resolver->new( nameservers => $NOIP );
-	eval { $resolver->tsig( 'MD5.example', 'MD5keyMD5keyMD5keyMD5keyMD5=' ) };
-	skip( 'TSIG AXFR tests', 2 ) if $@;
+	eval { $resolver->tsig($tsig_key) };
+	skip( 'TSIG bgsend tests', 2 ) if $@;
 
 	my $query = new Net::DNS::Packet(qw(. SOA IN));
 	ok( $resolver->bgsend($query), '$resolver->bgsend() + automatic TSIG' );
@@ -382,7 +392,7 @@ SKIP: {
 {					## exercise exceptions in _axfr_next()
 	my $resolver = Net::DNS::Resolver->new( nameservers => $IP );
 	$resolver->domain('net-dns.org');
-	eval { $resolver->tsig( $resolver->query(qw(tsig-md5 KEY))->answer ) };
+	eval { $resolver->tsig($tsig_key) };
 	$resolver->tcp_timeout(10);
 
 	{

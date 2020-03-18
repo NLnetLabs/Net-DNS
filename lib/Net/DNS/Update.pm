@@ -237,10 +237,9 @@ the corresponding ( name => value ) form may also be used.
 
 =head2 Another way to sign a DNS update
 
-    my $key_name = 'tsig-key';
-    my $key	 = 'awwLOtRfpGE+rRKF2+DEiw==';
+    use Net::DNS::RR::TSIG;
 
-    my $tsig = new Net::DNS::RR("$key_name TSIG $key");
+    my $tsig = create Net::DNS::RR::TSIG( $key_file );
     $tsig->fudge(60);
 
     my $update = new Net::DNS::Update('example.com');

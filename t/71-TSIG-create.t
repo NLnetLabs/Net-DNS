@@ -52,12 +52,6 @@ close KEY;
 }
 
 
-{
-	my $tsig = create $class( $keyrr->owner, $keyrr->key );
-	is( ref($tsig), $class, 'create TSIG from argument list' );
-}
-
-
 my $publickey = 'Khmac-sha1.example.+161+39562.key';
 END { unlink($publickey) if defined $publickey; }
 
@@ -148,6 +142,15 @@ close KEY;
 	eval { create $class($dnskey); };
 	my ($exception) = split /\n/, "$@\n";
 	ok( $exception, "unrecognised public key\t[$exception]" );
+}
+
+
+{
+	my @warning;
+	local $SIG{__WARN__} = sub { @warning = @_ };
+	create $class( $keyrr->owner, $keyrr->key );
+	my ($warning) = split /\n/, "@warning\n";
+	ok( $warning, "2-argument create:\t[$warning]" );
 }
 
 

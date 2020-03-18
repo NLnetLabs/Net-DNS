@@ -219,14 +219,13 @@ sub create {
 
 	my ($type) = reverse split '::', $class;
 
-	my $kname = $keyrr->name;
 	my $flags = $keyrr->flags;
 	croak "Unable to create $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
 	croak "Unable to create $type record for non-authentication key" if $flags & 0x8000;
 	croak "Unable to create $type record for non-ZONE key" unless ( $flags & 0x300 ) == 0x100;
 
 	my $self = new Net::DNS::RR(
-		name	  => $kname,				# per definition, same as keyrr
+		owner	  => $keyrr->owner,			# per definition, same as keyrr
 		type	  => $type,
 		class	  => $keyrr->class,
 		keytag	  => $keyrr->keytag,

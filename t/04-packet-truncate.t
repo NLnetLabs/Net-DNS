@@ -54,7 +54,9 @@ my @rr = $source->read;
 	$packet->push( authority  => @rr );
 	$packet->push( additional => @rr );
 
-	my $tsig = eval { $packet->sign_tsig( 'tsig.example', 'ARDJZgtuTDzAWeSGYPAu9uJUkX0=' ) };
+	my $keyrr = new Net::DNS::RR('tsig.example KEY 512 3 157 ARDJZgtuTDzAWeSGYPAu9uJUkX0=');
+
+	my $tsig = eval { $packet->sign_tsig($keyrr) };
 
 	my $unlimited = length $packet->data;
 	my %before    = map { ( $_, scalar $packet->$_ ) } qw(answer authority additional);

@@ -3,6 +3,12 @@ $Id$                       -*-text-*-
 
 **** 1.23 [unreleased]
 
+	Deprecate 2-argument form of TSIG create().
+
+Fix rt.cpan.org #132170
+
+	[Documentation] Problems with TSIG on ddns update.
+
 Fix rt.cpan.org #131906
 
 	Undefined errorstring/warning when axfr fails
