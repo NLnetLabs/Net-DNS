@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.23 [unreleased]
+**** 1.23 Mar 18, 2020
 
 	Deprecate 2-argument form of TSIG create().
 
