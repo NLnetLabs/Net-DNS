@@ -151,15 +151,18 @@ if ($online_tests) {
 	my $class = USE_SOCKET_IP ? 'IO::Socket::IP' : 'IO::Socket::INET';
 
 	my $socket = $class->new(
-		PeerAddr => "www.google.com:80",
-		Timeout	 => 20
+		PeerAddr => 'dns.google.',
+		PeerPort => 53,		## check 53/TCP not blocked ##
+		Timeout	 => 10
 		);
 
 	unless ($socket) {
 		$online_tests = 0;
-		print <<EOT;
+		print <<"EOT";
 
-You appear not to be directly connected to the Internet.
+Unable to establish TCP/IP connection to the global Internet.
+$@
+
 Disabling online tests altogether...
 
 EOT

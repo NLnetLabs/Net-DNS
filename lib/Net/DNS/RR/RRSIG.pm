@@ -851,11 +851,7 @@ DEALINGS IN THE SOFTWARE.
 =head1 SEE ALSO
 
 L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::SEC>,
-RFC4034, RFC6840, RFC3755,
-L<Net::DNS::SEC::DSA>,
-L<Net::DNS::SEC::ECDSA>,
-L<Net::DNS::SEC::EdDSA>,
-L<Net::DNS::SEC::RSA>
+RFC4034, RFC6840, RFC3755
 
 L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>
 

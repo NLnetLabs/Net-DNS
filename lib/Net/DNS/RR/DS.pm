@@ -215,19 +215,19 @@ sub babble {
 sub create {
 	my $class = shift;
 	my $keyrr = shift;
-	my %args  = $keyrr->ttl ? ( ttl => $keyrr->ttl, @_ ) : (@_);
+	my %args  = @_;
 
 	my ($type) = reverse split '::', $class;
 
-	my $flags = $keyrr->flags;
-	croak "Unable to create $type record for non-DNSSEC key" unless $keyrr->protocol == 3;
-	croak "Unable to create $type record for non-authentication key" if $flags & 0x8000;
-	croak "Unable to create $type record for non-ZONE key" unless ( $flags & 0x300 ) == 0x100;
+	croak "Unable to create $type record for non-zone key" unless $keyrr->zone;
+	croak "Unable to create $type record for revoked key" if $keyrr->revoke;
+	croak "Unable to create $type record for invalid key" unless $keyrr->protocol == 3;
 
 	my $self = new Net::DNS::RR(
 		owner	  => $keyrr->owner,			# per definition, same as keyrr
 		type	  => $type,
 		class	  => $keyrr->class,
+		ttl	  => $keyrr->{ttl},
 		keytag	  => $keyrr->keytag,
 		algorithm => $keyrr->algorithm,
 		digtype	  => 1,					# SHA1 by default

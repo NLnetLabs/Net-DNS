@@ -85,6 +85,9 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>, RFC3755, RFC2535
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DNSKEY>,
+RFC4034, RFC3755, RFC3008, RFC2535
+
+L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>
 
 =cut

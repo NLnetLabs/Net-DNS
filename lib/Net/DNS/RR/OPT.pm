@@ -360,6 +360,28 @@ sub _decompose {
 sub _image { &_decompose; }
 
 
+package Net::DNS::RR::OPT::EXTENDED_ERROR;			# draft-ietf-dnsop-extended-error
+use Net::DNS::Text;
+
+my @field15 = qw(INFO-CODE EXTRA-TEXT);
+
+sub _compose {
+	my ( $class, %argument ) = @_;
+	my ( $ic, $et ) = map $_ || '', @argument{@field15};
+	pack 'na*', $ic, Net::DNS::Text->new($et)->raw;
+}
+
+sub _decompose {
+	my ( $ic, $et ) = unpack 'na*', $_[1];
+	my @payload = ( 'INFO-CODE' => $ic, 'EXTRA-TEXT' => Net::DNS::Text->decode( \$et, 0, length $et )->value );
+}
+
+sub _image {
+	my %hash  = &_decompose;
+	my @image = map join( ' => ', $_, $hash{$_} ), @field15;
+}
+
+
 1;
 __END__
 

@@ -133,18 +133,18 @@ my $wire = join '', qw( EC45 05 01 2BB183AF5F22588179A53B0A98631FAD1A292118 );
 
 
 {
-	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', flags => 0x8000 );
+	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', zone => 0 );
 	eval { create Net::DNS::RR::DS($keyrr); };
 	my ($exception) = split /\n/, "$@\n";
-	ok( $exception, "create: non-auth key\t[$exception]" );
+	ok( $exception, "create: non-zone key\t[$exception]" );
 }
 
 
 {
-	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', flags => 0x200 );
+	my $keyrr = new Net::DNS::RR( type => 'DNSKEY', revoke => 1 );
 	eval { create Net::DNS::RR::DS($keyrr); };
 	my ($exception) = split /\n/, "$@\n";
-	ok( $exception, "create: non-ZONE key\t[$exception]" );
+	ok( $exception, "create: revoked key\t[$exception]" );
 }
 
 

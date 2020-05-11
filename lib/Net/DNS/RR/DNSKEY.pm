@@ -118,6 +118,7 @@ sub _defaults {				## specify RR attribute default values
 	$self->algorithm(1);
 	$self->flags(256);
 	$self->protocol(3);
+	$self->keybin('');
 }
 
 
@@ -415,6 +416,7 @@ DEALINGS IN THE SOFTWARE.
 
 L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC4034, RFC3755
 
-L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>
+L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>,
+L<DNSKEY Flags|http://www.iana.org/assignments/dnskey-flags>
 
 =cut
