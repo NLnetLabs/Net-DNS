@@ -41,6 +41,7 @@ my %prerequisite = (
 	'File::Spec'	 => 0.86,
 	'IO::File'	 => 1.08,
 	'IO::Select'	 => 1.14,
+	'IO::Socket'	 => 1.26,
 	'IO::Socket::IP' => 0.38,
 	'MIME::Base64'	 => 2.13,
 	'PerlIO'	 => 1.05,
@@ -70,7 +71,7 @@ my @debris = qw(
 		);
 
 
-use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1';
+use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.38; 1';
 use constant INET_FALLBACK => !USE_SOCKET_IP && eval 'require IO::Socket::INET';
 
 

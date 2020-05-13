@@ -7,9 +7,7 @@ use Test::More;
 my @module = qw(
 	Net::DNS
 	Net::DNS::SEC
-	Data::Dumper
 	Digest::BubbleBabble
-	Digest::GOST
 	Digest::HMAC
 	Digest::MD5
 	Digest::SHA
@@ -17,7 +15,6 @@ my @module = qw(
 	File::Spec
 	IO::File
 	IO::Select
-	IO::Socket
 	IO::Socket::INET
 	IO::Socket::IP
 	MIME::Base64
@@ -25,7 +22,6 @@ my @module = qw(
 	Net::LibIDN2
 	PerlIO
 	Scalar::Util
-	Socket
 	Time::Local
 	Win32::API
 	Win32::IPHelper

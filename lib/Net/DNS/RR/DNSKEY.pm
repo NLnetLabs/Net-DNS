@@ -132,7 +132,7 @@ sub flags {
 
 sub zone {
 	for ( shift->{flags} ) {
-		$_ = ( shift() ? 0 : 0x0100 ) ^ ( 0x0100 | ( $_ || 0 ) ) if scalar @_;
+		$_ = ( $_[0] ? 0 : 0x0100 ) ^ ( 0x0100 | ( $_ || 0 ) ) if scalar @_;
 		return 0x0100 & ( $_ || 0 );
 	}
 }
@@ -140,7 +140,7 @@ sub zone {
 
 sub revoke {
 	for ( shift->{flags} ) {
-		$_ = ( shift() ? 0 : 0x0080 ) ^ ( 0x0080 | ( $_ || 0 ) ) if scalar @_;
+		$_ = ( $_[0] ? 0 : 0x0080 ) ^ ( 0x0080 | ( $_ || 0 ) ) if scalar @_;
 		return 0x0080 & ( $_ || 0 );
 	}
 }
@@ -148,7 +148,7 @@ sub revoke {
 
 sub sep {
 	for ( shift->{flags} ) {
-		$_ = ( shift() ? 0 : 0x0001 ) ^ ( 0x0001 | ( $_ || 0 ) ) if scalar @_;
+		$_ = ( $_[0] ? 0 : 0x0001 ) ^ ( 0x0001 | ( $_ || 0 ) ) if scalar @_;
 		return 0x0001 & ( $_ || 0 );
 	}
 }
@@ -295,7 +295,7 @@ Unsigned 16-bit number representing Boolean flags.
 	...
  }
 
-Boolean Zone flag.
+Boolean ZONE flag.
 
 =back
 
@@ -309,7 +309,7 @@ Boolean Zone flag.
 	...
  }
 
-Boolean Revoke flag.
+Boolean REVOKE flag.
 
 =back
 
@@ -323,7 +323,7 @@ Boolean Revoke flag.
 	...
  }
 
-Boolean Secure Entry Point flag.
+Boolean Secure Entry Point (SEP) flag.
 
 =back
 

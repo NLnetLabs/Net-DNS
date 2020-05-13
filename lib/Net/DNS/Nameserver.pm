@@ -39,7 +39,7 @@ See L</EXAMPLE> for an example.
 
 =cut
 
-use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.32; 1;';
+use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.38; 1;';
 
 use strict;
 use warnings;

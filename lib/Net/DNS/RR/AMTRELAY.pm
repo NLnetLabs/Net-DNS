@@ -88,7 +88,7 @@ sub precedence {
 
 sub D {
 	my $self = shift;
-	$self->{relaytype} = $self->relaytype | ( shift ? 0x80 : 0 ) if scalar @_;
+	$self->{relaytype} = $self->relaytype | ( $_[0] ? 0x80 : 0 ) if scalar @_;
 	$self->{relaytype} ? $self->{relaytype} >> 7 : 0;
 }
 

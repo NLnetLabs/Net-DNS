@@ -73,7 +73,7 @@ sub flags {
 
 sub critical {
 	for ( shift->{flags} ) {
-		$_ = ( shift() ? 0 : 0x0080 ) ^ ( 0x0080 | ( $_ || 0 ) ) if scalar @_;
+		$_ = ( $_[0] ? 0 : 0x0080 ) ^ ( 0x0080 | ( $_ || 0 ) ) if scalar @_;
 		return 0x0080 & ( $_ || 0 );
 	}
 }

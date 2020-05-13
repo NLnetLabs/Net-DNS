@@ -142,7 +142,7 @@ sub flags {
 
 sub optout {
 	for ( shift->{flags} ) {
-		$_ = ( shift() ? 0 : 0x01 ) ^ ( 0x01 | ( $_ || 0 ) ) if scalar @_;
+		$_ = ( $_[0] ? 0 : 0x01 ) ^ ( 0x01 | ( $_ || 0 ) ) if scalar @_;
 		return 0x01 & ( $_ || 0 );
 	}
 }

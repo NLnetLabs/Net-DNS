@@ -78,7 +78,7 @@ sub flags {
 
 sub immediate {
 	for ( shift->{flags} ) {
-		$_ = ( shift() ? 0 : 0x0001 ) ^ ( 0x0001 | ( $_ || 0 ) ) if scalar @_;
+		$_ = ( $_[0] ? 0 : 0x0001 ) ^ ( 0x0001 | ( $_ || 0 ) ) if scalar @_;
 		return 0x0001 & ( $_ || 0 );
 	}
 }
@@ -86,7 +86,7 @@ sub immediate {
 
 sub soaminimum {
 	for ( shift->{flags} ) {
-		$_ = ( shift() ? 0 : 0x0002 ) ^ ( 0x0002 | ( $_ || 0 ) ) if scalar @_;
+		$_ = ( $_[0] ? 0 : 0x0002 ) ^ ( 0x0002 | ( $_ || 0 ) ) if scalar @_;
 		return 0x0002 & ( $_ || 0 );
 	}
 }
