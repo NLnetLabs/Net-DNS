@@ -139,7 +139,7 @@ use constant ESC => '\\';
 
 
 {
-	foreach my $char (qw($ ' " ; @)) {
+	foreach my $char (qw(" ( ) ; @)) {
 		my $name   = $char . 'example.com.';
 		my $domain = new Net::DNS::Domain($name);
 		is( $domain->string, ESC . $name, "escape leading $char in string" );

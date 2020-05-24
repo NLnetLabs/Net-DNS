@@ -45,6 +45,7 @@ use strict;
 use warnings;
 use integer;
 use Carp;
+use IO::File;
 use IO::Select;
 use IO::Socket;
 
@@ -188,8 +189,7 @@ sub _read_config_file {			## read resolver config file
 	my $self = shift;
 	my $file = shift;
 
-	my $filehandle;
-	open( $filehandle, '<', $file ) or croak "$file: $!";
+	my $filehandle = new IO::File( $file, '<' ) or croak "$file: $!";
 
 	my @nameserver;
 	my @searchlist;
@@ -719,7 +719,7 @@ sub axfr {				## zone transfer
 			unless ( scalar @rr ) {
 				my $reply;			# refill @rr
 				( $reply, $verify ) = $self->_axfr_next( $select, $verify );
-				@rr = $reply->answer;
+				@rr = $reply->answer if $reply;
 			}
 
 			return $rr;

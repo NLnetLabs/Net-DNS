@@ -26,6 +26,11 @@ use constant CLASS_TTL_RDLENGTH => length pack 'n N n', (0) x 3;
 
 use constant OPT => typebyname qw(OPT);
 
+require Net::DNS::DomainName;
+require Net::DNS::RR::A;
+require Net::DNS::RR::AAAA;
+require Net::DNS::Text;
+
 
 sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $self = shift;
@@ -238,8 +243,6 @@ our @ISA = qw(Net::DNS::RR::OPT::DAU);
 
 
 package Net::DNS::RR::OPT::CLIENT_SUBNET;			# RFC7871
-use Net::DNS::RR::A;
-use Net::DNS::RR::AAAA;
 
 my %family = qw(1 Net::DNS::RR::A	2 Net::DNS::RR::AAAA);
 my @field8 = qw(FAMILY SOURCE-PREFIX-LENGTH SCOPE-PREFIX-LENGTH ADDRESS);
@@ -278,24 +281,29 @@ sub _decompose {
 sub _image { join ' => ', &_decompose; }
 
 
-package Net::DNS::RR::OPT::COOKIE;				# RFC7873
+package Net::DNS::RR::OPT::COOKIE;				# draft-ietf-dnsop-server-cookies
 
-my @field10 = qw(CLIENT-COOKIE SERVER-COOKIE);
+my @field10 = qw(VERSION RESERVED TIMESTAMP HASH);
 
 sub _compose {
-	my ( $class, %argument ) = @_;
-	pack 'a8 a*', map $_ || '', @argument{@field10};
+	my ( $class, %argument ) = ( VERSION => 1, RESERVED => '', @_ );
+	return pack 'a8', $argument{'CLIENT-COOKIE'} if $argument{'CLIENT-COOKIE'};
+	pack 'Ca3Na*', map $_, @argument{@field10};
 }
 
 sub _decompose {
+	my ( $class, $argument ) = @_;
+	return ( 'CLIENT-COOKIE', $argument ) unless length($argument) > 8;
 	my %hash;
-	@hash{@field10} = unpack 'a8 a*', $_[1];
-	my @payload = map { ( $_ => $hash{$_} ) } @field10;
+	@hash{@field10} = unpack 'Ca3Na*', $argument;
+	my @payload = map( ( $_ => $hash{$_} ), @field10 );
 }
 
 sub _image {
-	my %hash  = &_decompose;
-	my @image = map join( ' => ', $_, unpack 'H*', $hash{$_} ), @field10;
+	my %hash = &_decompose;
+	return unpack 'H*', $hash{'CLIENT-COOKIE'} if $hash{'CLIENT-COOKIE'};
+	for (qw(RESERVED HASH)) { $hash{$_} = unpack 'H*', $hash{$_} }
+	my @image = map "$_ => $hash{$_}", @field10;
 }
 
 
@@ -329,7 +337,6 @@ sub _image { join ' => ', &_decompose; }
 
 
 package Net::DNS::RR::OPT::CHAIN;				# RFC7901
-use Net::DNS::DomainName;
 
 sub _compose {
 	my ( $class, %argument ) = @_;
@@ -361,7 +368,6 @@ sub _image { &_decompose; }
 
 
 package Net::DNS::RR::OPT::EXTENDED_ERROR;			# draft-ietf-dnsop-extended-error
-use Net::DNS::Text;
 
 my @field15 = qw(INFO-CODE EXTRA-TEXT);
 
@@ -395,7 +401,7 @@ __END__
 
     $packet->edns->size(1280);			# UDP payload size
 
-    $packet->edns->option( COOKIE => $cookie );
+    $packet->edns->option( COOKIE => 'rawbytes' );
 
     $packet->edns->print;
 
@@ -403,10 +409,10 @@ __END__
     ;;	    flags:  8000
     ;;	    rcode:  NOERROR
     ;;	    size:   1280
-    ;;	    option: DAU	   => ( 8, 10, 13, 14, 15, 16 )
+    ;;	    option: COOKIE => ( 7261776279746573 )
+    ;;		    DAU	   => ( 8, 10, 13, 14, 15, 16 )
     ;;		    DHU	   => ( 1, 2, 4 )
-    ;;		    COOKIE => ( CLIENT-COOKIE => 7261776279746573,
-    ;;				SERVER-COOKIE =>  )
+    ;;		    EXTENDED-ERROR => ( INFO-CODE => 123, EXTRA-TEXT =>	 )
 
 
 =head1 DESCRIPTION
@@ -469,8 +475,8 @@ header.
 
 	$octets = $packet->edns->option($option_code);
 
-	$packet->edns->option( COOKIE => $cookie );
-	$packet->edns->option( 10     => $cookie );
+	$packet->edns->option( COOKIE => $octets );
+	$packet->edns->option( 10     => $octets );
 
 When called in a list context, options() returns a list of option codes
 found in the OPT record.
@@ -480,27 +486,24 @@ option() returns the uninterpreted octet string
 corresponding to the specified option.
 The method returns undef if the specified option is absent.
 
-Options can be added or replaced by providing the (name => string) pair.
+Options can be added or replaced by providing the (name => value) pair.
 The option is deleted if the value is undefined.
 
 
 When option() is called in a list context with a single argument,
-the returned array provides a structured interpretation
+the returned values provide a structured interpretation
 appropriate to the specified option.
 
-For the example above:
+For example:
 
-	%hash = $packet->edns->option(10);
-
-	%hash = (
-		'CLIENT-COOKIE' => 'rawbytes',
-		'SERVER-COOKIE' => ''
-		);
+	@algorithms = $packet->edns->option('DAU');
 
 
-For some options, an array is more appropriate:
+For some options, a hash table is more convenient:
 
-	@algorithms = $packet->edns->option(6);
+	%hash_table = $packet->edns->option(15);
+	$info_code  = $hash_table{'INFO-CODE'};
+	$extra_text = $hash_table{'EXTRA-TEXT'};
 
 
 Similar forms of array or hash syntax may be used to construct the
@@ -508,14 +511,14 @@ option value:
 
 	$packet->edns->option( DHU => [1, 2, 4] );
 
-	$packet->edns->option( COOKIE => {'CLIENT-COOKIE' => $cookie} );
+	$packet->edns->option( EXPIRE => {'EXPIRE-TIMER' => 604800} );
 
 
 =head1 COPYRIGHT
 
 Copyright (c)2001,2002 RIPE NCC.  Author Olaf M. Kolkman.
 
-Portions Copyright (c)2012,2017-2019 Dick Franks.
+Portions Copyright (c)2012,2017-2020 Dick Franks.
 
 All rights reserved.
 

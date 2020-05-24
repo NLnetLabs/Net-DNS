@@ -2,7 +2,7 @@
 #
 
 use strict;
-use Test::More tests => 26;
+use Test::More tests => 25;
 use Net::DNS;
 
 
@@ -88,7 +88,6 @@ my $wire = '0101000c04aabbccdd14174eb2409fe28bcb4887a1836f957f0a8425e27b00072201
 	my $rr	  = new Net::DNS::RR(". $type @rdata");
 	is( $rr->salt,	   '',	     'parse RR with salt field placeholder' );
 	is( $rr->rdstring, "@rdata", 'placeholder denotes empty salt field' );
-	is( unpack( 'H*', $rr->saltbin ), '', 'null salt binary value' );
 
 	eval { $rr->salt('123456789XBCDEF'); };
 	my ($exception) = split /\n/, "$@\n";
