@@ -222,7 +222,7 @@ sub dist {
 	return join '', shift->SUPER::dist(), <<'END';
 
 # $(PERM_RWX) raises security issues downstream
-PREOP =	$(NOECHO) $(CHMOD) $(PERM_RW) contrib$(DFSEP)* demo$(DFSEP)*
+PREOP =	$(NOECHO) $(CHMOD) $(PERM_RW) contrib$(DFSEP)/* demo$(DFSEP)/*
 END
 }
 
