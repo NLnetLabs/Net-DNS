@@ -57,14 +57,6 @@ my %optional = (
 	'Net::LibIDN2'	       => 1.00,
 	);
 
-my %resources = (
-        homepage => 'https://www.net-dns.org/',
-        repository => {
-            type => 'svn',
-            url => 'https://www.net-dns.org/svn/net-dns/',
-            web => 'https://www.net-dns.org/svn/net-dns/',
-        },
-        );
 
 ## IMPORTANT:	THE USE AND/OR HANDLING OF STRONG ENCRYPTION TECHNOLOGIES IS
 ##		PROHIBITED OR SEVERELY RESTRICTED IN MANY TERRITORIES.
@@ -89,11 +81,7 @@ unlink('Makefile');
 WriteMakefile(				## Makefile & distribution metadata
 	%metadata,
 	PREREQ_PM  => {%prerequisite},
-	META_MERGE => {
-            recommends => {%optional},
-            resources => {%resources},
-            'meta-spec' => {version => 2},
-        },
+	META_MERGE => {recommends => {%optional}},
 	clean	   => {FILES => "@debris"},
 	);
 
