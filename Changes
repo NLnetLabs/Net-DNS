@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.25 [unreleased]
+**** 1.25 Jun 26, 2020
 
 	Parsing of TSIG keyfiles made more robust.
 
