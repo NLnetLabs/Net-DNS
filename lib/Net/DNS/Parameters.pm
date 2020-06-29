@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2020-05-07)
+##	(last updated 2020-06-24)
 ##
 ################################################
 
@@ -184,7 +184,7 @@ our %rcodebyname = @rcodebyname;
 
 # Registry: DNS EDNS0 Option Codes (OPT)
 my @ednsoptionbyname = (
-	LLQ		 => 1,					# RFC-sekar-dns-llq-06
+	LLQ		 => 1,					# RFC8764
 	UL		 => 2,					# http://files.dns-sd.org/draft-sekar-dns-ul.txt
 	NSID		 => 3,					# RFC5001
 	DAU		 => 5,					# RFC6975
@@ -233,10 +233,10 @@ my @dsotypebyname = (
 	KEEPALIVE	  => 0x0001,				# RFC8490
 	RETRYDELAY	  => 0x0002,				# RFC8490
 	ENCRYPTIONPADDING => 0x0003,				# RFC8490
-	SUBSCRIBE	  => 0x0040,				# RFC-ietf-dnssd-push-25
-	PUSH		  => 0x0041,				# RFC-ietf-dnssd-push-25
-	UNSUBSCRIBE	  => 0x0042,				# RFC-ietf-dnssd-push-25
-	RECONFIRM	  => 0x0043,				# RFC-ietf-dnssd-push-25
+	SUBSCRIBE	  => 0x0040,				# RFC8765
+	PUSH		  => 0x0041,				# RFC8765
+	UNSUBSCRIBE	  => 0x0042,				# RFC8765
+	RECONFIRM	  => 0x0043,				# RFC8765
 	);
 our %dsotypebyval = reverse @dsotypebyname;
 push @dsotypebyname, map /^\d/ ? $_ : lc($_), @dsotypebyname;
