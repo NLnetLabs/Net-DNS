@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.26 [unreleased]
+
+Fix rt.cpan.org #132921
+
+	EDNS OPT handling
+
+
 **** 1.25 Jun 26, 2020
 
 	Parsing of TSIG keyfiles made more robust.

@@ -9,7 +9,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2020-06-24)
+##	(last updated 2020-06-30)
 ##
 ################################################
 
@@ -107,6 +107,8 @@ my @typebyname = (
 	OPENPGPKEY => 61,					# RFC7929
 	CSYNC	   => 62,					# RFC7477
 	ZONEMD	   => 63,					# draft-wessels-dns-zone-digest
+	SVCB	   => 64,					# draft-ietf-dnsop-svcb-https-00
+	HTTPS	   => 65,					# draft-ietf-dnsop-svcb-https-00
 	SPF	   => 99,					# RFC7208
 	UINFO	   => 100,					# IANA-Reserved
 	UID	   => 101,					# IANA-Reserved
@@ -305,7 +307,7 @@ sub opcodebyname {
 
 sub opcodebyval {
 	my $val = shift;
-	$opcodebyval{$val} || return $val;
+	$opcodebyval{$val} || return "$val";
 }
 
 
@@ -318,7 +320,7 @@ sub rcodebyname {
 
 sub rcodebyval {
 	my $val = shift;
-	$rcodebyval{$val} || return $val;
+	$rcodebyval{$val} || return "$val";
 }
 
 
@@ -331,7 +333,7 @@ sub ednsoptionbyname {
 
 sub ednsoptionbyval {
 	my $val = shift;
-	$ednsoptionbyval{$val} || return $val;
+	$ednsoptionbyval{$val} || return "$val";
 }
 
 
@@ -344,7 +346,7 @@ sub dsotypebyname {
 
 sub dsotypebyval {
 	my $val = shift;
-	$dsotypebyval{$val} || return $val;
+	$dsotypebyval{$val} || return "$val";
 }
 
 

@@ -967,11 +967,15 @@ sub _make_query_packet {
 
 	my ($packet) = @_;
 	if ( ref($packet) ) {
+		my $edns = $packet->edns;			# advertise UDPsize for local stack
+		$edns->size( $self->{udppacketsize} ) unless defined $edns->{size};
+
 		my $header = $packet->header;
 		$header->rd( $self->{recurse} ) if $header->opcode eq 'QUERY';
 
 	} else {
 		$packet = Net::DNS::Packet->new(@_);
+		$packet->edns->size( $self->{udppacketsize} );
 
 		my $header = $packet->header;
 		$header->ad( $self->{adflag} );			# RFC6840, 5.7
@@ -979,8 +983,6 @@ sub _make_query_packet {
 		$header->do(1) if $self->{dnssec};
 		$header->rd( $self->{recurse} );
 	}
-
-	$packet->edns->size( $self->{udppacketsize} );		# advertise UDPsize for local stack
 
 	if ( $self->{tsig_rr} ) {
 		$packet->sign_tsig( $self->{tsig_rr} ) unless $packet->sigrr;
