@@ -3,6 +3,8 @@ $Id$                       -*-text-*-
 
 **** 1.26 [unreleased]
 
+	Add HTTPS/SVCB packages.
+
 Fix rt.cpan.org #132921
 
 	EDNS OPT handling

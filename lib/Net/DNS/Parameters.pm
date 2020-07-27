@@ -300,8 +300,9 @@ sub typebyval {
 
 sub opcodebyname {
 	my $arg = shift;
-	return $opcodebyname{$arg} if defined $opcodebyname{$arg};
-	return 0 + $arg if $arg =~ /^\d/;
+	my $val = $opcodebyname{$arg};
+	return $val if defined $val;
+	return $arg if $arg =~ /^\d/;
 	croak qq[unknown opcode "$arg"];
 }
 
@@ -313,8 +314,9 @@ sub opcodebyval {
 
 sub rcodebyname {
 	my $arg = shift;
-	return $rcodebyname{$arg} if defined $rcodebyname{$arg};
-	return 0 + $arg if $arg =~ /^\d/;
+	my $val = $rcodebyname{$arg};
+	return $val if defined $val;
+	return $arg if $arg =~ /^\d/;
 	croak qq[unknown rcode "$arg"];
 }
 
@@ -326,8 +328,9 @@ sub rcodebyval {
 
 sub ednsoptionbyname {
 	my $arg = shift;
-	return $ednsoptionbyname{$arg} if defined $ednsoptionbyname{$arg};
-	return 0 + $arg if $arg =~ /^\d/;
+	my $val = $ednsoptionbyname{$arg};
+	return $val if defined $val;
+	return $arg if $arg =~ /^\d/;
 	croak qq[unknown option "$arg"];
 }
 
@@ -339,8 +342,9 @@ sub ednsoptionbyval {
 
 sub dsotypebyname {
 	my $arg = shift;
-	return $dsotypebyname{$arg} if defined $dsotypebyname{$arg};
-	return 0 + $arg if $arg =~ /^\d/;
+	my $val = $dsotypebyname{$arg};
+	return $val if defined $val;
+	return $arg if $arg =~ /^\d/;
 	croak qq[unknown DSO type "$arg"];
 }
 
@@ -353,9 +357,9 @@ sub dsotypebyval {
 sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
 	my ( $mnemonic, $rrtype ) = map uc($_), @_;		# uncoverable pod
 	$rrtype = rand(255) + 65280 unless $rrtype;
+	croak qq["$mnemonic" is a CLASS identifier] if defined $classbyname{$mnemonic};
 	for ( typebyval( $rrtype = int $rrtype ) ) {
-		croak qq["$mnemonic" is a CLASS identifier] if $classbyname{$mnemonic};
-		return $rrtype if /^$mnemonic$/;    # duplicate registration
+		return $rrtype if /^$mnemonic$/;		# duplicate registration
 		croak qq["$mnemonic" conflicts with TYPE$rrtype ($_)] unless /^TYPE\d+$/;
 		my $known = $typebyname{$mnemonic};
 		croak qq["$mnemonic" conflicts with TYPE$known] if $known;

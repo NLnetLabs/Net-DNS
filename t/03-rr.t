@@ -144,7 +144,7 @@ local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 
 {				## check for exception for nonexistent attribute
-	my $method = 'bogus';
+	my $method = 'bogus-method';
 	foreach my $testcase (
 		[ type => 'A' ],
 		[ type => 'ATMA' ],
@@ -320,6 +320,8 @@ eval {					## exercise printing functions
 	select( ( select(TEMP), $object->dump )[0] );
 	close(TEMP);
 	unlink($filename);
+
+	Net::DNS::RR::_wrap( 'exercise', '', "\n", "\n", "line\n", 'wrapping' );
 };
 
 
