@@ -81,7 +81,7 @@ foreach my $method (qw(class ttl)) {
 
 
 {
-	my $rr = new Net::DNS::RR( name => '.', type => $type, version => 1, rcode => 16 );
+	my $rr = new Net::DNS::RR( type => $type, version => 1, rcode => 16 );
 	$rr->{rdlength} = 0;					# inbound OPT RR only
 	like( $rr->string, '/BADVER/', 'opt->rcode(16)' );
 }

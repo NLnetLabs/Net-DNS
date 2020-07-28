@@ -766,9 +766,8 @@ sub AUTOLOAD {				## Default method
 	my $self = shift;
 	my ($method) = reverse split /::/, $AUTOLOAD;
 
-	for ( lc $method ) {		## tolerate mixed-case attribute name
-		s/[-]/_/g;
-		return $self->$_(@_) unless /^$method$/;
+	for ($method) {			## tolerate mixed-case attribute name
+		return $self->$_(@_) if tr [A-Z-] [a-z_];
 	}
 
 	no strict q/refs/;
