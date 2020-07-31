@@ -34,8 +34,8 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $rdata = substr $$data, $offset, $self->{rdlength};
 	$self->{SvcPriority} = unpack( 'n', $rdata );
 
-	my $index = 2;
-	( $self->{TargetName}, $index ) = decode Net::DNS::DomainName( \$rdata, $index );
+	my $index;
+	( $self->{TargetName}, $index ) = decode Net::DNS::DomainName( \$rdata, 2 );
 
 	my $params = $self->{SvcParams} = {};
 	my $limit  = length($rdata) - 4;
@@ -146,7 +146,10 @@ sub targetname {
 	my $self = shift;					# uncoverable pod
 
 	$self->{TargetName} = new Net::DNS::DomainName(shift) if scalar @_;
-	$self->{TargetName}->name if $self->{TargetName};
+
+	my $target = $self->{TargetName} ? $self->{TargetName}->name : return;
+	return $target unless $self->{SvcPriority};
+	return ( $target eq '.' ) ? $self->owner : $target;
 }
 
 
@@ -271,7 +274,7 @@ sub AUTOLOAD {				## Dynamic constructor/accessor methods
 	}
 
 	my $value = $params->{$key};
-	return $value ? _raw($value) : $value if defined wantarray;
+	return defined($value) ? _raw($value) : $value if defined wantarray;
 }
 
 
@@ -312,18 +315,30 @@ A value of 0 indicates AliasMode.
 
 =head2 TargetName
 
-    $targetname = $rr->targetname;
     $rr->targetname( $targetname );
+    $effecivetarget = $rr->targetname;
 
-The domain name of either the alias target
-(for AliasMode) or the alternative endpoint (for ServiceMode).
+The domain name of either the alias target (for AliasMode)
+or the alternative endpoint (for ServiceMode).
+
+For AliasMode SVCB RRs, a TargetName of "." indicates that the
+service is not available or does not exist.
+
+For ServiceMode SVCB RRs, a TargetName of "." indicates that the
+owner name of this record must be used as the effective TargetName.
 
 =head2 mandatory, alpn, no-default-alpn, port, ipv4hint, echconfig, ipv6hint
 
-Constructor methods for mnemonic SvcParams defined in draft-ietf-dnsop-svcb-https-01.
-When invoked without arguments, the methods return
-the presentation format value of the corresponding key.
+    $rr = new Net::DNS::RR( 'svc.example. SVCB 1 svc.example. port=1234' );
 
+    $rr->port(1234);
+    $string = $rr->port();	# \004\210
+    $rr->key3($string);
+
+Constructor methods for mnemonic SvcParams defined in draft-ietf-dnsop-svcb-https-01.
+When invoked without arguments, the methods return the presentation format
+value for the underlying key.
+The behaviour with undefined arguments is not specified.
 
 =head2 keyNN
 
@@ -331,8 +346,10 @@ the presentation format value of the corresponding key.
     $rr->keyNN( $keyNN );
 
 Generic constructor and accessor methods for SvcParams.
-The key index NN is a decimal number in the range 0 .. 65534.
+The key index NN is a decimal integer in the range 0 .. 65534.
 The method argument and returned value are both presentation format strings.
+The method returns the undefined value if the key is not present.
+A (key,value) pair will be ignored if the value is undefined.
 
 
 =head1 COPYRIGHT
