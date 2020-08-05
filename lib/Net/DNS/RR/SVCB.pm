@@ -217,9 +217,9 @@ my %keybyname = (
 	);
 
 
-sub mandatory {				## mandatory=1,2,...
-	my $self = shift;
-	my @keys = grep defined, map m/^key(\d+)/i ? $1 : $keybyname{lc $_}, @_;
+sub mandatory {				## mandatory=key1,port,...
+	my ( $self, @arg ) = grep defined, @_;
+	my @keys = map $keybyname{lc $_} || ( /^key(\d+)$/ ? $1 : croak qq["$_" unknown] ), @arg;
 	$self->key0( _integer16( sort { $a <=> $b } @keys ) );
 }
 
