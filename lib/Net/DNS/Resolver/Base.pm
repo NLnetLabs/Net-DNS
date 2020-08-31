@@ -27,6 +27,7 @@ our $VERSION = (qw$LastChangedRevision$)[1];
 
 
 use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.38; 1';
+require IO::Socket::INET unless USE_SOCKET_IP;
 
 use constant IPv6 => USE_SOCKET_IP;
 

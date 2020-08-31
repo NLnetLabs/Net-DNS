@@ -44,9 +44,9 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my ( $altitude, @precision ) = map $self->$_() . 'm', qw(altitude size hp vp);
 	my $precision = join ' ', @precision;
 	for ($precision) {
-		s/\s+10m$//;
-		s/\s+10000m$//;
-		s/\s*1m$//;
+		s/^1m 10000m 10m$//;
+		s/ 10000m 10m$//;
+		s/ 10m$//;
 	}
 	my @rdata = ( $self->latitude, '', $self->longitude, '', $altitude, $precision );
 }
