@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.27 [unreleased]
+**** 1.27 Sep 11, 2020
 
 Fix rt.cpan.org #133203
 
@@ -9,7 +9,7 @@ Fix rt.cpan.org #133203
 	string representation
 
 
-**** 1.26 Aug, 6, 2020
+**** 1.26 Aug 6, 2020
 
 	Add HTTPS/SVCB packages.
 
