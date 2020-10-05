@@ -16,6 +16,7 @@
 
 
 use strict;
+use warnings;
 use Net::DNS qw (wire2presentation name2labels);
 
 
@@ -77,6 +78,7 @@ sub print_ns_a {
 		}
 		
 	}
+	return;
 }
 
 

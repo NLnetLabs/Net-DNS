@@ -1,9 +1,8 @@
 package Net::DNS::Resolver::UNIX;
 
-#
-# $Id$
-#
-our $VERSION = (qw$LastChangedRevision$)[1];
+use strict;
+use warnings;
+our $VERSION = (qw$Id$)[2];
 
 
 =head1 NAME
@@ -13,16 +12,14 @@ Net::DNS::Resolver::UNIX - Unix resolver class
 =cut
 
 
-use strict;
-use warnings;
 use base qw(Net::DNS::Resolver::Base);
 
 
-my @config_file = grep -f $_ && -r _, '/etc/resolv.conf';
+my @config_file = grep { -f $_ && -r _ } '/etc/resolv.conf';
 
 my $dotfile = '.resolv.conf';
-my @dotpath = grep defined, $ENV{HOME}, '.';
-my @dotfile = grep -f $_ && -o _, map "$_/$dotfile", @dotpath;
+my @dotpath = grep {defined} $ENV{HOME}, '.';
+my @dotfile = grep { -f $_ && -o _ } map {"$_/$dotfile"} @dotpath;
 
 
 local $ENV{PATH} = '/bin:/usr/bin';
@@ -35,13 +32,14 @@ __PACKAGE__->domain(@domain);
 sub _init {
 	my $defaults = shift->_defaults;
 
-	map $defaults->_read_config_file($_), @config_file;
+	$defaults->_read_config_file($_) foreach @config_file;
 
 	%$defaults = Net::DNS::Resolver::Base::_untaint(%$defaults);
 
-	map $defaults->_read_config_file($_), @dotfile;
+	$defaults->_read_config_file($_) foreach @dotfile;
 
 	$defaults->_read_env;
+	return;
 }
 
 
