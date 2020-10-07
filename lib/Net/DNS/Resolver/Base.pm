@@ -25,20 +25,19 @@ our $VERSION = (qw$Id$)[2];
 # [Revised March 2016, June 2018]
 
 
-use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.38; 1';
+use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.38; 1;';	## no critic
 require IO::Socket::INET unless USE_SOCKET_IP;
 
 use constant IPv6 => USE_SOCKET_IP;
 
 
 # If SOCKSified Perl, use TCP instead of UDP and keep the socket open.
-use constant SOCKS => scalar eval 'require Config; $Config::Config{usesocks}';
+use constant SOCKS => scalar eval { require Config; $Config::Config{usesocks}; };
 
 
 # Allow taint tests to be optimised away when appropriate.
-use constant UNCND => $] < 5.008;	## eval '${^TAINT}' breaks old compilers
-use constant TAINT => UNCND || eval '${^TAINT}';
-use constant TESTS => TAINT && defined eval 'require Scalar::Util';
+use constant TAINT => eval { ${^TAINT} };
+use constant TESTS => TAINT && defined eval { require Scalar::Util; };
 
 
 use integer;
