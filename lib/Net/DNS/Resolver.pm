@@ -1,9 +1,10 @@
 package Net::DNS::Resolver;
 
-#
-# $Id$
-#
-our $VERSION = (qw$LastChangedRevision$)[1];
+use strict;
+use warnings;
+
+our $VERSION = (qw$Id$)[2];
+
 
 =head1 NAME
 
@@ -12,10 +13,7 @@ Net::DNS::Resolver - DNS resolver class
 =cut
 
 
-use strict;
-use warnings;
-
-use constant CONFIG => defined eval "require Net::DNS::Resolver::$^O";
+use constant CONFIG => defined eval "require Net::DNS::Resolver::$^O";	  ## no critic
 
 use constant OS_CONF => join '::', __PACKAGE__, CONFIG ? $^O : 'UNIX';
 
@@ -31,7 +29,7 @@ __END__
 
     use Net::DNS;
 
-    $resolver = new Net::DNS::Resolver();
+    $resolver = Net::DNS::Resolver->new();
 
     # Perform a lookup, using the searchlist if appropriate.
     $reply = $resolver->search( 'example.com' );
@@ -43,7 +41,7 @@ __END__
     $reply = $resolver->send( 'example.com', 'MX', 'IN' );
 
     # Send a prebuilt query packet
-    $query = new Net::DNS::Packet( ... );
+    $query = Net::DNS::Packet->new( ... );
     $reply = $resolver->send( $query );
 
 =head1 DESCRIPTION
@@ -58,13 +56,13 @@ recursion is desired, etc.
 =head2 new
 
     # Use the default configuration
-    $resolver = new Net::DNS::Resolver();
+    $resolver = Net::DNS::Resolver->new();
 
     # Use my own configuration file
-    $resolver = new Net::DNS::Resolver( config_file => '/my/dns.conf' );
+    $resolver = Net::DNS::Resolver->new( config_file => '/my/dns.conf' );
 
     # Set options in the constructor
-    $resolver = new Net::DNS::Resolver(
+    $resolver = Net::DNS::Resolver->new(
 	nameservers => [ '2001:DB8::1', 'ns.example.com' ],
 	recurse	    => 0,
 	debug	    => 1
@@ -122,7 +120,7 @@ interfaces may confuse L<Net::DNS>.
 
 
     # Use my own configuration file
-    $resolver = new Net::DNS::Resolver( config_file => '/my/dns.conf' );
+    $resolver = Net::DNS::Resolver->new( config_file => '/my/dns.conf' );
 
 You can include a configuration file of your own when creating a
 resolver object.  This is supported on both Unix and Windows.
@@ -132,7 +130,7 @@ all other configuration files and environment variables are ignored.
 
 
     # Set options in the constructor
-    $resolver = new Net::DNS::Resolver(
+    $resolver = Net::DNS::Resolver->new(
 	nameservers => [ '2001:DB8::1', 'ns.example.com' ],
 	recurse	    => 0
 	);

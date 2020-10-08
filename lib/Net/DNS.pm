@@ -1,13 +1,12 @@
 package Net::DNS;
 
-#
-# $Id$
-#
-require 5.006;
+use strict;
+use warnings;
+
 our $VERSION;
-$VERSION = '1.27';
-$VERSION = eval $VERSION;
-our $SVNVERSION = (qw$LastChangedRevision$)[1];
+$VERSION = '1.27_01';
+$VERSION = eval { $VERSION };
+our $SVNVERSION = (qw$Id$)[2];
 
 
 =head1 NAME
@@ -30,8 +29,6 @@ See RFC 1035 or DNS and BIND (Albitz & Liu) for details.
 =cut
 
 
-use strict;
-use warnings;
 use integer;
 
 use base qw(Exporter);
@@ -47,7 +44,7 @@ require Net::DNS::RR;
 require Net::DNS::Update;
 
 
-sub version { $VERSION; }
+sub version { return $VERSION; }
 
 
 #
@@ -60,10 +57,11 @@ sub version { $VERSION; }
 #
 sub rr {
 	my ($arg1) = @_;
-	my $res = ref($arg1) ? shift : new Net::DNS::Resolver();
+	my $res = ref($arg1) ? shift : Net::DNS::Resolver->new();
 
 	my $reply = $res->query(@_);
-	my @list = $reply ? $reply->answer : ();
+	my @list  = $reply ? $reply->answer : ();
+	return @list;
 }
 
 
@@ -88,7 +86,7 @@ sub mx {
 	# Then we return the list.
 
 	my @list = sort { $a->preference <=> $b->preference }
-			grep $_->type eq 'MX', &rr( @res, $name, 'MX', @class );
+			grep { $_->type eq 'MX' } &rr( @res, $name, 'MX', @class );
 	return @list;
 }
 
@@ -104,10 +102,11 @@ sub rrsort {
 	my ( $attribute, @rr ) = @_;	## NB: attribute is optional
 	( @rr, $attribute ) = @_ if ref($attribute) =~ /^Net::DNS::RR/;
 
-	my @extracted = grep $_->type eq $rrtype, @rr;
+	my @extracted = grep { $_->type eq $rrtype } @rr;
 	return @extracted unless scalar @extracted;
 	my $func   = "Net::DNS::RR::$rrtype"->get_rrsort_func($attribute);
 	my @sorted = sort $func @extracted;
+	return @sorted;
 }
 
 
@@ -119,7 +118,7 @@ sub rrsort {
 #	$successor = $soa->serial(YYYYMMDDxx);
 #
 
-sub SEQUENTIAL {undef}
+sub SEQUENTIAL { return (undef) }
 
 sub UNIXTIME { return CORE::time; }
 
@@ -134,15 +133,15 @@ sub YYYYMMDDxx {
 #
 
 sub yxrrset {
-	my $rr = new Net::DNS::RR(@_);
+	my $rr = Net::DNS::RR->new(@_);
 	$rr->ttl(0);
 	$rr->class('ANY') unless $rr->rdata;
 	return $rr;
 }
 
 sub nxrrset {
-	my $rr = new Net::DNS::RR(@_);
-	new Net::DNS::RR(
+	my $rr = Net::DNS::RR->new(@_);
+	return Net::DNS::RR->new(
 		name  => $rr->name,
 		type  => $rr->type,
 		class => 'NONE'
@@ -150,9 +149,9 @@ sub nxrrset {
 }
 
 sub yxdomain {
-	my ( $domain, @etc ) = map split, @_;
-	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain ) );
-	new Net::DNS::RR(
+	my ( $domain, @etc ) = map {split} @_;
+	my $rr = Net::DNS::RR->new( scalar(@etc) ? @_ : ( name => $domain ) );
+	return Net::DNS::RR->new(
 		name  => $rr->name,
 		type  => 'ANY',
 		class => 'ANY'
@@ -160,9 +159,9 @@ sub yxdomain {
 }
 
 sub nxdomain {
-	my ( $domain, @etc ) = map split, @_;
-	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain ) );
-	new Net::DNS::RR(
+	my ( $domain, @etc ) = map {split} @_;
+	my $rr = Net::DNS::RR->new( scalar(@etc) ? @_ : ( name => $domain ) );
+	return Net::DNS::RR->new(
 		name  => $rr->name,
 		type  => 'ANY',
 		class => 'NONE'
@@ -170,14 +169,14 @@ sub nxdomain {
 }
 
 sub rr_add {
-	my $rr = new Net::DNS::RR(@_);
+	my $rr = Net::DNS::RR->new(@_);
 	$rr->{ttl} = 86400 unless defined $rr->{ttl};
 	return $rr;
 }
 
 sub rr_del {
-	my ( $domain, @etc ) = map split, @_;
-	my $rr = new Net::DNS::RR( scalar(@etc) ? @_ : ( name => $domain, type => 'ANY' ) );
+	my ( $domain, @etc ) = map {split} @_;
+	my $rr = Net::DNS::RR->new( scalar(@etc) ? @_ : ( name => $domain, type => 'ANY' ) );
 	$rr->class( $rr->rdata ? 'NONE' : 'ANY' );
 	$rr->ttl(0);
 	return $rr;
