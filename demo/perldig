@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl
 # $Id$
 
 =head1 NAME
@@ -27,6 +27,7 @@ L<Net::DNS>
 =cut
 
 use strict;
+use warnings;
 
 use File::Basename;
 use Net::DNS;

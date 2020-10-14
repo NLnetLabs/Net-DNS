@@ -1,19 +1,23 @@
+#!/usr/bin/perl
 # $Id$ -*-perl-*-
+#
 
 use strict;
+use warnings;
 use Test::More;
 use File::Spec;
 use File::Find;
+use IO::File;
 use ExtUtils::MakeMaker;
 
 
 my %manifest;
-open( MANIFEST, 'MANIFEST' ) or BAIL_OUT("MANIFEST: $!");
-while (<MANIFEST>) {
+my $handle = IO::File->new( 'MANIFEST', '<' ) or BAIL_OUT("MANIFEST: $!");
+while (<$handle>) {
 	my ($filename) = split;
 	$manifest{$filename}++;
 }
-close MANIFEST;
+close $handle;
 
 plan skip_all => 'No versions from git checkouts' if -e '.git';
 

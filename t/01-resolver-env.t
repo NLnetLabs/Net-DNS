@@ -1,6 +1,9 @@
+#!/usr/bin/perl
 # $Id$  -*-perl-*-
+#
 
 use strict;
+use warnings;
 use Test::More tests => 10;
 
 use Net::DNS::Resolver;

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/perl
 # $Id$
 
 =head1 NAME
@@ -29,9 +29,10 @@ L<perl(1)>, L<axfr>, L<check_zone>, L<mresolv>, L<mx>, L<perldig>, L<Net::DNS>
 
 =cut
 
+use strict;
+use warnings;
 use File::Basename;
 use Net::DNS;
-use strict;
 
 #------------------------------------------------------------------------------
 # Get the domain from the command line.
@@ -58,7 +59,7 @@ die "No nameservers found for $domain: ", $res->errorstring, "\n"
 # Send out non-recursive queries
 $res->recurse(0);
 # Do not buffer standard out
-$| = 1;
+local $| = 1;
 
 
 #------------------------------------------------------------------------------

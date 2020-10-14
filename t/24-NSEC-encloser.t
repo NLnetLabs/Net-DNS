@@ -1,7 +1,9 @@
+#!/usr/bin/perl
 # $Id$	-*-perl-*-
 #
 
 use strict;
+use warnings;
 use Test::More;
 use Net::DNS;
 
@@ -11,7 +13,7 @@ my @prerequisite = qw(
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "use $package; 1;";
+	next if eval "require $package";## no critic
 	plan skip_all => "$package not installed";
 	exit;
 }
@@ -21,7 +23,7 @@ plan tests => 9;
 
 ## Based on example from RFC7129 3.2
 
-my @nsec = grep $_->type eq 'NSEC', parse Net::DNS::ZoneFile <<'END';
+my @nsec = grep { $_->type eq 'NSEC' } Net::DNS::ZoneFile->parse( <<'END' );
 
 $ORIGIN example.org.
 example.org.	SOA ( ns1 dns )

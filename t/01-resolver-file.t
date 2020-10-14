@@ -1,6 +1,9 @@
+#!/usr/bin/perl
 # $Id$
+#
 
 use strict;
+use warnings;
 use File::Spec;
 use Test::More tests => 16;
 
@@ -57,7 +60,7 @@ my $config = File::Spec->catfile(qw(t custom.txt));		# .txt to run on Windows
 
 
 {								# file presumed not to exist
-	eval { new $class( config_file => 'nonexist.txt' ); };
+	eval { $class->new( config_file => 'nonexist.txt' ); };
 	my ($exception) = split /\n/, "$@\n";
 	ok( $exception, "new( config_file => ?\t[$exception]" );
 }

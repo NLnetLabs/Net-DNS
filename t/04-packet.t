@@ -1,7 +1,9 @@
+#!/usr/bin/perl
 # $Id$	-*-perl-*-
+#
 
 use strict;
-
+use warnings;
 use Test::More tests => 101;
 
 
@@ -161,14 +163,14 @@ is( $rr->size, '4096', 'EDNS0 packet size correct' );
 
 
 {					## check tolerance of invalid pop
-	my $packet = new Net::DNS::Packet('example.com');
+	my $packet = Net::DNS::Packet->new('example.com');
 	my $case1  = $packet->pop('');
 	my $case2  = $packet->pop('bogus');
 }
 
 
 {					## check $packet->reply()
-	my $packet = new Net::DNS::Packet('example.com');
+	my $packet = Net::DNS::Packet->new('example.com');
 	my $reply  = $packet->reply();
 	ok( $reply->isa('Net::DNS::Packet'), '$packet->reply() returns packet' );
 	eval { $reply->reply(); };
@@ -182,9 +184,9 @@ is( $rr->size, '4096', 'EDNS0 packet size correct' );
 
 
 {					## check $packet->sigrr
-	my $packet = new Net::DNS::Packet();
+	my $packet = Net::DNS::Packet->new();
 	is( $packet->sigrr(), undef, 'sigrr() undef for empty packet' );
-	$packet->push( additional => new Net::DNS::RR( type => 'OPT' ) );
+	$packet->push( additional => Net::DNS::RR->new( type => 'OPT' ) );
 	is( $packet->sigrr(),  undef, 'sigrr() undef for unsigned packet' );
 	is( $packet->verify(), undef, 'verify() fails for unsigned packet' );
 	ok( $packet->verifyerr(), 'verifyerr() returned for unsigned packet' );
@@ -192,8 +194,8 @@ is( $rr->size, '4096', 'EDNS0 packet size correct' );
 
 
 {					## go through the motions of SIG0
-	my $packet = new Net::DNS::Packet('example.com');
-	my $sig = new Net::DNS::RR( type => 'SIG' );
+	my $packet = Net::DNS::Packet->new('example.com');
+	my $sig = Net::DNS::RR->new( type => 'SIG' );
 	ok( $packet->sign_sig0($sig), 'sign_sig0() returns SIG0 record' );
 	is( ref( $packet->sigrr() ), ref($sig), 'sigrr() returns SIG RR' );
 
@@ -204,8 +206,8 @@ is( $rr->size, '4096', 'EDNS0 packet size correct' );
 
 
 {					## check exception raised for bad TSIG
-	my $packet = new Net::DNS::Packet('example.com');
-	my $bogus = new Net::DNS::RR( type => 'NULL' );
+	my $packet = Net::DNS::Packet->new('example.com');
+	my $bogus = Net::DNS::RR->new( type => 'NULL' );
 	eval { $packet->sign_tsig($bogus); };
 	my ($exception) = split /\n/, "$@\n";
 	ok( $exception, "sign_tsig([])\t[$exception]" );
@@ -213,22 +215,24 @@ is( $rr->size, '4096', 'EDNS0 packet size correct' );
 
 
 eval {					## exercise dump and debug diagnostics
+	require IO::File;
 	require Data::Dumper;
 	local $Data::Dumper::Maxdepth;
 	local $Data::Dumper::Sortkeys;
-	my $packet = new Net::DNS::Packet();
+	my $packet = Net::DNS::Packet->new();
 	$packet->header->opcode('DSO');
-	my $buffer   = $packet->data . pack( 'n2H*', 1, 3, 'c0ffee' );
-	my $corrupt  = substr $buffer, 0, 10;
-	my $filename = '04-packet.txt';
-	open( TEMP, ">$filename" ) || die "Could not open $filename for writing";
-	select( ( select(TEMP), $packet->dump )[0] );
+	my $buffer  = $packet->data . pack( 'n2H*', 1, 3, 'c0ffee' );
+	my $corrupt = substr $buffer, 0, 10;
+	my $file    = '04-packet.txt';
+	my $handle  = IO::File->new( $file, '>' ) || die "Could not open $file for writing";
+	select( ( select($handle), $packet->dump )[0] );
 	$Data::Dumper::Maxdepth = 6;
 	$Data::Dumper::Sortkeys = 1;
-	select( ( select(TEMP), Net::DNS::Packet->new( \$buffer,  1 )->dump )[0] );
-	select( ( select(TEMP), Net::DNS::Packet->new( \$corrupt, 1 ) )[0] );
-	close(TEMP);
-	unlink($filename);
+	select( ( select($handle), $packet->dump )[0] );
+	select( ( select($handle), Net::DNS::Packet->new( \$buffer,  1 )->dump )[0] );
+	select( ( select($handle), Net::DNS::Packet->new( \$corrupt, 1 ) )[0] );
+	close($handle);
+	unlink($file);
 };
 
 

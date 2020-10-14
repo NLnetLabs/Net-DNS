@@ -1,12 +1,12 @@
+#!/usr/bin/perl
 # $Id$
+#
 
 use strict;
+use warnings;
+use Test::More tests => 45;
 
-BEGIN {
-	use Test::More tests => 45;
-
-	use_ok('Net::DNS');
-}
+use_ok('Net::DNS');
 
 
 # Matching of RR name is not case sensitive
@@ -79,7 +79,7 @@ foreach my $test (@tests) {
 
 	while ( my ( $section, $count_meth ) = each %sections ) {
 
-		my $packet = new Net::DNS::Update($domain);
+		my $packet = Net::DNS::Update->new($domain);
 
 		$packet->$method( $section => @rrs );
 
@@ -93,7 +93,7 @@ foreach my $test (@tests) {
 	#
 	while ( my ( $section, $count_meth ) = each %sections ) {
 
-		my $packet = new Net::DNS::Update($domain);
+		my $packet = Net::DNS::Update->new($domain);
 
 		foreach my $rr (@rrs) {
 			$packet->$method( $section => $rr );

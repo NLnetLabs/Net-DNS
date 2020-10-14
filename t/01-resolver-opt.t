@@ -1,6 +1,9 @@
+#!/usr/bin/perl
 # $Id$    -*-perl-*-
+#
 
 use strict;
+use warnings;
 use Test::More tests => 30;
 
 use Net::DNS::Resolver;
@@ -17,7 +20,7 @@ local $ENV{'RES_OPTIONS'};
 my %test_config = (
 	domain	       => 'net-dns.org',
 	searchlist     => ['net-dns.org', 't.net-dns.org'],
-	nameservers    => ['10.0.0.1', '10.0.0.2'],
+	nameservers    => ['10.0.0.1',	  '10.0.0.2'],
 	debug	       => 1,
 	defnames       => 0,
 	dnsrch	       => 0,

@@ -1,7 +1,9 @@
+#!/usr/bin/perl
 # $Id$	-*-perl-*-
 #
 
 use strict;
+use warnings;
 use Test::More;
 use Net::DNS;
 
@@ -10,7 +12,7 @@ my @prerequisite = qw(
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "use $package; 1;";
+	next if eval "require $package";## no critic
 	plan skip_all => "$package not installed";
 	exit;
 }
@@ -18,7 +20,7 @@ foreach my $package (@prerequisite) {
 plan tests => 3;
 
 
-my $rr = new Net::DNS::RR( type => 'NSEC3' );
+my $rr = Net::DNS::RR->new( type => 'NSEC3' );
 
 
 my $optout = $rr->optout;
