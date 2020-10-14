@@ -1,21 +1,17 @@
 package Net::DNS::RR::CDNSKEY;
 
-#
-# $Id$
-#
-our $VERSION = (qw$LastChangedRevision$)[1];
-
-
 use strict;
 use warnings;
+our $VERSION = (qw$Id$)[2];
+
 use base qw(Net::DNS::RR::DNSKEY);
+
 
 =head1 NAME
 
 Net::DNS::RR::CDNSKEY - DNS CDNSKEY resource record
 
 =cut
-
 
 use integer;
 
@@ -25,6 +21,7 @@ sub algorithm {
 	return $self->SUPER::algorithm($arg) if $arg;
 	return $self->SUPER::algorithm() unless defined $arg;
 	@{$self}{qw(flags protocol algorithm)} = ( 0, 3, 0 );
+	return;
 }
 
 
@@ -42,7 +39,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name CDNSKEY flags protocol algorithm publickey');
+    $rr = Net::DNS::RR->new('name CDNSKEY flags protocol algorithm publickey');
 
 =head1 DESCRIPTION
 

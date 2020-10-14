@@ -111,7 +111,7 @@ sub rrsort {
 
 
 #
-# Auxiliary functions to support policy-driven zone serial numbering.
+# Auxilliary functions to support policy-driven zone serial numbering.
 #
 #	$successor = $soa->serial(SEQUENTIAL);
 #	$successor = $soa->serial(UNIXTIME);
@@ -129,7 +129,7 @@ sub YYYYMMDDxx {
 
 
 #
-# Auxiliary functions to support dynamic update.
+# Auxilliary functions to support dynamic update.
 #
 
 sub yxrrset {
@@ -228,8 +228,7 @@ additional, a list of L<Net::DNS::RR> objects
 =head2 Update Objects
 
 L<Net::DNS::Update> is a subclass of L<Net::DNS::Packet>
-used to create dynamic update requests.
-
+useful for creating dynamic update requests.
 
 =head2 Header Object
 
@@ -252,7 +251,7 @@ The type of an RR object must be checked before calling any methods.
 
 =head1 METHODS
 
-Net::DNS exports methods and auxiliary functions to support
+Net::DNS exports methods and auxilliary functions to support
 DNS updates, zone serial number management, and simple DNS queries.
 
 =head2 version
@@ -306,9 +305,13 @@ This method does not look up address records; it resolves MX only.
 
 =head1 Dynamic DNS Update Support
 
-The Net::DNS module provides auxiliary functions which support
+The Net::DNS module provides auxilliary functions which support
 dynamic DNS update requests.
 
+    $update = Net::DNS::Update->new( 'example.com' );
+
+    $update->push( prereq => nxrrset('example.com. AAAA') );
+    $update->push( update => rr_add('example.com. 86400 AAAA 2001::DB8::F00') );
 
 =head2 yxrrset
 
@@ -319,11 +322,10 @@ value-dependent:
     # RRset exists (value-independent)
     $update->push( pre => yxrrset("host.example.com AAAA") );
 
-Meaning:  At least one RR with the specified name and type must
-exist.
+Meaning:  At least one RR with the specified name and type must exist.
 
     # RRset exists (value-dependent)
-    $update->push( pre => yxrrset("host.example.com AAAA 2001:DB8::dead:beef") );
+    $update->push( pre => yxrrset("host.example.com AAAA 2001:DB8::1") );
 
 Meaning:  At least one RR with the specified name and type must
 exist and must have matching data.
@@ -371,7 +373,7 @@ be created.
 
 Use this method to add RRs to a zone.
 
-    $update->push( update => rr_add("host.example.com AAAA 2001:DB8::dead:beef") );
+    $update->push( update => rr_add("host.example.com AAAA 2001:DB8::c001:a1e") );
 
 Meaning:  Add this RR to the zone.
 
@@ -411,8 +413,11 @@ be created.
 
 =head1 Zone Serial Number Management
 
-The Net::DNS module provides auxiliary functions which support
+The Net::DNS module provides auxilliary functions which support
 policy-driven zone serial numbering regimes.
+
+    $soa->serial(SEQUENTIAL);
+    $soa->serial(YYYMMDDxx);
 
 =head2 SEQUENTIAL
 
@@ -432,7 +437,7 @@ elapsed since the previous update is less than one second.
 
     $successor = $soa->serial( YYYYMMDDxx );
 
-The 32 bit value returned by the auxiliary C<YYYYMMDDxx()> function
+The 32 bit value returned by the auxilliary C<YYYYMMDDxx()> function
 will be used as the base for the date-coded zone serial number.
 Serial number increments must be limited to 100 per day for the
 date information to remain useful.

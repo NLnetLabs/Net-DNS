@@ -261,20 +261,21 @@ sub print {
 }
 
 
-sub domain {
-	my $self   = shift;
-	my ($head) = $self->searchlist(@_);
-	my @list   = grep {defined} $head;
-	return wantarray ? @list : "@list";
-}
-
 sub searchlist {
-	my $self = shift;
+	my ( $self, @domain ) = @_;
 	$self = $self->_defaults unless ref($self);
 
-	return $self->{searchlist} = [@_] unless defined wantarray;
-	$self->{searchlist} = [@_] if scalar @_;
+	if ( !defined(wantarray) or scalar(@domain) ) {
+		foreach (@domain) { $_ = Net::DNS::Domain->new($_)->name }
+		$self->{searchlist} = [@domain];
+	}
+
 	return ( @{$self->{searchlist}} );
+}
+
+sub domain {
+	my ($head) = &searchlist;
+	return wantarray ? ( grep {defined} $head ) : $head;
 }
 
 

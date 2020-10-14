@@ -70,7 +70,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	my ( $data, $offset ) = @_;
 
 	my $limit = $offset + $self->{rdlength};
-	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
+	( $self->{algorithm}, $offset ) = Net::DNS::DomainName->decode(@_);
 
 	# Design decision: Use 32 bits, which will work until the end of time()!
 	@{$self}{qw(time_signed fudge)} = unpack "\@$offset xxN n", $$data;
@@ -366,7 +366,7 @@ sub create {
 				);
 		}
 
-		croak "Usage:	create $class( \$keyfile, \@options )";
+		croak "Usage:	$class->create( \$keyfile, \@options )";
 
 	} elsif ( scalar(@_) == 1 ) {
 		$class->_deprecate('create( $keyname, $key )'); # ( keyname, key )
@@ -556,9 +556,9 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $tsig = create Net::DNS::RR::TSIG( $keyfile );
+    $tsig = Net::DNS::RR::TSIG->create( $keyfile );
 
-    $tsig = create Net::DNS::RR::TSIG( $keyfile,
+    $tsig = Net::DNS::RR::TSIG->create( $keyfile,
 					fudge => 300
 					);
 
@@ -706,9 +706,9 @@ needed for TSIG-GSS.
 
 =head2 create
 
-    $tsig = create Net::DNS::RR::TSIG( $keyfile );
+    $tsig = Net::DNS::RR::TSIG->create( $keyfile );
 
-    $tsig = create Net::DNS::RR::TSIG( $keyfile,
+    $tsig = Net::DNS::RR::TSIG->create( $keyfile,
 					fudge => 300
 					);
 

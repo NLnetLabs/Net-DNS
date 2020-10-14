@@ -30,7 +30,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 
 	my $limit = $offset + $self->{rdlength};
 
-	( $self->{algorithm}, $offset ) = decode Net::DNS::DomainName(@_);
+	( $self->{algorithm}, $offset ) = Net::DNS::DomainName->decode(@_);
 
 	@{$self}{qw(inception expiration mode error)} = unpack "\@$offset N2n2", $$data;
 	$offset += 12;

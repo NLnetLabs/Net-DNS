@@ -1,14 +1,11 @@
 package Net::DNS::RR::KEY;
 
-#
-# $Id$
-#
-our $VERSION = (qw$LastChangedRevision$)[1];
-
-
 use strict;
 use warnings;
+our $VERSION = (qw$Id$)[2];
+
 use base qw(Net::DNS::RR::DNSKEY);
+
 
 =head1 NAME
 
@@ -23,6 +20,7 @@ sub _defaults {				## specify RR attribute default values
 	$self->algorithm(1);
 	$self->flags(0);
 	$self->protocol(3);
+	return;
 }
 
 
@@ -33,7 +31,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name KEY flags protocol algorithm publickey');
+    $rr = Net::DNS::RR->new('name KEY flags protocol algorithm publickey');
 
 =head1 DESCRIPTION
 

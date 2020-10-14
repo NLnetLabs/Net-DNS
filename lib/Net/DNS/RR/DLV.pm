@@ -1,14 +1,11 @@
 package Net::DNS::RR::DLV;
 
-#
-# $Id$
-#
-our $VERSION = (qw$LastChangedRevision$)[1];
-
-
 use strict;
 use warnings;
+our $VERSION = (qw$Id$)[2];
+
 use base qw(Net::DNS::RR::DS);
+
 
 =head1 NAME
 
@@ -24,7 +21,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name DLV keytag algorithm digtype digest');
+    $rr = Net::DNS::RR->new('name DLV keytag algorithm digtype digest');
 
 =head1 DESCRIPTION
 
@@ -76,6 +73,6 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DS>, RFC4431
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, L<Net::DNS::RR::DS>, RFC8749, RFC4431
 
 =cut

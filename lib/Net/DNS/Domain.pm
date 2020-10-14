@@ -111,24 +111,22 @@ sub new {
 	my $label = $self->{label} = ( $s eq '@' ) ? [] : [split /\056/, _encode_utf8($s)];
 
 	foreach (@$label) {
-		croak 'empty domain label' unless length;
+		croak qq(empty label in "$s") unless length;
 
 		if ( LIBIDN2 && UTF8 && /[^\000-\177]/ ) {
 			my $rc = 0;
-			s/\134/\357\277\275/;			# disallow escapes
 			$_ = Net::LibIDN2::idn2_to_ascii_8( $_, IDN2FLAG, $rc );
 			croak Net::LibIDN2::idn2_strerror($rc) unless $_;
 		}
 
 		if ( LIBIDN && UTF8 && /[^\000-\177]/ ) {
-			s/\134/\357\277\275/;			# disallow escapes
 			$_ = Net::LibIDN::idn_to_ascii( $_, 'utf-8' );
 			croak 'name contains disallowed character' unless $_;
 		}
 
-		s/\134([\060-\071]{3})/$unescape{$1}/eg;	# numeric escape
-		s/\134(.)/$1/g;					# character escape
-		croak 'long domain label' if length > 63;
+		s/\134([\060-\071]{3})/$unescape{$1}/eg;	# restore numeric escapes
+		s/\134(.)/$1/g;					# restore character escapes
+		croak qq(label too long in "$s") if length > 63;
 	}
 
 	$$cache1{$k} = $self;					# cache object reference

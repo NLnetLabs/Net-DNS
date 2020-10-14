@@ -30,7 +30,7 @@ use Net::DNS::Parameters qw(:type);
 
 use constant DEBUG => 0;
 
-use constant UTIL => defined eval 'use Scalar::Util 1.25; 1;';	## no critic
+use constant UTIL => defined eval { require Scalar::Util; };
 
 eval { require MIME::Base64 };
 
@@ -62,7 +62,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 
 	my $limit = $offset + $self->{rdlength};
 	@{$self}{@field} = unpack "\@$offset n C2 N3 n", $$data;
-	( $self->{signame}, $offset ) = decode Net::DNS::DomainName2535( $data, $offset + 18 );
+	( $self->{signame}, $offset ) = Net::DNS::DomainName2535->decode( $data, $offset + 18 );
 	$self->{sigbin} = substr $$data, $offset, $limit - $offset;
 
 	croak('misplaced or corrupt SIG') unless $limit == length $$data;
@@ -423,75 +423,6 @@ sub vrfyerrstr {
 
 ########################################
 
-sub _ordered() {			## irreflexive 32-bit partial ordering
-	use integer;
-	my ( $l, $h ) = @_;
-
-	return defined $h unless defined $l;			# ( undef, any )
-	return 0	  unless defined $h;			# ( any, undef )
-
-	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
-	if ( $l < 0 ) {						# translate $l<0 region
-		$l = ( $l ^ 0x80000000 ) & 0xFFFFFFFF;		#  0	 <= $l < 2**31
-		$h = ( $h ^ 0x80000000 ) & 0xFFFFFFFF;		# -2**31 <= $h < 2**32
-	}
-
-	return $l < $h ? ( $l > ( $h - 0x80000000 ) ) : ( $h < ( $l - 0x80000000 ) );
-}
-
-
-my $y1998 = timegm( 0, 0, 0, 1, 0, 1998 );
-my $y2026 = timegm( 0, 0, 0, 1, 0, 2026 );
-my $y2082 = $y2026 << 1;
-my $y2054 = $y2082 - $y1998;
-my $m2026 = int( 0x80000000 - $y2026 );
-my $m2054 = int( 0x80000000 - $y2054 );
-my $t2082 = int( $y2082 & 0x7FFFFFFF );
-my $t2100 = 1960058752;
-
-sub _string2time {			## parse time specification string
-	my $arg = shift;
-	croak 'undefined time' unless defined $arg;
-	return int($arg) if length($arg) < 12;
-	my ( $y, $m, @dhms ) = unpack 'a4 a2 a2 a2 a2 a2', $arg . '00';
-	if ( $arg lt '20380119031408' ) {			# calendar folding
-		return timegm( reverse(@dhms), $m - 1, $y ) if $y < 2026;
-		return timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2026;
-	} elsif ( $y > 2082 ) {
-		my $z = timegm( reverse(@dhms), $m - 1, $y - 84 );
-		$z -= 86400 unless $z < 1456704000 + 86400;	# expunge 29 Feb 2100
-		return $z + $y2054;
-	}
-	return ( timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2054 ) - $y1998;
-}
-
-
-sub _time2string {			## format time specification string
-	my $arg = shift;
-	croak 'undefined time' unless defined $arg;
-	my $ls31 = int( $arg & 0x7FFFFFFF );
-	if ( $arg & 0x80000000 ) {
-
-		if ( $ls31 > $t2082 ) {
-			$ls31 += 86400 unless $ls31 < $t2100;	# expunge 29 Feb 2100
-			my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 + $m2054 ) )[0 .. 5] );
-			return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1984, $mm + 1, @dhms;
-		}
-
-		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 + $m2026 ) )[0 .. 5] );
-		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
-
-
-	} elsif ( $ls31 > $y2026 ) {
-		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 - $y2026 ) )[0 .. 5] );
-		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
-	}
-
-	my ( $yy, $mm, @dhms ) = reverse( ( gmtime $ls31 )[0 .. 5] );
-	return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1900, $mm + 1, @dhms;
-}
-
-
 sub _CreateSigData {
 	if (DNSSEC) {
 		my ( $self, $message ) = @_;
@@ -557,6 +488,74 @@ sub _VerifySig {
 		print "\nalgorithm $algorithm verification successful\n" if DEBUG;
 		return 1;
 	}
+}
+
+
+sub _ordered() {			## irreflexive 32-bit partial ordering
+	use integer;
+	my ( $n1, $n2 ) = @_;
+
+	return 0 unless defined $n2;				# ( any, undef )
+	return 1 unless defined $n1;				# ( undef, any )
+
+	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
+	if ( $n1 < 0 ) {					# translate $n1<0 region
+		$n1 = ( $n1 ^ 0x80000000 ) & 0xFFFFFFFF;	#  0	 <= $n1 < 2**31
+		$n2 = ( $n2 ^ 0x80000000 ) & 0xFFFFFFFF;	# -2**31 <= $n2 < 2**32
+	}
+
+	return $n1 < $n2 ? ( $n1 > ( $n2 - 0x80000000 ) ) : ( $n2 < ( $n1 - 0x80000000 ) );
+}
+
+
+my $y1998 = timegm( 0, 0, 0, 1, 0, 1998 );
+my $y2026 = timegm( 0, 0, 0, 1, 0, 2026 );
+my $y2082 = $y2026 << 1;
+my $y2054 = $y2082 - $y1998;
+my $m2026 = int( 0x80000000 - $y2026 );
+my $m2054 = int( 0x80000000 - $y2054 );
+my $t2082 = int( $y2082 & 0x7FFFFFFF );
+my $t2100 = 1960058752;
+
+sub _string2time {			## parse time specification string
+	my $arg = shift;
+	croak 'undefined time' unless defined $arg;
+	return int($arg) if length($arg) < 12;
+	my ( $y, $m, @dhms ) = unpack 'a4 a2 a2 a2 a2 a2', $arg . '00';
+	if ( $arg lt '20380119031408' ) {			# calendar folding
+		return timegm( reverse(@dhms), $m - 1, $y ) if $y < 2026;
+		return timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2026;
+	} elsif ( $y > 2082 ) {
+		my $z = timegm( reverse(@dhms), $m - 1, $y - 84 );    # expunge 29 Feb 2100
+		return $z < 1456790400 ? $z + $y2054 : $z + $y2054 - 86400;
+	}
+	return ( timegm( reverse(@dhms), $m - 1, $y - 56 ) + $y2054 ) - $y1998;
+}
+
+
+sub _time2string {			## format time specification string
+	my $arg = shift;
+	croak 'undefined time' unless defined $arg;
+	my $ls31 = int( $arg & 0x7FFFFFFF );
+	if ( $arg & 0x80000000 ) {
+
+		if ( $ls31 > $t2082 ) {
+			$ls31 += 86400 unless $ls31 < $t2100;	# expunge 29 Feb 2100
+			my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 + $m2054 ) )[0 .. 5] );
+			return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1984, $mm + 1, @dhms;
+		}
+
+		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 + $m2026 ) )[0 .. 5] );
+		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
+
+
+	} elsif ( $ls31 > $y2026 ) {
+		my ( $yy, $mm, @dhms ) = reverse( ( gmtime( $ls31 - $y2026 ) )[0 .. 5] );
+		return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1956, $mm + 1, @dhms;
+	}
+
+	my ( $yy, $mm, @dhms ) = reverse( ( gmtime $ls31 )[0 .. 5] );
+	return sprintf '%d%02d%02d%02d%02d%02d', $yy + 1900, $mm + 1, @dhms;
 }
 
 

@@ -2,6 +2,7 @@
 # $Id$	-*-perl-*-
 #
 
+use 5.008008;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
@@ -19,7 +20,7 @@ my %metadata = (
 	ABSTRACT_FROM	   => 'lib/Net/DNS.pm',
 	AUTHOR		   => $MM < 6.58 ? "$author[0] et al" : [@author],
 	LICENSE		   => 'mit',
-	MIN_PERL_VERSION   => '5.008009',
+	MIN_PERL_VERSION   => '5.008008',
 	CONFIGURE_REQUIRES => {
 		'ExtUtils::MakeMaker' => 6.66,
 		'Getopt::Long'	      => 2.43,
@@ -90,6 +91,7 @@ my $online_tests = 2;			##  2 = non-fatal, 1 = on, 0 = off  ##
 
 my @options = (
 	'online-tests!'		 => \$online_tests,
+	'noonline-tests'	 => sub { $online_tests = 0; },
 	'non-fatal-online-tests' => sub { $online_tests = 2; },
 	'IPv6-tests!'		 => \$IPv6_tests,
 	'help!'			 => \$help
