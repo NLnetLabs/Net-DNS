@@ -1,6 +1,12 @@
 $Id$                       -*-text-*-
 
 
+**** 1.28 [unreleased]
+
+	Eliminate indirect object syntax.
+	Eliminate grep/map <expression>.
+
+
 **** 1.27 Sep 11, 2020
 
 Fix rt.cpan.org #133203

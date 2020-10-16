@@ -73,6 +73,7 @@ time. These are the core packages that need to be available:
 	Digest::SHA  
 	File::Spec      
 	IO::Socket      
+	IO::Socket::IP
 	MIME::Base64     
 	Time::Local
 	Test::More       
@@ -80,7 +81,6 @@ time. These are the core packages that need to be available:
 The availability of these optional packages is tested at runtime:
 
 	Digest::BubbleBabble
-	IO::Socket::IP
 	Net::DNS::SEC
 	Net::LibIDN2
 

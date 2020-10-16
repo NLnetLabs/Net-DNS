@@ -21,22 +21,18 @@
 
 package Net::DNS::RR::XXXX;
 
-#
-# $Id$
-#
-our $VERSION = (qw$LastChangedRevision$)[1];
-
-
 use strict;
 use warnings;
+our $VERSION = (qw$Id$)[2];
+
 use base qw(Net::DNS::RR);
+
 
 =head1 NAME
 
 Net::DNS::RR::XXXX - DNS XXXX resource record
 
 =cut
-
 
 use integer;
 
@@ -56,8 +52,9 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	##	$self->{preference} = unpack( "\@$offset n", $$data );
 	##
 	## Domain name attribute
-	##	( $self->{foo}, $next ) = decode Net::DNS::DomainName( $data, $offset + 2 );
+	##	( $self->{foo}, $next ) = Net::DNS::DomainName->decode( $data, $offset + 2 );
 	##
+	return;
 }
 
 
@@ -70,6 +67,7 @@ sub _encode_rdata {			## encode rdata as wire-format octet string
 	## Domain name attribute
 	##	$rdata .= $self->{foo}->encode;
 	##
+	return my $rdata;
 }
 
 
@@ -87,6 +85,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	##
 	##	my @list = ( $self->{preference}, $foo );
 	##
+	return my @rdata;
 }
 
 
@@ -101,6 +100,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	## Domain name attribute
 	##	$self->{foo} = new Net::DNS::DomainName(shift);
 	##
+	return;
 }
 
 
@@ -111,6 +111,7 @@ sub _defaults {				## specify RR attribute default values
 	##
 	##	$self->preference(0);
 	##
+	return;
 }
 
 
@@ -118,15 +119,15 @@ sub preference {
 	my $self = shift;
 
 	$self->{preference} = 0 + shift if scalar @_;
-	$self->{preference} || 0;
+	return $self->{preference} || 0;
 }
 
 
 sub foo {
 	my $self = shift;
 
-	$self->{foo} = new Net::DNS::DomainName(shift) if scalar @_;
-	$self->{foo}->name if $self->{foo};
+	$self->{foo} = Net::DNS::DomainName->new(shift) if scalar @_;
+	return $self->{foo} ? $self->{foo}->name : undef;
 }
 
 
@@ -134,7 +135,7 @@ sub foo {
 ## define the ordering function.
 
 # my $function = sub {	# order RRs by numerically increasing preference
-#	$Net::DNS::a->{preference} <=> $Net::DNS::b->{preference};
+#	return $Net::DNS::a->{preference} <=> $Net::DNS::b->{preference};
 # };
 #
 # __PACKAGE__->set_rrsort_func( 'preference', $function );
@@ -150,7 +151,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = new Net::DNS::RR('name XXXX  ...     ');
+    $rr = Net::DNS::RR->new('name XXXX ... ');
 
 =head1 DESCRIPTION
 

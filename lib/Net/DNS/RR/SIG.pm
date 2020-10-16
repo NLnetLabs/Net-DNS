@@ -519,7 +519,6 @@ my $t2100 = 1960058752;
 
 sub _string2time {			## parse time specification string
 	my $arg = shift;
-	croak 'undefined time' unless defined $arg;
 	return int($arg) if length($arg) < 12;
 	my ( $y, $m, @dhms ) = unpack 'a4 a2 a2 a2 a2 a2', $arg . '00';
 	if ( $arg lt '20380119031408' ) {			# calendar folding
@@ -535,7 +534,6 @@ sub _string2time {			## parse time specification string
 
 sub _time2string {			## format time specification string
 	my $arg = shift;
-	croak 'undefined time' unless defined $arg;
 	my $ls31 = int( $arg & 0x7FFFFFFF );
 	if ( $arg & 0x80000000 ) {
 

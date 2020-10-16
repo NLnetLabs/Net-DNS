@@ -18,46 +18,59 @@
 # NonFatalEnd subroutines may not be nested.
 #
 
-use strict;
-use Test::More;
+package Test::NonFatal;
 
-use constant NONFATAL => eval { -e 't/online.nonfatal' };
+use strict;
+use warnings;
+use base qw(Test::Builder);
 
 my @failed;
+
+sub ok {
+	my ( $self, $test, @name ) = @_;
+
+	return $self->SUPER::ok( 1, @name ) if $test;
+
+	$self->SUPER::ok( 1, "NOT OK (tolerating failure)  @name" );
+
+	push @failed, scalar(@name) ? "@name" : 'undef';
+	return $test;
+}
+
+
+sub diag {
+	my @annotation = @_;
+	return Test::More->builder->diag(@annotation);
+}
+
 
 END {
 	my $n = scalar(@failed);
 	my $s = $n > 1 ? 's' : '';
+	bless Test::More->builder, qw(Test::Builder);
 	diag( join "\n\t", "\tDisregarding $n failed sub-test$s", @failed ) if $n;
+	return;
 }
 
 
-{
-	package Test::NonFatal;
+package main;				## no critic ProhibitMultiplePackages
 
-	use base qw(Test::Builder);
+require Test::More;
 
-	sub ok {
-		my ( $self, $test, $name ) = ( @_, '' );
-
-		return $self->SUPER::ok( 1, $name ) if $test;
-
-		$self->SUPER::ok( 1, "NOT OK, but tolerating failure, $name" );
-
-		push @failed, $name;
-		return $test;
-	}
-}
-
+use constant NONFATAL => eval { -e 't/online.nonfatal' };
 
 sub NonFatalBegin {
 	bless Test::More->builder, qw(Test::NonFatal) if NONFATAL;
+	return;
 }
 
 sub NonFatalEnd {
 	bless Test::More->builder, qw(Test::Builder) if NONFATAL;
+	return;
 }
 
 
 1;
+
+__END__
 
