@@ -6,9 +6,9 @@
 # ok method that always reports the test to have completed successfully.
 #
 # The functions NonFatalBegin and NonFatalEnd re-bless the builder in use by
-# Test::More (Test::More->builder) to be of type Test::NonFatal and
-# Test::Builder respectively. Tests that are between those functions will thus
-# always appear to succeed. The failure report itself is not suppressed.
+# Test::More (Test::More->builder) to be of type NonFatal and Test::Builder
+# respectively. Tests that are between those functions will thus always appear
+# to succeed. The failure report itself is not suppressed.
 #
 # Note that the builder is only re-blessed when the file 't/online.nonfatal'
 # exists.
@@ -18,7 +18,7 @@
 # NonFatalEnd subroutines may not be nested.
 #
 
-package Test::NonFatal;
+package NonFatal;
 
 use strict;
 use warnings;
@@ -60,7 +60,7 @@ require Test::More;
 use constant NONFATAL => eval { -e 't/online.nonfatal' };
 
 sub NonFatalBegin {
-	bless Test::More->builder, qw(Test::NonFatal) if NONFATAL;
+	bless Test::More->builder, qw(NonFatal) if NONFATAL;
 	return;
 }
 

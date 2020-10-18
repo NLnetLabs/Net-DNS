@@ -162,10 +162,11 @@ sub decode {
 		return unless $self->header->opcode eq 'DSO';
 
 		$self->{dso} = [];
-		while ( $offset < $length ) {
+		my $limit = $length - 4;
+		while ( $offset < $limit ) {
 			my ( $t, $l, $v ) = unpack "\@$offset n2a*", $$data;
 			CORE::push( @{$self->{dso}}, [$t, substr( $v, 0, $l )] );
-			$offset += 4 + $l;
+			$offset += ( $l + 4 );
 		}
 	};
 

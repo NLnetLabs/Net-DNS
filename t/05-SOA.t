@@ -82,8 +82,10 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 	my $initial = -1;		## exercise 32-bit compatibility code on 64-bit hardware
 	foreach my $serial ( 2E9, 3E9, 4E9, 1E9, 2E9, 4E9, 1E9, 3E9 ) {
 		my $rr = Net::DNS::RR->new("name SOA mname rname $initial");
-		$rr->serial($serial);
-		is( $rr->serial, 0 + $serial, "rr->serial($serial) steps from $initial to $serial" );
+		is(	sprintf( '%u', $rr->serial($serial) ),
+			sprintf( '%u', $serial ),
+			"rr->serial($serial) steps from $initial to $serial"
+			);
 		$initial = $serial;
 	}
 }
@@ -93,20 +95,23 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 	use integer;
 	my $rr	    = Net::DNS::RR->new('name SOA mname rname 1');
 	my $initial = $rr->serial;
-	$rr->serial(SEQUENTIAL);
-	is( $rr->serial, ++$initial, 'rr->serial(SEQUENTIAL) increments existing serial number' );
+	is( $rr->serial(SEQUENTIAL), ++$initial, 'rr->serial(SEQUENTIAL) increments existing serial number' );
 
 	my $pre31wrap  = 0x7FFFFFFF;
 	my $post31wrap = 0x80000000;
 	$rr->serial($pre31wrap);
-	$rr->serial(SEQUENTIAL);
-	is( $rr->serial, 0 + $post31wrap, "rr->serial(SEQUENTIAL) wraps from $pre31wrap to $post31wrap" );
+	is(	sprintf( '%x', $rr->serial(SEQUENTIAL) ),
+		sprintf( '%x', $post31wrap ),
+		"rr->serial(SEQUENTIAL) wraps from $pre31wrap to $post31wrap"
+		);
 
 	my $pre32wrap  = 0xFFFFFFFF;
 	my $post32wrap = 0x00000000;
 	$rr->serial($pre32wrap);
-	$rr->serial(SEQUENTIAL);
-	is( $rr->serial, 0 + $post32wrap, "rr->serial(SEQUENTIAL) wraps from $pre32wrap to $post32wrap" );
+	is(	sprintf( '%x', $rr->serial(SEQUENTIAL) ),
+		sprintf( '%x', $post32wrap ),
+		"rr->serial(SEQUENTIAL) wraps from $pre31wrap to $post32wrap"
+		);
 }
 
 
@@ -123,9 +128,8 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 
 {
 	use integer;
-	my $pretime = UNIXTIME;
+	my $pretime = time() - 10;
 	my $rr	    = Net::DNS::RR->new("name SOA mname rname $pretime");
-	sleep 5;
 	my $posttime = UNIXTIME;
 	my $postincr = $posttime + 1;
 	is( $rr->serial($posttime), $posttime, "rr->serial(UNIXTIME) steps from $pretime to $posttime" );

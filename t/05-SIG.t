@@ -19,7 +19,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 75;
+plan tests => 73;
 
 
 my $name = '.';
@@ -130,21 +130,20 @@ my $wire =
 	my $object   = Net::DNS::RR->new(". $type");
 	my $class    = ref($object);
 	my $scalar   = '';
-	my %testcase = (		## test callable with invalid arguments
+	my %testcase = (		## methods callable with invalid arguments
 		'_CreateSig'	 => [$object, $scalar, $object],
 		'_CreateSigData' => [$object, $object],
-		'_string2time'	 => [undef],
-		'_time2string'	 => [undef],
 		'_VerifySig'	 => [$object, $object, $object],
 		'create'	 => [$class,  $scalar, $object],
 		'verify'	 => [$object, $object, $object],
 		);
 
+	$object->{algorithm} = 0;				# induce exception
+
 	foreach my $method ( sort keys %testcase ) {
 		my $arglist = $testcase{$method};
-		$object->{algorithm} = 0;			# induce exception
-		my $subroutine = join '::', $class, $method;
-		eval { &$subroutine(@$arglist); };
+		my ( $object, @arglist ) = @$arglist;
+		eval { $object->$method(@arglist) };
 		my ($exception) = split /\n/, "$@\n";
 		ok( defined $exception, "$method method callable\t[$exception]" );
 	}

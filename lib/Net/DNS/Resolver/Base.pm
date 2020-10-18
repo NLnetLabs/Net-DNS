@@ -265,7 +265,7 @@ sub searchlist {
 	my ( $self, @domain ) = @_;
 	$self = $self->_defaults unless ref($self);
 
-	if ( !defined(wantarray) or scalar(@domain) ) {
+	if ( scalar(@domain) || !defined(wantarray) ) {
 		foreach (@domain) { $_ = Net::DNS::Domain->new($_)->name }
 		$self->{searchlist} = [@domain];
 	}

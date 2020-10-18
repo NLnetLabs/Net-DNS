@@ -4,7 +4,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 101;
+use Test::More tests => 103;
 
 
 use_ok('Net::DNS::Packet');
@@ -57,6 +57,14 @@ my $packet2 = Net::DNS::Packet->new( \$packet_data );
 ok( $packet2->isa('Net::DNS::Packet'), 'new(\$data) object' );
 is( $packet2->string, $packet->string, 'decoded packet matches original' );
 is( unpack( 'H*', $packet2->data ), unpack( 'H*', $packet_data ), 'retransmitted packet matches original' );
+
+my $empty_packet = Net::DNS::Packet->new()->data;
+ok( Net::DNS::Packet->new( \$empty_packet )->string, 'decoded empty packet' );
+
+my $dso = Net::DNS::Packet->new();
+$dso->header->opcode('DSO');
+my $dso_packet  = $dso->data . pack( 'n2H*', 1, 2, 'beef' );
+ok( Net::DNS::Packet->new( \$dso_packet )->string, 'decoded DSO packet' );
 
 
 #	new(\$data) class constructor captures exception text when data truncated
@@ -220,8 +228,7 @@ eval {					## exercise dump and debug diagnostics
 	local $Data::Dumper::Maxdepth;
 	local $Data::Dumper::Sortkeys;
 	my $packet = Net::DNS::Packet->new();
-	$packet->header->opcode('DSO');
-	my $buffer  = $packet->data . pack( 'n2H*', 1, 3, 'c0ffee' );
+	my $buffer  = $packet->data;
 	my $corrupt = substr $buffer, 0, 10;
 	my $file    = '04-packet.txt';
 	my $handle  = IO::File->new( $file, '>' ) || die "Could not open $file for writing";

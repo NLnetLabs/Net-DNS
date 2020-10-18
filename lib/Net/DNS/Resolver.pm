@@ -149,8 +149,8 @@ Prints the resolver state on the standard output.
 
 =head2 query
 
-    $packet = $resolver->query( 'mailhost' );
-    $packet = $resolver->query( 'mailhost.example.com' );
+    $packet = $resolver->query( 'host' );
+    $packet = $resolver->query( 'host.example.com' );
     $packet = $resolver->query( '2001:DB8::1' );
     $packet = $resolver->query( 'example.com', 'MX' );
     $packet = $resolver->query( 'annotation.example.com', 'TXT', 'IN' );
@@ -171,8 +171,8 @@ any answers or not, use the C<send()> method instead.
 
 =head2 search
 
-    $packet = $resolver->search( 'mailhost' );
-    $packet = $resolver->search( 'mailhost.example.com' );
+    $packet = $resolver->search( 'host' );
+    $packet = $resolver->search( 'host.example.com' );
     $packet = $resolver->search( '2001:DB8::1' );
     $packet = $resolver->search( 'example.com', 'MX' );
     $packet = $resolver->search( 'annotation.example.com', 'TXT', 'IN' );
@@ -201,7 +201,7 @@ any answers or not, use the C<send()> method instead.
 
     $packet = $resolver->send( $query );
 
-    $packet = $resolver->send( 'mailhost.example.com' );
+    $packet = $resolver->send( 'host.example.com' );
     $packet = $resolver->send( '2001:DB8::1' );
     $packet = $resolver->send( 'example.com', 'MX' );
     $packet = $resolver->send( 'annotation.example.com', 'TXT', 'IN' );
@@ -286,7 +286,7 @@ Here is the example above, implemented using an iterator:
 
     $handle = $resolver->bgsend( $packet ) || die $resolver->errorstring;
 
-    $handle = $resolver->bgsend( 'mailhost.example.com' );
+    $handle = $resolver->bgsend( 'host.example.com' );
     $handle = $resolver->bgsend( '2001:DB8::1' );
     $handle = $resolver->bgsend( 'example.com', 'MX' );
     $handle = $resolver->bgsend( 'annotation.example.com', 'TXT', 'IN' );
