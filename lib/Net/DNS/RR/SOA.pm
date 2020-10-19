@@ -101,11 +101,12 @@ sub serial {
 	return $self->{serial} || 0 unless scalar @_;		# current/default value
 
 	my $value = shift;					# replace if in sequence
-	return $self->{serial} = $value if _ordered( $self->{serial}, $value );
+	return $self->{serial} = ( $value & 0xFFFFFFFF ) if _ordered( $self->{serial}, $value );
 
 	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
 	my $serial = 0xFFFFFFFF & ( $self->{serial} || 0 );
-	return $self->{serial} = $serial ^ 0xFFFFFFFF if ( $serial & 0x7FFFFFFF ) == 0x7FFFFFFF;    # wrap
+	return $self->{serial} = 0x80000000 if $serial == 0x7FFFFFFF;	 # wrap
+	return $self->{serial} = 0x00000000 if $serial == 0xFFFFFFFF;	 # wrap
 	return $self->{serial} = $serial + 1;			# increment
 }
 
@@ -152,9 +153,9 @@ sub _ordered() {			## irreflexive 32-bit partial ordering
 	return 1 unless defined $n1;				# ( undef, any )
 
 	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
-	if ( $n1 < 0 ) {					# translate $n1<0 region
-		$n1 = ( $n1 ^ 0x80000000 ) & 0xFFFFFFFF;	#  0	 <= $n1 < 2**31
-		$n2 = ( $n2 ^ 0x80000000 ) & 0xFFFFFFFF;	# -2**31 <= $n2 < 2**32
+	if ( $n2 < 0 ) {					# fold, leaving $n2 non-negative
+		$n1 = ( $n1 & 0xFFFFFFFF ) ^ 0x80000000;	# -2**31 <= $n1 < 2**32
+		$n2 = ( $n2 & 0x7FFFFFFF );			#  0	 <= $n2 < 2**31
 	}
 
 	return $n1 < $n2 ? ( $n1 > ( $n2 - 0x80000000 ) ) : ( $n2 < ( $n1 - 0x80000000 ) );

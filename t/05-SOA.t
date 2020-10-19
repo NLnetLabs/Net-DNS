@@ -4,7 +4,8 @@
 
 use strict;
 use warnings;
-use Test::More tests => 40;
+use integer;
+use Test::More tests => 41;
 
 use Net::DNS;
 
@@ -78,8 +79,14 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 
 
 {
-	use integer;
-	my $initial = -1;		## exercise 32-bit compatibility code on 64-bit hardware
+	use integer;			## exercise 32-bit compatibility code on 64-bit hardware
+	my $rr = Net::DNS::RR->new("name SOA mname rname 0");
+	ok( $rr->serial(-1), 'ordering function 32-bit compatibility' );
+}
+
+
+{
+	my $initial = 0;		## test serial number partial ordering function
 	foreach my $serial ( 2E9, 3E9, 4E9, 1E9, 2E9, 4E9, 1E9, 3E9 ) {
 		my $rr = Net::DNS::RR->new("name SOA mname rname $initial");
 		is(	sprintf( '%u', $rr->serial($serial) ),
@@ -92,7 +99,6 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 
 
 {
-	use integer;
 	my $rr	    = Net::DNS::RR->new('name SOA mname rname 1');
 	my $initial = $rr->serial;
 	is( $rr->serial(SEQUENTIAL), ++$initial, 'rr->serial(SEQUENTIAL) increments existing serial number' );
@@ -110,13 +116,12 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 	$rr->serial($pre32wrap);
 	is(	sprintf( '%x', $rr->serial(SEQUENTIAL) ),
 		sprintf( '%x', $post32wrap ),
-		"rr->serial(SEQUENTIAL) wraps from $pre31wrap to $post32wrap"
+		"rr->serial(SEQUENTIAL) wraps from $pre32wrap to $post32wrap"
 		);
 }
 
 
 {
-	use integer;
 	my $rr	     = Net::DNS::RR->new('name SOA mname rname 2000000000');
 	my $predate  = $rr->serial;
 	my $postdate = YYYYMMDDxx;
@@ -127,9 +132,8 @@ my $wire = '026e73076578616d706c65036e657400027270076578616d706c6503636f6d000000
 
 
 {
-	use integer;
-	my $pretime = time() - 10;
-	my $rr	    = Net::DNS::RR->new("name SOA mname rname $pretime");
+	my $pretime  = time() - 10;
+	my $rr	     = Net::DNS::RR->new("name SOA mname rname $pretime");
 	my $posttime = UNIXTIME;
 	my $postincr = $posttime + 1;
 	is( $rr->serial($posttime), $posttime, "rr->serial(UNIXTIME) steps from $pretime to $posttime" );

@@ -499,9 +499,9 @@ sub _ordered() {			## irreflexive 32-bit partial ordering
 	return 1 unless defined $n1;				# ( undef, any )
 
 	# unwise to assume 64-bit arithmetic, or that 32-bit integer overflow goes unpunished
-	if ( $n1 < 0 ) {					# translate $n1<0 region
-		$n1 = ( $n1 ^ 0x80000000 ) & 0xFFFFFFFF;	#  0	 <= $n1 < 2**31
-		$n2 = ( $n2 ^ 0x80000000 ) & 0xFFFFFFFF;	# -2**31 <= $n2 < 2**32
+	if ( $n2 < 0 ) {					# fold, leaving $n2 non-negative
+		$n1 = ( $n1 & 0xFFFFFFFF ) ^ 0x80000000;	# -2**31 <= $n1 < 2**32
+		$n2 = ( $n2 & 0x7FFFFFFF );			#  0	 <= $n2 < 2**31
 	}
 
 	return $n1 < $n2 ? ( $n1 > ( $n2 - 0x80000000 ) ) : ( $n2 < ( $n1 - 0x80000000 ) );
@@ -533,7 +533,7 @@ sub _string2time {			## parse time specification string
 
 
 sub _time2string {			## format time specification string
-	my $arg = shift;
+	my $arg	 = shift;
 	my $ls31 = int( $arg & 0x7FFFFFFF );
 	if ( $arg & 0x80000000 ) {
 
