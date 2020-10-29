@@ -19,10 +19,8 @@ my @module = qw(
 		File::Spec
 		IO::File
 		IO::Select
-		IO::Socket::INET
 		IO::Socket::IP
 		MIME::Base64
-		Net::LibIDN
 		Net::LibIDN2
 		PerlIO
 		Scalar::Util

@@ -21,8 +21,6 @@ my @hints = Net::DNS::Resolver->new()->_hints;
 exit( plan skip_all => 'Online tests disabled.' ) if -e 't/online.disabled';
 exit( plan skip_all => 'Online tests disabled.' ) unless -e 't/online.enabled';
 
-plan tests => 10;
-
 
 eval {
 	my $resolver = Net::DNS::Resolver->new();
@@ -52,6 +50,8 @@ eval {
 	1;
 } || exit( plan skip_all => 'Unable to reach global root nameservers' );
 
+
+plan tests => 10;
 
 NonFatalBegin();
 
