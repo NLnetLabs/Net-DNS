@@ -33,7 +33,7 @@ sub ok {
 
 	$self->SUPER::ok( 1, "NOT OK (tolerating failure)  @name" );
 
-	push @failed, scalar(@name) ? "@name" : 'undef';
+	push @failed, join( "\t", $self->current_test, @name );
 	return $test;
 }
 

@@ -280,7 +280,7 @@ sub _decompose {
 sub _image { join ' => ', &_decompose; }
 
 
-package Net::DNS::RR::OPT::COOKIE;				# draft-ietf-dnsop-server-cookies
+package Net::DNS::RR::OPT::COOKIE;				# RFC7873
 
 my @field10 = qw(VERSION RESERVED TIMESTAMP HASH);
 
@@ -366,7 +366,7 @@ sub _decompose {
 sub _image { &_decompose; }
 
 
-package Net::DNS::RR::OPT::EXTENDED_ERROR;			# draft-ietf-dnsop-extended-error
+package Net::DNS::RR::OPT::EXTENDED_ERROR;			# RFC8914
 
 my @field15 = qw(INFO-CODE EXTRA-TEXT);
 

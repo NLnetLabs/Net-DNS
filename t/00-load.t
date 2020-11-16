@@ -6,11 +6,8 @@ use strict;
 use warnings;
 use Test::More;
 
-use Net::DNS::RR::RRSIG;		## preempt Net::DNS::SEC configuration
-
 my @module = qw(
 		Net::DNS
-		Net::DNS::SEC
 		Digest::BubbleBabble
 		Digest::HMAC
 		Digest::MD5

@@ -343,8 +343,8 @@ The behaviour with undefined arguments is not specified.
 
 =head2 keyNN
 
-    $keyNN = $rr->keyNN;
-    $rr->keyNN( $keyNN );
+    $keynn = $rr->keyNN;
+    $rr->keyNN( $keynn );
 
 Generic constructor and accessor methods for SvcParams.
 The key index NN is a decimal integer in the range 0 .. 65534.

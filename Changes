@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.29 [unreleased]
+
+	Include test number in summary of failed non-fatal tests.
+	Remove Net::DNS::SEC specific tests.
+	Fix faulty test plan in t/08-recurse.t.
+
+
 **** 1.28 Oct 23, 2020
 
 	Eliminate indirect object syntax.
