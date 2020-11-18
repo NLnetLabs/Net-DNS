@@ -26,8 +26,8 @@ Each domain object instance represents a single DNS domain which
 has a fixed identity throughout its lifetime.
 
 Internally, the primary representation is a (possibly empty) list
-of ASCII domain name labels, and optional link to an arbitrary
-origin domain object topologically closer to the DNS root.
+of ASCII domain name labels, and optional link to an origin domain
+object topologically closer to the DNS root.
 
 The computational expense of Unicode character-set conversion is
 partially mitigated by use of caches.
