@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.29 [unreleased]
+**** 1.29 Nov 18, 2020
 
 	Include test number in summary of failed non-fatal tests.
 	Remove Net::DNS::SEC specific tests.
