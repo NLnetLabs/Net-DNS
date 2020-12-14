@@ -38,18 +38,10 @@ sub ok {
 }
 
 
-sub diag {
-	my @annotation = @_;
-	return Test::More->builder->diag(@annotation);
-}
-
-
 END {
-	my $n = scalar(@failed);
-	my $s = $n > 1 ? 's' : '';
-	bless Test::More->builder, qw(Test::Builder);
-	diag( join "\n\t", "\tDisregarding $n failed sub-test$s", @failed ) if $n;
-	return;
+	my $n = scalar(@failed) || return;
+	my $s = ( $n == 1 ) ? '' : 's';
+	Test::Builder->new->diag( join "\n\t", "\tDisregarding $n failed sub-test$s", @failed );
 }
 
 
