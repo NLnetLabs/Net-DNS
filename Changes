@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.30 [unreleased]
+
+	Simplify parsing of multi-line RRs in zone file.
+	Improve robustness of "dry" resolver tests.
+	Avoid deep recursion in non-fatal test report.
+
+
 **** 1.29 Nov 18, 2020
 
 	Include test number in summary of failed non-fatal tests.
