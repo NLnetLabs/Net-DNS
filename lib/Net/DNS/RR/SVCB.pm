@@ -64,23 +64,23 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my ($params) = grep {defined} $self->{SvcParams}, {};
-	my @keys = keys %$params;
-	return ( $self->{SvcPriority}, $self->{TargetName}->string ) unless scalar @keys;
+	my $priority = $self->{SvcPriority};
+	return ( $priority, $self->{TargetName}->string ) unless scalar keys %$params;
 
-	my @rdata  = unpack 'H4', pack 'n', $self->{SvcPriority};
+	my @rdata  = unpack 'H4', pack 'n', $priority;
 	my $target = $self->{TargetName}->encode();
 	my $length = 2 + length $target;
 	my @target = split /(\S{32})/, unpack 'H*', $target;
-	$target[-1] .= join ' ', "\t;", $self->{TargetName}->string if $length > 3;
-	push @rdata, $length > 18 ? "\n" : (), @target, "\n";
+	push @rdata, $length > 18 ? "\t; $priority\n" : (), @target;
+	push @rdata, join '', "\t; ", $self->{TargetName}->string, "\n" if $length > 3;
 
-	foreach ( sort { $a <=> $b } @keys ) {
+	foreach ( sort { $a <=> $b } keys %$params ) {
 		my $value = $params->{$_};
 		next unless defined $value;
+		push @rdata, "\n";
 		push @rdata, "; key$_=...\n" if $_ > 15;
 		push @rdata, unpack 'H4H4', pack( 'n2', $_, length $value );
 		push @rdata, split /(\S{32})/, unpack 'H*', $value;
-		push @rdata, "\n";
 		$length += 4 + length $value;
 	}
 	return ( "\\# $length", @rdata );
@@ -212,7 +212,8 @@ my %keybyname = (
 	'no-default-alpn' => 2,
 	port		  => 3,
 	ipv4hint	  => 4,
-	echconfig	  => 5,
+	ech		  => 5,
+	echconfig	  => 5,					# draft-ietf-dnsop-svcb-https compatible
 	ipv6hint	  => 6,
 	);
 
@@ -242,10 +243,11 @@ sub ipv4hint {				## ipv4hint=192.0.2.1,...
 	return $self->key4( _ipv4(@_) );
 }
 
-sub echconfig {				## echconfig=base64string
+sub ech {				## ech=base64string
 	my $self = shift;
 	return $self->key5( map { _base64($_) } @_ );
 }
+sub echconfig { return &ech; }					# uncoverable pod
 
 sub ipv6hint {				## ipv6hint=2001:DB8::1,...
 	my $self = shift;
@@ -328,7 +330,7 @@ service is not available or does not exist.
 For ServiceMode SVCB RRs, a TargetName of "." indicates that the
 owner name of this record must be used as the effective TargetName.
 
-=head2 mandatory, alpn, no-default-alpn, port, ipv4hint, echconfig, ipv6hint
+=head2 mandatory, alpn, no-default-alpn, port, ipv4hint, ech, ipv6hint
 
     $rr = Net::DNS::RR->new( 'svc.example. SVCB 1 svc.example. port=1234' );
 
@@ -336,7 +338,7 @@ owner name of this record must be used as the effective TargetName.
     $string = $rr->port();	# \004\210
     $rr->key3($string);
 
-Constructor methods for mnemonic SvcParams defined in draft-ietf-dnsop-svcb-https-01.
+Constructor methods for mnemonic SvcParams defined in draft-ietf-dnsop-svcb-https-02.
 When invoked without arguments, the methods return the presentation format
 value for the underlying key.
 The behaviour with undefined arguments is not specified.
@@ -383,6 +385,6 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, draft-ietf-dnsop-svcb-https-01
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, draft-ietf-dnsop-svcb-https-02
 
 =cut

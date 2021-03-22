@@ -451,6 +451,7 @@ sub _getline {				## get line from current source
 			if ( grep( { $_ eq '(' } @token ) && !grep( { $_ eq ')' } @token ) ) {
 				while (<$fh>) {
 					chomp;			# discard line terminator
+					tr[\t ][ ]s;		# squash white space
 					s/\\\\/\\092/g;		# disguise escaped escape
 					s/\\"/\\034/g;		# disguise escaped quote
 					s/\\\(/\\040/g;		# disguise escaped bracket
@@ -462,7 +463,6 @@ sub _getline {				## get line from current source
 					last if grep { $_ eq ')' } @part;
 				}
 				$_ = join ' ', @token;		# reconstitute RR string
-				tr[\t ][ ]s;			# squash white space
 			}
 		}
 

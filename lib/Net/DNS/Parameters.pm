@@ -3,7 +3,7 @@ package Net::DNS::Parameters;
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2020-12-02)
+##	(last updated 2021-03-08)
 ##
 ################################################
 
@@ -111,7 +111,7 @@ my @typebyname = (
 	CDNSKEY	   => 60,					# RFC7344
 	OPENPGPKEY => 61,					# RFC7929
 	CSYNC	   => 62,					# RFC7477
-	ZONEMD	   => 63,					# RFC-ietf-dnsop-dns-zone-digest-14
+	ZONEMD	   => 63,					# RFC8976
 	SVCB	   => 64,					# draft-ietf-dnsop-svcb-https-00
 	HTTPS	   => 65,					# draft-ietf-dnsop-svcb-https-00
 	SPF	   => 99,					# RFC7208
