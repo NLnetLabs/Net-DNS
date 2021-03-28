@@ -33,15 +33,14 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 	my $index;
 	( $self->{TargetName}, $index ) = Net::DNS::DomainName->decode( \$rdata, 2 );
 
-	my $params = $self->{SvcParams} = {};
-	my $limit  = length($rdata) - 4;
+	my $params = $self->{SvcParams} = [];
+	my $limit  = length($rdata) - 3;
 	while ( $index < $limit ) {
 		my ( $key, $size ) = unpack( "\@$index n2", $rdata );
-		$params->{$key} = substr $rdata, $index + 4, $size;
+		push @$params, ( $key, substr $rdata, $index + 4, $size );
 		$index += ( $size + 4 );
 	}
-	die 'corrupt RDATA in ' . $self->type unless $index == $self->{rdlength};
-	$self->_post_parse;
+	die 'corrupt RDATA in ' . $self->type unless $index == length($rdata);
 	return;
 }
 
@@ -49,23 +48,24 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 sub _encode_rdata {			## encode rdata as wire-format octet string
 	my $self = shift;
 
-	my ($params) = grep {defined} $self->{SvcParams}, {};
-	my @params;
-	foreach ( sort { $a <=> $b } keys %$params ) {
-		my $value = $params->{$_};
-		next unless defined $value;
-		push @params, pack( 'n2a*', $_, length($value), $value );
+	my @packed   = pack 'n a*', $self->{SvcPriority}, $self->{TargetName}->encode;
+	my ($params) = grep {defined} $self->{SvcParams}, [];
+	my @params   = @$params;
+	while (@params) {
+		my $key = shift @params;
+		my $val = shift @params;
+		push @packed, pack( 'n2a*', $key, length($val), $val );
 	}
-	return pack 'n a* a*', $self->{SvcPriority}, $self->{TargetName}->encode, join '', @params;
+	return join '', @packed;
 }
 
 
 sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
-	my ($params) = grep {defined} $self->{SvcParams}, {};
 	my $priority = $self->{SvcPriority};
-	return ( $priority, $self->{TargetName}->string ) unless scalar keys %$params;
+	my ($params) = grep {defined} $self->{SvcParams}, [];
+	return ( $priority, $self->{TargetName}->string ) unless scalar @$params;
 
 	my @rdata  = unpack 'H4', pack 'n', $priority;
 	my $target = $self->{TargetName}->encode();
@@ -74,14 +74,15 @@ sub _format_rdata {			## format rdata portion of RR string.
 	push @rdata, $length > 18 ? "\t; $priority\n" : (), @target;
 	push @rdata, join '', "\t; ", $self->{TargetName}->string, "\n" if $length > 3;
 
-	foreach ( sort { $a <=> $b } keys %$params ) {
-		my $value = $params->{$_};
-		next unless defined $value;
+	my @params = @$params;
+	while (@params) {
+		my $key = shift @params;
+		my $val = shift @params;
 		push @rdata, "\n";
-		push @rdata, "; key$_=...\n" if $_ > 15;
-		push @rdata, unpack 'H4H4', pack( 'n2', $_, length $value );
-		push @rdata, split /(\S{32})/, unpack 'H*', $value;
-		$length += 4 + length $value;
+		push @rdata, "; key$key=...\n" if $key > 15;
+		push @rdata, unpack 'H4H4', pack( 'n2', $key, length $val );
+		push @rdata, split /(\S{32})/, unpack 'H*', $val;
+		$length += 4 + length $val;
 	}
 	return ( "\\# $length", @rdata );
 }
@@ -116,13 +117,17 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 sub _post_parse {			## parser post processing
 	my $self = shift;
 
-	my $params = $self->{SvcParams} || return;
-	my %unique;
-	my @unique = grep { !$unique{$_}++ } unpack 'n*', ( $params->{0} || return );
-	croak( $self->type . qq(: mandatory "key0" not permitted) ) if $unique{0};
-	foreach (@unique) {
-		croak( $self->type . qq(: duplicate "key$_" in mandatory list) ) if --$unique{$_};
-		croak( $self->type . qq(: mandatory "key$_" not defined) )	 if !defined( $params->{$_} );
+	if ( defined $self->key0() ) {
+		my %params = @{$self->{SvcParams}};
+		my %unique;
+		foreach ( grep { !$unique{$_}++ } unpack 'n*', $params{0} ) {
+			croak( $self->type . qq[: unexpected "key0" in mandatory list] ) if $unique{0};
+			croak( $self->type . qq[: duplicate "key$_" in mandatory list] ) if --$unique{$_};
+			croak( $self->type . qq[: mandatory "key$_" not defined] ) unless defined $params{$_};
+		}
+		$self->mandatory( keys %unique );		# sort both $self->key0 and SvcParams
+	} else {
+		$self->key0(undef)				# force sorting of SvcParams
 	}
 	return;
 }
@@ -175,7 +180,7 @@ my %escape = do {			## precalculated ASCII escape table
 
 sub _raw {				## concatenate @_ and escape non-printable
 	return () unless scalar @_;
-	local $_ = join '', map { $escape{$_} } map { split( //, $_ ) } @_;
+	local $_ = join '', map { $escape{$_} } split( //, join '', @_ );
 
 	# partial transliteration for non-ASCII character encodings
 	tr
@@ -220,7 +225,7 @@ my %keybyname = (
 
 sub mandatory {				## mandatory=key1,port,...
 	my ( $self, @arg ) = grep {defined} @_;
-	my @keys = map { $keybyname{lc $_} || ( /^key(\d+)$/i ? $1 : croak qq["$_" unknown] ) } @arg;
+	my @keys = map { $keybyname{lc $_} || ( /(\d+)$/ ? $1 : croak qq["$_" unknown] ) } @arg;
 	return $self->key0( _integer16( sort { $a <=> $b } @keys ) );
 }
 
@@ -266,17 +271,19 @@ sub AUTOLOAD {				## Dynamic constructor/accessor methods
 	return $self->$default(@_) unless $method =~ /^key(\d+)$/i;
 	my $key = $1;
 
-	my ($params) = grep {defined} $self->{SvcParams}, {};
+	my $params = $self->{SvcParams} || [];
+	my %params = @$params;
 
 	if ( scalar @_ ) {
 		my $arg = shift;				# keyNN($value);
 		croak 'unexpected number of arguments' if scalar @_;
-
-		$params->{$key} = defined($arg) ? Net::DNS::Text->new($arg)->raw : undef;
-		$self->{SvcParams} = $params;
+		delete $params{$key};
+		$params{$key} = Net::DNS::Text->new("$arg")->raw if defined $arg;
+		$self->{SvcParams} = $params;			# maintain list in ascending order
+		@$params = map { ( $_, $params{$_} ) } sort { $a <=> $b } keys %params;
 	}
 
-	my $value = $params->{$key};
+	my $value = $params{$key};
 	return defined($value) ? _raw($value) : $value;
 }
 
@@ -357,7 +364,7 @@ A (key,value) pair will be ignored if the value is undefined.
 
 =head1 COPYRIGHT
 
-Copyright (c)2020 Dick Franks. 
+Copyright (c)2020-2021 Dick Franks. 
 
 All rights reserved.
 

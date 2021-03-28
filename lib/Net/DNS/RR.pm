@@ -133,10 +133,10 @@ sub _new_string {
 		my $rdata = pack 'H*', join( '', @token );
 		croak 'length and hexadecimal data inconsistent' unless $rdlen == length $rdata;
 		$self->rdata($rdata);				# unpack RDATA
-		return $self;
+	} else {
+		$self->_parse_rdata(@token);			# parse arguments
 	}
 
-	$self->_parse_rdata(@token);				# parse arguments
 	$self->_post_parse();
 	return $self;
 }
