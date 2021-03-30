@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.30 [unreleased]
+**** 1.30 Mar 30, 2021
 
 	Simplify parsing of multi-line RRs in zone file.
 	Improve robustness of "dry" resolver tests.
