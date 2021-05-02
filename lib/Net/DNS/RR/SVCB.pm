@@ -94,20 +94,19 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	$self->svcpriority(shift);
 	$self->targetname(shift);
 
-	while ( my $attribute = shift ) {
-		for ($attribute) {
-			my @argument = '';
+	while ( my $svcparam = shift ) {
+		for ($svcparam) {
+			my @value = '';
 			if (/=(.*)$/) {
-				for ( my $rhs = length($1) ? $1 : shift ) {
-					s/^(["'])(.*)\1$/$2/;	# strip paired quotes
-					s/\\,/\\044/g;		# disguise escaped comma
-					@argument = split /,/;	# potentially multi-valued
-				}
+				local $_ = length($1) ? $1 : shift;
+				s/^(["'])(.*)\1$/$2/;		# strip paired quotes
+				s/\\,/\\044/g;			# disguise escaped comma
+				@value = ( $svcparam =~ /^key/i ) ? $_ : split /,/;
 			}
 
-			s/[-]/_/g;				# extract attribute identifier
+			s/[-]/_/g;				# extract identifier
 			m/^([^=]+)/;
-			$self->$1(@argument);
+			$self->$1(@value);
 		}
 	}
 	return;
