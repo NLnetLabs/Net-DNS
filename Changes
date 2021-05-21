@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.32 [unreleased]
+
+	Text: Offer both Unicode and escaped-ASCII strings.
+
+	Add LICENSE file to comply with Fedora/RedHat announcement.
+
+
 **** 1.31 May 2, 2021
 
 	Improve implementation of SVCB record.

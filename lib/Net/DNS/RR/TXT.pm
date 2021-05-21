@@ -50,7 +50,7 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $txtdata = $self->{txtdata};
-	return ( map { $_->string } @$txtdata );
+	return ( map { $_->unicode } @$txtdata );
 }
 
 

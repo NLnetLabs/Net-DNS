@@ -51,6 +51,11 @@ our @EXPORT = qw(parse read readfh);
 
 use constant PERLIO => defined eval { require PerlIO };
 
+use constant UTF8 => scalar eval {	## not UTF-EBCDIC  [see Unicode TR#16 3.6]
+	require Encode;
+	Encode::encode_utf8( chr(182) ) eq pack( 'H*', 'C2B6' );
+};
+
 require Net::DNS::Domain;
 require Net::DNS::RR;
 
@@ -73,10 +78,12 @@ exhausted or all references to the ZoneFile object cease to exist.
 
 The optional second argument specifies $ORIGIN for the zone file.
 
-Character encoding is specified indirectly by creating a file handle
-with the desired encoding layer, which is then passed as an argument
-to new(). The specified encoding is propagated to files introduced
-by $include directives.
+Zone files are presumed to be UTF-8 encoded where that is supported.
+
+Alternative character encodings may be specified indirectly by creating
+a file handle with the desired encoding layer, which is then passed as
+an argument to new(). The specified encoding is propagated to files
+introduced by $INCLUDE directives.
 
 =cut
 
@@ -93,7 +100,8 @@ sub new {
 	}
 
 	croak 'filename argument undefined' unless $file;
-	$self->{filehandle} = IO::File->new( $file, '<' ) or croak "$file: $!";
+	my $discipline = UTF8 ? '<:encoding(UTF-8)' : '<';
+	$self->{filehandle} = IO::File->new( $file, $discipline ) or croak "$file: $!";
 	$self->{fileopen}{$file}++;
 	$self->{filename} = $file;
 	return $self;
@@ -430,18 +438,18 @@ sub _generate {				## expand $GENERATE into input stream
 }
 
 
-my $LEX_REGEX = q/("[^"]*"|"[^"]*$)|;.*$|([()])|[ \t\n\r\f]/;
+my $LEX_REGEX = q/("[^"]*"|"[^"]*$)|;[^\n]*|([()])|[ \t\n\r\f]+/;
 
 sub _getline {				## get line from current source
 	my $self = shift;
 
 	my $fh = $self->{filehandle};
 	while (<$fh>) {
+		chomp;						# discard line terminator
 		next if /^\s*;/;				# discard comment line
 		next unless /\S/;				# discard blank line
 
 		if (/[(]/) {					# concatenate multi-line RR
-			chomp;					# discard line terminator
 			s/\\\\/\\092/g;				# disguise escaped escape
 			s/\\"/\\034/g;				# disguise escaped quote
 			s/\\\(/\\040/g;				# disguise escaped bracket

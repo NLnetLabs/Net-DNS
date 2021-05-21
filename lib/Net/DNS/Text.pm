@@ -66,7 +66,7 @@ interpretation.
 
 =cut
 
-my ( %escape, %unescape );		## precalculated ASCII escape tables
+my ( %escape, %escapeUTF8, %unescape );	## precalculated escape tables
 
 sub new {
 	my $self = bless [], shift;
@@ -178,7 +178,7 @@ sub value {
 
     $string = $text->string;
 
-Conditionally quoted zone file representation of the text object.
+Conditionally quoted RFC1035 zone file representation of the text object.
 
 =cut
 
@@ -187,6 +187,23 @@ sub string {
 
 	my @s = map { split '', $_ } @$self;			# escape special and ASCII non-printable
 	my $s = _decode_utf8( join '', map { $escape{$_} } @s );
+	return $s =~ /\\034|[ \t\n\r\f();]|^$/ ? qq("$s") : $s; # quote special characters and empty string
+}
+
+
+=head2 unicode
+
+    $string = $text->unicode;
+
+Conditionally quoted Unicode representation of the text object.
+
+=cut
+
+sub unicode {
+	my $self = shift;
+
+	my @s = map { split '', $_ } @$self;			# escape special and non-printable
+	my $s = _decode_utf8( join '', map { $escapeUTF8{$_} } @s );
 	return $s =~ /\\034|[ \t\n\r\f();]|^$/ ? qq("$s") : $s; # quote special characters and empty string
 }
 
@@ -224,13 +241,10 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 }
 
 
-%escape = eval {			## precalculated ASCII/UTF-8 escape table
-	my @C0 = ( 0 .. 31 );					# control characters
-	my @NA = UTF8 ? ( 192, 193, 216 .. 223, 245 .. 255 ) : ( 128 .. 255 );
+%escape = eval {			## precalculated ASCII escape table
+	my %table = map { ( chr($_) => chr($_) ) } ( 0 .. 127 );
 
-	my %table = map { ( chr($_) => chr($_) ) } ( 0 .. 255 );
-
-	foreach my $n ( @C0, 34, 92, 127, @NA ) {		# numerical escape
+	foreach my $n ( 0 .. 31, 34, 92, 127 .. 255 ) {		# numerical escape
 		my $codepoint = sprintf( '%03u', $n );
 
 		# transliteration for non-ASCII character encodings
@@ -240,6 +254,11 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 	}
 
 	return %table;
+};
+
+%escapeUTF8 = eval {			## precalculated UTF-8 escape table
+	my @octet = UTF8 ? ( 128 .. 191, 194 .. 254 ) : ();
+	return ( %escape, map { ( chr($_) => chr($_) ) } @octet );
 };
 
 

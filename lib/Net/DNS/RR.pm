@@ -85,7 +85,7 @@ The trailing dot (.) is optional.
 
 =cut
 
-my $PARSE_REGEX = q/("[^"]*")|;[^\n]*|[ \t\n\r\f()]/;		# NB: *not* \s (matches Unicode white space)
+my $PARSE_REGEX = q/("[^"]*")|;[^\n]*|[ \t\n\r\f()]+/;		# NB: *not* \s (matches Unicode white space)
 
 sub _new_string {
 	my $base;
