@@ -113,7 +113,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 				local $_ = length($1) ? $1 : shift;
 				s/^(["'])(.*)\1$/$2/;		# strip paired quotes
 				s/\\,/\\044/g;			# disguise escaped comma
-				push @value, $_;
+				push @value, split /,/;
 			} else {
 				push @value, '' unless $keybyname{lc $_};    # empty keyNNN
 			}
@@ -184,7 +184,7 @@ sub _presentation {			## render octet string(s) in presentation format
 }
 
 sub _base64 {
-	return map { _presentation( MIME::Base64::decode($_) ) } @_;
+	return _presentation( map { MIME::Base64::decode($_) } @_ );
 }
 
 sub _integer16 {
@@ -207,13 +207,16 @@ sub _string {
 sub mandatory {				## mandatory=key1,port,...
 	my $self = shift;
 	my @list = map { $keybyname{lc $_} || $_ } map { split /,/ } @_;
-	my @keys = map { /(\d+)$/ ? $1 : croak qq["$_" unknown] } @list;
+	my @keys = map { /(\d+)$/ ? $1 : croak( $self->type . qq[: "$_" unexpected] ) } @list;
 	return $self->key0( _integer16( sort { $a <=> $b } @keys ) );
 }
 
 sub alpn {				## alpn=h3,h2,...
 	my $self = shift;
-	return $self->key1( _string( map { split /,/ } @_ ) );
+
+	###	tolerate unnecessary double-escape nonsense in draft-ietf-dnsop-svcb-https	###
+	my @sanitized = map { s/\\092,/\\044/g; s/\\092\\092/\\092/g; split /,/ } join ',', @_;
+	return $self->key1( scalar(@_) ? _string(@sanitized) : () );
 }
 
 sub no_default_alpn {			## no-default-alpn
@@ -228,7 +231,7 @@ sub port {				## port=1234
 
 sub ipv4hint {				## ipv4hint=192.0.2.1,...
 	my $self = shift;
-	return $self->key4( _ipv4( map { split /,/ } @_ ) );
+	return $self->key4( _ipv4(@_) );
 }
 
 sub ech {				## ech=base64string
@@ -243,7 +246,7 @@ sub echconfig {				## echconfig=base64string
 
 sub ipv6hint {				## ipv6hint=2001:DB8::1,...
 	my $self = shift;
-	return $self->key6( _ipv6( map { split /,/ } @_ ) );
+	return $self->key6( _ipv6(@_) );
 }
 
 

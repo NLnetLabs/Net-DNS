@@ -372,8 +372,8 @@ sub parse {
 		my ( $first, $last ) = split m#[-]#, $bound;
 		$first ||= 0;
 		$last  ||= $first;
-		$step = abs( $step || 1 );			# coerce step to match range
-		$step = -$step if $last < $first;
+		$step  ||= 1;					# coerce step to match range
+		$step = ( $last < $first ) ? -abs($step) : abs($step);
 		$self->{count} = int( ( $last - $first ) / $step ) + 1;
 
 		@{$self}{qw(instant step template line)} = ( $first, $step, $template, $line );
@@ -445,36 +445,44 @@ sub _getline {				## get line from current source
 
 	my $fh = $self->{filehandle};
 	while (<$fh>) {
-		chomp;						# discard line terminator
 		next if /^\s*;/;				# discard comment line
 		next unless /\S/;				# discard blank line
 
-		if (/[(]/) {					# concatenate multi-line RR
+		if (/["(]/) {
 			s/\\\\/\\092/g;				# disguise escaped escape
 			s/\\"/\\034/g;				# disguise escaped quote
 			s/\\\(/\\040/g;				# disguise escaped bracket
 			s/\\\)/\\041/g;				# disguise escaped bracket
 			s/\\;/\\059/g;				# disguise escaped semicolon
 			my @token = grep { defined && length } split /(^\s)|$LEX_REGEX/o;
-			if ( grep( { $_ eq '(' } @token ) && !grep( { $_ eq ')' } @token ) ) {
-				while (<$fh>) {
-					chomp;			# discard line terminator
-					tr[\t ][ ]s;		# squash white space
+
+			while ( $token[-1] =~ /^"[^"]*$/ ) {	# multiline quoted string
+				$_ = pop(@token) . <$fh>;	# reparse fragments
+				s/\\\\/\\092/g;			# disguise escaped escape
+				s/\\"/\\034/g;			# disguise escaped quote
+				s/\\\(/\\040/g;			# disguise escaped bracket
+				s/\\\)/\\041/g;			# disguise escaped bracket
+				s/\\;/\\059/g;			# disguise escaped semicolon
+				push @token, grep { defined && length } split /$LEX_REGEX/o;
+				$_ = join ' ', @token;		# reconstitute RR string
+			}
+
+			if ( grep { $_ eq '(' } @token ) {	# concatenate multiline RR
+				until ( grep { $_ eq ')' } @token ) {
+					$_ = pop(@token) . <$fh>;
 					s/\\\\/\\092/g;		# disguise escaped escape
 					s/\\"/\\034/g;		# disguise escaped quote
 					s/\\\(/\\040/g;		# disguise escaped bracket
 					s/\\\)/\\041/g;		# disguise escaped bracket
 					s/\\;/\\059/g;		# disguise escaped semicolon
-					$_ = pop(@token) . $_;	# reparse fragmented string
-					my @part = grep { defined && length } split /$LEX_REGEX/o;
-					push @token, @part;
-					last if grep { $_ eq ')' } @part;
+					push @token, grep { defined && length } split /$LEX_REGEX/o;
+					chomp $token[-1] unless $token[-1] =~ /^"[^"]*$/;
 				}
 				$_ = join ' ', @token;		# reconstitute RR string
 			}
 		}
 
-		return $_ unless /^\$/;				# RR string
+		return $_ unless /^[\$]/;			# RR string
 
 		if (/^\$INCLUDE/) {				# directive
 			my ( $keyword, @argument ) = split;
@@ -483,12 +491,12 @@ sub _getline {				## get line from current source
 
 		} elsif (/^\$GENERATE/) {			# directive
 			my ( $keyword, $range, @template ) = split;
-			die '$GENERATE incomplete' unless $range;
+			die '$GENERATE incomplete' unless @template;
 			$fh = $self->_generate( $range, "@template\n" );
 
 		} elsif (/^\$ORIGIN/) {				# directive
 			my ( $keyword, $origin, @etc ) = split;
-			die '$ORIGIN incomplete' unless $origin;
+			die '$ORIGIN incomplete' unless defined $origin;
 			$self->_origin($origin);
 
 		} elsif (/^\$TTL/) {				# directive

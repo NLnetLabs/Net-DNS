@@ -187,7 +187,7 @@ sub string {
 
 	my @s = map { split '', $_ } @$self;			# escape special and ASCII non-printable
 	my $s = _decode_utf8( join '', map { $escape{$_} } @s );
-	return $s =~ /\\034|[ \t\n\r\f();]|^$/ ? qq("$s") : $s; # quote special characters and empty string
+	return $s =~ /[ \t\n\r\f();]|^$/ ? qq("$s") : $s;	# quote special characters and empty string
 }
 
 
@@ -204,7 +204,7 @@ sub unicode {
 
 	my @s = map { split '', $_ } @$self;			# escape special and non-printable
 	my $s = _decode_utf8( join '', map { $escapeUTF8{$_} } @s );
-	return $s =~ /\\034|[ \t\n\r\f();]|^$/ ? qq("$s") : $s; # quote special characters and empty string
+	return $s =~ /[ \t\n\r\f();]|^$/ ? qq("$s") : $s;	# quote special characters and empty string
 }
 
 
@@ -250,7 +250,7 @@ sub _encode_utf8 {			## perl internal encoding to UTF-8
 		# transliteration for non-ASCII character encodings
 		$codepoint =~ tr [0-9] [\060-\071];
 
-		$table{pack( 'C', $n )} = pack 'C a3', 92, $codepoint;
+		$table{chr($n)} = pack 'C a3', 92, $codepoint;
 	}
 
 	return %table;

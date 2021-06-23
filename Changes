@@ -7,6 +7,11 @@ $Id$                       -*-text-*-
 
 	Add LICENSE file to comply with Fedora/RedHat announcement.
 
+Fix rt.cpan.org #136666
+
+	Net::DNS::RR::ZoneFile parser erroneously strips line
+	terminators in quoted string forming part of multiline RR.
+
 
 **** 1.31 May 2, 2021
 
