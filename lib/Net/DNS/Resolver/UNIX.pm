@@ -11,7 +11,7 @@ Net::DNS::Resolver::UNIX - Unix resolver class
 
 =cut
 
-
+use POSIX ();
 use base qw(Net::DNS::Resolver::Base);
 
 
@@ -23,8 +23,7 @@ my @dotfile = grep { -f $_ && -o _ } map {"$_/$dotfile"} @dotpath;
 
 
 local $ENV{PATH} = '/bin:/usr/bin';
-my $uname = eval {`uname -n 2>/dev/null`} || '';
-chomp $uname;
+my (undef, $uname ) = POSIX::uname();
 my ( $host, @domain ) = split /\./, $uname, 2;
 __PACKAGE__->domain(@domain);
 
