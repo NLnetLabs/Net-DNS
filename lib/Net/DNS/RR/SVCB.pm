@@ -30,7 +30,6 @@ my %keybyname = (
 	port		  => 'key3',
 	ipv4hint	  => 'key4',
 	ech		  => 'key5',
-	echconfig	  => 'key5',				# draft-ietf-dnsop-svcb-https compatible
 	ipv6hint	  => 'key6',
 	);
 
@@ -52,7 +51,7 @@ sub _decode_rdata {			## decode rdata from wire-format octet string
 		push @$params, ( $key, substr $rdata, $index + 4, $size );
 		$index += ( $size + 4 );
 	}
-	die 'corrupt RDATA in ' . $self->type unless $index == length($rdata);
+	die $self->type . ': corrupt RDATA' unless $index == length($rdata);
 	return;
 }
 
@@ -180,7 +179,8 @@ sub targetname {
 sub _presentation {			## render octet string(s) in presentation format
 	return () unless scalar @_;
 	my $raw = join '', @_;
-	return Net::DNS::Text->decode( \$raw, 0, length($raw) )->string;
+	my $txt = Net::DNS::Text->decode( \$raw, 0, length($raw) );
+	return map { s/ /\\032/g; $_ } $txt->string;
 }
 
 sub _base64 {
@@ -207,7 +207,7 @@ sub _string {
 sub mandatory {				## mandatory=key1,port,...
 	my $self = shift;
 	my @list = map { $keybyname{lc $_} || $_ } map { split /,/ } @_;
-	my @keys = map { /(\d+)$/ ? $1 : croak( $self->type . qq[: "$_" unexpected] ) } @list;
+	my @keys = map { /(\d+)$/ ? $1 : croak( $self->type . qq[: unexpected "$_"] ) } @list;
 	return $self->key0( _integer16( sort { $a <=> $b } @keys ) );
 }
 
@@ -239,11 +239,6 @@ sub ech {				## ech=base64string
 	return $self->key5( map { _base64($_) } @_ );
 }
 
-sub echconfig {				## echconfig=base64string
-	$_[0]->_deprecate(qq[please use "ech"]);		# uncoverable pod
-	return &ech;
-}
-
 sub ipv6hint {				## ipv6hint=2001:DB8::1,...
 	my $self = shift;
 	return $self->key6( _ipv6(@_) );
@@ -267,12 +262,12 @@ sub AUTOLOAD {				## Dynamic constructor/accessor methods
 	if ( scalar @_ ) {
 		my $arg = shift;				# keyNN($value);
 		delete $params{$key} unless defined $arg;
-		croak(qq[duplicate "key$key" in SvcParams list]) if defined $params{$key};
+		croak( $self->type . qq[: duplicate SvcParam "key$key"] ) if defined $params{$key};
 		$params{$key} = Net::DNS::Text->new("$arg")->raw if defined $arg;
 		$self->{SvcParams} = [map { ( $_, $params{$_} ) } sort { $a <=> $b } keys %params];
-		croak(qq[unexpected number of arguments for "key$key"]) if scalar @_;
+		croak( $self->type . qq[: unexpected number of values for "key$key"] ) if scalar @_;
 	} else {
-		croak(qq["key$key" argument not defined]) unless defined wantarray;
+		croak( $self->type . qq[: no value specified for "key$key"] ) unless defined wantarray;
 	}
 
 	my $value = $params{$key};

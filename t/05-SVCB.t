@@ -4,7 +4,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 53;
+use Test::More tests => 48;
 
 use Net::DNS;
 use Net::DNS::ZoneFile;
@@ -12,11 +12,11 @@ use Net::DNS::ZoneFile;
 my $name = 'alias.example';
 my $type = 'SVCB';
 my $code = 64;
-my @attr = qw( svcpriority targetname );
-my @data = qw( 0 pool.svc.example );
+my @attr = qw( svcpriority targetname port );
+my @data = qw( 1 pool.svc.example 1234 );
 my @also = qw(mandatory alpn no-default-alpn port ipv4hint ech ipv6hint);
 
-my $wire = '000004706f6f6c03737663076578616d706c6500';
+my $wire = '000104706f6f6c03737663076578616d706c65000003000204d2';
 
 
 {
@@ -77,32 +77,8 @@ my $wire = '000004706f6f6c03737663076578616d706c6500';
 {
 	my $rr = Net::DNS::RR->new(". $type");
 	foreach ( qw(TargetName), @also ) {
-		is( $rr->$_(), undef, "attribute '$_'	of empty RR undefined" );
+		is( $rr->$_(), undef, "empty RR has undefined $_" );
 	}
-}
-
-
-{
-	my $rr = Net::DNS::RR->new(qq(. $type 1 . alpn="h3,h2" no-default-alpn));
-	ok( $rr->alpn, 'key string for alpn' );
-}
-
-
-{
-	my $rr = Net::DNS::RR->new(". $type 1 . port=1234");
-	ok( $rr->port, 'key string for port' );
-}
-
-
-{
-	my $rr = Net::DNS::RR->new(". $type 1 . ipv4hint=192.0.2.1");
-	ok( $rr->ipv4hint, 'key string for ipv4hint' );
-}
-
-
-{
-	my $rr = Net::DNS::RR->new(". $type 1 . ipv6hint=2001:DB8::1");
-	ok( $rr->ipv6hint, 'key string for ipv6hint' );
 }
 
 
@@ -110,32 +86,17 @@ my $wire = '000004706f6f6c03737663076578616d706c6500';
 	my $l0 = length( Net::DNS::RR->new(". $type 1 .")->encode );
 	my $rr = Net::DNS::RR->new(". $type 1 . port=1234");
 	$rr->key3(undef);
-	is( length( $rr->encode ), $l0,	  'delete SvcParams key' );
-	is( $rr->key3,		   undef, 'return undef for undefined key' );
+	is( length( $rr->encode ), $l0, 'delete SvcParams key' );
 }
 
-
-{
-	my $wire = Net::DNS::RR->new(". $type 1 . mandatory=port port=1234")->encode;
-	substr( $wire, -4, 2 ) = pack 'H*', '0003';
-	eval { Net::DNS::RR->decode( \$wire ) };
-	my ($exception) = split /\n/, "$@\n";
-	ok( $exception, "corrupt wire format\t[$exception]" );
-}
-
-
-{
-	local $SIG{__WARN__} = sub { };				# echconfig deprecated in favour of ech
-	Net::DNS::RR->new(". $type 1 . echconfig=...")
-}
 
 END {
 	Net::DNS::RR->new( <<'END' )->print;
-example.com.   SVCB   16 foo.example.org. (alpn=h2,h3-19 mandatory=ipv4hint,alpn
-			ipv4hint=192.0.2.1)
+example.com.	SVCB	16 foo.example.org.	( mandatory=alpn alpn=h2,h3-19
+			no-default-alpn port=1234 ipv4hint=192.0.2.1
+			ech=Li4u ipv6hint=2001:db8::1 )
 END
 }
-
 
 ####	Test Vectors
 
@@ -180,8 +141,10 @@ failure('ech  + multiple values');
 failure('mandatory lists key0');
 failure('duplicate mandatory key');
 failure('undefined mandatory key');
-failure('unrecognised key name');
 failure('alpn not specified');
+
+failure('unrecognised key name');
+failure('corrupt wire format');
 
 exit;
 
@@ -247,20 +210,21 @@ example.com	SVCB	\# 55 (
 )
 
 
-example.com.   SVCB   1 example.com. ipv6hint="2001:db8:ffff:ffff:ffff:ffff:198.51.100.100"
+example.com.   SVCB   1 example.com. ipv6hint="::ffff:198.51.100.100"
 example.com	SVCB	\# 35 (
 00 01							; priority
 07 65 78 61 6d 70 6c 65 03 63 6f 6d 00			; target
 00 06							; key 6
 00 10							; length 16
-20 01 0d b8 ff ff ff ff ff ff ff ff c6 33 64 64		; address
+00 00 00 00 00 00 00 00 00 00 ff ff c6 33 64 64		; address
 )
 
 
-example.com.	SVCB	16 foo.example.org. (		; unsorted SvcParam keys
-			key23609 key23600 mandatory=key23609,key23600 )
+example.com.	SVCB	1 foo.example.org. (		; unsorted SvcParam keys
+			key23609 key23600 mandatory=key23609,key23600
+			)
 example.com	SVCB	\# 35 (
-00 10							; priority
+00 01							; priority
 03 66 6f 6f 07 65 78 61 6d 70 6c 65 03 6f 72 67 00	; target
 00 00							; key 0
 00 04							; param length 4
@@ -312,17 +276,23 @@ example.com.	SVCB	1 foo.example.com. ech
 example.com.	SVCB	1 foo.example.com. ipv6hint
 
 example.com.	SVCB	1 foo.example.com. no-default-alpn=abc
-example.com.	SVCB	1 foo.example.com. port=123,456
-example.com.	SVCB	1 foo.example.com. ech=abc,def
+example.com.	SVCB	1 foo.example.com. port=1234,5678
+example.com.	SVCB	1 foo.example.com. ech=b25l,Li4u
 
 example.com.	SVCB	1 foo.example.com. mandatory=mandatory
 example.com.	SVCB	1 foo.example.com. (
 			mandatory=key123,key123 key123=abc
 			)
 example.com.	SVCB	1 foo.example.com. mandatory=key123
-example.com.	SVCB	1 foo.example.com. mandatory=bogus
 
 example.com.	SVCB	1 foo.example.com. (
-			no-default-alpn			; without expected alpn
+			no-default-alpn		; without expected alpn
 			)
+
+
+example.com.	SVCB	1 foo.example.com. mandatory=bogus
+
+example.com.	SVCB	( \# 25 0001		; 1
+	03666f6f076578616d706c6503636f6d 00	; foo.example.com.
+	0003 0003 0035 )			; corrupt wire format
 
