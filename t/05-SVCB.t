@@ -4,7 +4,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 48;
+use Test::More tests => 49;
 
 use Net::DNS;
 use Net::DNS::ZoneFile;
@@ -98,6 +98,7 @@ example.com.	SVCB	16 foo.example.org.	( mandatory=alpn alpn=h2,h3-19
 END
 }
 
+
 ####	Test Vectors
 
 my $zonefile = new Net::DNS::ZoneFile( \*DATA );
@@ -144,6 +145,7 @@ failure('undefined mandatory key');
 failure('alpn not specified');
 
 failure('unrecognised key name');
+failure('non-numeric port value');
 failure('corrupt wire format');
 
 exit;
@@ -291,6 +293,7 @@ example.com.	SVCB	1 foo.example.com. (
 
 
 example.com.	SVCB	1 foo.example.com. mandatory=bogus
+example.com.	SVCB	1 foo.example.com. port=1234X5
 
 example.com.	SVCB	( \# 25 0001		; 1
 	03666f6f076578616d706c6503636f6d 00	; foo.example.com.

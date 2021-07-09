@@ -105,6 +105,7 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	$self->svcpriority(shift);
 	$self->targetname(shift);
 
+	local $SIG{__WARN__} = sub { die @_ };
 	while ( my $svcparam = shift ) {
 		for ($svcparam) {
 			my @value;

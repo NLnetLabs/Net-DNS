@@ -22,7 +22,7 @@ my @dotpath = grep {defined} $ENV{HOME}, '.';
 my @dotfile = grep { -f $_ && -o _ } map {"$_/$dotfile"} @dotpath;
 
 
-local $ENV{PATH} = '/bin:/usr/bin';
+local $ENV{PATH} = join ':', grep {$_} qw(/bin /usr/bin), $ENV{PATH};
 my $uname = eval {`uname -n 2>/dev/null`} || '';
 chomp $uname;
 my ( $host, @domain ) = split /\./, $uname, 2;
