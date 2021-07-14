@@ -109,7 +109,9 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 	while ( my $svcparam = shift ) {
 		for ($svcparam) {
 			my @value;
-			if (/=(.*)$/) {
+			if (/^key\d+=(.*)$/i) {
+				push @value, length($1) ? $1 : shift;
+			} elsif (/=(.*)$/) {
 				local $_ = length($1) ? $1 : shift;
 				s/^(["'])(.*)\1$/$2/;		# strip paired quotes
 				s/\\,/\\044/g;			# disguise escaped comma
@@ -181,7 +183,7 @@ sub _presentation {			## render octet string(s) in presentation format
 	return () unless scalar @_;
 	my $raw = join '', @_;
 	my $txt = Net::DNS::Text->decode( \$raw, 0, length($raw) );
-	return map { s/ /\\032/g; $_ } $txt->string;
+	return map { s/ /\\032/g; s/,/\\044/g; $_ } $txt->string;
 }
 
 sub _base64 {
