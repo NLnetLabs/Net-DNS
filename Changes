@@ -1,7 +1,7 @@
 $Id$                       -*-text-*-
 
 
-**** 1.32 [unreleased]
+**** 1.32 Jul 16, 2021
 
 	Text: Offer both Unicode and escaped-ASCII strings.
 
