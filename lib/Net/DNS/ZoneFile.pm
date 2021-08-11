@@ -484,28 +484,31 @@ sub _getline {				## get line from current source
 
 		return $_ unless /^[\$]/;			# RR string
 
+		my @token = grep { defined && length } split /$LEX_REGEX/o;
 		if (/^\$INCLUDE/) {				# directive
-			my ( $keyword, @argument ) = split;
+			my ( $keyword, @argument ) = @token;
 			die '$INCLUDE incomplete' unless @argument;
 			$fh = $self->_include(@argument);
 
 		} elsif (/^\$GENERATE/) {			# directive
-			my ( $keyword, $range, @template ) = split;
+			my ( $keyword, $range, @template ) = @token;
 			die '$GENERATE incomplete' unless @template;
-			$fh = $self->_generate( $range, "@template\n" );
+			$_ = join ' ', @template;
+			s/\\034/"/g if s/^"(.*)"$/$1/;		# unwrap BIND's quoted template
+			$fh = $self->_generate( $range, $_ );
 
 		} elsif (/^\$ORIGIN/) {				# directive
-			my ( $keyword, $origin, @etc ) = split;
+			my ( $keyword, $origin ) = @token;
 			die '$ORIGIN incomplete' unless defined $origin;
 			$self->_origin($origin);
 
 		} elsif (/^\$TTL/) {				# directive
-			my ( $keyword, $ttl, @etc ) = split;
+			my ( $keyword, $ttl ) = @token;
 			die '$TTL incomplete' unless defined $ttl;
 			$self->{TTL} = Net::DNS::RR::ttl( {}, $ttl );
 
 		} else {					# unrecognised
-			my ($keyword) = split;
+			my ($keyword) = @token;
 			die qq[unknown "$keyword" directive];
 		}
 	}
@@ -619,8 +622,10 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC1035 Section 5.1,
-RFC2308, BIND 9 Administrator Reference Manual
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>,
+RFC1035 Section 5.1, RFC2308
+
+L<BIND Administrator Reference Manual|http://bind.isc.org/>
 
 =cut
 

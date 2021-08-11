@@ -113,11 +113,10 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 				push @value, length($1) ? $1 : shift;
 			} elsif (/=(.*)$/) {
 				local $_ = length($1) ? $1 : shift;
-				s/^(["'])(.*)\1$/$2/;		# strip paired quotes
-				s/\\,/\\044/g;			# disguise escaped comma
+				s/^"(.*)"$/$1/;			# strip enclosing quotes
 				push @value, split /,/;
 			} else {
-				push @value, '' unless $keybyname{lc $_};    # empty keyNNN
+				push @value, '' unless $keybyname{lc $_};    # empty | Boolean
 			}
 
 			s/[-]/_/g;				# extract identifier
@@ -176,37 +175,6 @@ sub targetname {
 }
 
 
-########################################
-
-
-sub _presentation {			## render octet string(s) in presentation format
-	return () unless scalar @_;
-	my $raw = join '', @_;
-	my $txt = Net::DNS::Text->decode( \$raw, 0, length($raw) );
-	return map { s/ /\\032/g; s/,/\\044/g; $_ } $txt->string;
-}
-
-sub _base64 {
-	return _presentation( map { MIME::Base64::decode($_) } @_ );
-}
-
-sub _integer16 {
-	return _presentation( map { pack( 'n', $_ ) } @_ );
-}
-
-sub _ipv4 {
-	return _presentation( map { Net::DNS::RR::A::address( {}, $_ ) } @_ );
-}
-
-sub _ipv6 {
-	return _presentation( map { Net::DNS::RR::AAAA::address( {}, $_ ) } @_ );
-}
-
-sub _string {
-	return _presentation( map { Net::DNS::Text->new($_)->encode() } @_ );
-}
-
-
 sub mandatory {				## mandatory=key1,port,...
 	my $self = shift;
 	my @list = map { $keybyname{lc $_} || $_ } map { split /,/ } @_;
@@ -216,10 +184,7 @@ sub mandatory {				## mandatory=key1,port,...
 
 sub alpn {				## alpn=h3,h2,...
 	my $self = shift;
-
-	###	tolerate unnecessary double-escape nonsense in draft-ietf-dnsop-svcb-https	###
-	my @sanitized = map { s/\\092,/\\044/g; s/\\092\\092/\\092/g; split /,/ } join ',', @_;
-	return $self->key1( scalar(@_) ? _string(@sanitized) : () );
+	return $self->key1( _string(@_) );
 }
 
 sub no_default_alpn {			## no-default-alpn
@@ -245,6 +210,41 @@ sub ech {				## ech=base64string
 sub ipv6hint {				## ipv6hint=2001:DB8::1,...
 	my $self = shift;
 	return $self->key6( _ipv6(@_) );
+}
+
+
+########################################
+
+
+sub _presentation {			## render octet string(s) in presentation format
+	return () unless scalar @_;
+	my $raw = join '', @_;
+	return Net::DNS::Text->decode( \$raw, 0, length($raw) )->string;
+}
+
+sub _base64 {
+	return _presentation( map { MIME::Base64::decode($_) } @_ );
+}
+
+sub _integer16 {
+	return _presentation( map { pack( 'n', $_ ) } @_ );
+}
+
+sub _ipv4 {
+	return _presentation( map { Net::DNS::RR::A::address( {}, $_ ) } @_ );
+}
+
+sub _ipv6 {
+	return _presentation( map { Net::DNS::RR::AAAA::address( {}, $_ ) } @_ );
+}
+
+sub _string {
+	local $_ = join ',', '', @_;				# reassemble argument string
+	s/\\092,/\\044/g;		### tolerate unnecessary double-escape nonsense in
+	s/\\092\\092/\\092/g;		### draft-ietf-dnsop-svcb-https that contradicts RFC1035
+	s/\\,/\\044/g;						# disguise (RFC1035) escaped comma
+	my ( undef, @reparsed ) = split /,/;			# multi-valued argument
+	return _presentation( map { Net::DNS::Text->new($_)->encode() } @reparsed );
 }
 
 
@@ -347,7 +347,7 @@ The behaviour with undefined arguments is not specified.
     $rr->keyNN( undef );
 
 Generic constructor and accessor methods for SvcParams.
-The key index NN is a decimal integer in the range 0 .. 65534.
+The key index NN is a decimal integer in the range 0 .. 65535.
 The method argument and returned value are both presentation format strings.
 The method returns the undefined value if the key is not present.
 The specified key will be deleted if the value is undefined.

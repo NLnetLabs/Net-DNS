@@ -3,7 +3,7 @@ package Net::DNS::Parameters;
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2021-05-26)
+##	(last updated 2021-07-30)
 ##
 ################################################
 
@@ -96,10 +96,10 @@ my @typebyname = (
 	SSHFP	   => 44,					# RFC4255
 	IPSECKEY   => 45,					# RFC4025
 	RRSIG	   => 46,					# RFC3755 RFC4034
-	NSEC	   => 47,					# RFC3755 RFC4034 RFC-ietf-dnsop-nsec-ttl-05
+	NSEC	   => 47,					# RFC3755 RFC4034 RFC9077
 	DNSKEY	   => 48,					# RFC3755 RFC4034
 	DHCID	   => 49,					# RFC4701
-	NSEC3	   => 50,					# RFC5155 RFC-ietf-dnsop-nsec-ttl-05
+	NSEC3	   => 50,					# RFC5155 RFC9077
 	NSEC3PARAM => 51,					# RFC5155
 	TLSA	   => 52,					# RFC6698
 	SMIMEA	   => 53,					# RFC8162

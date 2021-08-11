@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use IO::File;
 
-use Test::More tests => 94;
+use Test::More tests => 93;
 
 ## vvv	verbatim from Domain.pm
 use constant ASCII => ref eval {
@@ -302,9 +302,8 @@ EOF
 
 {					## $GENERATE directive
 	my $zonefile = source <<'EOF';
-$GENERATE 0-0		@	TXT	$
-$GENERATE 10-30/10	@	TXT	$
-$GENERATE 30-10/-10	@	TXT	$
+$GENERATE 10-30/10	"@	TXT	$"	; BIND expects template to be quoted
+$GENERATE 30-10/10	@	TXT	$
 $GENERATE 123-123	@	TXT	${,,}
 $GENERATE 123-123	@	TXT	${0,0,d}
 $GENERATE 123-123	@	TXT	${0,0,o}
@@ -316,7 +315,6 @@ $GENERATE 11259375	@	TXT	${0,6,n}
 $GENERATE 11259375	@	TXT	${0,16,N}
 $GENERATE 0-0		@	TXT	${0,0,Z}
 EOF
-	is( $zonefile->read->rdstring, '0',		   'generate TXT $' );
 	is( $zonefile->read->rdstring, '10',		   'generate TXT $ with step 10' );
 	is( $zonefile->read->rdstring, '20',		   'generate TXT $ with step 10' );
 	is( $zonefile->read->rdstring, '30',		   'generate TXT $ with step 10' );

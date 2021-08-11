@@ -95,10 +95,11 @@ use constant PACKETSZ => 512;
 }
 
 
-my $warned;
+my %warned;
 
 sub _deprecate {
-	carp join ' ', 'deprecated method;', pop(@_) unless $warned++;
+	my $msg = pop(@_);
+	carp join ' ', 'deprecated method;', $msg unless $warned{$msg}++;
 	return;
 }
 
@@ -444,8 +445,6 @@ sub _send_tcp {
 
 		$socket->send($tcp_packet);
 		$self->errorstring($!);
-
-		next unless $select->can_read($timeout);	# uncoverable branch true
 
 		my $buffer = _read_tcp($socket);
 		$self->{replyfrom} = $ip;
@@ -824,17 +823,16 @@ sub _axfr_next {
 sub _read_tcp {
 	my $socket = shift;
 
-	my ( $buffer, $s1, $s2 );
+	my ( $s1, $s2 );
 	$socket->recv( $s1, 2 );				# one lump
 	$socket->recv( $s2, 2 - length $s1 );			# or two?
 	my $size = unpack 'n', pack( 'a*a*@2', $s1, $s2 );
 
-	$socket->recv( $buffer, $size );			# initial read
-
-	while ( length($buffer) < $size ) {
+	my $buffer = '';
+	for (;;) {
 		my $fragment;
 		$socket->recv( $fragment, $size - length($buffer) );
-		$buffer .= $fragment || last;
+		last unless length( $buffer .= $fragment || last ) < $size;
 	}
 	return $buffer;
 }
@@ -1083,7 +1081,7 @@ sub make_query_packet {			## historical
 sub _diag {				## debug output
 	my $self = shift;
 	return unless $self->{debug};
-	return print "\n;; @_\n"
+	return print "\n;; @_\n";
 }
 
 

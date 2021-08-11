@@ -719,10 +719,11 @@ sub _annotation {
 }
 
 
-my $warned;
+my %warned;
 
 sub _deprecate {
-	carp join ' ', 'deprecated method;', pop(@_) unless $warned++;
+	my $msg = pop(@_);
+	carp join ' ', 'deprecated method;', $msg unless $warned{$msg}++;
 	return;
 }
 
@@ -782,7 +783,7 @@ sub AUTOLOAD {				## Default method
 	my $module = join '::', __PACKAGE__, $self->type;
 	eval("require $module") if $oref eq __PACKAGE__;	## no critic ProhibitStringyEval
 
-	@_ = ( <<"END", $@, "@object" );
+	@_ = ( <<"END" );
 ***  FATAL PROGRAM ERROR!!	Unknown instance method "$method"
 ***  which the program has attempted to call for the object:
 ***
@@ -792,6 +793,8 @@ $string
 ***  that the object would be of a particular type.  The type of an
 ***  object should be checked before calling any of its methods.
 ***
+@object
+$@
 END
 	goto &{'Carp::confess'};
 }

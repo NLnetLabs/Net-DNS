@@ -855,6 +855,6 @@ RFC4034, RFC6840, RFC3755
 
 L<Algorithm Numbers|http://www.iana.org/assignments/dns-sec-alg-numbers>
 
-L<BIND 9 Administrator Reference Manual|http://www.bind9.net/manuals>
+L<BIND Administrator Reference Manual|http://bind.isc.org/>
 
 =cut

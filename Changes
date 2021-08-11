@@ -1,6 +1,13 @@
 $Id$                       -*-text-*-
 
 
+**** 1.33 [unreleased]
+
+Fix rt.cpan.org #137768
+
+	Test t/05-SVCB.t on Perl 5.18.0 fails with deep recursion.
+
+
 **** 1.32 Jul 16, 2021
 
 	Text: Offer both Unicode and escaped-ASCII strings.
