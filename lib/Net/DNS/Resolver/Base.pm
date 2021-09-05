@@ -362,6 +362,7 @@ sub answerfrom { return &replyfrom; }				# uncoverable pod
 
 sub _reset_errorstring {
 	shift->{errorstring} = '';
+	$! = $@ = undef;
 	return;
 }
 
@@ -824,8 +825,8 @@ sub _read_tcp {
 	my $socket = shift;
 
 	my ( $s1, $s2 );
-	$socket->recv( $s1, 2 );				# one lump
-	$socket->recv( $s2, 2 - length $s1 );			# or two?
+	$socket->recv( $s1, 1 );				# two octet length
+	$socket->recv( $s2, 2 - length $s1 );			# possibly fragmented
 	my $size = unpack 'n', pack( 'a*a*@2', $s1, $s2 );
 
 	my $buffer = '';
@@ -1079,8 +1080,7 @@ sub make_query_packet {			## historical
 
 
 sub _diag {				## debug output
-	my $self = shift;
-	return unless $self->{debug};
+	return unless shift->{debug};
 	return print "\n;; @_\n";
 }
 

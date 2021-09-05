@@ -3,7 +3,7 @@ package Net::DNS::Parameters;
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2021-07-30)
+##	(last updated 2021-08-31)
 ##
 ################################################
 
@@ -207,7 +207,8 @@ my @ednsoptionbyname = (
 	'EXTENDED-ERROR' => 15,					# RFC8914
 	'CLIENT-TAG'	 => 16,					# draft-bellis-dnsop-edns-tags
 	'SERVER-TAG'	 => 17,					# draft-bellis-dnsop-edns-tags
-	DEVICEID	 => 26946,				# https://docs.umbrella.com/developer/networkdevices-api/identifying-dns-traffic2
+	'UMBRELLA-IDENT' => 20292,				# https://developer.cisco.com/docs/cloud-security/#!integrating-network-devic
+	DEVICEID	 => 26946,				# https://developer.cisco.com/docs/cloud-security/#!network-devices-getting-s
 	);
 our %ednsoptionbyval = reverse @ednsoptionbyname;
 push @ednsoptionbyname, map { /^\d/ ? $_ : lc($_) } @ednsoptionbyname;
