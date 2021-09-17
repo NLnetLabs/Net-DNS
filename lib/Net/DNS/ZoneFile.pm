@@ -365,9 +365,6 @@ sub parse {
 		my ( $class, $range, $template, $line ) = @_;
 		my $self = bless {}, $class;
 
-		$template =~ s/\\\$/\\036/g;			# disguise escaped dollar
-		$template =~ s/\$\$/\\036/g;			# disguise escaped dollar
-
 		my ( $bound, $step ) = split m#[/]#, $range;	# initial iterator state
 		my ( $first, $last ) = split m#[-]#, $bound;
 		$first ||= 0;
@@ -376,7 +373,12 @@ sub parse {
 		$step = ( $last < $first ) ? -abs($step) : abs($step);
 		$self->{count} = int( ( $last - $first ) / $step ) + 1;
 
-		@{$self}{qw(instant step template line)} = ( $first, $step, $template, $line );
+		for ($template) {
+			s/\\\$/\\036/g;				# disguise escaped dollar
+			s/\$\$/\\036/g;				# disguise escaped dollar
+			s/\\034/"/g if s/^"(.*)"$/$1/;		# unwrap BIND's quoted template
+			@{$self}{qw(instant step template line)} = ( $first, $step, $_, $line );
+		}
 		return $self;
 	}
 
@@ -493,9 +495,7 @@ sub _getline {				## get line from current source
 		} elsif (/^\$GENERATE/) {			# directive
 			my ( $keyword, $range, @template ) = @token;
 			die '$GENERATE incomplete' unless @template;
-			$_ = join ' ', @template;
-			s/\\034/"/g if s/^"(.*)"$/$1/;		# unwrap BIND's quoted template
-			$fh = $self->_generate( $range, $_ );
+			$fh = $self->_generate( $range, "@template" );
 
 		} elsif (/^\$ORIGIN/) {				# directive
 			my ( $keyword, $origin ) = @token;
