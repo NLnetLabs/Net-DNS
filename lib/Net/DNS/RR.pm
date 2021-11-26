@@ -103,16 +103,16 @@ sub _new_string {
 	my ( $owner, @token ) = grep { defined && length } split /$PARSE_REGEX/o;
 
 	croak 'unable to parse RR string' unless scalar @token;
-	my $t1 = uc $token[0];
+	my $t1 = $token[0];
 	my $t2 = $token[1];
 
 	my ( $ttl, $class );
 	if ( not defined $t2 ) {				# <owner> <type>
-		@token = ('ANY') if $classbyname{$t1};		# <owner> <class>
+		@token = ('ANY') if $classbyname{uc $t1};	# <owner> <class>
 	} elsif ( $t1 =~ /^\d/ ) {
 		$ttl   = shift @token;				# <owner> <ttl> [<class>] <type>
 		$class = shift @token if $classbyname{uc $t2} || $t2 =~ /^CLASS\d/i;
-	} elsif ( $classbyname{$t1} || $t1 =~ /^CLASS\d/ ) {
+	} elsif ( $classbyname{uc $t1} || $t1 =~ /^CLASS\d/i ) {
 		$class = shift @token;				# <owner> <class> [<ttl>] <type>
 		$ttl   = shift @token if $t2 =~ /^\d/;
 	}

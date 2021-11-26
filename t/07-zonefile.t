@@ -6,7 +6,7 @@ use strict;
 use warnings;
 use IO::File;
 
-use Test::More tests => 93;
+use Test::More tests => 91;
 
 ## vvv	verbatim from Domain.pm
 use constant ASCII => ref eval {
@@ -178,16 +178,6 @@ $TTL 54321
 rr0		SOA	mname rname 99 6h 1h 1w 12345
 EOF
 	is( $zonefile->read->ttl, 54321, 'SOA TTL set from $TTL directive' );
-}
-
-
-{					## no $TTL directive, default implicit
-	my $zonefile = source <<'EOF';
-rr0		SOA	mname rname 99 6h 1h 1w 0
-rr1		NULL
-EOF
-	is( $zonefile->read->ttl, 0, 'SOA TTL set from zero SOA minimum field' );
-	is( $zonefile->read->ttl, 0, 'implicit zero default from SOA record' );
 }
 
 

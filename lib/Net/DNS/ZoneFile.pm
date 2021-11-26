@@ -88,22 +88,22 @@ introduced by $INCLUDE directives.
 =cut
 
 sub new {
-	my $self = bless {}, shift;
-	my $file = shift;
-	$self->_origin(shift);
+	my $self = bless {fileopen => {}}, shift;
+	my ( $filename, $origin ) = @_;
 
-	if ( ref($file) ) {
-		$self->{filename} = $self->{filehandle} = $file;
-		$self->{fileopen} = {};
-		return $self if ref($file) =~ /IO::File|FileHandle|GLOB|Text/;
+	$self->_origin($origin);
+
+	if ( ref($filename) ) {
+		$self->{filehandle} = $self->{filename} = $filename;
+		return $self if ref($filename) =~ /IO::File|FileHandle|GLOB|Text/;
 		croak 'argument not a file handle';
 	}
 
-	croak 'filename argument undefined' unless $file;
+	croak 'filename argument undefined' unless $filename;
 	my $discipline = UTF8 ? '<:encoding(UTF-8)' : '<';
-	$self->{filehandle} = IO::File->new( $file, $discipline ) or croak "$file: $!";
-	$self->{fileopen}{$file}++;
-	$self->{filename} = $file;
+	$self->{filehandle} = IO::File->new( $filename, $discipline ) or croak "$filename: $!";
+	$self->{fileopen}->{$filename}++;
+	$self->{filename} = $filename;
 	return $self;
 }
 
@@ -376,7 +376,7 @@ sub parse {
 		for ($template) {
 			s/\\\$/\\036/g;				# disguise escaped dollar
 			s/\$\$/\\036/g;				# disguise escaped dollar
-			s/\\034/"/g if s/^"(.*)"$/$1/;		# unwrap BIND's quoted template
+			s/^"(.*)"$/$1/s;			# unwrap BIND's quoted template
 			@{$self}{qw(instant step template line)} = ( $first, $step, $_, $line );
 		}
 		return $self;
@@ -539,29 +539,28 @@ sub _getRR {				## get RR from current source
 	$self->{class} = $rr->class unless $self->{class};	# propagate RR class
 	$rr->class( $self->{class} );
 
-	$self->{TTL} ||= $rr->minimum if $rr->type eq 'SOA';	# default TTL
-	$rr->{'ttl'} = $self->{TTL} unless defined $rr->{'ttl'};
+	unless ( defined $self->{TTL} ) {
+		$self->{TTL} = $rr->minimum if $rr->type eq 'SOA';    # default TTL
+	}
+	$rr->{ttl} = $self->{TTL} unless defined $rr->{ttl};
 
 	return $self->{latest} = $rr;
 }
 
 
 sub _include {				## open $INCLUDE file
-	my $self = shift;
-	my $file = _filename(shift);
-	my $root = shift;
+	my ( $self, $include, $origin ) = @_;
 
-	my $opened = {%{$self->{fileopen}}};
-	die qq(\$INCLUDE $file: Unexpected recursion) if $opened->{$file}++;
+	my $filename = _filename($include);
+	die qq(\$INCLUDE $filename: Unexpected recursion) if $self->{fileopen}->{$filename}++;
 
 	my $discipline = PERLIO ? join( ':', '<', PerlIO::get_layers $self->{filehandle} ) : '<';
-	my $filehandle = IO::File->new( $file, $discipline ) or die qq(\$INCLUDE $file: $!);
+	my $filehandle = IO::File->new( $filename, $discipline ) or die qq(\$INCLUDE $filename: $!);
 
 	delete $self->{latest};					# forget previous owner
 	$self->{parent} = bless {%$self}, ref($self);		# save state, create link
-	$self->_origin($root) if $root;
-	$self->{filename} = $file;
-	$self->{fileopen} = $opened;
+	$self->_origin($origin) if $origin;
+	$self->{filename} = $filename;
 	return $self->{filehandle} = $filehandle;
 }
 
@@ -605,7 +604,7 @@ All rights reserved.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted, provided
-that the above copyright notice appear in all copies and that both that
+that the original copyright notices appear in all copies and that both
 copyright notice and this permission notice appear in supporting
 documentation, and that the name of the author not be used in advertising
 or publicity pertaining to distribution of the software without specific

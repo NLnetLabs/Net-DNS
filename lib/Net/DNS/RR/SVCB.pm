@@ -75,15 +75,18 @@ sub _format_rdata {			## format rdata portion of RR string.
 	my $self = shift;
 
 	my $priority = $self->{SvcPriority};
+	my $target   = $self->{TargetName}->string;
 	my $params   = $self->{SvcParams} || [];
-	return ( $priority, $self->{TargetName}->string ) unless scalar @$params;
+	return ( $priority, $target ) unless scalar @$params;
 
+	my $encode = $self->{TargetName}->encode();
+	my $length = 2 + length $encode;
+	my @target = split /(\S{32})/, unpack 'H*', $encode;
 	my @rdata  = unpack 'H4', pack 'n', $priority;
-	my $target = $self->{TargetName}->encode();
-	my $length = 2 + length $target;
-	my @target = split /(\S{32})/, unpack 'H*', $target;
-	push @rdata, $length > 18 ? "\t; $priority\n" : (), @target;
-	push @rdata, join '', "\t; ", $self->{TargetName}->string, "\n" if $length > 3;
+	push @rdata, "\t; priority: $priority\n";
+	push @rdata, shift @target;
+	push @rdata, join '', "\t\t; target: ", substr( $target, 0, 50 ), "\n";
+	push @rdata, @target;
 
 	my @params = @$params;
 	while (@params) {
@@ -131,19 +134,20 @@ sub _parse_rdata {			## populate RR from rdata in argument list
 sub _post_parse {			## parser post processing
 	my $self = shift;
 
-	my $params = $self->{SvcParams} || return;
-	my %params = @$params;
+	my $paramref = $self->{SvcParams} || [];
+	my %svcparam = scalar(@$paramref) ? @$paramref : return;
+
 	$self->key0(undef);					# ruse to force sorting of SvcParams
-	if ( defined $params{0} ) {
+	if ( defined $svcparam{0} ) {
 		my %unique;
-		foreach ( grep { !$unique{$_}++ } unpack 'n*', $params{0} ) {
+		foreach ( grep { !$unique{$_}++ } unpack 'n*', $svcparam{0} ) {
 			croak( $self->type . qq[: unexpected "key0" in mandatory list] ) if $unique{0};
 			croak( $self->type . qq[: duplicate "key$_" in mandatory list] ) if --$unique{$_};
-			croak( $self->type . qq[: mandatory "key$_" not present] ) unless defined $params{$_};
+			croak( $self->type . qq[: mandatory "key$_" not present] ) unless defined $svcparam{$_};
 		}
 		$self->mandatory( keys %unique );		# restore mandatory key list
 	}
-	croak( $self->type . qq[: expected alpn="..." not present] ) if defined( $params{2} ) and !$params{1};
+	croak( $self->type . qq[: expected alpn="..." not present] ) if defined( $svcparam{2} ) and !$svcparam{1};
 	return;
 }
 
@@ -255,25 +259,25 @@ sub AUTOLOAD {				## Dynamic constructor/accessor methods
 
 	my ($method) = reverse split /::/, $AUTOLOAD;
 
-	my $default = join '::', 'SUPER', $method;
-	return $self->$default(@_) unless $method =~ /^key[0]*(\d+)$/i;
+	my $super = "SUPER::$method";
+	return $self->$super(@_) unless $method =~ /^key[0]*(\d+)$/i;
 	my $key = $1;
 
-	my $params = $self->{SvcParams} || [];
-	my %params = @$params;
+	my $paramsref = $self->{SvcParams} || [];
+	my %svcparams = @$paramsref;
 
 	if ( scalar @_ ) {
 		my $arg = shift;				# keyNN($value);
-		delete $params{$key} unless defined $arg;
-		croak( $self->type . qq[: duplicate SvcParam "key$key"] ) if defined $params{$key};
-		$params{$key} = Net::DNS::Text->new("$arg")->raw if defined $arg;
-		$self->{SvcParams} = [map { ( $_, $params{$_} ) } sort { $a <=> $b } keys %params];
+		delete $svcparams{$key} unless defined $arg;
+		croak( $self->type . qq[: duplicate SvcParam "key$key"] ) if defined $svcparams{$key};
+		$svcparams{$key}   = Net::DNS::Text->new("$arg")->raw if defined $arg;
+		$self->{SvcParams} = [map { ( $_, $svcparams{$_} ) } sort { $a <=> $b } keys %svcparams];
 		croak( $self->type . qq[: unexpected number of values for "key$key"] ) if scalar @_;
 	} else {
 		croak( $self->type . qq[: no value specified for "key$key"] ) unless defined wantarray;
 	}
 
-	my $value = $params{$key};
+	my $value = $svcparams{$key};
 	return defined($value) ? _presentation($value) : $value;
 }
 
@@ -285,7 +289,7 @@ __END__
 =head1 SYNOPSIS
 
     use Net::DNS;
-    $rr = Net::DNS::RR->new('name HTTPS SvcPriority TargetName alpn=h3,...');
+    $rr = Net::DNS::RR->new('name HTTPS SvcPriority TargetName SvcParams');
 
 =head1 DESCRIPTION
 
@@ -329,7 +333,7 @@ owner name of this record must be used as the effective TargetName.
 
 =head2 mandatory, alpn, no-default-alpn, port, ipv4hint, ech, ipv6hint
 
-    $rr = Net::DNS::RR->new( 'svc.example. SVCB 1 svc.example. port=1234' );
+    $rr = Net::DNS::RR->new( 'svcb.example. SVCB 1 svcb.example. port=1234' );
 
     $rr->port(1234);
     $string = $rr->port();	# \004\210
@@ -366,7 +370,7 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted, provided
-that the above copyright notice appear in all copies and that both that
+that the original copyright notices appear in all copies and that both
 copyright notice and this permission notice appear in supporting
 documentation, and that the name of the author not be used in advertising
 or publicity pertaining to distribution of the software without specific

@@ -698,7 +698,7 @@ sub _accept_reply {
 
 	return if $query && $header->id != $query->header->id;
 
-	return $self->errorstring( $header->rcode );			# historical quirk
+	return $self->errorstring( $header->rcode );		# historical quirk
 }
 
 
@@ -935,7 +935,7 @@ sub _create_udp_socket {
 	sub _create_dst_sockaddr {	## create UDP destination sockaddr structure
 		my ( $self, $ip, $port ) = @_;
 
-		unless (USE_SOCKET_IP) {				# NB: errors raised in socket->send
+		unless (USE_SOCKET_IP) {			# NB: errors raised in socket->send
 			return _ipv6($ip) ? undef : sockaddr_in( $port, inet_aton($ip) );
 		}
 
@@ -973,10 +973,6 @@ sub _make_query_packet {
 	if ( ref($packet) ) {
 		my $edns = $packet->edns;			# advertise UDPsize for local stack
 		$edns->size( $self->{udppacketsize} ) unless defined $edns->{size};
-
-		my $header = $packet->header;
-		$header->rd( $self->{recurse} ) if $header->opcode eq 'QUERY';
-
 	} else {
 		$packet = Net::DNS::Packet->new(@_);
 		$packet->edns->size( $self->{udppacketsize} );
@@ -1185,7 +1181,7 @@ All rights reserved.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted, provided
-that the above copyright notice appear in all copies and that both that
+that the original copyright notices appear in all copies and that both
 copyright notice and this permission notice appear in supporting
 documentation, and that the name of the author not be used in advertising
 or publicity pertaining to distribution of the software without specific

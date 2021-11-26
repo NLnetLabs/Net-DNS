@@ -20,14 +20,15 @@ use Carp;
 use constant BABBLE => defined eval { require Digest::BubbleBabble };
 
 eval { require Digest::SHA };		## optional for simple Net::DNS RR
-eval { require Digest::GOST };
+eval { require Digest::GOST12 };
 eval { require Digest::GOST::CryptoPro };
 
 my %digest = (
-	'1' => ['Digest::SHA', 1],
-	'2' => ['Digest::SHA', 256],
-	'3' => ['Digest::GOST::CryptoPro'],
-	'4' => ['Digest::SHA', 384],
+	'1' => scalar( eval { Digest::SHA->new(1) } ),
+	'2' => scalar( eval { Digest::SHA->new(256) } ),
+	'3' => scalar( eval { Digest::GOST::CryptoPro->new() } ),
+	'4' => scalar( eval { Digest::SHA->new(384) } ),
+	'5' => scalar( eval { Digest::GOST12->new() } ),
 	);
 
 #
@@ -85,15 +86,17 @@ my %digest = (
 #
 {
 	my @digestbyname = (
-		'SHA-1'		  => 1,				# [RFC3658]
-		'SHA-256'	  => 2,				# [RFC4509]
-		'GOST-R-34.11-94' => 3,				# [RFC5933]
-		'SHA-384'	  => 4,				# [RFC6605]
+		'SHA-1'		    => 1,			# [RFC3658]
+		'SHA-256'	    => 2,			# [RFC4509]
+		'GOST-R-34.11-94'   => 3,			# [RFC5933]
+		'SHA-384'	    => 4,			# [RFC6605]
+		'GOST-R-34.11-2012' => 5,			# [RFC5933bis]
 		);
 
 	my @digestalias = (
-		'SHA'  => 1,
-		'GOST' => 3,
+		'SHA'	 => 1,
+		'GOST94' => 3,
+		'GOST12' => 5,
 		);
 
 	my %digestbyval = reverse @digestbyname;
@@ -235,10 +238,8 @@ sub create {
 		%args
 		);
 
-	my $arglist = $digest{$self->digtype};
-	croak join ' ', 'digtype', $self->digtype('MNEMONIC'), 'not supported' unless $arglist;
-	my ( $object, @argument ) = @$arglist;
-	my $hash = $object->new(@argument);
+	my $hash = $digest{$self->digtype};
+	croak join ' ', 'digtype', $self->digtype('MNEMONIC'), 'not supported' unless $hash;
 	$hash->add( $keyrr->{owner}->canonical );
 	$hash->add( $keyrr->_encode_rdata );
 	$self->digestbin( $hash->digest );
@@ -345,14 +346,14 @@ method is called.
 
     use Net::DNS::SEC;
 
-    $dsrr = Net::DNS::RR::DS->create($keyrr, digtype => 'SHA-256' );
+    $dsrr = Net::DNS::RR::DS->create( $keyrr, digtype => 'SHA-256' );
     $keyrr->print;
     $dsrr->print;
 
-This constructor takes a key object as argument and will return the
-corresponding DS RR object.
+This constructor takes a DNSKEY argument and will return the
+corresponding DS RR constructed using the specified algorithm.
 
-The digest type defaults to SHA-1.
+The digest algorithm defaults to SHA-1.
 
 =head2 verify
 
@@ -367,7 +368,7 @@ i.e. the DS points to the DNSKEY from the argument.
 
 Copyright (c)2001-2005 RIPE NCC.  Author Olaf M. Kolkman
 
-Portions Copyright (c)2013 Dick Franks.
+Portions Copyright (c)2013,2021 Dick Franks.
 
 All rights reserved.
 
@@ -378,7 +379,7 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted, provided
-that the above copyright notice appear in all copies and that both that
+that the original copyright notices appear in all copies and that both
 copyright notice and this permission notice appear in supporting
 documentation, and that the name of the author not be used in advertising
 or publicity pertaining to distribution of the software without specific
