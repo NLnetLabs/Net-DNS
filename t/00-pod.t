@@ -18,7 +18,7 @@ foreach my $package ( sort keys %prerequisite ) {
 
 my @poddirs = qw( lib demo );
 my @allpods = all_pod_files(@poddirs);
-all_pod_files_ok( sort @allpods);
+all_pod_files_ok( sort @allpods );
 
 
 exit;

@@ -15,7 +15,7 @@ my @prerequisite = qw(
 		);
 
 foreach my $package (@prerequisite) {
-	next if eval "require $package";## no critic
+	next if eval "require $package";	## no critic
 	plan skip_all => "$package not installed";
 	exit;
 }

@@ -12,9 +12,9 @@ local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 {					## check exception raised for unparsable argument
 	foreach my $testcase ( undef, '', ' ', '. NULL x', '. OPT x', '. ATMA x', [], {} ) {
+		my $test = defined $testcase ? "'$testcase'" : 'undef';
 		eval { Net::DNS::RR->new($testcase) };
 		my ($exception) = split /\n/, "$@\n";
-		my $test = defined $testcase ? "'$testcase'" : 'undef';
 		ok( $exception, "Net::DNS::RR->new($test)\t[$exception]" );
 	}
 }

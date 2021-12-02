@@ -60,7 +60,7 @@ my $rdata  = "10.1.2.3";
 
 {
 	Net::DNS::Resolver->searchlist();			# overides config files
-	my $packet = eval { Net::DNS::Update->new(undef); };
+	my $packet	= eval { Net::DNS::Update->new(undef); };
 	my ($exception) = split /\n/, "$@\n";
 	ok( $exception, "argument undefined\t[$exception]" );
 }

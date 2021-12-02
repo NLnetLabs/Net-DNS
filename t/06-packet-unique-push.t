@@ -66,7 +66,7 @@ my @tests = (
 		Net::DNS::RR->new('foo.example.com 60 IN A 192.0.2.4'),
 		Net::DNS::RR->new('foo.example.com 60 HS A 192.0.2.4'),
 		],
-	[	3,
+	[	3,						# without RDATA
 		Net::DNS::RR->new('foo.example.com IN A'),
 		Net::DNS::RR->new('foo.example.com ANY A'),
 		Net::DNS::RR->new('foo.example.com NONE A'),
