@@ -68,7 +68,7 @@ my $wire = '000004706f6f6c03737663076578616d706c6500';
 	my $lc		= Net::DNS::RR->new( lc ". $type @data" );
 	my $rr		= Net::DNS::RR->new( uc ". $type @data" );
 	my $hash	= {};
-	my $predecessor = $rr->encode( 0, $hash );
+	my $predecessor = $rr->encode( 0,		    $hash );
 	my $compressed	= $rr->encode( length $predecessor, $hash );
 	ok( length $compressed == length $predecessor, 'encoded RDATA not compressible' );
 	isnt( $rr->encode,    $lc->encode, 'encoded RDATA names not downcased' );

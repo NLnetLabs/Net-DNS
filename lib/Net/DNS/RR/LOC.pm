@@ -204,6 +204,8 @@ sub _encode_prec {
 	return ( $mantissa & 0xF ) << 4 | $exponent;
 }
 
+########################################
+
 
 1;
 __END__
@@ -321,7 +323,7 @@ Package template (c)2009,2012 O.M.Kolkman and R.W.Franks.
 
 Permission to use, copy, modify, and distribute this software and its
 documentation for any purpose and without fee is hereby granted, provided
-that the above copyright notice appear in all copies and that both that
+that the original copyright notices appear in all copies and that both
 copyright notice and this permission notice appear in supporting
 documentation, and that the name of the author not be used in advertising
 or publicity pertaining to distribution of the software without specific

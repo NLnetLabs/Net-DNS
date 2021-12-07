@@ -498,7 +498,7 @@ DEALINGS IN THE SOFTWARE.
 
 =head1 SEE ALSO
 
-L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC5155, RFC4648
+L<perl>, L<Net::DNS>, L<Net::DNS::RR>, RFC5155, RFC9077
 
 L<Hash Algorithms|http://www.iana.org/assignments/dnssec-nsec3-parameters>
 
