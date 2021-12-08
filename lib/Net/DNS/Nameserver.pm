@@ -39,7 +39,7 @@ See L</EXAMPLE> for an example.
 
 =cut
 
-use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.38; 1;'; ## no critic
+use constant USE_SOCKET_IP => defined eval 'use IO::Socket::IP 0.38; 1;';    ## no critic
 require IO::Socket::INET unless USE_SOCKET_IP;
 
 use integer;
@@ -80,7 +80,7 @@ sub new {
 
 	# local server addresses must also be accepted by a resolver
 	my $LocalAddr = $self{LocalAddr} || [DEFAULT_ADDR];
-	my $resolver = Net::DNS::Resolver->new( nameservers => $LocalAddr );
+	my $resolver  = Net::DNS::Resolver->new( nameservers => $LocalAddr );
 	$resolver->force_v4(1) unless USE_SOCKET_IP;
 	$resolver->force_v4(1) if FORCE_IPv4;
 	my @localaddresses = $resolver->nameservers;
@@ -406,7 +406,9 @@ sub tcp_connection {
 				print "Error decoding query packet: $err\n" if $self->{Verbose};
 				undef $query;			# force FORMERR reply
 			}
+
 			my $conn = {
+				protocol => $sock->protocol,
 				sockhost => $sock->sockhost,
 				sockport => $sock->sockport,
 				peerhost => $sock->peerhost,
@@ -452,7 +454,6 @@ sub udp_connection {
 		return;
 	}
 
-
 	print "UDP connection from $peerhost:$peerport to $sockhost\n" if $self->{Verbose};
 
 	my $query = Net::DNS::Packet->new( \$buf );
@@ -460,11 +461,13 @@ sub udp_connection {
 		print "Error decoding query packet: $err\n" if $self->{Verbose};
 		undef $query;					# force FORMERR reply
 	}
+
 	my $conn = {
-		sockhost => $sock->sockhost,
+		protocol => $sock->protocol,
 		sockport => $sock->sockport,
-		peerhost => $sock->peerhost,
-		peerport => $sock->peerport
+		sockhost => $sockhost,
+		peerhost => $peerhost,
+		peerport => $peerport
 		};
 	my $reply = $self->make_reply( $query, $peerhost, $conn ) || return;
 
@@ -545,11 +548,11 @@ sub loop_once {
 
 			# If we have buffered output, then send as much as the OS will accept
 			# and wait with the rest
-			my $len = length $self->{_tcp}{$s}{outbuffer};
-			my $charssent = $sock->syswrite( $self->{_tcp}{$s}{outbuffer} ) || 0;
-			print "Sent $charssent of $len octets to ", $self->{_tcp}{$s}{peer}, ".\n"
+			my $len	 = length $self->{_tcp}{$s}{outbuffer};
+			my $sent = $sock->syswrite( $self->{_tcp}{$s}{outbuffer} ) || 0;
+			print "Sent $sent of $len octets to ", $self->{_tcp}{$s}{peer}, ".\n"
 					if $self->{Verbose};
-			substr( $self->{_tcp}{$s}{outbuffer}, 0, $charssent ) = "";
+			substr( $self->{_tcp}{$s}{outbuffer}, 0, $sent ) = "";
 			if ( length $self->{_tcp}{$s}{outbuffer} == 0 ) {
 				delete $self->{_tcp}{$s}{outbuffer};
 				$self->{_tcp}{$s}{state} = STATE_ACCEPTED;
