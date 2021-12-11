@@ -232,7 +232,7 @@ sub inet_new {
 #------------------------------------------------------------------------------
 
 sub make_reply {
-	my ( $self, $query, $peerhost, $conn ) = @_;
+	my ( $self, $query, $sock ) = @_;
 
 	unless ($query) {
 		print "ERROR: invalid packet\n" if $self->{Verbose};
@@ -271,8 +271,17 @@ sub make_reply {
 		my $id = $query->header->id;
 		print "query $id : $qname $qclass $qtype\n" if $self->{Verbose};
 
+		my $peer = $sock->peerhost;
+		my $conn = {
+			peerhost => $peer,
+			peerport => $sock->peerport,
+			protocol => $sock->protocol,
+			sockhost => $sock->sockhost,
+			sockport => $sock->sockport
+			};
+
 		my ( $rcode, $ans, $auth, $add );
-		my @arglist = ( $qname, $qclass, $qtype, $peerhost, $query, $conn );
+		my @arglist = ( $qname, $qclass, $qtype, $peer, $query, $conn );
 
 		if ( $opcode eq "QUERY" ) {
 			( $rcode, $ans, $auth, $add, $headermask, $optionmask ) =
@@ -407,14 +416,7 @@ sub tcp_connection {
 				undef $query;			# force FORMERR reply
 			}
 
-			my $conn = {
-				protocol => $sock->protocol,
-				sockhost => $sock->sockhost,
-				sockport => $sock->sockport,
-				peerhost => $sock->peerhost,
-				peerport => $sock->peerport
-				};
-			my $reply = $self->make_reply( $query, $sock->peerhost, $conn );
+			my $reply = $self->make_reply( $query, $sock );
 			if ( not defined $reply ) {
 				print "I couldn't create a reply for $peer. Closing socket.\n"
 						if $self->{Verbose};
@@ -462,14 +464,7 @@ sub udp_connection {
 		undef $query;					# force FORMERR reply
 	}
 
-	my $conn = {
-		protocol => $sock->protocol,
-		sockport => $sock->sockport,
-		sockhost => $sockhost,
-		peerhost => $peerhost,
-		peerport => $peerport
-		};
-	my $reply = $self->make_reply( $query, $peerhost, $conn ) || return;
+	my $reply = $self->make_reply( $query, $sock ) || return;
 
 	my $max_len = ( $query && $self->{Truncate} ) ? $query->edns->size : undef;
 	if ( $self->{Verbose} ) {
@@ -661,9 +656,8 @@ this may also include IPv6 addresses.
 
 
 The ReplyHandler subroutine is passed the query name, query class,
-query type and optionally an argument containing the peerhost, the
-incoming query, and the name of the incoming socket (sockethost). It
-must either return the response code and references to the answer,
+query type, peerhost, query record, and connection descriptor.
+It must either return the response code and references to the answer,
 authority, and additional sections of the response, or undef to leave
 the query unanswered.  Common response codes are:
 
