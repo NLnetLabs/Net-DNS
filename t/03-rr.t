@@ -7,7 +7,6 @@ use warnings;
 use Test::More tests => 108;
 
 use Net::DNS::RR;
-local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 
 {					## check exception raised for unparsable argument

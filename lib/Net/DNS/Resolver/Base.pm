@@ -257,7 +257,7 @@ END
 
 
 sub print {
-	print &string;
+	print shift->string;
 	return;
 }
 

@@ -684,11 +684,12 @@ sub _subclass {
 			my $subclass = join '::', __PACKAGE__, $identifier;
 
 			unless ( eval "require $subclass" ) {	## no critic ProhibitStringyEval
-				push @INC, sub {
-					Net::DNS::Parameters::_typespec("$rrtype.RRTYPE");
-				};
-
+				my $perl = Net::DNS::Parameters::_typespec("$rrtype.RRTYPE");
 				$subclass = join '::', __PACKAGE__, "TYPE$rrtype";
+				push @INC, sub {		# see perldoc -f require
+					my @line = split /\n/, $perl;
+					return ( sub { defined( $_ = shift @line ) } );
+				};
 				eval "require $subclass";	## no critic ProhibitStringyEval
 			}
 

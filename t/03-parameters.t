@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 use Net::DNS::Parameters qw(:class :type :opcode :rcode :ednsoption :dsotype);
-local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 use Test::More tests => ( 5 + scalar keys %Net::DNS::Parameters::classbyval ) +
 		( 6 + scalar keys %Net::DNS::Parameters::typebyval ) +

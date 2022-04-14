@@ -3,7 +3,7 @@ package Net::DNS::Parameters;
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2021-11-22)
+##	(last updated 2022-04-01)
 ##
 ################################################
 
@@ -377,31 +377,28 @@ sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
 
 use constant EXTLANG => defined eval { require Net::DNS::Extlang };
 
-our $DNSEXTLANG = EXTLANG ? eval { Net::DNS::Extlang->new()->domain } : undef;
-
 sub _typespec {
-	eval {				## draft-levine-dnsextlang
-		<<'END' } if EXTLANG && $DNSEXTLANG;
-	my ($node) = @_;
+	my $generate = defined wantarray;
+	return EXTLANG ? eval <<'END' : '';			# no critic
+	my ($node) = @_;		## draft-levine-dnsextlang
+	my $instance = Net::DNS::Extlang->new();
+	my $basename = $instance->domain || return;
 
 	require Net::DNS::Resolver;
-	my $resolver = Net::DNS::Resolver->new() || return;
-	my $response = $resolver->send( "$node.$DNSEXTLANG", 'TXT' ) || return;
+	my $resolver = Net::DNS::Resolver->new();
+	my $response = $resolver->send( "$node.$basename", 'TXT' ) || return;
 
 	foreach my $txt ( grep { $_->type eq 'TXT' } $response->answer ) {
 		my @stanza = $txt->txtdata;
 		my ( $tag, $identifier, @attribute ) = @stanza;
 		next unless defined($tag) && $tag =~ /^RRTYPE=\d+$/;
 		register( $1, $2 ) if $identifier =~ /^(\w+):(\d+)\W*/;
-		return unless defined wantarray;
+		return unless $generate;
 
-		my $extobj = Net::DNS::Extlang->new();
-		my $recipe = $extobj->xlstorerecord( $identifier, @attribute );
-		my @source = split /\n/, $extobj->compilerr($recipe);
-		return sub { defined( $_ = shift @source ) };
+		my $recipe = $instance->xlstorerecord( $identifier, @attribute );
+		return $instance->compilerr($recipe);
 	}
 END
-	return;
 }
 
 

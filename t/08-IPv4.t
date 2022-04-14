@@ -65,7 +65,7 @@ my $IP = eval {
 	$resolver->nameservers(@nsdname);
 	$resolver->force_v4(1);
 	[$resolver->nameservers()];
-};
+} || [];
 exit( plan skip_all => 'Unable to resolve nameserver name' ) unless scalar @$IP;
 
 diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;

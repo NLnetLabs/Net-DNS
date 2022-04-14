@@ -9,7 +9,6 @@ use Test::More;
 use Net::DNS;
 use Net::DNS::DomainName;
 use Net::DNS::Parameters qw(:type);
-local $Net::DNS::Parameters::DNSEXTLANG;			# suppress Extlang type queries
 
 my @prerequisite = qw(
 		Net::DNS::RR::NSEC
