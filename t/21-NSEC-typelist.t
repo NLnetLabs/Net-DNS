@@ -20,7 +20,7 @@ foreach my $package (@prerequisite) {
 	exit;
 }
 
-plan tests => 80;
+plan tests => 79;
 
 
 my $rr = Net::DNS::RR->new(
@@ -33,7 +33,7 @@ $rr->typelist(1);
 is( $rr->typemap(256), undef, 'typemap($type) undefined for empty map block' );
 
 foreach my $rrtype ( 0, 256, 512, 768, 1024 ) {
-	my $type = typebyval($rrtype);
+	my $type = "TYPE$rrtype";
 	$rr->typelist($type);
 	my $rdata = $rr->rdata;
 	my ( $name, $offset ) = Net::DNS::DomainName->decode( \$rdata );
@@ -50,7 +50,7 @@ foreach my $rrtype ( 0, 7, 8, 15, 16, 23, 24, 31, 32, 39 ) {
 	is( $l, 1 + ( $rrtype >> 3 ), "expected map length for $type" );
 }
 
-foreach my $rrtype ( 1 .. 40, 42 .. 64 ) {
+foreach my $rrtype ( 1 .. 40, 42 .. 53, 55 .. 64 ) {
 	my $type = typebyval($rrtype);
 	$rr->typelist($type);
 	is( $rr->typemap($type), 1, "expected map bit for $type" );

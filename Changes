@@ -5,9 +5,11 @@ $Id$                       -*-text-*-
 
 	Improve robustness of EDNS option compose/decompose functions.
 
-	Avoid old perl's "Useless use of a constant in void context".
-
 	Simplify code in Makefile.PL.
+
+Fix rt.cpan.org #142426
+
+	Avoid "Useless use of a constant in void context" warning.
 
 
 **** 1.33 Dec 16, 2021

@@ -360,21 +360,6 @@ sub dsotypebyval {
 }
 
 
-sub register {				## register( 'TOY', 1234 )	(NOT part of published API)
-	my ( $mnemonic, $rrtype ) = @_;				# uncoverable pod
-	$rrtype = rand(255) + 65280 unless $rrtype;
-	croak qq["$mnemonic" is a CLASS identifier] if defined $classbyname{$mnemonic = uc($mnemonic)};
-	for ( typebyval( $rrtype = int $rrtype ) ) {
-		return $rrtype if /^$mnemonic$/;		# duplicate registration
-		croak qq["$mnemonic" conflicts with TYPE$rrtype ($_)] unless /^TYPE\d+$/;
-		my $known = $typebyname{$mnemonic};
-		croak qq["$mnemonic" conflicts with TYPE$known] if $known;
-	}
-	$typebyval{$rrtype} = $mnemonic;
-	return $typebyname{$mnemonic} = $rrtype;
-}
-
-
 use constant EXTLANG => defined eval { require Net::DNS::Extlang };
 
 sub _typespec {
@@ -382,17 +367,28 @@ sub _typespec {
 	return EXTLANG ? eval <<'END' : '';			# no critic
 	my ($node) = @_;		## draft-levine-dnsextlang
 	my $instance = Net::DNS::Extlang->new();
-	my $basename = $instance->domain || return;
+	my $basename = $instance->domain || return '';
 
 	require Net::DNS::Resolver;
 	my $resolver = Net::DNS::Resolver->new();
-	my $response = $resolver->send( "$node.$basename", 'TXT' ) || return;
+	my $response = $resolver->send( "$node.$basename", 'TXT' ) || return '';
 
 	foreach my $txt ( grep { $_->type eq 'TXT' } $response->answer ) {
 		my @stanza = $txt->txtdata;
 		my ( $tag, $identifier, @attribute ) = @stanza;
 		next unless defined($tag) && $tag =~ /^RRTYPE=\d+$/;
-		register( $1, $2 ) if $identifier =~ /^(\w+):(\d+)\W*/;
+		if ( $identifier =~ /^(\w+):(\d+)\W*/ ) {
+			my ( $mnemonic, $rrtype ) = ( uc($1), $2 );
+			croak qq["$mnemonic" is a CLASS identifier] if $classbyname{$mnemonic};
+			for ( typebyval($rrtype) ) {
+				next if /^$mnemonic$/i;		# duplicate registration
+				croak qq["$mnemonic" conflicts with TYPE$rrtype ($_)] unless /^TYPE\d+$/;
+				my $known = $typebyname{$mnemonic};
+				croak qq["$mnemonic" conflicts with TYPE$known] if $known;
+				$typebyval{$rrtype} = $mnemonic;
+				$typebyname{$mnemonic} = $rrtype;
+			}
+		}
 		return unless $generate;
 
 		my $recipe = $instance->xlstorerecord( $identifier, @attribute );

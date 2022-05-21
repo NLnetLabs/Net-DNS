@@ -73,7 +73,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 66;
+plan tests => 65;
 
 NonFatalBegin();
 
@@ -458,11 +458,6 @@ SKIP: {
 	delete ${*$socket}{net_dns_bg};				# state vector
 	while ( $resolver->bgbusy($socket) ) { sleep 1 }
 	ok( !$resolver->bgbusy($socket), 'bgbusy()	SpamAssassin workaround' );
-}
-
-
-{					## exercise Net::DNS::Extlang query
-	ok( Net::DNS::RR->new('. MD'), 'Net::DNS::Extlang query' );
 }
 
 
