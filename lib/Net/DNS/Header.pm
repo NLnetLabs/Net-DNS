@@ -126,9 +126,9 @@ sub id {
 	my $self  = shift;
 	my $ident = scalar(@_) ? ( $$self->{id} = shift ) : $$self->{id};
 	return $ident if defined $ident;
-	$cache2->{$ident = int rand(0xffff)}++;			# preserve recent uniqueness
-	$cache2->{$ident = int rand(0xffff)}++ while $cache1->{$ident}++;
-	( $cache1, $cache2, $limit ) = ( $cache2, {}, 50 ) unless $limit--;
+	$ident = int rand(0xffff);				# preserve recent uniqueness
+	$ident = int rand(0xffff) while $cache1->{$ident}++ + exists($cache2->{$ident});
+	( $cache1, $cache2, $limit ) = ( {}, $cache1, 50 ) unless $limit--;
 	return $$self->{id} = $ident;
 }
 
@@ -478,7 +478,7 @@ Copyright (c)1997 Michael Fuhr.
 
 Portions Copyright (c)2002,2003 Chris Reinhardt.
 
-Portions Copyright (c)2012 Dick Franks.
+Portions Copyright (c)2012,2022 Dick Franks.
 
 All rights reserved.
 

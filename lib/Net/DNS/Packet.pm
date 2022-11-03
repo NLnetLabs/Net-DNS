@@ -565,7 +565,7 @@ sub _section {				## returns array reference for section
     $query = Net::DNS::Packet->new( 'www.example.com', 'A' );
 
     $query->sign_tsig(
-		'Khmac-sha512.example.+165+01018.private',
+		$keyfile,
 		fudge => 60
 		);
 
@@ -597,12 +597,6 @@ specified key.
 		);
 
     $query->sign_tsig( $tsig );
-
-
-The historical simplified syntax is still available, but additional
-options can not be specified.
-
-    $packet->sign_tsig( $key_name, $key );
 
 
 The response to an inbound request is signed by presenting the request

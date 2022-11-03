@@ -1,6 +1,12 @@
 $Id$                       -*-text-*-
 
 
+**** 1.36 [unrleased]
+
+	Remove deprecated 2-argument TSIG->create() method.
+	Revise TSIG test scripts and documentation.
+
+
 **** 1.35 Oct 4, 2022
 
 	Improve SVCB error reporting.

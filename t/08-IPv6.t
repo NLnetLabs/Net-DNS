@@ -76,7 +76,7 @@ diag join( "\n\t", 'will use nameservers', @$IP ) if $debug;
 Net::DNS::Resolver->debug($debug);
 
 
-plan tests => 65;
+plan tests => 64;
 
 NonFatalBegin();
 
@@ -358,10 +358,6 @@ SKIP: {
 	my @unverifiable = $resolver->axfr();
 	my $errorstring	 = $resolver->errorstring;
 	ok( !scalar(@unverifiable), "mismatched key\t[$errorstring]" );
-
-	eval { $resolver->tsig(undef) };
-	my ($exception) = split /\n/, "$@\n";
-	ok( $exception, "undefined TSIG\t[$exception]" );
 }
 
 

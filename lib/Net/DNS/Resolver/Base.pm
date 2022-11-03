@@ -1043,6 +1043,8 @@ sub tsig {
 	my $self = shift;
 	$self->{tsig_rr} = eval {
 		local $SIG{__DIE__};
+		return shift unless $_[0];
+		return shift if ref($_[0]) eq 'Net::DNS::RR::TSIG';
 		require Net::DNS::RR::TSIG;
 		Net::DNS::RR::TSIG->create(@_);
 	};

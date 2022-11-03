@@ -143,6 +143,13 @@ SKIP: {
 
 
 {
+	eval { $class->create( $keyrr->owner, $keyrr->key ); };
+	my ($exception) = split /\n/, "$@\n";
+	ok( $exception, "2-argument create\t[$exception]" );
+}
+
+
+{
 	my $packet = Net::DNS::Packet->new('query.example');
 	eval { $class->create($packet); };
 	my ($exception) = split /\n/, "$@\n";
@@ -200,15 +207,6 @@ close($fh_corrupt);
 	$class->create($corruptBINDkey);
 	my ($warning) = split /\n/, "@warning\n";
 	ok( $warning, "corrupt BIND public key\t[$warning]" );
-}
-
-
-{
-	my @warning;
-	local $SIG{__WARN__} = sub { @warning = @_ };
-	$class->create( $keyrr->owner, $keyrr->key );
-	my ($warning) = split /\n/, "@warning\n";
-	ok( $warning, "2-argument create\t[$warning]" );
 }
 
 
