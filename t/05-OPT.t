@@ -8,6 +8,7 @@ use Test::More;
 
 use Net::DNS;
 use Net::DNS::Parameters;
+use Net::DNS::RR::OPT;
 
 
 plan tests => 33 + scalar( keys %Net::DNS::Parameters::ednsoptionbyval );
@@ -75,7 +76,7 @@ foreach my $method (qw(class ttl)) {
 
 	eval { $rr->$method(512) };
 	my ($warning) = split /\n/, "$@\n";
-	ok( 1, "deprecated $method method:\t[$warning]" );	# warning may, or may not, be first
+	ok( 1, "deprecated $method method\t[$warning]" );	# warning may, or may not, be first
 
 	eval { $rr->$method(512) };
 	my ($repeated) = split /\n/, "$@\n";
@@ -149,10 +150,11 @@ foreach my $method (qw(class ttl)) {
 
 	$edns->option( 12 => pack 'x100' );
 
-	$edns->option( 13 => pack 'H*', '03636F6D00' );
+	$edns->option( 13 => pack 'H*', '076578616d706c6500' );
 
-	$edns->option( 15 => pack 'H*', '007B' );
+	$edns->option( 15 => pack 'H*', '0000' );
 
+	$edns->option( 65023 => pack 'H*', '076578616d706c6500' );
 
 	foreach my $option ( sort { $a <=> $b } keys %Net::DNS::Parameters::ednsoptionbyval ) {
 		my @interpretation = $edns->option($option);	# check option interpretation

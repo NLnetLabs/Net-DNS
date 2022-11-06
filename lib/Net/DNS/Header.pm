@@ -120,15 +120,15 @@ A random value is assigned if the argument value is undefined.
 
 =cut
 
-my ( $cache1, $cache2, $limit ) = ( {}, {}, 50 );		# two part cache
+my ( $cache1, $cache2, $limit );				# two layer cache
 
 sub id {
 	my $self  = shift;
 	my $ident = scalar(@_) ? ( $$self->{id} = shift ) : $$self->{id};
-	return $ident if defined $ident;
-	$ident = int rand(0xffff);				# preserve recent uniqueness
-	$ident = int rand(0xffff) while $cache1->{$ident}++ + exists($cache2->{$ident});
-	( $cache1, $cache2, $limit ) = ( {}, $cache1, 50 ) unless $limit--;
+	return $ident if $ident;
+	$ident = int rand(0xffff);				# preserve short-term uniqueness
+	$ident = int rand(0xffff) while $cache1->{$ident}++ + exists( $cache2->{$ident} );
+	( $cache1, $cache2, $limit ) = ( {0 => 1}, $cache1, 50 ) unless $limit--;
 	return $$self->{id} = $ident;
 }
 

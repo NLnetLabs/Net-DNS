@@ -226,10 +226,7 @@ sub _compose {
 	return pack 'C*', @_;
 }
 
-sub _decompose {
-	my @payload = unpack 'C*', $_[1];
-	return @payload;
-}
+sub _decompose { return unpack 'C*', pop(@_); }
 
 sub _image { return &_decompose; }
 
@@ -255,71 +252,57 @@ sub _compose {
 
 sub _decompose {
 	my %hash;
-	@hash{@field8} = unpack 'nC2a*', $_[1];
+	@hash{@field8} = unpack 'nC2a*', pop(@_);
 	$hash{ADDRESS} = bless( {address => $hash{ADDRESS}}, $family{$hash{FAMILY}} )->address;
-	my @payload = map( ( $_ => $hash{$_} ), @field8 );
-	return @payload;
+	return map( ( $_ => $hash{$_} ), @field8 );
 }
 
 sub _image {
-	my %hash  = &_decompose;
-	my @image = map "$_ => $hash{$_}", @field8;
-	return @image;
+	my %hash = &_decompose;
+	return map "$_ => $hash{$_}", @field8;
 }
 
 
 package Net::DNS::RR::OPT::EXPIRE;				# RFC7314
 
-sub _compose {
-	return pack 'N', pop @_;
-}
+sub _compose { return pack 'N', pop(@_); }
 
-sub _decompose {
-	my @payload = ( 'EXPIRE-TIMER' => unpack 'N', $_[1] );
-	return @payload;
-}
+sub _decompose { return ( 'EXPIRE-TIMER' => unpack( 'N', pop(@_) ) ); }
 
 sub _image { return join ' => ', &_decompose; }
 
 
 package Net::DNS::RR::OPT::COOKIE;				# RFC7873
 
-my @field10 = qw(VERSION RESERVED TIMESTAMP HASH);
+my @field10 = qw(VERSION TIMESTAMP HASH);
 
 sub _compose {
 	my ( $class, %argument ) = ( VERSION => 1, RESERVED => '', @_ );
 	return pack 'a8', $argument{'CLIENT-COOKIE'} if $argument{'CLIENT-COOKIE'};
-	return pack 'Ca3Na*', map $_, @argument{@field10};
+	return pack 'Cx3Na*', map $_, @argument{@field10};
 }
 
 sub _decompose {
-	my ( $class, $argument ) = @_;
-	return ( 'CLIENT-COOKIE', $argument ) unless length($argument) > 8;
+	my $argument = pop(@_);
+	return ( 'CLIENT-COOKIE' => $argument ) unless length($argument) > 8;
 	my %hash;
-	@hash{@field10} = unpack 'Ca3Na*', $argument;
-	my @payload = map( ( $_ => $hash{$_} ), @field10 );
-	return @payload;
+	@hash{@field10} = unpack 'Cx3Na*', $argument;
+	return map( ( $_ => $hash{$_} ), @field10 );
 }
 
 sub _image {
 	my %hash = &_decompose;
 	return unpack 'H*', $hash{'CLIENT-COOKIE'} if $hash{'CLIENT-COOKIE'};
-	for (qw(RESERVED HASH)) { $hash{$_} = unpack 'H*', $hash{$_} }
-	my @image = map "$_ => $hash{$_}", @field10;
-	return @image;
+	$hash{HASH} = unpack 'H*', $hash{HASH};
+	return map "$_ => $hash{$_}", @field10;
 }
 
 
 package Net::DNS::RR::OPT::TCP_KEEPALIVE;			# RFC7828
 
-sub _compose {
-	return pack 'n', pop @_;
-}
+sub _compose { return pack 'n', pop(@_); }
 
-sub _decompose {
-	my @payload = ( 'TIMEOUT' => unpack 'n', $_[1] );
-	return @payload;
-}
+sub _decompose { return ( 'TIMEOUT' => unpack( 'n', pop(@_) ) ); }
 
 sub _image { return join ' => ', &_decompose; }
 
@@ -327,31 +310,23 @@ sub _image { return join ' => ', &_decompose; }
 package Net::DNS::RR::OPT::PADDING;				# RFC7830
 
 sub _compose {
-	my $size = pop @_;
+	my $size = pop(@_);
 	return pack "x$size";
 }
 
-sub _decompose {
-	my @payload = ( 'OPTION-LENGTH' => length( $_[1] ) );
-	return @payload;
-}
+sub _decompose { return ( 'OPTION-LENGTH' => length pop(@_) ); }
 
 sub _image { return join ' => ', &_decompose; }
 
 
 package Net::DNS::RR::OPT::CHAIN;				# RFC7901
 
-sub _compose {
-	my ( $class, %argument ) = @_;
-	my ($trust_point) = values %argument;
-	return Net::DNS::DomainName->new($trust_point)->encode;
-}
+sub _compose { return Net::DNS::DomainName->new( pop(@_) )->encode; }
 
 sub _decompose {
 	my ( $class, $payload ) = @_;
-	my $fqdn    = Net::DNS::DomainName->decode( \$payload )->string;
-	my @payload = ( 'CLOSEST-TRUST-POINT' => $fqdn );
-	return @payload;
+	my $fqdn = Net::DNS::DomainName->decode( \$payload )->string;
+	return ( 'CLOSEST-TRUST-POINT' => $fqdn );
 }
 
 sub _image { return join ' => ', &_decompose; }
@@ -364,10 +339,7 @@ sub _compose {
 	return pack 'n*', @_;
 }
 
-sub _decompose {
-	my @payload = unpack 'n*', $_[1];
-	return @payload;
-}
+sub _decompose { return unpack 'n*', pop(@_); }
 
 sub _image { return &_decompose; }
 
@@ -383,18 +355,35 @@ sub _compose {
 }
 
 sub _decompose {
-	my ( $code, $text ) = unpack 'na*', $_[1];
-	my @payload = (
-		'INFO-CODE'  => $code,
+	my ( $code, $text ) = unpack 'na*', pop(@_);
+	return ('INFO-CODE' => $code,
+		eval { return ( 'DNS-ERROR' => qq("$Net::DNS::Parameters::dnserrorbyval{$code}") ) },
 		'EXTRA-TEXT' => Net::DNS::Text->decode( \$text, 0, length $text )->string
 		);
-	return @payload;
 }
 
 sub _image {
-	my %hash  = &_decompose;
-	my @image = map "$_ => $hash{$_}", @field15;
+	my @list = &_decompose;
+	my @text;
+	while ( my $key = shift @list ) {
+		push @text, join ' => ', $key, shift @list;
+	}
+	return @text;
 }
+
+
+package Net::DNS::RR::OPT::DRC;					# draft-ietf-dnsop-dns-error-reporting
+$Net::DNS::Parameters::ednsoptionbyval{65023} = 'DRC';		# experimental/private use
+
+sub _compose { return Net::DNS::DomainName->new( pop(@_) )->encode; }
+
+sub _decompose {
+	my $payload = pop(@_);
+	my $fqdn    = Net::DNS::DomainName->decode( \$payload )->string;
+	return ( 'AGENT-DOMAIN' => $fqdn );
+}
+
+sub _image { return join ' => ', &_decompose; }
 
 ########################################
 
@@ -493,7 +482,7 @@ When called in a list context, options() returns a list of option codes
 found in the OPT record.
 
 When called in a scalar context with a single argument,
-option() returns the uninterpreted octet string
+
 corresponding to the specified option.
 The method returns undef if the specified option is absent.
 
