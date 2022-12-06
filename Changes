@@ -3,6 +3,7 @@ $Id$                       -*-text-*-
 
 **** 1.36 [unrleased]
 
+	Zero packet->id not allowed in outbound packet.
 	Remove deprecated 2-argument TSIG->create() method.
 	Revise TSIG test scripts and documentation.
 

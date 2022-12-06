@@ -11,7 +11,7 @@ use Net::DNS::Parameters;
 use Net::DNS::RR::OPT;
 
 
-plan tests => 33 + scalar( keys %Net::DNS::Parameters::ednsoptionbyval );
+plan tests => 30 + scalar( keys %Net::DNS::Parameters::ednsoptionbyval );
 
 
 my $name = '.';
@@ -53,7 +53,7 @@ my $wire = '0000290500000080000000';
 	is( $hex1, $hex2, 'encode/decode transparent' );
 	is( $hex1, $wire, 'encoded RDATA matches example' );
 
-	$rr->option( 10, 'rawbytes' );
+	$rr->option( 65534 => {'OPTION-DATA' => 'rawbytes'} );
 	like( $rr->string, '/EDNS/', 'string method works' );
 }
 
@@ -121,44 +121,37 @@ foreach my $method (qw(class ttl)) {
 	is( scalar( $edns->options ), 0, 'delete EDNS option' );
 
 
-	foreach my $option ( keys %Net::DNS::Parameters::ednsoptionbyval ) {
-		$edns->option( $option => 'rawbytes' );
+	foreach my $option ( sort { $a <=> $b } keys %Net::DNS::Parameters::ednsoptionbyval ) {
+		$edns->option( $option => ( 'OPTION-DATA' => 'rawbytes' ) );
 	}
 
-
 	$edns->option( 4 => '' );
-	is( length( $edns->option(4) ), 0, "option 4 => ''" );
 
-	$edns->option( DAU => [8, 10, 13, 14, 15, 16] );
-	is( length( $edns->option(5) ), 6, "option DAU => [ ... ]" );
+	$edns->option( 5 => [8, 10, 13, 14, 15, 16] );
 
-	$edns->option( 10 => {'CLIENT-COOKIE' => 'rawbytes'} );
-	is( length( $edns->option(10) ), 8, "option 10 => {CLIENT-COOKIE => ... }" );
+	$edns->option( 6 => [1, 2, 4] );
 
+	$edns->option( 7 => [1] );
 
-	$edns->option( 6 => pack 'H*', '010204' );
-
-	$edns->option( 7 => pack 'H*', '01' );
-
-	$edns->option( 8 => pack 'H*', '000117007b7b7a' );
+	$edns->option( 8 => {'OPTION-DATA' => pack 'H*', '000117007b7b7a'} );
 
 	$edns->option( 9 => pack 'H*', '00093A80' );
 
-	$edns->option( 10 => pack 'H*', '010000005EC233441122334455667788' );
+	$edns->option( 10 => pack 'H*', '11223344556677881122334455667788' );
 
-	$edns->option( 11 => pack 'H*', '00C8' );
+	$edns->option( 11 => {'OPTION-DATA' => pack 'H*', '00C8'} );
 
-	$edns->option( 12 => pack 'x100' );
+	$edns->option( 12 => {'OPTION-DATA' => pack 'x100'} );
 
-	$edns->option( 13 => pack 'H*', '076578616d706c6500' );
+	$edns->option( 13 => {'OPTION-DATA' => pack 'H*', '076578616d706c6500'} );
 
-	$edns->option( 15 => pack 'H*', '0000' );
+	$edns->option( 15 => {'INFO-CODE' => 123} );
 
-	$edns->option( 65023 => pack 'H*', '076578616d706c6500' );
+	$edns->option( 65023 => {'OPTION-DATA' => pack 'H*', '076578616d706c6500'} );
 
 	foreach my $option ( sort { $a <=> $b } keys %Net::DNS::Parameters::ednsoptionbyval ) {
 		my @interpretation = $edns->option($option);	# check option interpretation
-		$edns->option( $option => (@interpretation) );
+		$edns->option( $option => [@interpretation] );
 		my @reconstitution = $edns->option($option);
 		is( "@reconstitution", "@interpretation", "compose/decompose option $option" );
 	}
