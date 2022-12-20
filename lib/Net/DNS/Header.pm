@@ -169,7 +169,6 @@ sub rcode {
 	for ( $$self->{status} ) {
 		my $opt = $$self->edns;
 		unless ( defined $arg ) {
-			return rcodebyval( $_ & 0x0f ) unless $opt->_specified;
 			$rcode = ( $opt->rcode & 0xff0 ) | ( $_ & 0x00f );
 			$opt->rcode($rcode);			# write back full 12-bit rcode
 			return $rcode == 16 ? 'BADVERS' : rcodebyval($rcode);

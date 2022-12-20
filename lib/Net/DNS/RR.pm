@@ -201,24 +201,21 @@ sub _new_hash {
 
 =head2 decode
 
-    ( $rr, $next ) = decode Net::DNS::RR( \$data, $offset, @opaque );
+    ( $rr, $next ) = Net::DNS::RR->decode( \$data, $offset, @opaque );
 
 Decodes a DNS resource record at the specified location within a
 DNS packet.
 
 The argument list consists of a reference to the buffer containing
 the packet data and offset indicating where resource record begins.
-Remaining arguments, if any, are passed as opaque data to
-subordinate decoders.
+Any remaining arguments are passed as opaque data to subordinate
+decoders and do not form part of the published interface.
 
 Returns a C<Net::DNS::RR> object and the offset of the next record
 in the packet.
 
 An exception is raised if the data buffer contains insufficient or
 corrupt data.
-
-Any remaining arguments are passed as opaque data to subordinate
-decoders and do not form part of the published interface.
 
 =cut
 
@@ -228,7 +225,7 @@ sub decode {
 	my $base = shift;
 	my ( $data, $offset, @opaque ) = @_;
 
-	my ( $owner, $fixed ) = decode Net::DNS::DomainName1035(@_);
+	my ( $owner, $fixed ) = Net::DNS::DomainName1035->decode(@_);
 
 	my $index = $fixed + RRFIXEDSZ;
 	die 'corrupt wire-format data' if length $$data < $index;

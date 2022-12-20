@@ -3,7 +3,7 @@ package Net::DNS::Parameters;
 ################################################
 ##
 ##	Domain Name System (DNS) Parameters
-##	(last updated 2022-08-30)
+##	(last updated 2022-12-06)
 ##
 ################################################
 
@@ -281,6 +281,7 @@ my @dnserrorbyval = (
 	25 => 'Signature Expired before Valid',			# https://github.com/NLnetLabs/unbound/pull/604#discussion_r802678343
 	26 => 'Too Early',					# RFC9250
 	27 => 'Unsupported NSEC3 Iterations Value',		# RFC9276
+	28 => 'Unable to conform to policy',			#
 	);
 our %dnserrorbyval = @dnserrorbyval;
 

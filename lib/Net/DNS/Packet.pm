@@ -138,23 +138,23 @@ sub decode {
 		my $record;
 		$offset = HEADER_LENGTH;
 		while ( $qd-- ) {
-			( $record, $offset ) = decode Net::DNS::Question( $data, $offset, $hash );
+			( $record, $offset ) = Net::DNS::Question->decode( $data, $offset, $hash );
 			CORE::push( @{$self->{question}}, $record );
 		}
 
 		# RR sections
 		while ( $an-- ) {
-			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			( $record, $offset ) = Net::DNS::RR->decode( $data, $offset, $hash );
 			CORE::push( @{$self->{answer}}, $record );
 		}
 
 		while ( $ns-- ) {
-			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			( $record, $offset ) = Net::DNS::RR->decode( $data, $offset, $hash );
 			CORE::push( @{$self->{authority}}, $record );
 		}
 
 		while ( $ar-- ) {
-			( $record, $offset ) = decode Net::DNS::RR( $data, $offset, $hash );
+			( $record, $offset ) = Net::DNS::RR->decode( $data, $offset, $hash );
 			CORE::push( @{$self->{additional}}, $record );
 		}
 

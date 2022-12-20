@@ -295,7 +295,7 @@ sub postamble {
 test_cover :
 	cover -delete
 	HARNESS_PERL_SWITCHES=-MDevel::Cover $(MAKE) test
-	cover -summary
+	cover
 END
 }
 
