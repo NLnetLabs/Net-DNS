@@ -347,7 +347,11 @@ sub _compose {
 	return pack "x$length";
 }
 
-sub _decompose { return {'OPTION-LENGTH' => length pop @_} }
+sub _decompose {
+	my $argument = pop @_;
+	return {'OPTION-LENGTH' => length $argument} if $argument =~ /^\000*$/;
+	return {'BASE16'	=> unpack 'H*', $argument};
+}
 
 
 package Net::DNS::RR::OPT::CHAIN;				# RFC7901

@@ -135,7 +135,8 @@ foreach my $method (qw(class ttl)) {
 	my @option11 = $edns->option(11);
 	$edns->option( 11 => {'TIMEOUT' => 200} );
 
-	$edns->option( 12 => {'LENGTH' => 100} );
+	my @option12 = $edns->option(12);			# non-zero content
+	$edns->option( 12 => {'LENGTH' => 100} );		# zero content per RFC7830
 
 	$edns->option( 13 => {'BASE16' => '076578616d706c6500'} );
 
