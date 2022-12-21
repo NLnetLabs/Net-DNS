@@ -111,9 +111,11 @@ sub class {				## overide RR method
 sub ttl {				## overide RR method
 	my $self = shift;
 	$self->_deprecate(qq[please use "flags()" or "rcode()"]);
-	my @rcode = map { unpack( 'C',	 pack 'N', $_ ) } @_;
-	my @flags = map { unpack( 'x2n', pack 'N', $_ ) } @_;
-	return pack 'C2n', $self->rcode(@rcode), $self->version, $self->flags(@flags);
+	for (@_) {
+		@{$self}{qw(rcode version flags)} = unpack 'C2n', pack 'N', $_;
+		@{$self}{rcode} = @{$self}{rcode} << 4;
+	}
+	return pack 'C2n', $self->rcode >> 4, $self->version, $self->flags;
 }
 
 
@@ -475,6 +477,7 @@ other unpredictable behaviour.
 The version of EDNS supported by this OPT record.
 
 =head2 UDPsize
+
 	$size = $packet->edns->UDPsize;
 	$packet->edns->UDPsize($size);
 
@@ -534,10 +537,10 @@ For example:
 Similar forms of array or hash syntax may be used to construct the
 option value:
 
-	$packet->edns->option( DAU => [8, 10, 13, 14, 15, 16] );
+	$packet->edns->option( 'DAU' => [8, 10, 13, 14, 15, 16] );
 
-	$packet->edns->option( EXTENDED-ERROR => {'INFO-CODE'  => 123,
-						  'EXTRA-TEXT' => ""} );
+	$packet->edns->option( 'EXTENDED-ERROR' => {'INFO-CODE'	 => 123,
+						    'EXTRA-TEXT' => ""} );
 
 
 =head1 COPYRIGHT
